@@ -47,6 +47,15 @@ export function NotificationBell() {
     },
   });
 
+  const markAllAsRead = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/notifications/mark-all-read", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/feed"] });
+    },
+  });
+
   const handleNotificationClick = async (notification: NotificationItem) => {
     // Convert NotificationItem to match NotificationDetailDialog interface
     const detailNotification = {
@@ -96,9 +105,16 @@ export function NotificationBell() {
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-sm">Notifications</h3>
             {unreadCount > 0 && (
-              <span className="text-xs text-muted-foreground">
-                {unreadCount} unread
-              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs h-6 px-2"
+                onClick={() => markAllAsRead.mutate()}
+                disabled={markAllAsRead.isPending}
+                data-testid="button-mark-all-read"
+              >
+                {markAllAsRead.isPending ? 'Marking...' : 'Mark all read'}
+              </Button>
             )}
           </div>
 

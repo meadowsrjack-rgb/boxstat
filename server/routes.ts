@@ -8130,6 +8130,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Mark all notifications as read for the current user
+  app.post('/api/notifications/mark-all-read', requireAuth, async (req: any, res) => {
+    try {
+      const { id: userId } = req.user;
+      await storage.markAllNotificationsAsRead(userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error marking all notifications as read:', error);
+      res.status(500).json({ error: 'Failed to mark all notifications as read', message: error.message });
+    }
+  });
+  
   // =============================================
   // NOTIFICATION CAMPAIGN ROUTES (Scheduled Messaging)
   // =============================================

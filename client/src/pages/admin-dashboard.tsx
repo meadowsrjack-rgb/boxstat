@@ -10281,6 +10281,16 @@ function CRMTab({ organization, users, teams }: any) {
     queryKey: ['/api/contact-management'],
   });
 
+  // Mark contact message as read mutation
+  const markMessageAsReadMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest(`/api/contact-management/${id}`, { method: 'PATCH', data: { isRead: true } });
+    },
+    onSuccess: () => {
+      refetchMessages();
+    },
+  });
+
   // Fetch quote checkouts
   const { data: quotes = [], refetch: refetchQuotes } = useQuery<any[]>({
     queryKey: ['/api/quote-checkouts'],
@@ -10504,17 +10514,6 @@ function CRMTab({ organization, users, teams }: any) {
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              quoteForm.setValue('leadId', lead.id);
-                              setIsQuoteDialogOpen(true);
-                            }}
-                            data-testid={`button-create-quote-${lead.id}`}
-                          >
-                            <LinkIcon className="w-4 h-4" />
-                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -10543,7 +10542,12 @@ function CRMTab({ organization, users, teams }: any) {
                     <div
                       key={msg.id}
                       className={`p-3 rounded-lg cursor-pointer hover:bg-gray-50 ${selectedConversation?.id === msg.id ? 'bg-gray-100 border-l-4 border-red-600' : ''}`}
-                      onClick={() => setSelectedConversation(msg)}
+                      onClick={() => {
+                        setSelectedConversation(msg);
+                        if (!msg.isRead) {
+                          markMessageAsReadMutation.mutate(msg.id);
+                        }
+                      }}
                       data-testid={`conversation-${msg.id}`}
                     >
                       <div className="flex justify-between items-start">

@@ -244,6 +244,7 @@ export interface IStorage {
   updateNotification(id: number, updates: Partial<Notification>): Promise<Notification | undefined>;
   deleteNotification(id: number): Promise<void>;
   markNotificationAsRead(id: number): Promise<Notification | undefined>;
+  markAllNotificationsAsRead(userId: number): Promise<void>;
   
   // Event Window operations
   getEventWindow(id: number): Promise<EventWindow | undefined>;
@@ -1834,6 +1835,16 @@ class MemStorage implements IStorage {
     const updated = { ...notification, id: id.toString(), status: 'sent' };
     this.notifications.set(id, updated as any);
     return updated;
+  }
+  
+  async markAllNotificationsAsRead(userId: number): Promise<void> {
+    // Mark all notifications for this user as read
+    for (const [id, notification] of this.notifications.entries()) {
+      if (notification.recipientIds && notification.recipientIds.includes(userId)) {
+        const updated = { ...notification, id: id.toString(), status: 'sent' };
+        this.notifications.set(id, updated as any);
+      }
+    }
   }
   
   // Event Window operations
@@ -4481,6 +4492,17 @@ class DatabaseStorage implements IStorage {
     
     if (results.length === 0) return undefined;
     return this.mapDbNotificationToNotification(results[0]);
+  }
+  
+  async markAllNotificationsAsRead(userId: number): Promise<void> {
+    // Get all notifications where this user is a recipient and mark them as read
+    // We use SQL to find notifications where the user ID is in the recipientIds array
+    await db.execute(sql`
+      UPDATE notifications 
+      SET status = 'sent' 
+      WHERE ${userId} = ANY(recipient_ids) 
+      AND status != 'sent'
+    `);
   }
   
   // Event Window operations

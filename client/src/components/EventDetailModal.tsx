@@ -1401,46 +1401,48 @@ export default function EventDetailModal({
           )}
           
           <div className="space-y-3 py-4 max-h-80 overflow-y-auto">
-            {/* Parent self-RSVP option */}
-            <div className="flex items-center gap-3 p-3 rounded-lg border bg-white border-gray-200" data-testid="rsvp-row-self">
-              <Avatar className="h-10 w-10 bg-blue-100 flex-shrink-0">
-                <AvatarFallback className="bg-blue-100 text-blue-700">
-                  {(currentUser?.firstName?.[0] || '') + (currentUser?.lastName?.[0] || 'M')}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{currentUserName}</p>
-                <p className="text-xs text-gray-500">
-                  {userRsvp?.response === 'attending' 
-                    ? 'Attending' 
-                    : userRsvp?.response === 'not_attending'
-                      ? 'Not attending'
-                      : 'No response'}
-                </p>
+            {/* Parent self-RSVP option - only show if parent is invited to the event */}
+            {users.some(u => u.id === userId) && (
+              <div className="flex items-center gap-3 p-3 rounded-lg border bg-white border-gray-200" data-testid="rsvp-row-self">
+                <Avatar className="h-10 w-10 bg-blue-100 flex-shrink-0">
+                  <AvatarFallback className="bg-blue-100 text-blue-700">
+                    {(currentUser?.firstName?.[0] || '') + (currentUser?.lastName?.[0] || 'M')}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{currentUserName}</p>
+                  <p className="text-xs text-gray-500">
+                    {userRsvp?.response === 'attending' 
+                      ? 'Attending' 
+                      : userRsvp?.response === 'not_attending'
+                        ? 'Not attending'
+                        : 'No response'}
+                  </p>
+                </div>
+                <div className="flex gap-1 flex-shrink-0">
+                  <Button
+                    size="sm"
+                    variant={userRsvp?.response === 'not_attending' ? 'default' : 'outline'}
+                    className={`h-8 px-2 ${userRsvp?.response === 'not_attending' ? 'bg-red-600 hover:bg-red-700' : 'border-red-300 text-red-700 hover:bg-red-50'}`}
+                    disabled={pendingRsvps[userId] || !windowStatus.rsvpOpen}
+                    onClick={() => handleIndividualRsvp(userId, 'not_attending')}
+                    data-testid="rsvp-self-not-attending"
+                  >
+                    {pendingRsvps[userId] ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={userRsvp?.response === 'attending' ? 'default' : 'outline'}
+                    className={`h-8 px-2 ${userRsvp?.response === 'attending' ? 'bg-green-600 hover:bg-green-700' : 'border-green-300 text-green-700 hover:bg-green-50'}`}
+                    disabled={pendingRsvps[userId] || !windowStatus.rsvpOpen}
+                    onClick={() => handleIndividualRsvp(userId, 'attending')}
+                    data-testid="rsvp-self-attending"
+                  >
+                    {pendingRsvps[userId] ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-1 flex-shrink-0">
-                <Button
-                  size="sm"
-                  variant={userRsvp?.response === 'not_attending' ? 'default' : 'outline'}
-                  className={`h-8 px-2 ${userRsvp?.response === 'not_attending' ? 'bg-red-600 hover:bg-red-700' : 'border-red-300 text-red-700 hover:bg-red-50'}`}
-                  disabled={pendingRsvps[userId] || !windowStatus.rsvpOpen}
-                  onClick={() => handleIndividualRsvp(userId, 'not_attending')}
-                  data-testid="rsvp-self-not-attending"
-                >
-                  {pendingRsvps[userId] ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
-                </Button>
-                <Button
-                  size="sm"
-                  variant={userRsvp?.response === 'attending' ? 'default' : 'outline'}
-                  className={`h-8 px-2 ${userRsvp?.response === 'attending' ? 'bg-green-600 hover:bg-green-700' : 'border-green-300 text-green-700 hover:bg-green-50'}`}
-                  disabled={pendingRsvps[userId] || !windowStatus.rsvpOpen}
-                  onClick={() => handleIndividualRsvp(userId, 'attending')}
-                  data-testid="rsvp-self-attending"
-                >
-                  {pendingRsvps[userId] ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-                </Button>
-              </div>
-            </div>
+            )}
             
             {/* Linked players */}
             {linkedPlayers.map(player => {

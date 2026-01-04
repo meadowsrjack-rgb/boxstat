@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Medal, ArrowLeft, Filter } from "lucide-react";
+import { Medal, ArrowLeft } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type TierType = "Prospect" | "Starter" | "All-Star" | "Superstar" | "HOF" | "Legacy";
@@ -326,11 +326,7 @@ export default function TrophiesBadgesPage() {
 
         {/* Filters */}
         <Card className="bg-white/5 border-white/10">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Filter className="h-4 w-4" />
-              <span className="font-semibold">Filters</span>
-            </div>
+          <CardContent className="p-6 pt-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="text-sm text-gray-400 mb-2 block">Tier</label>

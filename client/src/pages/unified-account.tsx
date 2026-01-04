@@ -915,22 +915,20 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Get unique teams from all players
-  const playerTeams = players?.reduce((teams: any[], player: any) => {
-    if (player.teamId && player.teamName) {
-      const existing = teams.find(t => t.id === player.teamId);
-      if (!existing) {
-        teams.push({
-          id: player.teamId,
-          name: player.teamName,
-          coachId: player.coachId,
-          coachName: player.coachName || 'Coach',
-          playerName: `${player.firstName} ${player.lastName}`,
-        });
-      }
-    }
-    return teams;
-  }, []) || [];
+  // Fetch team chatrooms from backend (based on children's team memberships with chat enabled)
+  const { data: teamChatrooms = [] } = useQuery<any[]>({
+    queryKey: ["/api/account/team-chatrooms"],
+  });
+
+  // Map to format expected by UI
+  const playerTeams = teamChatrooms.map((chatroom: any) => ({
+    id: chatroom.teamId,
+    name: chatroom.teamName,
+    coachId: chatroom.coachId,
+    coachName: chatroom.coachName || 'Coach',
+    playerName: chatroom.playerNames?.join(', ') || '',
+    chatMode: chatroom.chatMode,
+  }));
 
   // Fetch team messages
   const { data: teamMessages = [] } = useQuery<any[]>({

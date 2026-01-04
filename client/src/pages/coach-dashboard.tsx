@@ -1028,9 +1028,13 @@ function RosterTab({
         )}
       </div>
 
-      {/* Team Chat */}
+      {/* Team Chat - visible to coaches and parents */}
       <div>
-        <h4 className="font-semibold text-gray-900 mb-2">Team Chat</h4>
+        <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+          <Users className="h-4 w-4 text-blue-600" />
+          Team Chat
+        </h4>
+        <p className="text-xs text-gray-500 mb-2">Chat with parents and team members</p>
         <TeamChat teamId={selectedTeamId} currentProfileId={currentUser?.id} />
       </div>
 

@@ -2535,6 +2535,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(playersWithSubscriptions);
   });
   
+  // Get parent's team chatrooms (based on children's team memberships)
+  app.get('/api/account/team-chatrooms', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.user;
+      const user = await storage.getUser(id);
+      
+      if (!user) {
+        return res.status(403).json({ message: "User not found" });
+      }
+      
+      // Get all players linked to this user (mirrors /api/account/players logic)
+      // Check for linked players regardless of role - parents can be 'parent', 'account_holder', or 'admin'
+      const allUsers = await storage.getUsersByOrganization(user.organizationId);
+      let linkedPlayers: any[] = [];
+      
+      // First, try to find linked players (for parents/admins)
+      linkedPlayers = allUsers.filter(u => 
+        (u.accountHolderId === id || u.parentId === id) && u.role === "player"
+      );
+      
+      // If no linked players and user is a player themselves, include self
+      if (linkedPlayers.length === 0 && user.role === "player") {
+        linkedPlayers = [user];
+      }
+      
+      if (linkedPlayers.length === 0) {
+        return res.json([]);
+      }
+      
+      // Get all team memberships for linked players
+      const teamChatroomsMap = new Map<number, any>();
+      const allTeams = await storage.getTeamsByOrganization(user.organizationId);
+      const allPrograms = await storage.getProductsByOrganization(user.organizationId);
+      
+      for (const player of linkedPlayers) {
+        const memberships = await storage.getTeamMembershipsByProfile(player.id);
+        const activeMemberships = memberships.filter((m: any) => m.status === 'active');
+        
+        for (const membership of activeMemberships) {
+          const team = allTeams.find((t: any) => t.id === membership.teamId);
+          if (!team || !team.active) continue;
+          
+          // Check if the team's program has chat enabled
+          const program = allPrograms.find((p: any) => String(p.id) === String(team.programId));
+          const chatMode = program?.chatMode || 'two_way'; // Default to enabled if not specified
+          
+          if (chatMode === 'disabled') continue;
+          
+          // Add to map if not already present
+          if (!teamChatroomsMap.has(team.id)) {
+            let coachName = 'Coach';
+            if (team.coachId) {
+              const coach = await storage.getUser(team.coachId);
+              if (coach) {
+                coachName = `${coach.firstName} ${coach.lastName}`;
+              }
+            }
+            
+            teamChatroomsMap.set(team.id, {
+              teamId: team.id,
+              teamName: team.name,
+              coachId: team.coachId,
+              coachName,
+              chatMode,
+              playerNames: [],
+            });
+          }
+          
+          // Add player name to list
+          const chatroom = teamChatroomsMap.get(team.id);
+          const playerName = `${player.firstName} ${player.lastName}`;
+          if (!chatroom.playerNames.includes(playerName)) {
+            chatroom.playerNames.push(playerName);
+          }
+        }
+      }
+      
+      res.json(Array.from(teamChatroomsMap.values()));
+    } catch (error: any) {
+      console.error('Error fetching team chatrooms:', error);
+      res.status(500).json({ error: 'Failed to fetch team chatrooms' });
+    }
+  });
+  
   // Add player to account (for parents and admins adding players)
   app.post('/api/account/players', requireAuth, async (req: any, res) => {
     try {

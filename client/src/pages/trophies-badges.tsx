@@ -266,59 +266,51 @@ export default function TrophiesBadgesPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-legacy">
+          <Card className="border-white/10 opacity-50 bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500" data-testid="card-stat-legacy">
             <CardContent className="p-3">
               <div className="text-center">
-                <div className="h-5 w-5 mx-auto mb-1 rounded-full bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 flex items-center justify-center">
-                  <Medal className="h-3 w-3 text-white" />
-                </div>
                 <p className="text-xl font-bold text-white">{stats.legacy}</p>
-                <p className="text-xs text-gray-400">Legacy</p>
+                <p className="text-xs text-white/80">Legacy</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-hof">
+          <Card className="border-white/10 opacity-50 bg-yellow-500" data-testid="card-stat-hof">
             <CardContent className="p-3">
               <div className="text-center">
-                <Medal className="h-5 w-5 text-yellow-500 mx-auto mb-1" />
                 <p className="text-xl font-bold text-white">{stats.hof}</p>
-                <p className="text-xs text-gray-400">HOF</p>
+                <p className="text-xs text-white/80">HOF</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-superstar">
+          <Card className="border-white/10 opacity-50 bg-purple-500" data-testid="card-stat-superstar">
             <CardContent className="p-3">
               <div className="text-center">
-                <Medal className="h-5 w-5 text-purple-500 mx-auto mb-1" />
                 <p className="text-xl font-bold text-white">{stats.superstar}</p>
-                <p className="text-xs text-gray-400">Superstar</p>
+                <p className="text-xs text-white/80">Superstar</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-allstar">
+          <Card className="border-white/10 opacity-50 bg-blue-500" data-testid="card-stat-allstar">
             <CardContent className="p-3">
               <div className="text-center">
-                <Medal className="h-5 w-5 text-blue-500 mx-auto mb-1" />
                 <p className="text-xl font-bold text-white">{stats.allStar}</p>
-                <p className="text-xs text-gray-400">All-Star</p>
+                <p className="text-xs text-white/80">All-Star</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-starter">
+          <Card className="border-white/10 opacity-50 bg-green-500" data-testid="card-stat-starter">
             <CardContent className="p-3">
               <div className="text-center">
-                <Medal className="h-5 w-5 text-green-500 mx-auto mb-1" />
                 <p className="text-xl font-bold text-white">{stats.starter}</p>
-                <p className="text-xs text-gray-400">Starter</p>
+                <p className="text-xs text-white/80">Starter</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-prospect">
+          <Card className="border-white/10 opacity-50 bg-gray-500" data-testid="card-stat-prospect">
             <CardContent className="p-3">
               <div className="text-center">
-                <Medal className="h-5 w-5 text-gray-500 mx-auto mb-1" />
                 <p className="text-xl font-bold text-white">{stats.prospect}</p>
-                <p className="text-xs text-gray-400">Prospect</p>
+                <p className="text-xs text-white/80">Prospect</p>
               </div>
             </CardContent>
           </Card>

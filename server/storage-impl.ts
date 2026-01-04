@@ -5138,7 +5138,7 @@ class DatabaseStorage implements IStorage {
       medicalInfo: dbUser.medicalInfo,
       allergies: dbUser.allergies,
       gender: undefined,
-      accountHolderId: dbUser.parentId,
+      accountHolderId: dbUser.accountHolderId,
       parentId: dbUser.parentId,
       guardianId: dbUser.guardianId,
       packageSelected: undefined,

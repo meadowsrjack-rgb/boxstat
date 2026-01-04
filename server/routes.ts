@@ -2573,7 +2573,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const activeMemberships = memberships.filter((m: any) => m.status === 'active');
         
         for (const membership of activeMemberships) {
-          const team = allTeams.find((t: any) => t.id === membership.teamId);
+          const team = allTeams.find((t: any) => String(t.id) === String(membership.teamId));
           if (!team || !team.active) continue;
           
           // Check if the team's program has chat enabled

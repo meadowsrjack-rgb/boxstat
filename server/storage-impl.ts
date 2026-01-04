@@ -3240,6 +3240,7 @@ class DatabaseStorage implements IStorage {
         teamId: String(m.teamId),
         teamName: m.teamName,
         role: m.role,
+        status: m.status,
         coachId: m.coachId,
         coachName,
       };

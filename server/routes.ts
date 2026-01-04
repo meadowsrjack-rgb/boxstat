@@ -2541,34 +2541,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.user;
       const user = await storage.getUser(id);
       
-      console.log('🔍 CHATROOMS DEBUG - User ID:', id, 'Role:', user?.role);
-      
       if (!user) {
         return res.status(403).json({ message: "User not found" });
       }
       
       // Get all players linked to this user (mirrors /api/account/players logic)
-      // Check for linked players regardless of role - parents can be 'parent', 'account_holder', or 'admin'
       const allUsers = await storage.getUsersByOrganization(user.organizationId);
-      console.log('🔍 CHATROOMS DEBUG - Total users in org:', allUsers.length);
-      
-      // Debug: show all players and their parent linkage
-      const players = allUsers.filter(u => u.role === 'player');
-      console.log('🔍 CHATROOMS DEBUG - Players found:', players.map(p => ({
-        id: p.id,
-        name: `${p.firstName} ${p.lastName}`,
-        parentId: p.parentId,
-        accountHolderId: p.accountHolderId
-      })));
-      
       let linkedPlayers: any[] = [];
       
-      // First, try to find linked players (for parents/admins)
+      // Find linked players (for parents/admins)
       linkedPlayers = allUsers.filter(u => 
         (u.accountHolderId === id || u.parentId === id) && u.role === "player"
       );
-      
-      console.log('🔍 CHATROOMS DEBUG - Linked players by accountHolderId or parentId:', linkedPlayers.length);
       
       // If no linked players and user is a player themselves, include self
       if (linkedPlayers.length === 0 && user.role === "player") {
@@ -2576,7 +2560,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (linkedPlayers.length === 0) {
-        console.log('🔍 CHATROOMS DEBUG - No linked players found, returning empty');
         return res.json([]);
       }
       
@@ -2585,12 +2568,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allTeams = await storage.getTeamsByOrganization(user.organizationId);
       const allPrograms = await storage.getProgramsByOrganization(user.organizationId);
       
-      console.log('🔍 CHATROOMS DEBUG - Teams:', allTeams.length, 'Programs:', allPrograms.length);
-      
       for (const player of linkedPlayers) {
         const memberships = await storage.getTeamMembershipsByProfile(player.id);
         const activeMemberships = memberships.filter((m: any) => m.status === 'active');
-        console.log('🔍 CHATROOMS DEBUG - Player', player.id, 'memberships:', memberships.length, 'active:', activeMemberships.length);
         
         for (const membership of activeMemberships) {
           const team = allTeams.find((t: any) => t.id === membership.teamId);

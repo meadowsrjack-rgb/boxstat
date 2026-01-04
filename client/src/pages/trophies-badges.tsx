@@ -417,7 +417,7 @@ export default function TrophiesBadgesPage() {
               <Card className="bg-white/5 border-white/10">
                 <CardContent className="pt-12 pb-12 text-center">
                   <Medal className="h-16 w-16 mx-auto mb-4 text-gray-500" />
-                  <h3 className="text-xl font-semibold mb-2" data-testid="text-empty-state">
+                  <h3 className="text-xl font-semibold mb-2 text-[#9ca3af]" data-testid="text-empty-state">
                     No Awards Yet
                   </h3>
                   <p className="text-gray-400" data-testid="text-empty-message">

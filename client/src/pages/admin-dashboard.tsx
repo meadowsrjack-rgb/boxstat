@@ -10745,7 +10745,7 @@ function CRMTab({ organization, users, teams }: any) {
                                 <div key={msg.id} className="bg-gray-100 rounded-lg p-3 group relative">
                                   <div className="flex justify-between items-start">
                                     <div className="font-medium text-sm">
-                                      {msg.senderName || 'Unknown'}
+                                      {msg.sender ? `${msg.sender.firstName} ${msg.sender.lastName}` : 'Unknown'}
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <span className="text-xs text-gray-500">

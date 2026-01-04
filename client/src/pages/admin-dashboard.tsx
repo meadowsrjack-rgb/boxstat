@@ -4789,6 +4789,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     countMode: z.enum(["total", "streak"]).optional(),
     threshold: z.number().optional(),
     referenceId: z.string().optional(),
+    targetTier: z.string().optional(), // For tier-based collection meta badges
     timeUnit: z.enum(["years", "months", "days"]).optional(),
     // Program/Team scope
     programIds: z.array(z.string()).optional(),
@@ -4817,6 +4818,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       countMode: undefined,
       threshold: undefined,
       referenceId: undefined,
+      targetTier: undefined,
       timeUnit: undefined,
       programIds: [] as string[],
       teamIds: [] as number[],
@@ -5606,29 +5608,63 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                     <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
                       <FormField
                         control={form.control}
-                        name="referenceId"
+                        name="targetTier"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Target Award</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormLabel>Target Tier (Optional)</FormLabel>
+                            <Select onValueChange={(value) => {
+                              field.onChange(value === "none" ? undefined : value);
+                              if (value !== "none") {
+                                form.setValue("referenceId", undefined);
+                              }
+                            }} value={field.value || "none"}>
                               <FormControl>
-                                <SelectTrigger data-testid="select-reference-award">
-                                  <SelectValue placeholder="Select award to count..." />
+                                <SelectTrigger data-testid="select-target-tier">
+                                  <SelectValue placeholder="Select tier to count..." />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {awardDefinitions
-                                  .filter((a: any) => a.active && a.triggerCategory !== 'system')
-                                  .map((a: any) => (
-                                    <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>
-                                  ))}
+                                <SelectItem value="none">-- Select a specific award instead --</SelectItem>
+                                <SelectItem value="Legacy">Legacy</SelectItem>
+                                <SelectItem value="HOF">HOF</SelectItem>
+                                <SelectItem value="Superstar">Superstar</SelectItem>
+                                <SelectItem value="All-Star">All-Star</SelectItem>
+                                <SelectItem value="Starter">Starter</SelectItem>
+                                <SelectItem value="Prospect">Prospect</SelectItem>
                               </SelectContent>
                             </Select>
-                            <FormDescription>Which award needs to be collected multiple times?</FormDescription>
+                            <FormDescription>Award this when user collects X awards of this tier</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
+                      {!form.watch("targetTier") && (
+                        <FormField
+                          control={form.control}
+                          name="referenceId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Target Award</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || ""}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-reference-award">
+                                    <SelectValue placeholder="Select award to count..." />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {awardDefinitions
+                                    .filter((a: any) => a.active && a.triggerCategory !== 'system')
+                                    .map((a: any) => (
+                                      <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>Which specific award needs to be collected multiple times?</FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
                       <FormField
                         control={form.control}
                         name="threshold"
@@ -5639,13 +5675,13 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                               <Input
                                 {...field}
                                 type="number"
-                                placeholder="e.g., 10"
+                                placeholder="e.g., 5"
                                 onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                                 value={field.value || ""}
                                 data-testid="input-system-threshold"
                               />
                             </FormControl>
-                            <FormDescription>How many of that award are needed?</FormDescription>
+                            <FormDescription>How many {form.watch("targetTier") ? `${form.watch("targetTier")} tier awards` : "of that award"} are needed?</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}

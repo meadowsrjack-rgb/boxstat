@@ -700,6 +700,7 @@ export const awardDefinitions = pgTable("award_definitions", {
   countMode: text("count_mode"), // total, streak (for checkin)
   threshold: integer(), // number required (e.g., 50 checkins, 5 years)
   referenceId: text("reference_id"), // for system (award ID to count) or store (product SKU)
+  targetTier: text("target_tier"), // for system: tier name to count (Legacy, HOF, Superstar, etc.) - alternative to referenceId
   timeUnit: text("time_unit"), // years, months, days (for time triggers)
   
   // Program/Team scope filtering (for checkin awards)
@@ -1421,6 +1422,7 @@ export interface AwardDefinition {
   countMode?: CountMode;
   threshold?: number;
   referenceId?: string;
+  targetTier?: string; // For collection meta badges: tier to count (Legacy, HOF, Superstar, etc.)
   timeUnit?: TimeUnit;
   
   // Legacy fields

@@ -258,7 +258,7 @@ export default function EventDetailModal({
   }, [currentUser]);
 
   // For parents: fetch linked players
-  const { data: linkedPlayers = [] } = useQuery<UserType[]>({
+  const { data: allLinkedPlayers = [] } = useQuery<UserType[]>({
     queryKey: ['/api/parent/linked-players'],
     queryFn: async () => {
       const token = localStorage.getItem('authToken');
@@ -273,6 +273,14 @@ export default function EventDetailModal({
     },
     enabled: open && isParent,
   });
+
+  // Filter linked players to only show those invited to this event
+  // A player is invited if they appear in the event's participants list (users array)
+  const linkedPlayers = useMemo(() => {
+    if (!users.length || !allLinkedPlayers.length) return [];
+    const invitedPlayerIds = new Set(users.map(u => u.id));
+    return allLinkedPlayers.filter(player => invitedPlayerIds.has(player.id));
+  }, [users, allLinkedPlayers]);
 
   const rsvpMutation = useMutation({
     mutationFn: (response: 'attending' | 'not_attending') => {

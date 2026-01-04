@@ -3581,6 +3581,7 @@ class DatabaseStorage implements IStorage {
       countMode: data.countMode ?? null,
       threshold: data.threshold ?? null,
       referenceId: data.referenceId ?? null,
+      targetTier: data.targetTier ?? null, // For tier-based collection meta badges
       timeUnit: data.timeUnit ?? null,
       // Program/Team scope filtering
       programIds: data.programIds ?? null,
@@ -3614,6 +3615,7 @@ class DatabaseStorage implements IStorage {
       countMode: data.countMode,
       threshold: data.threshold,
       referenceId: data.referenceId,
+      targetTier: data.targetTier, // For tier-based collection meta badges
       timeUnit: data.timeUnit,
       // Program/Team scope filtering
       programIds: data.programIds,

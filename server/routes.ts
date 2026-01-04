@@ -9182,6 +9182,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         organizationId,
       });
+      
+      // Enforce XOR: for system trigger, require exactly one of targetTier or referenceId
+      if (awardDefinitionData.triggerCategory === 'system') {
+        const hasTier = !!awardDefinitionData.targetTier;
+        const hasRef = !!awardDefinitionData.referenceId;
+        if (!hasTier && !hasRef) {
+          return res.status(400).json({ error: 'Collection awards require either a target tier or a specific award' });
+        }
+        if (hasTier && hasRef) {
+          return res.status(400).json({ error: 'Collection awards cannot have both a target tier and a specific award' });
+        }
+      }
+      
       const awardDefinition = await storage.createAwardDefinition(awardDefinitionData);
       res.status(201).json(awardDefinition);
     } catch (error: any) {
@@ -9209,8 +9222,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid award definition ID' });
       }
       
-      // Validate request body
-      const awardDefinitionData = insertAwardDefinitionSchema.partial().parse(req.body);
+      // Get existing record to merge with update for validation
+      const existing = await storage.getAwardDefinition(id);
+      if (!existing) {
+        return res.status(404).json({ error: 'Award definition not found' });
+      }
+      
+      // Pre-process: normalize null/"none"/empty values - track which fields to clear
+      const preprocessed = { ...req.body };
+      const clearTargetTier = preprocessed.targetTier === null || preprocessed.targetTier === 'none' || preprocessed.targetTier === '';
+      const clearReferenceId = preprocessed.referenceId === null || preprocessed.referenceId === 'none' || preprocessed.referenceId === '';
+      
+      // Remove clearing fields before Zod parsing (Zod partial doesn't accept undefined values for present keys)
+      if (clearTargetTier) delete preprocessed.targetTier;
+      if (clearReferenceId) delete preprocessed.referenceId;
+      
+      // Validate request body after normalization
+      const awardDefinitionData = insertAwardDefinitionSchema.partial().parse(preprocessed);
+      
+      // Re-add cleared fields as null for database update
+      if (clearTargetTier) (awardDefinitionData as any).targetTier = null;
+      if (clearReferenceId) (awardDefinitionData as any).referenceId = null;
+      
+      // Merge existing values with update for XOR validation
+      // Check if fields were in original req.body or explicitly cleared
+      const merged = {
+        triggerCategory: awardDefinitionData.triggerCategory ?? existing.triggerCategory,
+        targetTier: ('targetTier' in req.body || clearTargetTier) ? (clearTargetTier ? null : awardDefinitionData.targetTier) : existing.targetTier,
+        referenceId: ('referenceId' in req.body || clearReferenceId) ? (clearReferenceId ? null : awardDefinitionData.referenceId) : existing.referenceId,
+      };
+      
+      // Enforce XOR: for system trigger, require exactly one of targetTier or referenceId
+      if (merged.triggerCategory === 'system') {
+        const hasTier = !!merged.targetTier;
+        const hasRef = !!merged.referenceId;
+        if (!hasTier && !hasRef) {
+          return res.status(400).json({ error: 'Collection awards require either a target tier or a specific award' });
+        }
+        if (hasTier && hasRef) {
+          return res.status(400).json({ error: 'Collection awards cannot have both a target tier and a specific award' });
+        }
+      }
       
       const updated = await storage.updateAwardDefinition(id, awardDefinitionData);
       if (!updated) {

@@ -296,19 +296,19 @@ async function evaluateSystemAward(
 ): Promise<boolean> {
   const threshold = award.threshold || 1;
   
-  // Tier-based collection: count all awards of a specific tier
+  // Tier-based collection: count distinct award definitions of a specific tier earned by user
   if (award.targetTier) {
     const tierAwards = await db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: sql<number>`count(DISTINCT ${awardDefinitions.id})` })
       .from(userAwards)
       .innerJoin(awardDefinitions, eq(userAwards.awardId, awardDefinitions.id))
       .where(and(
         eq(userAwards.userId, userId),
         eq(awardDefinitions.tier, award.targetTier),
-        sql`${awardDefinitions.id} != ${award.id}` // Don't count this meta award itself
+        sql`${awardDefinitions.id} <> ${award.id}` // Don't count this meta award itself
       ));
     
-    const count = tierAwards[0]?.count || 0;
+    const count = Number(tierAwards[0]?.count) || 0;
     return count >= threshold;
   }
   

@@ -4788,12 +4788,23 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     eventFilter: z.enum(["game", "practice", "skills", "fnh", "any"]).optional(),
     countMode: z.enum(["total", "streak"]).optional(),
     threshold: z.number().optional(),
-    referenceId: z.string().optional(),
-    targetTier: z.string().optional(), // For tier-based collection meta badges
+    referenceId: z.string().nullable().optional(), // Accept null for clearing
+    targetTier: z.string().nullable().optional(), // For tier-based collection meta badges, accept null for clearing
     timeUnit: z.enum(["years", "months", "days"]).optional(),
     // Program/Team scope
     programIds: z.array(z.string()).optional(),
     teamIds: z.array(z.number()).optional(),
+  }).refine((data) => {
+    // For system trigger category, require exactly one of targetTier or referenceId (not both, not neither)
+    if (data.triggerCategory === "system") {
+      const hasTier = !!data.targetTier;
+      const hasRef = !!data.referenceId;
+      return (hasTier || hasRef) && !(hasTier && hasRef);
+    }
+    return true;
+  }, {
+    message: "Collection awards require exactly one target: either a tier OR a specific award (not both)",
+    path: ["referenceId"]
   });
 
   // Fetch programs and teams for check-in award scope
@@ -5213,10 +5224,17 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit((data) => {
+                    // For system trigger category, explicitly send null for cleared fields
+                    const payload = { ...data } as any;
+                    if (data.triggerCategory === 'system') {
+                      // Send null instead of undefined to signal "clear this field"
+                      if (!data.targetTier) payload.targetTier = null;
+                      if (!data.referenceId) payload.referenceId = null;
+                    }
                     if (editingAward) {
-                      updateAward.mutate({ id: editingAward.id, ...data });
+                      updateAward.mutate({ id: editingAward.id, ...payload });
                     } else {
-                      createAward.mutate(data);
+                      createAward.mutate(payload);
                     }
                   })}
                   className="space-y-4"
@@ -5613,8 +5631,9 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                           <FormItem>
                             <FormLabel>Target Tier (Optional)</FormLabel>
                             <Select onValueChange={(value) => {
-                              field.onChange(value === "none" ? undefined : value);
-                              if (value !== "none") {
+                              const newValue = value === "none" ? undefined : value;
+                              field.onChange(newValue);
+                              if (newValue) {
                                 form.setValue("referenceId", undefined);
                               }
                             }} value={field.value || "none"}>
@@ -5633,7 +5652,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                                 <SelectItem value="Prospect">Prospect</SelectItem>
                               </SelectContent>
                             </Select>
-                            <FormDescription>Award this when user collects X awards of this tier</FormDescription>
+                            <FormDescription>Award this when user collects X distinct awards of this tier</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -5645,13 +5664,16 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Target Award</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <Select onValueChange={(value) => {
+                                field.onChange(value === "none" ? undefined : value);
+                              }} value={field.value || "none"}>
                                 <FormControl>
                                   <SelectTrigger data-testid="select-reference-award">
                                     <SelectValue placeholder="Select award to count..." />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
+                                  <SelectItem value="none">-- Select an award --</SelectItem>
                                   {awardDefinitions
                                     .filter((a: any) => a.active && a.triggerCategory !== 'system')
                                     .map((a: any) => (

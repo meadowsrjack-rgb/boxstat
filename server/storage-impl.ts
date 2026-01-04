@@ -4037,6 +4037,10 @@ class DatabaseStorage implements IStorage {
       requireConcussionWaiver: program.requireConcussionWaiver ?? false,
       requireClubAgreement: program.requireClubAgreement ?? false,
       requiredWaivers: program.requiredWaivers ?? [],
+      // Multi-tier pricing fields
+      comparePrice: program.comparePrice,
+      savingsNote: program.savingsNote,
+      packageGroup: program.packageGroup,
       createdAt: now,
     };
 
@@ -4090,6 +4094,10 @@ class DatabaseStorage implements IStorage {
       requireConcussionWaiver: updates.requireConcussionWaiver,
       requireClubAgreement: updates.requireClubAgreement,
       requiredWaivers: updates.requiredWaivers,
+      // Multi-tier pricing fields
+      comparePrice: updates.comparePrice,
+      savingsNote: updates.savingsNote,
+      packageGroup: updates.packageGroup,
     };
 
     // Remove undefined values
@@ -5487,6 +5495,10 @@ class DatabaseStorage implements IStorage {
       requireConcussionWaiver: dbProgram.requireConcussionWaiver ?? false,
       requireClubAgreement: dbProgram.requireClubAgreement ?? false,
       requiredWaivers: dbProgram.requiredWaivers || [],
+      // Multi-tier pricing fields
+      comparePrice: dbProgram.comparePrice,
+      savingsNote: dbProgram.savingsNote,
+      packageGroup: dbProgram.packageGroup,
     };
   }
   

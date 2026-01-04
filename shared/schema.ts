@@ -405,6 +405,10 @@ export const products = pgTable("products", {
   inventorySizes: text("inventory_sizes").array().default(sql`ARRAY[]::text[]`), // Available sizes: ["S", "M", "L", "XL"]
   inventoryCount: integer("inventory_count"), // Current stock count
   shippingRequired: boolean("shipping_required").default(false), // Does this item need shipping?
+  // Multi-tier pricing support
+  comparePrice: integer("compare_price"), // For multi-month packages: equivalent monthly price to show value (in cents)
+  savingsNote: varchar("savings_note"), // Display text like "Save $114!" for bundle discounts
+  packageGroup: varchar("package_group"), // Groups related packages together (e.g., "youth_club" for all Youth Club tiers)
 });
 
 // Program Suggested Add-ons table (many-to-many relationship between programs and store products)
@@ -1615,6 +1619,10 @@ export interface Product {
   inventorySizes?: string[]; // Available sizes: ["S", "M", "L", "XL"]
   inventoryCount?: number; // Current stock count
   shippingRequired?: boolean; // Does this item need shipping?
+  // Multi-tier pricing support
+  comparePrice?: number; // For multi-month packages: equivalent monthly price to show value (in cents)
+  savingsNote?: string; // Display text like "Save $114!" for bundle discounts
+  packageGroup?: string; // Groups related packages together (e.g., "youth_club" for all Youth Club tiers)
 }
 
 export const insertProductSchema = z.object({
@@ -1659,6 +1667,10 @@ export const insertProductSchema = z.object({
   inventorySizes: z.array(z.string()).default([]),
   inventoryCount: z.number().optional(),
   shippingRequired: z.boolean().default(false),
+  // Multi-tier pricing support
+  comparePrice: z.number().optional(), // For multi-month packages: equivalent monthly price (in cents)
+  savingsNote: z.string().optional(), // Display text like "Save $114!"
+  packageGroup: z.string().optional(), // Groups related packages together
 });
 
 export type InsertProduct = z.infer<typeof insertProductSchema>;

@@ -5245,12 +5245,12 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Prospect">Prospect</SelectItem>
-                            <SelectItem value="Starter">Starter</SelectItem>
-                            <SelectItem value="All-Star">All-Star</SelectItem>
-                            <SelectItem value="Superstar">Superstar</SelectItem>
-                            <SelectItem value="HOF">HOF</SelectItem>
                             <SelectItem value="Legacy">Legacy</SelectItem>
+                            <SelectItem value="HOF">HOF</SelectItem>
+                            <SelectItem value="Superstar">Superstar</SelectItem>
+                            <SelectItem value="All-Star">All-Star</SelectItem>
+                            <SelectItem value="Starter">Starter</SelectItem>
+                            <SelectItem value="Prospect">Prospect</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />

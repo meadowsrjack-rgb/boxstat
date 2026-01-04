@@ -317,60 +317,76 @@ export default function TrophiesBadgesPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-2">
-          <Select value={selectedTier} onValueChange={(value) => setSelectedTier(value as any)}>
-            <SelectTrigger className="w-28 h-8 text-xs bg-white/10 border-white/20" data-testid="select-tier">
-              <SelectValue placeholder="Tier" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Tiers</SelectItem>
-              <SelectItem value="Legacy">Legacy</SelectItem>
-              <SelectItem value="HOF">HOF</SelectItem>
-              <SelectItem value="Superstar">Superstar</SelectItem>
-              <SelectItem value="All-Star">All-Star</SelectItem>
-              <SelectItem value="Starter">Starter</SelectItem>
-              <SelectItem value="Prospect">Prospect</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={selectedTrigger} onValueChange={(value) => setSelectedTrigger(value as any)}>
-            <SelectTrigger className="w-28 h-8 text-xs bg-white/10 border-white/20" data-testid="select-trigger">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="checkin">Check-in</SelectItem>
-              <SelectItem value="system">Collection</SelectItem>
-              <SelectItem value="time">Time</SelectItem>
-              <SelectItem value="store">Store</SelectItem>
-              <SelectItem value="manual">Manual</SelectItem>
-            </SelectContent>
-          </Select>
-          {programMemberships.length > 0 && (
-            <Select value={selectedProgram} onValueChange={(value) => setSelectedProgram(value)}>
-              <SelectTrigger className="w-28 h-8 text-xs bg-white/10 border-white/20" data-testid="select-program">
-                <SelectValue placeholder="Program" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Programs</SelectItem>
-                {programMemberships.map((pm) => (
-                  <SelectItem key={pm.programId} value={pm.programId}>
-                    {pm.programName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
-            <SelectTrigger className="w-28 h-8 text-xs bg-white/10 border-white/20" data-testid="select-sort">
-              <SelectValue placeholder="Sort" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">Newest</SelectItem>
-              <SelectItem value="oldest">Oldest</SelectItem>
-              <SelectItem value="tier">By Tier</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <Card className="bg-white/5 border-white/10">
+          <CardContent className="p-6 pt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Tier</label>
+                <Select value={selectedTier} onValueChange={(value) => setSelectedTier(value as any)}>
+                  <SelectTrigger className="bg-white/10 border-white/20" data-testid="select-tier">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Tiers</SelectItem>
+                    <SelectItem value="Legacy">Legacy</SelectItem>
+                    <SelectItem value="HOF">Hall of Fame</SelectItem>
+                    <SelectItem value="Superstar">Superstar</SelectItem>
+                    <SelectItem value="All-Star">All-Star</SelectItem>
+                    <SelectItem value="Starter">Starter</SelectItem>
+                    <SelectItem value="Prospect">Prospect</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Category</label>
+                <Select value={selectedTrigger} onValueChange={(value) => setSelectedTrigger(value as any)}>
+                  <SelectTrigger className="bg-white/10 border-white/20" data-testid="select-trigger">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="checkin">Check-in</SelectItem>
+                    <SelectItem value="system">Collection</SelectItem>
+                    <SelectItem value="time">Time</SelectItem>
+                    <SelectItem value="store">Store</SelectItem>
+                    <SelectItem value="manual">Manual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {programMemberships.length > 0 && (
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Program</label>
+                  <Select value={selectedProgram} onValueChange={(value) => setSelectedProgram(value)}>
+                    <SelectTrigger className="bg-white/10 border-white/20" data-testid="select-program">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Programs</SelectItem>
+                      {programMemberships.map((pm) => (
+                        <SelectItem key={pm.programId} value={pm.programId}>
+                          {pm.programName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Sort By</label>
+                <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
+                  <SelectTrigger className="bg-white/10 border-white/20" data-testid="select-sort">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Newest First</SelectItem>
+                    <SelectItem value="oldest">Oldest First</SelectItem>
+                    <SelectItem value="tier">Tier (High to Low)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Awards Display */}
         <Tabs defaultValue="earned" className="w-full">

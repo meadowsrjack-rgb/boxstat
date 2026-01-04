@@ -4378,7 +4378,9 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
               </TableRow>
             </TableHeader>
             <TableBody>
-              {events.map((event: any) => {
+              {events
+                .sort((a: any, b: any) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+                .map((event: any) => {
                 // Look up team if event is team-specific
                 const eventTeam = event.teamId ? teams.find((t: any) => t.id === parseInt(event.teamId)) : null;
                 const teamDisplay = eventTeam 

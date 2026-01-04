@@ -3421,6 +3421,9 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [selectedEventForDetails, setSelectedEventForDetails] = useState<any>(null);
   const [eventWindows, setEventWindows] = useState<Partial<EventWindow>[]>([]);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState<'daily' | 'weekly' | 'biweekly' | 'monthly'>('weekly');
+  const [recurrenceCount, setRecurrenceCount] = useState(4);
   const [editEventWindows, setEditEventWindows] = useState<Partial<EventWindow>[]>([]);
   
   // Multi-select state for event targeting
@@ -3503,31 +3506,72 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
       }
       
       console.log('Event form data before submission:', { type, targetType, assignTo, ...rest });
-      const payload = {
+      const basePayload = {
         ...rest,
         eventType: type,
         organizationId: organization.id,
         assignTo,
         visibility,
       };
-      console.log('Event API payload:', payload);
-      const newEvent = await apiRequest("POST", "/api/events", payload);
+      console.log('Event API payload:', basePayload);
       
-      // Create event windows if configured
-      if (eventWindows.length > 0) {
-        for (const window of eventWindows) {
-          await apiRequest("POST", "/api/event-windows", {
-            ...window,
-            eventId: parseInt(newEvent.id),
+      // Calculate how many events to create based on recurrence
+      const eventsToCreate: any[] = [];
+      const startDate = new Date(rest.startTime);
+      const endDate = new Date(rest.endTime);
+      const duration = endDate.getTime() - startDate.getTime();
+      
+      if (isRecurring && recurrenceCount > 1) {
+        for (let i = 0; i < recurrenceCount; i++) {
+          const newStartDate = new Date(startDate);
+          const newEndDate = new Date(startDate);
+          
+          // Calculate offset based on frequency
+          if (recurrenceFrequency === 'daily') {
+            newStartDate.setDate(startDate.getDate() + i);
+          } else if (recurrenceFrequency === 'weekly') {
+            newStartDate.setDate(startDate.getDate() + (i * 7));
+          } else if (recurrenceFrequency === 'biweekly') {
+            newStartDate.setDate(startDate.getDate() + (i * 14));
+          } else if (recurrenceFrequency === 'monthly') {
+            newStartDate.setMonth(startDate.getMonth() + i);
+          }
+          
+          newEndDate.setTime(newStartDate.getTime() + duration);
+          
+          eventsToCreate.push({
+            ...basePayload,
+            startTime: newStartDate.toISOString(),
+            endTime: newEndDate.toISOString(),
           });
+        }
+      } else {
+        eventsToCreate.push(basePayload);
+      }
+      
+      // Create all events
+      const createdEvents: any[] = [];
+      for (const eventPayload of eventsToCreate) {
+        const newEvent = await apiRequest("POST", "/api/events", eventPayload);
+        createdEvents.push(newEvent);
+        
+        // Create event windows if configured (for each event)
+        if (eventWindows.length > 0) {
+          for (const window of eventWindows) {
+            await apiRequest("POST", "/api/event-windows", {
+              ...window,
+              eventId: parseInt(newEvent.id),
+            });
+          }
         }
       }
       
-      return newEvent;
+      return createdEvents[0];
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      toast({ title: "Event created successfully" });
+      const count = isRecurring ? recurrenceCount : 1;
+      toast({ title: count > 1 ? `${count} events created successfully` : "Event created successfully" });
       setIsDialogOpen(false);
       form.reset();
       setEventWindows([]);
@@ -3536,6 +3580,9 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
       setSelectedDivisions([]);
       setSelectedPrograms([]);
       setSelectedRoles([]);
+      setIsRecurring(false);
+      setRecurrenceFrequency('weekly');
+      setRecurrenceCount(4);
     },
     onError: () => {
       toast({ title: "Failed to create event", variant: "destructive" });
@@ -3880,6 +3927,65 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                       )}
                     />
                   </div>
+                  
+                  {/* Recurring Event Options */}
+                  <div className="border rounded-lg p-4 space-y-3 bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="recurring-toggle"
+                        checked={isRecurring}
+                        onCheckedChange={setIsRecurring}
+                        data-testid="switch-recurring"
+                      />
+                      <Label htmlFor="recurring-toggle" className="font-medium cursor-pointer">
+                        Make this a recurring event
+                      </Label>
+                    </div>
+                    
+                    {isRecurring && (
+                      <div className="grid grid-cols-2 gap-4 pt-2">
+                        <div className="space-y-2">
+                          <Label>Frequency</Label>
+                          <Select
+                            value={recurrenceFrequency}
+                            onValueChange={(value: 'daily' | 'weekly' | 'biweekly' | 'monthly') => setRecurrenceFrequency(value)}
+                          >
+                            <SelectTrigger data-testid="select-recurrence-frequency">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Number of Occurrences</Label>
+                          <Select
+                            value={String(recurrenceCount)}
+                            onValueChange={(value) => setRecurrenceCount(parseInt(value))}
+                          >
+                            <SelectTrigger data-testid="select-recurrence-count">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {[2, 3, 4, 5, 6, 7, 8, 10, 12, 16, 20, 24].map((count) => (
+                                <SelectItem key={count} value={String(count)}>
+                                  {count} events
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <p className="col-span-2 text-xs text-gray-500">
+                          This will create {recurrenceCount} separate events, each {recurrenceFrequency === 'daily' ? '1 day' : recurrenceFrequency === 'weekly' ? '1 week' : recurrenceFrequency === 'biweekly' ? '2 weeks' : '1 month'} apart.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  
                   <FormField
                     control={form.control}
                     name="location"

@@ -10270,6 +10270,9 @@ function CRMTab({ organization, users, teams }: any) {
   const [newNote, setNewNote] = useState("");
   const [replyMessage, setReplyMessage] = useState("");
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
+  const [messagesFilter, setMessagesFilter] = useState<'users' | 'teams'>('users');
+  const [selectedTeamChat, setSelectedTeamChat] = useState<{ teamId: number; channel: 'players' | 'parents'; teamName: string } | null>(null);
+  const [teamChatMessage, setTeamChatMessage] = useState("");
 
   // Fetch CRM leads
   const { data: leads = [], refetch: refetchLeads } = useQuery<any[]>({
@@ -10279,6 +10282,40 @@ function CRMTab({ organization, users, teams }: any) {
   // Fetch contact management messages
   const { data: contactMessages = [], refetch: refetchMessages } = useQuery<any[]>({
     queryKey: ['/api/contact-management'],
+  });
+
+  // Fetch team chat messages for selected team/channel
+  const { data: teamChatMessages = [], refetch: refetchTeamChatMessages } = useQuery<any[]>({
+    queryKey: [`/api/messages/team/${selectedTeamChat?.teamId}?channel=${selectedTeamChat?.channel}`],
+    enabled: !!selectedTeamChat,
+  });
+
+  // Delete message mutation (for admin)
+  const deleteMessageMutation = useMutation({
+    mutationFn: async (messageId: number) => {
+      return apiRequest(`/api/messages/${messageId}`, { method: 'DELETE' });
+    },
+    onSuccess: () => {
+      refetchTeamChatMessages();
+      toast({ title: "Message deleted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete message", variant: "destructive" });
+    },
+  });
+
+  // Send team chat message mutation (for admin)
+  const sendTeamChatMutation = useMutation({
+    mutationFn: async (data: { teamId: number; channel: 'players' | 'parents'; message: string }) => {
+      return apiRequest('/api/messages/team', { method: 'POST', data: { teamId: data.teamId, content: data.message, chatChannel: data.channel } });
+    },
+    onSuccess: () => {
+      refetchTeamChatMessages();
+      setTeamChatMessage("");
+    },
+    onError: () => {
+      toast({ title: "Failed to send message", variant: "destructive" });
+    },
   });
 
   // Mark contact message as read mutation
@@ -10527,96 +10564,236 @@ function CRMTab({ organization, users, teams }: any) {
         {/* Messages Tab */}
         {activeTab === 'messages' && (
           <div className="space-y-4">
-            <h3 className="font-medium">Contact Management Messages</h3>
+            {/* Filter tabs */}
+            <div className="flex gap-2 items-center">
+              <span className="text-sm text-gray-500">Filter:</span>
+              <Button
+                variant={messagesFilter === 'users' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => { setMessagesFilter('users'); setSelectedTeamChat(null); }}
+                data-testid="button-filter-users"
+              >
+                <User className="w-4 h-4 mr-1" />
+                Single Users
+              </Button>
+              <Button
+                variant={messagesFilter === 'teams' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => { setMessagesFilter('teams'); setSelectedConversation(null); }}
+                data-testid="button-filter-teams"
+              >
+                <Users className="w-4 h-4 mr-1" />
+                Team Chats
+              </Button>
+            </div>
             
-            {contactMessages.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <MessageSquare className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                <p>No messages yet. Messages from parents will appear here.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Conversation list */}
-                <div className="border rounded-lg p-4 space-y-2 max-h-96 overflow-y-auto">
-                  {contactMessages.map((msg: any) => (
-                    <div
-                      key={msg.id}
-                      className={`p-3 rounded-lg cursor-pointer hover:bg-gray-50 ${selectedConversation?.id === msg.id ? 'bg-gray-100 border-l-4 border-red-600' : ''}`}
-                      onClick={() => {
-                        setSelectedConversation(msg);
-                        if (!msg.isRead) {
-                          markMessageAsReadMutation.mutate(msg.id);
-                        }
-                      }}
-                      data-testid={`conversation-${msg.id}`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="font-medium text-sm">
-                          {msg.sender?.firstName} {msg.sender?.lastName}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {new Date(msg.createdAt).toLocaleDateString()}
-                        </div>
-                      </div>
-                      <p className="text-sm text-gray-600 truncate">{msg.message}</p>
-                      {!msg.isRead && <Badge variant="default" className="mt-1">New</Badge>}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Conversation detail */}
-                <div className="border rounded-lg p-4">
-                  {selectedConversation ? (
-                    <div className="space-y-4">
-                      <div className="border-b pb-2">
-                        <h4 className="font-medium">
-                          {selectedConversation.sender?.firstName} {selectedConversation.sender?.lastName}
-                        </h4>
-                        <p className="text-xs text-gray-500">{selectedConversation.sender?.email}</p>
-                      </div>
-                      
-                      <div className="space-y-3 max-h-48 overflow-y-auto">
-                        <div className="bg-gray-100 rounded-lg p-3">
-                          <p className="text-sm">{selectedConversation.message}</p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {new Date(selectedConversation.createdAt).toLocaleString()}
-                          </p>
-                        </div>
-                        
-                        {selectedConversation.replies?.map((reply: any) => (
-                          <div key={reply.id} className={`rounded-lg p-3 ${reply.isAdmin ? 'bg-red-50 ml-4' : 'bg-gray-100'}`}>
-                            <p className="text-sm">{reply.message}</p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {reply.isAdmin ? 'Admin' : 'User'} - {new Date(reply.createdAt).toLocaleString()}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="flex gap-2 pt-2 border-t">
-                        <Input
-                          value={replyMessage}
-                          onChange={(e) => setReplyMessage(e.target.value)}
-                          placeholder="Type a reply..."
-                          data-testid="input-reply-message"
-                        />
-                        <Button
-                          onClick={() => replyMessageMutation.mutate({ parentId: selectedConversation.id, message: replyMessage })}
-                          disabled={!replyMessage.trim() || replyMessageMutation.isPending}
-                          data-testid="button-send-reply"
+            {/* Single Users Messages */}
+            {messagesFilter === 'users' && (
+              <>
+                <h3 className="font-medium">Contact Management Messages</h3>
+                
+                {contactMessages.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <MessageSquare className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                    <p>No messages yet. Messages from parents will appear here.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Conversation list */}
+                    <div className="border rounded-lg p-4 space-y-2 max-h-96 overflow-y-auto">
+                      {contactMessages.map((msg: any) => (
+                        <div
+                          key={msg.id}
+                          className={`p-3 rounded-lg cursor-pointer hover:bg-gray-50 ${selectedConversation?.id === msg.id ? 'bg-gray-100 border-l-4 border-red-600' : ''}`}
+                          onClick={() => {
+                            setSelectedConversation(msg);
+                            if (!msg.isRead) {
+                              markMessageAsReadMutation.mutate(msg.id);
+                            }
+                          }}
+                          data-testid={`conversation-${msg.id}`}
                         >
-                          <Send className="w-4 h-4" />
-                        </Button>
-                      </div>
+                          <div className="flex justify-between items-start">
+                            <div className="font-medium text-sm">
+                              {msg.sender?.firstName} {msg.sender?.lastName}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {new Date(msg.createdAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-600 truncate">{msg.message}</p>
+                          {!msg.isRead && <Badge variant="default" className="mt-1">New</Badge>}
+                        </div>
+                      ))}
                     </div>
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                      <p className="text-sm">Select a conversation to view</p>
+
+                    {/* Conversation detail */}
+                    <div className="border rounded-lg p-4">
+                      {selectedConversation ? (
+                        <div className="space-y-4">
+                          <div className="border-b pb-2">
+                            <h4 className="font-medium">
+                              {selectedConversation.sender?.firstName} {selectedConversation.sender?.lastName}
+                            </h4>
+                            <p className="text-xs text-gray-500">{selectedConversation.sender?.email}</p>
+                          </div>
+                          
+                          <div className="space-y-3 max-h-48 overflow-y-auto">
+                            <div className="bg-gray-100 rounded-lg p-3">
+                              <p className="text-sm">{selectedConversation.message}</p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {new Date(selectedConversation.createdAt).toLocaleString()}
+                              </p>
+                            </div>
+                            
+                            {selectedConversation.replies?.map((reply: any) => (
+                              <div key={reply.id} className={`rounded-lg p-3 ${reply.isAdmin ? 'bg-red-50 ml-4' : 'bg-gray-100'}`}>
+                                <p className="text-sm">{reply.message}</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {reply.isAdmin ? 'Admin' : 'User'} - {new Date(reply.createdAt).toLocaleString()}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="flex gap-2 pt-2 border-t">
+                            <Input
+                              value={replyMessage}
+                              onChange={(e) => setReplyMessage(e.target.value)}
+                              placeholder="Type a reply..."
+                              data-testid="input-reply-message"
+                            />
+                            <Button
+                              onClick={() => replyMessageMutation.mutate({ parentId: selectedConversation.id, message: replyMessage })}
+                              disabled={!replyMessage.trim() || replyMessageMutation.isPending}
+                              data-testid="button-send-reply"
+                            >
+                              <Send className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                          <p className="text-sm">Select a conversation to view</p>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Team Chats */}
+            {messagesFilter === 'teams' && (
+              <>
+                <h3 className="font-medium">Team Chat Rooms</h3>
+                
+                {teams.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Users className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                    <p>No teams created yet.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Team/Channel list */}
+                    <div className="border rounded-lg p-4 space-y-2 max-h-96 overflow-y-auto">
+                      {teams.filter((t: any) => t.active).map((team: any) => (
+                        <div key={team.id} className="space-y-1">
+                          <div className="font-medium text-sm px-2 pt-2">{team.name}</div>
+                          <div
+                            className={`p-3 rounded-lg cursor-pointer hover:bg-gray-50 flex items-center gap-2 ${selectedTeamChat?.teamId === team.id && selectedTeamChat?.channel === 'players' ? 'bg-blue-50 border-l-4 border-blue-600' : ''}`}
+                            onClick={() => setSelectedTeamChat({ teamId: team.id, channel: 'players', teamName: team.name })}
+                            data-testid={`team-chat-players-${team.id}`}
+                          >
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700">Players</Badge>
+                            <span className="text-sm text-gray-600">Player Channel</span>
+                          </div>
+                          <div
+                            className={`p-3 rounded-lg cursor-pointer hover:bg-gray-50 flex items-center gap-2 ${selectedTeamChat?.teamId === team.id && selectedTeamChat?.channel === 'parents' ? 'bg-green-50 border-l-4 border-green-600' : ''}`}
+                            onClick={() => setSelectedTeamChat({ teamId: team.id, channel: 'parents', teamName: team.name })}
+                            data-testid={`team-chat-parents-${team.id}`}
+                          >
+                            <Badge variant="outline" className="bg-green-50 text-green-700">Parents</Badge>
+                            <span className="text-sm text-gray-600">Parent Channel</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Team Chat Messages */}
+                    <div className="border rounded-lg p-4">
+                      {selectedTeamChat ? (
+                        <div className="space-y-4">
+                          <div className="border-b pb-2 flex justify-between items-center">
+                            <div>
+                              <h4 className="font-medium">{selectedTeamChat.teamName}</h4>
+                              <Badge variant="outline" className={selectedTeamChat.channel === 'players' ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'}>
+                                {selectedTeamChat.channel === 'players' ? 'Player Channel' : 'Parent Channel'}
+                              </Badge>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-3 max-h-64 overflow-y-auto">
+                            {teamChatMessages.length === 0 ? (
+                              <div className="text-center py-4 text-gray-500 text-sm">
+                                No messages in this channel yet.
+                              </div>
+                            ) : (
+                              teamChatMessages.map((msg: any) => (
+                                <div key={msg.id} className="bg-gray-100 rounded-lg p-3 group relative">
+                                  <div className="flex justify-between items-start">
+                                    <div className="font-medium text-sm">
+                                      {msg.senderName || 'Unknown'}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-gray-500">
+                                        {new Date(msg.createdAt).toLocaleString()}
+                                      </span>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                        onClick={() => deleteMessageMutation.mutate(msg.id)}
+                                        disabled={deleteMessageMutation.isPending}
+                                        data-testid={`button-delete-message-${msg.id}`}
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  <p className="text-sm mt-1">{msg.content}</p>
+                                </div>
+                              ))
+                            )}
+                          </div>
+
+                          <div className="flex gap-2 pt-2 border-t">
+                            <Input
+                              value={teamChatMessage}
+                              onChange={(e) => setTeamChatMessage(e.target.value)}
+                              placeholder="Send a message as admin..."
+                              data-testid="input-team-chat-message"
+                            />
+                            <Button
+                              onClick={() => sendTeamChatMutation.mutate({ teamId: selectedTeamChat.teamId, channel: selectedTeamChat.channel, message: teamChatMessage })}
+                              disabled={!teamChatMessage.trim() || sendTeamChatMutation.isPending}
+                              data-testid="button-send-team-message"
+                            >
+                              <Send className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <Users className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                          <p className="text-sm">Select a team channel to view messages</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

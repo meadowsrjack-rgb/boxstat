@@ -6625,9 +6625,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // MESSAGE ROUTES (Team Chat)
   // =============================================
   
-  // Legacy route (kept for backwards compatibility)
+  // Legacy route (kept for backwards compatibility) - now supports channel query param
   app.get('/api/messages/team/:teamId', requireAuth, async (req: any, res) => {
-    const messages = await storage.getMessagesByTeam(req.params.teamId);
+    const { channel = 'players' } = req.query;
+    const messages = await storage.getMessagesByTeam(req.params.teamId, channel as string);
     res.json(messages);
   });
   
@@ -6700,6 +6701,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     res.json(message);
+  });
+  
+  // Delete a message (admin only)
+  app.delete('/api/messages/:messageId', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      
+      // Only admins can delete messages
+      if (role !== 'admin') {
+        return res.status(403).json({ error: 'Only administrators can delete messages' });
+      }
+      
+      const messageId = parseInt(req.params.messageId);
+      if (isNaN(messageId)) {
+        return res.status(400).json({ error: 'Invalid message ID' });
+      }
+      
+      await storage.deleteMessage(messageId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting message:', error);
+      res.status(500).json({ error: 'Failed to delete message' });
+    }
   });
   
   // =============================================

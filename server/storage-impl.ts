@@ -173,6 +173,7 @@ export interface IStorage {
   // Message operations
   getMessagesByTeam(teamId: string, channel?: string): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
+  deleteMessage(messageId: number): Promise<void>;
   
   // Payment operations
   getPayment(id: string): Promise<Payment | undefined>;
@@ -1396,6 +1397,10 @@ class MemStorage implements IStorage {
     };
     this.messages.set(newMessage.id, newMessage);
     return newMessage;
+  }
+  
+  async deleteMessage(messageId: number): Promise<void> {
+    this.messages.delete(messageId);
   }
   
   // Payment operations
@@ -3833,6 +3838,10 @@ class DatabaseStorage implements IStorage {
     }
     
     return this.mapDbMessageWithSenderToMessage(enrichedResults[0]);
+  }
+
+  async deleteMessage(messageId: number): Promise<void> {
+    await db.delete(schema.messages).where(eq(schema.messages.id, messageId));
   }
 
   // Payment operations

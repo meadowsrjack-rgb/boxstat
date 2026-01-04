@@ -21,6 +21,7 @@ interface TeamChatProps {
   className?: string;
   currentProfileId?: string;
   readOnly?: boolean; // When true, hides message input (for announcements-only mode)
+  channel?: 'players' | 'parents'; // Chat channel: 'players' or 'parents'
 }
 
 interface TeamMessageWithSender {
@@ -41,7 +42,7 @@ interface TeamMessageWithSender {
 
 const MESSAGES_PER_PAGE = 10;
 
-export default function TeamChat({ teamId, teamName, className, currentProfileId, readOnly = false }: TeamChatProps) {
+export default function TeamChat({ teamId, teamName, className, currentProfileId, readOnly = false, channel = 'players' }: TeamChatProps) {
   const [newMessage, setNewMessage] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [visibleCount, setVisibleCount] = useState(MESSAGES_PER_PAGE);
@@ -53,7 +54,14 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
   const wsRef = useRef<WebSocket | null>(null);
 
   const { data: allMessages = [], isLoading } = useQuery<TeamMessageWithSender[]>({
-    queryKey: ['/api/teams', teamId, 'messages'],
+    queryKey: ['/api/teams', teamId, 'messages', channel],
+    queryFn: async () => {
+      const response = await fetch(`/api/teams/${teamId}/messages?channel=${channel}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch messages');
+      return response.json();
+    },
     enabled: !!teamId,
     refetchInterval: false,
   });
@@ -62,16 +70,16 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
   const hasMoreMessages = allMessages.length > visibleCount;
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (messageData: { message: string; messageType?: string; profileId?: string }) => {
+    mutationFn: async (messageData: { message: string; messageType?: string; profileId?: string; channel?: string }) => {
       const result = await apiRequest(`/api/teams/${teamId}/messages`, {
         method: "POST",
-        data: messageData
+        data: { ...messageData, channel }
       });
       return result;
     },
     onSuccess: () => {
       setNewMessage("");
-      queryClient.invalidateQueries({ queryKey: ['/api/teams', teamId, 'messages'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/teams', teamId, 'messages', channel] });
     },
     onError: () => {
       toast({
@@ -98,10 +106,12 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'new_team_message' && data.teamId === teamId) {
+        // Only update if message is for this team AND this channel
+        if (data.type === 'new_team_message' && data.teamId === teamId && 
+            (data.channel === channel || (!data.channel && channel === 'players'))) {
           const newMsg = data.message;
           queryClient.setQueryData<TeamMessageWithSender[]>(
-            ['/api/teams', teamId, 'messages'], 
+            ['/api/teams', teamId, 'messages', channel], 
             (oldMessages) => {
               if (!oldMessages) return [newMsg];
               const messageExists = oldMessages.some(msg => msg.id === newMsg.id);
@@ -126,7 +136,7 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
     return () => {
       ws.close();
     };
-  }, [teamId, queryClient]);
+  }, [teamId, channel, queryClient]);
 
   useEffect(() => {
     scrollToBottom();

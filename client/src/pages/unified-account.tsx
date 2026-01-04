@@ -930,9 +930,16 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
     chatMode: chatroom.chatMode,
   }));
 
-  // Fetch team messages
+  // Fetch team messages (parent channel)
   const { data: teamMessages = [] } = useQuery<any[]>({
-    queryKey: ['/api/teams', activeChat?.teamId, 'messages'],
+    queryKey: ['/api/teams', activeChat?.teamId, 'messages', 'parents'],
+    queryFn: async () => {
+      const response = await fetch(`/api/teams/${activeChat?.teamId}/messages?channel=parents`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch messages');
+      return response.json();
+    },
     enabled: activeChat?.type === 'team' && !!activeChat?.teamId,
   });
 
@@ -948,17 +955,17 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
     enabled: activeChat?.type === 'management',
   });
 
-  // Send team message mutation
+  // Send team message mutation (parent channel)
   const sendTeamMessageMutation = useMutation({
     mutationFn: async () => {
       return apiRequest(`/api/teams/${activeChat?.teamId}/messages`, {
         method: 'POST',
-        data: { message: newMessage },
+        data: { message: newMessage, channel: 'parents' },
       });
     },
     onSuccess: () => {
       setNewMessage("");
-      queryClient.invalidateQueries({ queryKey: ['/api/teams', activeChat?.teamId, 'messages'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/teams', activeChat?.teamId, 'messages', 'parents'] });
     },
     onError: () => {
       toast({ title: "Failed to send message", variant: "destructive" });

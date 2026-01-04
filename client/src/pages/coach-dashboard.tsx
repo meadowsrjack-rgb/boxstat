@@ -19,6 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
   Bell,
@@ -1028,14 +1029,32 @@ function RosterTab({
         )}
       </div>
 
-      {/* Team Chat - visible to coaches and parents */}
+      {/* Team Chat - with tabs for Players and Parents */}
       <div>
         <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
           <Users className="h-4 w-4 text-blue-600" />
           Team Chat
         </h4>
-        <p className="text-xs text-gray-500 mb-2">Chat with parents and team members</p>
-        <TeamChat teamId={selectedTeamId} currentProfileId={currentUser?.id} />
+        <Tabs defaultValue="players" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-2">
+            <TabsTrigger value="players" data-testid="tab-player-chat">
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Player Chat
+            </TabsTrigger>
+            <TabsTrigger value="parents" data-testid="tab-parent-chat">
+              <Users className="h-4 w-4 mr-2" />
+              Parent Chat
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="players">
+            <p className="text-xs text-gray-500 mb-2">Chat with players on this team</p>
+            <TeamChat teamId={selectedTeamId} currentProfileId={currentUser?.id} channel="players" />
+          </TabsContent>
+          <TabsContent value="parents">
+            <p className="text-xs text-gray-500 mb-2">Chat with parents of players on this team</p>
+            <TeamChat teamId={selectedTeamId} currentProfileId={currentUser?.id} channel="parents" />
+          </TabsContent>
+        </Tabs>
       </div>
 
     </div>

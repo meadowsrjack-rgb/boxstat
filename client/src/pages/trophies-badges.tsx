@@ -270,7 +270,7 @@ export default function TrophiesBadgesPage() {
             <CardContent className="p-3">
               <div className="text-center">
                 <p className="text-xl font-bold text-white">{stats.legacy}</p>
-                <p className="text-xs text-gray-400">Legacy</p>
+                <p className="text-xs font-medium bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 bg-clip-text text-transparent">Legacy</p>
               </div>
             </CardContent>
           </Card>
@@ -278,7 +278,7 @@ export default function TrophiesBadgesPage() {
             <CardContent className="p-3">
               <div className="text-center">
                 <p className="text-xl font-bold text-white">{stats.hof}</p>
-                <p className="text-xs text-gray-400">HOF</p>
+                <p className="text-xs font-medium text-yellow-500">HOF</p>
               </div>
             </CardContent>
           </Card>
@@ -286,7 +286,7 @@ export default function TrophiesBadgesPage() {
             <CardContent className="p-3">
               <div className="text-center">
                 <p className="text-xl font-bold text-white">{stats.superstar}</p>
-                <p className="text-xs text-gray-400">Superstar</p>
+                <p className="text-xs font-medium text-purple-500">Superstar</p>
               </div>
             </CardContent>
           </Card>
@@ -294,7 +294,7 @@ export default function TrophiesBadgesPage() {
             <CardContent className="p-3">
               <div className="text-center">
                 <p className="text-xl font-bold text-white">{stats.allStar}</p>
-                <p className="text-xs text-gray-400">All-Star</p>
+                <p className="text-xs font-medium text-blue-500">All-Star</p>
               </div>
             </CardContent>
           </Card>
@@ -302,7 +302,7 @@ export default function TrophiesBadgesPage() {
             <CardContent className="p-3">
               <div className="text-center">
                 <p className="text-xl font-bold text-white">{stats.starter}</p>
-                <p className="text-xs text-gray-400">Starter</p>
+                <p className="text-xs font-medium text-green-500">Starter</p>
               </div>
             </CardContent>
           </Card>
@@ -310,7 +310,7 @@ export default function TrophiesBadgesPage() {
             <CardContent className="p-3">
               <div className="text-center">
                 <p className="text-xl font-bold text-white">{stats.prospect}</p>
-                <p className="text-xs text-gray-400">Prospect</p>
+                <p className="text-xs font-medium text-gray-500">Prospect</p>
               </div>
             </CardContent>
           </Card>

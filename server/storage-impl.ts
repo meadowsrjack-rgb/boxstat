@@ -171,7 +171,7 @@ export interface IStorage {
   deleteAnnouncement(id: string): Promise<void>;
   
   // Message operations
-  getMessagesByTeam(teamId: string): Promise<Message[]>;
+  getMessagesByTeam(teamId: string, channel?: string): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
   
   // Payment operations
@@ -1381,9 +1381,9 @@ class MemStorage implements IStorage {
   }
   
   // Message operations
-  async getMessagesByTeam(teamId: string): Promise<Message[]> {
+  async getMessagesByTeam(teamId: string, channel: string = 'players'): Promise<Message[]> {
     return Array.from(this.messages.values())
-      .filter(msg => msg.teamId === teamId)
+      .filter(msg => msg.teamId === teamId && (msg.chatChannel === channel || (!msg.chatChannel && channel === 'players')))
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   }
   
@@ -3783,7 +3783,7 @@ class DatabaseStorage implements IStorage {
   }
 
   // Message operations
-  async getMessagesByTeam(teamId: string): Promise<Message[]> {
+  async getMessagesByTeam(teamId: string, channel: string = 'players'): Promise<Message[]> {
     const teamIdNum = parseInt(teamId);
     const results = await db
       .select({
@@ -3792,7 +3792,13 @@ class DatabaseStorage implements IStorage {
       })
       .from(schema.messages)
       .leftJoin(schema.users, eq(schema.messages.senderId, schema.users.id))
-      .where(eq(schema.messages.teamId, teamIdNum))
+      .where(and(
+        eq(schema.messages.teamId, teamIdNum),
+        or(
+          eq(schema.messages.chatChannel, channel),
+          and(isNull(schema.messages.chatChannel), eq(channel, 'players')) // Legacy messages default to players
+        )
+      ))
       .orderBy(schema.messages.createdAt);
     
     return results.map(row => this.mapDbMessageWithSenderToMessage(row));
@@ -3804,6 +3810,7 @@ class DatabaseStorage implements IStorage {
       teamId: parseInt(message.teamId),
       content: message.content,
       messageType: message.messageType || 'text',
+      chatChannel: message.chatChannel || 'players',
       isModerated: false,
       createdAt: new Date().toISOString(),
     };

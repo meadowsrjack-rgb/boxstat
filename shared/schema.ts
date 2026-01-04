@@ -766,6 +766,7 @@ export const messages = pgTable("messages", {
   content: text().notNull(),
   teamId: integer("team_id").notNull(),
   messageType: varchar("message_type").default('text'),
+  chatChannel: varchar("chat_channel").default('players'), // 'players' for player chat, 'parents' for parent chat
   isModerated: boolean("is_moderated").default(false),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
@@ -1502,6 +1503,7 @@ export interface Message {
   senderId: string;
   content: string;
   messageType: "text" | "system";
+  chatChannel?: "players" | "parents"; // 'players' for player chat, 'parents' for parent chat
   createdAt: Date;
   sender?: {
     id: string;
@@ -1517,6 +1519,7 @@ export const insertMessageSchema = z.object({
   senderId: z.string(),
   content: z.string().min(1),
   messageType: z.enum(["text", "system"]).default("text"),
+  chatChannel: z.enum(["players", "parents"]).default("players").optional(),
 });
 
 export type InsertMessage = z.infer<typeof insertMessageSchema>;

@@ -2567,7 +2567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all team memberships for linked players
       const teamChatroomsMap = new Map<number, any>();
       const allTeams = await storage.getTeamsByOrganization(user.organizationId);
-      const allPrograms = await storage.getProductsByOrganization(user.organizationId);
+      const allPrograms = await storage.getProgramsByOrganization(user.organizationId);
       
       for (const player of linkedPlayers) {
         const memberships = await storage.getTeamMembershipsByProfile(player.id);
@@ -6634,12 +6634,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Team-scoped message routes (used by TeamChat component)
   app.get('/api/teams/:teamId/messages', requireAuth, async (req: any, res) => {
-    const messages = await storage.getMessagesByTeam(req.params.teamId);
+    const { channel = 'players' } = req.query; // Default to players channel
+    const messages = await storage.getMessagesByTeam(req.params.teamId, channel as string);
     res.json(messages);
   });
   
   app.post('/api/teams/:teamId/messages', requireAuth, async (req: any, res) => {
-    const { message, messageType = 'text', profileId } = req.body;
+    const { message, messageType = 'text', profileId, channel = 'players' } = req.body;
     
     // Security: Validate that profileId belongs to authenticated user or is the user themselves
     let validatedSenderId = req.user.id;
@@ -6663,6 +6664,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       senderId: validatedSenderId,
       content: message, // Database field is 'content'
       messageType,
+      chatChannel: channel, // 'players' or 'parents'
     };
     
     const newMessage = await storage.createMessage(messageData);
@@ -6674,6 +6676,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           client.send(JSON.stringify({ 
             type: 'new_team_message', 
             teamId: parseInt(req.params.teamId),
+            channel: channel, // Include channel in broadcast
             message: newMessage 
           }));
         }

@@ -64,6 +64,7 @@ import {
   StickyNote,
   Phone,
   Mail,
+  User,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";

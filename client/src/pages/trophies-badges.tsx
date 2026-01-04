@@ -269,9 +269,6 @@ export default function TrophiesBadgesPage() {
           <Card className="bg-white/5 border-white/10" data-testid="card-stat-legacy">
             <CardContent className="p-3">
               <div className="text-center">
-                <div className="h-5 w-5 mx-auto mb-1 rounded-full bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 flex items-center justify-center">
-                  <Medal className="h-3 w-3 text-white" />
-                </div>
                 <p className="text-xl font-bold text-white">{stats.legacy}</p>
                 <p className="text-xs text-gray-400">Legacy</p>
               </div>
@@ -280,7 +277,6 @@ export default function TrophiesBadgesPage() {
           <Card className="bg-white/5 border-white/10" data-testid="card-stat-hof">
             <CardContent className="p-3">
               <div className="text-center">
-                <Medal className="h-5 w-5 text-yellow-500 mx-auto mb-1" />
                 <p className="text-xl font-bold text-white">{stats.hof}</p>
                 <p className="text-xs text-gray-400">HOF</p>
               </div>
@@ -289,7 +285,6 @@ export default function TrophiesBadgesPage() {
           <Card className="bg-white/5 border-white/10" data-testid="card-stat-superstar">
             <CardContent className="p-3">
               <div className="text-center">
-                <Medal className="h-5 w-5 text-purple-500 mx-auto mb-1" />
                 <p className="text-xl font-bold text-white">{stats.superstar}</p>
                 <p className="text-xs text-gray-400">Superstar</p>
               </div>
@@ -298,7 +293,6 @@ export default function TrophiesBadgesPage() {
           <Card className="bg-white/5 border-white/10" data-testid="card-stat-allstar">
             <CardContent className="p-3">
               <div className="text-center">
-                <Medal className="h-5 w-5 text-blue-500 mx-auto mb-1" />
                 <p className="text-xl font-bold text-white">{stats.allStar}</p>
                 <p className="text-xs text-gray-400">All-Star</p>
               </div>
@@ -307,7 +301,6 @@ export default function TrophiesBadgesPage() {
           <Card className="bg-white/5 border-white/10" data-testid="card-stat-starter">
             <CardContent className="p-3">
               <div className="text-center">
-                <Medal className="h-5 w-5 text-green-500 mx-auto mb-1" />
                 <p className="text-xl font-bold text-white">{stats.starter}</p>
                 <p className="text-xs text-gray-400">Starter</p>
               </div>
@@ -316,7 +309,6 @@ export default function TrophiesBadgesPage() {
           <Card className="bg-white/5 border-white/10" data-testid="card-stat-prospect">
             <CardContent className="p-3">
               <div className="text-center">
-                <Medal className="h-5 w-5 text-gray-500 mx-auto mb-1" />
                 <p className="text-xl font-bold text-white">{stats.prospect}</p>
                 <p className="text-xs text-gray-400">Prospect</p>
               </div>

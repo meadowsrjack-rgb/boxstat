@@ -1566,6 +1566,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 isMigrated: false,
               });
               console.log(`✅ Created subscription record for ${stripeSubscriptionId}`);
+              
+              // Update user's stripeSubscriptionId field with the latest subscription
+              if (user?.stripeSubscriptionId !== stripeSubscriptionId) {
+                await storage.updateUser(userId, { stripeSubscriptionId: stripeSubscriptionId });
+                console.log(`✅ Updated user ${userId} with stripeSubscriptionId: ${stripeSubscriptionId}`);
+              } else {
+                console.log(`ℹ️ User ${userId} already has this stripeSubscriptionId: ${stripeSubscriptionId}`);
+              }
             } catch (subError: any) {
               console.error("Error creating subscription record:", subError);
             }
@@ -1792,6 +1800,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (playerId) {
                 await storage.updateUser(playerId, { paymentStatus: 'paid' });
                 console.log(`✅ Updated paymentStatus to 'paid' for player ${playerId}`);
+              }
+              
+              // Update user's stripeSubscriptionId field with the latest subscription
+              if (subscriptionId) {
+                const existingUser = await storage.getUser(userId);
+                if (existingUser?.stripeSubscriptionId !== subscriptionId) {
+                  await storage.updateUser(userId, { stripeSubscriptionId: subscriptionId });
+                  console.log(`✅ Updated user ${userId} with stripeSubscriptionId: ${subscriptionId}`);
+                } else {
+                  console.log(`ℹ️ User ${userId} already has this stripeSubscriptionId: ${subscriptionId}`);
+                }
               }
             } catch (enrollError) {
               console.error('Error creating enrollment:', enrollError);

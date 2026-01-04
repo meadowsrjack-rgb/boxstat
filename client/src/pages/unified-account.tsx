@@ -1768,6 +1768,9 @@ export default function UnifiedAccount() {
                                 {isSubscription && item.billingCycle && (
                                   <span className="text-gray-400 text-sm">/{item.billingCycle.toLowerCase()}</span>
                                 )}
+                                {item.savingsNote && (
+                                  <span className="ml-2 text-sm font-medium text-green-600">{item.savingsNote}</span>
+                                )}
                               </div>
                               <Button size="sm" className="bg-red-600 hover:bg-red-700">
                                 {isStore ? "Buy" : "Enroll"}

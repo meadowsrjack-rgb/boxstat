@@ -266,54 +266,30 @@ export default function TrophiesBadgesPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-legacy">
-            <CardContent className="p-3">
-              <div className="text-center">
-                <p className="text-xl font-bold text-white">{stats.legacy}</p>
-                <p className="text-xs font-medium bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 bg-clip-text text-transparent">Legacy</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-hof">
-            <CardContent className="p-3">
-              <div className="text-center">
-                <p className="text-xl font-bold text-white">{stats.hof}</p>
-                <p className="text-xs font-medium text-yellow-500">HOF</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-superstar">
-            <CardContent className="p-3">
-              <div className="text-center">
-                <p className="text-xl font-bold text-white">{stats.superstar}</p>
-                <p className="text-xs font-medium text-purple-500">Superstar</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-allstar">
-            <CardContent className="p-3">
-              <div className="text-center">
-                <p className="text-xl font-bold text-white">{stats.allStar}</p>
-                <p className="text-xs font-medium text-blue-500">All-Star</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-starter">
-            <CardContent className="p-3">
-              <div className="text-center">
-                <p className="text-xl font-bold text-white">{stats.starter}</p>
-                <p className="text-xs font-medium text-green-500">Starter</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-prospect">
-            <CardContent className="p-3">
-              <div className="text-center">
-                <p className="text-xl font-bold text-white">{stats.prospect}</p>
-                <p className="text-xs font-medium text-gray-500">Prospect</p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="text-center p-3" data-testid="card-stat-legacy">
+            <p className="text-xl font-bold text-white">{stats.legacy}</p>
+            <p className="text-xs font-medium bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 bg-clip-text text-transparent">Legacy</p>
+          </div>
+          <div className="text-center p-3" data-testid="card-stat-hof">
+            <p className="text-xl font-bold text-white">{stats.hof}</p>
+            <p className="text-xs font-medium text-yellow-500">HOF</p>
+          </div>
+          <div className="text-center p-3" data-testid="card-stat-superstar">
+            <p className="text-xl font-bold text-white">{stats.superstar}</p>
+            <p className="text-xs font-medium text-purple-500">Superstar</p>
+          </div>
+          <div className="text-center p-3" data-testid="card-stat-allstar">
+            <p className="text-xl font-bold text-white">{stats.allStar}</p>
+            <p className="text-xs font-medium text-blue-500">All-Star</p>
+          </div>
+          <div className="text-center p-3" data-testid="card-stat-starter">
+            <p className="text-xl font-bold text-white">{stats.starter}</p>
+            <p className="text-xs font-medium text-green-500">Starter</p>
+          </div>
+          <div className="text-center p-3" data-testid="card-stat-prospect">
+            <p className="text-xl font-bold text-white">{stats.prospect}</p>
+            <p className="text-xs font-medium text-gray-500">Prospect</p>
+          </div>
         </div>
 
         {/* Filters */}

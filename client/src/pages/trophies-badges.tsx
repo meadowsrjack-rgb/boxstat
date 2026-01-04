@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Medal, ArrowLeft } from "lucide-react";
+import { Medal, ArrowLeft, Trophy, Award } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type TierType = "Prospect" | "Starter" | "All-Star" | "Superstar" | "HOF" | "Legacy";
@@ -265,52 +265,67 @@ export default function TrophiesBadgesPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-          <Card className="border-white/10 opacity-50 bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500" data-testid="card-stat-legacy">
+        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+          <Card className="bg-white/5 border-white/10" data-testid="card-stat-total">
             <CardContent className="p-3">
               <div className="text-center">
+                <Award className="h-5 w-5 text-green-500 mx-auto mb-1" />
+                <p className="text-xl font-bold text-white">{stats.total}</p>
+                <p className="text-xs text-gray-400">Earned</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white/5 border-white/10" data-testid="card-stat-legacy">
+            <CardContent className="p-3">
+              <div className="text-center">
+                <Trophy className="h-5 w-5 text-purple-500 mx-auto mb-1" />
                 <p className="text-xl font-bold text-white">{stats.legacy}</p>
-                <p className="text-xs text-white/80">Legacy</p>
+                <p className="text-xs text-gray-400">Legacy</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-white/10 opacity-50 bg-yellow-500" data-testid="card-stat-hof">
+          <Card className="bg-white/5 border-white/10" data-testid="card-stat-hof">
             <CardContent className="p-3">
               <div className="text-center">
+                <Trophy className="h-5 w-5 text-yellow-500 mx-auto mb-1" />
                 <p className="text-xl font-bold text-white">{stats.hof}</p>
-                <p className="text-xs text-white/80">HOF</p>
+                <p className="text-xs text-gray-400">HOF</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-white/10 opacity-50 bg-purple-500" data-testid="card-stat-superstar">
+          <Card className="bg-white/5 border-white/10" data-testid="card-stat-superstar">
             <CardContent className="p-3">
               <div className="text-center">
+                <Trophy className="h-5 w-5 text-purple-400 mx-auto mb-1" />
                 <p className="text-xl font-bold text-white">{stats.superstar}</p>
-                <p className="text-xs text-white/80">Superstar</p>
+                <p className="text-xs text-gray-400">Superstar</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-white/10 opacity-50 bg-blue-500" data-testid="card-stat-allstar">
+          <Card className="bg-white/5 border-white/10" data-testid="card-stat-allstar">
             <CardContent className="p-3">
               <div className="text-center">
+                <Award className="h-5 w-5 text-blue-500 mx-auto mb-1" />
                 <p className="text-xl font-bold text-white">{stats.allStar}</p>
-                <p className="text-xs text-white/80">All-Star</p>
+                <p className="text-xs text-gray-400">All-Star</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-white/10 opacity-50 bg-green-500" data-testid="card-stat-starter">
+          <Card className="bg-white/5 border-white/10" data-testid="card-stat-starter">
             <CardContent className="p-3">
               <div className="text-center">
+                <Award className="h-5 w-5 text-green-500 mx-auto mb-1" />
                 <p className="text-xl font-bold text-white">{stats.starter}</p>
-                <p className="text-xs text-white/80">Starter</p>
+                <p className="text-xs text-gray-400">Starter</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-white/10 opacity-50 bg-gray-500" data-testid="card-stat-prospect">
+          <Card className="bg-white/5 border-white/10" data-testid="card-stat-prospect">
             <CardContent className="p-3">
               <div className="text-center">
+                <Award className="h-5 w-5 text-gray-500 mx-auto mb-1" />
                 <p className="text-xl font-bold text-white">{stats.prospect}</p>
-                <p className="text-xs text-white/80">Prospect</p>
+                <p className="text-xs text-gray-400">Prospect</p>
               </div>
             </CardContent>
           </Card>

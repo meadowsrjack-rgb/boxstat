@@ -7139,7 +7139,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
 
   const downloadProgramTemplate = () => {
-    const csvContent = "Name,Description,Type,Price,Billing Cycle,Access Tag,Duration Days,Is Active\nHigh School Club,Competitive basketball program,Subscription,15000,Monthly,club_member,365,true\n10-Session Pack,Credit-based training,Pack,5000,,pack_holder,,true";
+    const csvContent = "Name,Description,Type,Price,Billing Cycle,Access Tag,Duration Days,Session Count,Compare Price,Savings Note,Package Group,Is Active\nYouth Club Monthly,Monthly basketball membership,Subscription,7500,Monthly,club_member,30,,,,,true\nYouth Club 3 Months,3-month basketball bundle,Subscription,19500,One-Time,club_member,90,,7500,Save $30!,youth_club,true\nYouth Club 6 Months,6-month basketball bundle,Subscription,36000,One-Time,club_member,180,,7500,Save $114!,youth_club,true\n10-Session Pack,Credit-based training,Pack,5000,,pack_holder,,10,,,training_packs,true";
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -7150,7 +7150,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
   };
 
   const downloadProgramsData = () => {
-    const csvHeaders = "Name,Description,Type,Price,Billing Cycle,Access Tag,Duration Days,Is Active";
+    const csvHeaders = "Name,Description,Type,Price,Billing Cycle,Access Tag,Duration Days,Session Count,Compare Price,Savings Note,Package Group,Is Active";
     const servicePrograms = programs.filter((p: any) => p.productCategory === 'service' || !p.productCategory);
     const csvRows = servicePrograms.map((program: any) => {
       return [
@@ -7161,6 +7161,10 @@ function ProgramsTab({ programs, teams, organization }: any) {
         program.billingCycle || "",
         program.accessTag || "club_member",
         program.durationDays || "",
+        program.sessionCount || "",
+        program.comparePrice || "",
+        program.savingsNote || "",
+        program.packageGroup || "",
         program.isActive !== false ? "true" : "false"
       ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(",");
     });
@@ -7198,7 +7202,11 @@ function ProgramsTab({ programs, teams, organization }: any) {
             billingCycle: values[4] || "Monthly",
             accessTag: values[5] || "club_member",
             durationDays: values[6] ? parseInt(values[6]) : undefined,
-            isActive: values[7]?.toLowerCase() !== "false",
+            sessionCount: values[7] ? parseInt(values[7]) : undefined,
+            comparePrice: values[8] ? parseInt(values[8]) : undefined,
+            savingsNote: values[9] || undefined,
+            packageGroup: values[10] || undefined,
+            isActive: values[11]?.toLowerCase() !== "false",
             productCategory: "service",
           });
           successCount++;
@@ -7231,7 +7239,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
                 <DialogTitle>Bulk Upload Programs</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <p className="text-sm text-gray-600">Upload a CSV file with columns: Name, Description, Type, Price, Billing Cycle, Access Tag, Duration Days, Is Active</p>
+                <p className="text-sm text-gray-600">Upload a CSV file with columns: Name, Description, Type, Price (in cents), Billing Cycle, Access Tag, Duration Days, Session Count, Compare Price (in cents), Savings Note, Package Group, Is Active</p>
                 <Input
                   type="file"
                   accept=".csv"

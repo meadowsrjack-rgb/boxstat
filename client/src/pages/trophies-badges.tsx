@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Trophy, Award, ArrowLeft, Filter } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-type TierType = "Gold" | "Purple" | "Blue" | "Green" | "Grey" | "Special";
+type TierType = "Prospect" | "Starter" | "All-Star" | "Superstar" | "HOF" | "Legacy";
 type TriggerCategory = "checkin" | "system" | "time" | "store" | "manual";
 
 interface AwardDefinition {
@@ -50,30 +50,30 @@ interface AwardWithDetails extends AwardDefinition {
 }
 
 const TIER_COLORS = {
-  Gold: "bg-yellow-500",
-  Purple: "bg-purple-500",
-  Blue: "bg-blue-500",
-  Green: "bg-green-500",
-  Grey: "bg-gray-500",
-  Special: "bg-gradient-to-r from-purple-500 to-yellow-500"
+  Prospect: "bg-gray-500",
+  Starter: "bg-green-500",
+  "All-Star": "bg-blue-500",
+  Superstar: "bg-purple-500",
+  HOF: "bg-yellow-500",
+  Legacy: "bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500"
 };
 
 const TIER_TEXT_COLORS = {
-  Gold: "text-yellow-600 dark:text-yellow-400",
-  Purple: "text-purple-600 dark:text-purple-400",
-  Blue: "text-blue-600 dark:text-blue-400",
-  Green: "text-green-600 dark:text-green-400",
-  Grey: "text-gray-600 dark:text-gray-400",
-  Special: "text-purple-600 dark:text-purple-400"
+  Prospect: "text-gray-600 dark:text-gray-400",
+  Starter: "text-green-600 dark:text-green-400",
+  "All-Star": "text-blue-600 dark:text-blue-400",
+  Superstar: "text-purple-600 dark:text-purple-400",
+  HOF: "text-yellow-600 dark:text-yellow-400",
+  Legacy: "text-purple-600 dark:text-purple-400"
 };
 
 const TIER_BORDER_COLORS = {
-  Gold: "border-yellow-500",
-  Purple: "border-purple-500",
-  Blue: "border-blue-500",
-  Green: "border-green-500",
-  Grey: "border-gray-500",
-  Special: "border-purple-500"
+  Prospect: "border-gray-500",
+  Starter: "border-green-500",
+  "All-Star": "border-blue-500",
+  Superstar: "border-purple-500",
+  HOF: "border-yellow-500",
+  Legacy: "border-purple-500"
 };
 
 const TRIGGER_LABELS: Record<TriggerCategory, string> = {
@@ -154,8 +154,8 @@ export default function TrophiesBadgesPage() {
     return awardDefinitions.filter(def => def.active && !earnedIds.has(def.id));
   }, [awardDefinitions, earnedAwards]);
 
-  // Tier hierarchy for sorting
-  const tierOrder = ["Gold", "Special", "Purple", "Blue", "Green", "Grey"];
+  // Tier hierarchy for sorting (highest first)
+  const tierOrder = ["Legacy", "HOF", "Superstar", "All-Star", "Starter", "Prospect"];
 
   // Helper to check if award belongs to selected program
   const matchesProgram = (award: AwardDefinition) => {
@@ -218,13 +218,14 @@ export default function TrophiesBadgesPage() {
 
   // Calculate statistics - group by tier
   const stats = useMemo(() => {
-    const gold = earnedAwards.filter(a => a.tier === "Gold");
-    const purple = earnedAwards.filter(a => a.tier === "Purple");
-    const other = earnedAwards.filter(a => !["Gold", "Purple"].includes(a.tier));
+    const legacy = earnedAwards.filter(a => a.tier === "Legacy");
+    const hof = earnedAwards.filter(a => a.tier === "HOF");
+    const allStar = earnedAwards.filter(a => a.tier === "All-Star");
     return {
       total: earnedAwards.length,
-      gold: gold.length,
-      purple: purple.length,
+      legacy: legacy.length,
+      hof: hof.length,
+      allStar: allStar.length,
       available: availableAwards.length,
     };
   }, [earnedAwards, availableAwards]);
@@ -277,36 +278,36 @@ export default function TrophiesBadgesPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-gold">
+          <Card className="bg-white/5 border-white/10" data-testid="card-stat-legacy">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Gold</p>
-                  <p className="text-3xl font-bold text-white">{stats.gold}</p>
+                  <p className="text-sm text-gray-400">Legacy</p>
+                  <p className="text-3xl font-bold text-white">{stats.legacy}</p>
+                </div>
+                <Trophy className="h-8 w-8 text-purple-500" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white/5 border-white/10" data-testid="card-stat-hof">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-400">Hall of Fame</p>
+                  <p className="text-3xl font-bold text-white">{stats.hof}</p>
                 </div>
                 <Trophy className="h-8 w-8 text-yellow-500" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-purple">
+          <Card className="bg-white/5 border-white/10" data-testid="card-stat-allstar">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Purple</p>
-                  <p className="text-3xl font-bold text-white">{stats.purple}</p>
+                  <p className="text-sm text-gray-400">All-Star</p>
+                  <p className="text-3xl font-bold text-white">{stats.allStar}</p>
                 </div>
-                <Award className="h-8 w-8 text-purple-500" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-available">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-400">Available</p>
-                  <p className="text-3xl font-bold text-white">{stats.available}</p>
-                </div>
-                <Award className="h-8 w-8 text-gray-500" />
+                <Award className="h-8 w-8 text-blue-500" />
               </div>
             </CardContent>
           </Card>
@@ -328,12 +329,12 @@ export default function TrophiesBadgesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Tiers</SelectItem>
-                    <SelectItem value="Gold">Gold</SelectItem>
-                    <SelectItem value="Purple">Purple</SelectItem>
-                    <SelectItem value="Blue">Blue</SelectItem>
-                    <SelectItem value="Green">Green</SelectItem>
-                    <SelectItem value="Grey">Grey</SelectItem>
-                    <SelectItem value="Special">Special</SelectItem>
+                    <SelectItem value="Legacy">Legacy</SelectItem>
+                    <SelectItem value="HOF">Hall of Fame</SelectItem>
+                    <SelectItem value="Superstar">Superstar</SelectItem>
+                    <SelectItem value="All-Star">All-Star</SelectItem>
+                    <SelectItem value="Starter">Starter</SelectItem>
+                    <SelectItem value="Prospect">Prospect</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -326,22 +326,18 @@ export default function TrophiesBadgesPage() {
 
         {/* Filters */}
         <Card className="bg-white/5 border-white/10">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Filter className="h-4 w-4" />
-              <span className="font-semibold">Filters</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <CardContent className="p-3">
+            <div className="grid grid-cols-3 gap-2">
               <div>
-                <label className="text-sm text-gray-400 mb-2 block">Tier</label>
+                <label className="text-xs text-gray-400 mb-1 block">Tier</label>
                 <Select value={selectedTier} onValueChange={(value) => setSelectedTier(value as any)}>
-                  <SelectTrigger className="bg-white/10 border-white/20" data-testid="select-tier">
+                  <SelectTrigger className="bg-white/10 border-white/20 h-8 text-xs" data-testid="select-tier">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Tiers</SelectItem>
+                    <SelectItem value="all">All</SelectItem>
                     <SelectItem value="Legacy">Legacy</SelectItem>
-                    <SelectItem value="HOF">Hall of Fame</SelectItem>
+                    <SelectItem value="HOF">HOF</SelectItem>
                     <SelectItem value="Superstar">Superstar</SelectItem>
                     <SelectItem value="All-Star">All-Star</SelectItem>
                     <SelectItem value="Starter">Starter</SelectItem>
@@ -350,13 +346,13 @@ export default function TrophiesBadgesPage() {
                 </Select>
               </div>
               <div>
-                <label className="text-sm text-gray-400 mb-2 block">Category</label>
+                <label className="text-xs text-gray-400 mb-1 block">Category</label>
                 <Select value={selectedTrigger} onValueChange={(value) => setSelectedTrigger(value as any)}>
-                  <SelectTrigger className="bg-white/10 border-white/20" data-testid="select-trigger">
+                  <SelectTrigger className="bg-white/10 border-white/20 h-8 text-xs" data-testid="select-trigger">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="all">All</SelectItem>
                     <SelectItem value="checkin">Check-in</SelectItem>
                     <SelectItem value="system">Collection</SelectItem>
                     <SelectItem value="time">Time</SelectItem>
@@ -365,38 +361,38 @@ export default function TrophiesBadgesPage() {
                   </SelectContent>
                 </Select>
               </div>
-              {programMemberships.length > 0 && (
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Program</label>
-                  <Select value={selectedProgram} onValueChange={(value) => setSelectedProgram(value)}>
-                    <SelectTrigger className="bg-white/10 border-white/20" data-testid="select-program">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Programs</SelectItem>
-                      {programMemberships.map((pm) => (
-                        <SelectItem key={pm.programId} value={pm.programId}>
-                          {pm.programName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
               <div>
-                <label className="text-sm text-gray-400 mb-2 block">Sort By</label>
+                <label className="text-xs text-gray-400 mb-1 block">Sort</label>
                 <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
-                  <SelectTrigger className="bg-white/10 border-white/20" data-testid="select-sort">
+                  <SelectTrigger className="bg-white/10 border-white/20 h-8 text-xs" data-testid="select-sort">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="newest">Newest First</SelectItem>
-                    <SelectItem value="oldest">Oldest First</SelectItem>
-                    <SelectItem value="tier">Tier (High to Low)</SelectItem>
+                    <SelectItem value="newest">Newest</SelectItem>
+                    <SelectItem value="oldest">Oldest</SelectItem>
+                    <SelectItem value="tier">By Tier</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
+            {programMemberships.length > 0 && (
+              <div className="mt-2">
+                <label className="text-xs text-gray-400 mb-1 block">Program</label>
+                <Select value={selectedProgram} onValueChange={(value) => setSelectedProgram(value)}>
+                  <SelectTrigger className="bg-white/10 border-white/20 h-8 text-xs" data-testid="select-program">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Programs</SelectItem>
+                    {programMemberships.map((pm) => (
+                      <SelectItem key={pm.programId} value={pm.programId}>
+                        {pm.programName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </CardContent>
         </Card>
 

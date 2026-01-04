@@ -8266,8 +8266,8 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Manage Messages</CardTitle>
-          <CardDescription>Send and manage messages to users</CardDescription>
+          <CardTitle>Notifications</CardTitle>
+          <CardDescription>Send and manage notifications</CardDescription>
         </div>
         <div className="flex gap-2">
           <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
@@ -8308,7 +8308,7 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
             </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create New Message</DialogTitle>
+              <DialogTitle>Create New Notification</DialogTitle>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit((data) => createMessage.mutate(data))} className="space-y-4">
@@ -8344,9 +8344,9 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                   name="types"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Message Types</FormLabel>
+                      <FormLabel>Type</FormLabel>
                       <FormDescription>
-                        Select one or more types for this message
+                        Select one or more types for this notification
                       </FormDescription>
                       <div className="border rounded-md p-4 space-y-3">
                         <div className="flex items-center gap-2">
@@ -8389,27 +8389,6 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                           >
                             Notification
-                          </label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            id="type-message"
-                            checked={field.value?.includes("message")}
-                            onCheckedChange={(checked) => {
-                              const current = field.value || [];
-                              if (checked) {
-                                field.onChange([...current, "message"]);
-                              } else {
-                                field.onChange(current.filter((t: string) => t !== "message"));
-                              }
-                            }}
-                            data-testid="checkbox-type-message"
-                          />
-                          <label
-                            htmlFor="type-message"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                          >
-                            Message
                           </label>
                         </div>
                       </div>

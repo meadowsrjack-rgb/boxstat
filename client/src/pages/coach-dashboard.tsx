@@ -260,12 +260,16 @@ export default function CoachDashboard() {
   }, [assignedPlayers, filteredTeam, selectedTeamFilter]);
 
   const { data: coachEvents = [] as UypEvent[] } = useQuery<UypEvent[]>({
-    queryKey: ["/api/coach/events"],
+    queryKey: ["/api/coach/events", coachProfileId],
+    enabled: !!coachProfileId,
     queryFn: async () => {
       const token = localStorage.getItem('authToken');
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch("/api/coach/events", { credentials: "include", headers });
+      const url = coachProfileId 
+        ? `/api/coach/events?profileId=${encodeURIComponent(coachProfileId)}`
+        : "/api/coach/events";
+      const res = await fetch(url, { credentials: "include", headers });
       if (!res.ok) return [] as UypEvent[];
       return res.json();
     },

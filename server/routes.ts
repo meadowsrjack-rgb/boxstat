@@ -4965,10 +4965,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Coach-specific events endpoint (delegates to shared filtering logic)
   app.get('/api/coach/events', requireAuth, async (req: any, res) => {
-    const { organizationId, id: userId, role } = req.user;
+    const { organizationId, id: sessionUserId, role: sessionRole } = req.user;
+    
+    // Support profile switching: use profileId query param if provided, otherwise use session user
+    const profileId = req.query.profileId as string | undefined;
+    let effectiveUserId = sessionUserId;
+    let effectiveRole = sessionRole;
+    
+    // If profileId is provided, validate it belongs to the current user's account
+    if (profileId && profileId !== sessionUserId) {
+      const profile = await storage.getUser(profileId);
+      if (profile && profile.role === 'coach') {
+        // Verify the profile belongs to this user (same email or is linked)
+        const sessionUser = await storage.getUser(sessionUserId);
+        if (sessionUser && (profile.email === sessionUser.email || 
+            profile.accountHolderId === sessionUserId || 
+            profile.parentId === sessionUserId)) {
+          effectiveUserId = profileId;
+          effectiveRole = 'coach';
+        }
+      }
+    }
     
     // Only coaches can access this endpoint
-    if (role !== 'coach') {
+    if (effectiveRole !== 'coach') {
       return res.status(403).json({ message: 'Only coaches can access this endpoint' });
     }
     
@@ -4976,13 +4996,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Use shared helper to get coach's event scope
     const { teamIds, divisionIds, programIds, targetUserId } = await getUserEventScope(
-      userId,
-      role,
+      effectiveUserId,
+      effectiveRole,
       organizationId
     );
     
+    console.log(`🔍 Coach events debug for ${effectiveUserId}:`);
+    console.log(`   Teams: [${teamIds.join(', ')}]`);
+    console.log(`   Divisions: [${divisionIds.join(', ')}]`);
+    console.log(`   Programs: [${programIds.join(', ')}]`);
+    console.log(`   Total events in org: ${allEvents.length}`);
+    
     // Filter events using shared helper
-    const filteredEvents = filterEventsByScope(allEvents, role, teamIds, divisionIds, programIds, targetUserId, false);
+    const filteredEvents = filterEventsByScope(allEvents, effectiveRole, teamIds, divisionIds, programIds, targetUserId, false);
+    
+    console.log(`   Filtered events: ${filteredEvents.length}`);
     
     res.json(filteredEvents);
   });

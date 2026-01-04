@@ -932,14 +932,7 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
 
   // Fetch team messages (parent channel)
   const { data: teamMessages = [] } = useQuery<any[]>({
-    queryKey: ['/api/teams', activeChat?.teamId, 'messages', 'parents'],
-    queryFn: async () => {
-      const response = await fetch(`/api/teams/${activeChat?.teamId}/messages?channel=parents`, {
-        credentials: 'include'
-      });
-      if (!response.ok) throw new Error('Failed to fetch messages');
-      return response.json();
-    },
+    queryKey: [`/api/teams/${activeChat?.teamId}/messages?channel=parents`],
     enabled: activeChat?.type === 'team' && !!activeChat?.teamId,
   });
 
@@ -965,7 +958,7 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
     },
     onSuccess: () => {
       setNewMessage("");
-      queryClient.invalidateQueries({ queryKey: ['/api/teams', activeChat?.teamId, 'messages', 'parents'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/teams/${activeChat?.teamId}/messages?channel=parents`] });
     },
     onError: () => {
       toast({ title: "Failed to send message", variant: "destructive" });

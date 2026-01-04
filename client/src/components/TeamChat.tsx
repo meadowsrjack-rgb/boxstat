@@ -56,8 +56,14 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
   const { data: allMessages = [], isLoading } = useQuery<TeamMessageWithSender[]>({
     queryKey: ['/api/teams', teamId, 'messages', channel],
     queryFn: async () => {
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(`/api/teams/${teamId}/messages?channel=${channel}`, {
-        credentials: 'include'
+        credentials: 'include',
+        headers
       });
       if (!response.ok) throw new Error('Failed to fetch messages');
       return response.json();

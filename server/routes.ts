@@ -2818,15 +2818,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Validate package selection
+      // Package selection is now optional - players can be added without enrolling in a program
+      // Program enrollment happens separately in the Payments section
+      
+      // Child players don't need their own email - they're managed through parent's account
+      // The unique email constraint only applies to parent accounts (account_holder_id IS NULL)
+      
+      // Create child player user
+      const playerUser = await storage.createUser({
+        organizationId: user.organizationId,
+        email: null as any, // Child players don't need email - managed through parent account
+        role: "player",
+        firstName,
+        lastName,
+        dateOfBirth: dateOfBirth || null,
+        gender: gender || null,
+        aauMembershipId: aauMembershipId || null,
+        postalCode: postalCode || null,
+        concussionWaiverAcknowledged: concussionWaiverAcknowledged || false,
+        concussionWaiverDate: concussionWaiverAcknowledged ? new Date().toISOString() : null,
+        clubAgreementAcknowledged: clubAgreementAcknowledged || false,
+        clubAgreementDate: clubAgreementAcknowledged ? new Date().toISOString() : null,
+        accountHolderId: id,
+        packageSelected: packageId || null, // Optional now
+        teamAssignmentStatus: "pending",
+        hasRegistered: !packageId, // If no package, mark as registered immediately
+        verified: true, // Child profiles are auto-verified through parent
+        isActive: true,
+        awards: [],
+        totalPractices: 0,
+        totalGames: 0,
+        consecutiveCheckins: 0,
+        videosCompleted: 0,
+        yearsActive: 0,
+      });
+      
+      // If no package selected, just return success with the new player
       if (!packageId) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Package selection is required" 
+        return res.json({
+          success: true,
+          player: playerUser,
+          message: "Player added successfully. You can enroll them in programs from the Payments section."
         });
       }
       
-      // Get the selected program to check price
+      // Get the selected program to check price (only if packageId provided)
       const program = await storage.getProgram(packageId);
       if (!program) {
         return res.status(404).json({ 
@@ -2855,38 +2891,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Selected program has no valid price" 
         });
       }
-      
-      // Child players don't need their own email - they're managed through parent's account
-      // The unique email constraint only applies to parent accounts (account_holder_id IS NULL)
-      
-      // Create child player user with PENDING payment status
-      const playerUser = await storage.createUser({
-        organizationId: user.organizationId,
-        email: null as any, // Child players don't need email - managed through parent account
-        role: "player",
-        firstName,
-        lastName,
-        dateOfBirth: dateOfBirth || null,
-        gender: gender || null,
-        aauMembershipId: aauMembershipId || null,
-        postalCode: postalCode || null,
-        concussionWaiverAcknowledged: concussionWaiverAcknowledged || false,
-        concussionWaiverDate: concussionWaiverAcknowledged ? new Date().toISOString() : null,
-        clubAgreementAcknowledged: clubAgreementAcknowledged || false,
-        clubAgreementDate: clubAgreementAcknowledged ? new Date().toISOString() : null,
-        accountHolderId: id,
-        packageSelected: packageId,
-        teamAssignmentStatus: "pending",
-        hasRegistered: false, // Will be set to true after payment
-        verified: true, // Child profiles are auto-verified through parent
-        isActive: true,
-        awards: [],
-        totalPractices: 0,
-        totalGames: 0,
-        consecutiveCheckins: 0,
-        videosCompleted: 0,
-        yearsActive: 0,
-      });
       
       // Create or retrieve Stripe customer
       if (!stripe) {

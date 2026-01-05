@@ -2067,18 +2067,33 @@ export default function UnifiedAccount() {
                           return (
                             <div className="space-y-2">
                               <label className="text-sm font-medium">Player *</label>
-                              <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
-                                <SelectTrigger data-testid="select-player">
-                                  <SelectValue placeholder="Select a player" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {players?.map((player: any) => (
-                                    <SelectItem key={player.id} value={player.id} data-testid={`player-option-${player.id}`}>
-                                      {player.firstName} {player.lastName}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <div className="flex gap-2">
+                                <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
+                                  <SelectTrigger data-testid="select-player" className="flex-1">
+                                    <SelectValue placeholder="Select a player" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {players?.map((player: any) => (
+                                      <SelectItem key={player.id} value={player.id} data-testid={`player-option-${player.id}`}>
+                                        {player.firstName} {player.lastName}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => {
+                                    setPaymentDialogOpen(false);
+                                    window.location.href = "/add-player";
+                                  }}
+                                  data-testid="button-add-new-player"
+                                  title="Add new player"
+                                >
+                                  <UserPlus className="h-4 w-4" />
+                                </Button>
+                              </div>
                               <p className="text-xs text-gray-600">
                                 This is a per-player program. Select which player this payment is for.
                               </p>

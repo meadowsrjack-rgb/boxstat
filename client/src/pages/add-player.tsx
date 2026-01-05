@@ -169,30 +169,16 @@ export default function AddPlayer() {
         data,
       });
     },
-    onSuccess: (response: any) => {
-      if (response.checkoutUrl) {
-        // Redirect to Stripe Checkout
-        toast({
-          title: "Redirecting to Payment",
-          description: "Please complete payment to finalize player registration.",
-        });
-        
-        setTimeout(() => {
-          window.location.href = response.checkoutUrl;
-        }, 1000);
-      } else {
-        // Fallback: player added without payment (shouldn't happen)
-        queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
-        
-        toast({
-          title: "Player Added!",
-          description: "Player has been successfully added to your account.",
-        });
-        setTimeout(() => {
-          setLocation("/unified-account");
-        }, 1000);
-      }
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
+      
+      toast({
+        title: "Player Added!",
+        description: "Player has been successfully added. You can enroll them in programs from the Payments section.",
+      });
+      setTimeout(() => {
+        setLocation("/unified-account");
+      }, 1000);
     },
     onError: (error: any) => {
       toast({
@@ -203,36 +189,10 @@ export default function AddPlayer() {
     },
   });
 
-  // Calculate dynamic step flow based on selected program's requirements
-  // Steps 1-4 are always fixed: Name, DOB, Gender, Package Selection
-  // Steps 5+ are dynamic based on package requirements
+  // Simplified step flow: Just basic player info (no package/payment)
+  // Payment is handled separately in the Payments section of parent dashboard
   const getStepFlow = () => {
-    const baseSteps = ["name", "dob", "gender", "package"];
-    const dynamicSteps: string[] = [];
-
-    if (selectedProgram) {
-      // Add add-ons step if there are suggested add-ons
-      if (hasSuggestedAddOns) {
-        dynamicSteps.push("addons");
-      }
-      
-      if (selectedProgram.requireAAUMembership) {
-        dynamicSteps.push("aau");
-      }
-      if (selectedProgram.requireConcussionWaiver) {
-        dynamicSteps.push("concussion");
-      }
-      if (selectedProgram.requireClubAgreement) {
-        dynamicSteps.push("club");
-      }
-      // Add custom waivers
-      const customWaiverIds = selectedProgram.requiredWaivers || [];
-      customWaiverIds.forEach(waiverId => {
-        dynamicSteps.push(`custom_${waiverId}`);
-      });
-    }
-
-    return [...baseSteps, ...dynamicSteps, "payment"];
+    return ["name", "dob", "gender"];
   };
 
   const stepFlow = getStepFlow();
@@ -301,15 +261,20 @@ export default function AddPlayer() {
             />
           )}
 
-          {/* Gender */}
+          {/* Gender - Final step, submit player */}
           {currentStepName === "gender" && (
             <GenderStep
               defaultValues={{ gender: playerData.gender || "" }}
               onSubmit={(data) => {
-                setPlayerData({ ...playerData, ...data });
-                handleNext();
+                const finalData = { 
+                  ...playerData, 
+                  ...data 
+                };
+                addPlayerMutation.mutate(finalData);
               }}
               onBack={handleBack}
+              isSubmitting={addPlayerMutation.isPending}
+              isFinalStep={true}
             />
           )}
 
@@ -636,10 +601,14 @@ function GenderStep({
   defaultValues,
   onSubmit,
   onBack,
+  isSubmitting = false,
+  isFinalStep = false,
 }: {
   defaultValues: { gender?: string };
   onSubmit: (data: Gender) => void;
   onBack: () => void;
+  isSubmitting?: boolean;
+  isFinalStep?: boolean;
 }) {
   const form = useForm<Gender>({
     resolver: zodResolver(genderSchema),
@@ -671,12 +640,33 @@ function GenderStep({
           )}
         />
         <div className="flex justify-between pt-6">
-          <button type="button" onClick={onBack} data-testid="button-back" className="text-gray-400 hover:text-white transition-colors">
+          <button type="button" onClick={onBack} data-testid="button-back" className="text-gray-400 hover:text-white transition-colors" disabled={isSubmitting}>
             <ChevronLeft className="w-6 h-6" />
           </button>
-          <button type="submit" data-testid="button-next" className="text-gray-400 hover:text-white transition-colors">
-            <ChevronRight className="w-6 h-6" />
-          </button>
+          {isFinalStep ? (
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              data-testid="button-add-player"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Add Player
+                </>
+              )}
+            </Button>
+          ) : (
+            <button type="submit" data-testid="button-next" className="text-gray-400 hover:text-white transition-colors">
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          )}
         </div>
       </form>
     </Form>

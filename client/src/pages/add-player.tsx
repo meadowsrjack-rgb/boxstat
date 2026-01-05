@@ -100,6 +100,7 @@ export default function AddPlayer() {
     concussionWaiverAcknowledged?: boolean;
     clubAgreementAcknowledged?: boolean;
     packageId?: string;
+    selectedPricingOptionId?: string; // For bundle pricing option selection
     customWaiverAcknowledgments?: Record<string, boolean>;
   }>({});
 
@@ -315,7 +316,7 @@ export default function AddPlayer() {
           {/* Package Selection */}
           {currentStepName === "package" && (
             <PackageSelectionStep
-              defaultValues={{ packageId: playerData.packageId || "" }}
+              defaultValues={{ packageId: playerData.packageId || "", selectedPricingOptionId: playerData.selectedPricingOptionId || "" }}
               programs={enrollablePrograms}
               programsByCategory={programsByCategory}
               isLoading={programsLoading}
@@ -1228,17 +1229,24 @@ function PackageSelectionStep({
   onSubmit,
   onBack,
 }: {
-  defaultValues: { packageId?: string };
+  defaultValues: { packageId?: string; selectedPricingOptionId?: string };
   programs: Program[];
   programsByCategory: Record<string, Program[]>;
   isLoading: boolean;
-  onSubmit: (data: Package) => void;
+  onSubmit: (data: Package & { selectedPricingOptionId?: string }) => void;
   onBack: () => void;
 }) {
-  const form = useForm<Package>({
+  const form = useForm<Package & { selectedPricingOptionId?: string }>({
     resolver: zodResolver(packageSchema),
-    defaultValues: { packageId: defaultValues.packageId || "" },
+    defaultValues: { 
+      packageId: defaultValues.packageId || "",
+      selectedPricingOptionId: defaultValues.selectedPricingOptionId || "",
+    },
   });
+  
+  const selectedPackageId = form.watch("packageId");
+  const selectedProgram = programs.find(p => p.id === selectedPackageId);
+  const pricingOptions = (selectedProgram as any)?.pricingOptions || [];
 
   if (isLoading) {
     return (
@@ -1345,6 +1353,76 @@ function PackageSelectionStep({
             </FormItem>
           )}
         />
+        
+        {/* Pricing Options (Bundle Pricing) */}
+        {selectedProgram && pricingOptions.length > 0 && (
+          <div className="mt-4 p-4 border border-yellow-700 bg-yellow-900/20 rounded-lg">
+            <h4 className="font-medium text-yellow-400 mb-3 flex items-center gap-2">
+              <DollarSign className="w-4 h-4" />
+              Bundle Options Available
+            </h4>
+            <p className="text-sm text-gray-400 mb-3">
+              Save money by choosing a bundle option for {selectedProgram.name}
+            </p>
+            <RadioGroup
+              value={form.watch("selectedPricingOptionId") || "default"}
+              onValueChange={(value) => form.setValue("selectedPricingOptionId", value === "default" ? "" : value)}
+              className="space-y-2"
+              data-testid="radiogroup-pricing-options"
+            >
+              {/* Default pricing (standard program price) */}
+              <div className="flex items-center space-x-3 border border-gray-700 rounded-lg p-3 bg-gray-800/50 hover:bg-gray-700/50 transition">
+                <RadioGroupItem value="default" id="pricing-default" data-testid="radio-pricing-default" />
+                <Label htmlFor="pricing-default" className="flex-1 cursor-pointer">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-white">Standard</p>
+                      <p className="text-xs text-gray-400">
+                        {(selectedProgram as any).billingCycle || "One-time"}
+                      </p>
+                    </div>
+                    <p className="font-bold text-red-400">
+                      ${selectedProgram.price ? (selectedProgram.price / 100).toFixed(2) : '0.00'}
+                    </p>
+                  </div>
+                </Label>
+              </div>
+              
+              {/* Bundle pricing options */}
+              {pricingOptions.map((option: any) => (
+                <div 
+                  key={option.id}
+                  className="flex items-center space-x-3 border border-gray-700 rounded-lg p-3 bg-gray-800/50 hover:bg-gray-700/50 transition"
+                >
+                  <RadioGroupItem value={option.id} id={`pricing-${option.id}`} data-testid={`radio-pricing-${option.id}`} />
+                  <Label htmlFor={`pricing-${option.id}`} className="flex-1 cursor-pointer">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-medium text-white">{option.name}</p>
+                        {option.durationDays && (
+                          <p className="text-xs text-gray-400">
+                            {option.durationDays} days
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-green-400">
+                          ${(option.price / 100).toFixed(2)}
+                        </p>
+                        {option.savingsNote && (
+                          <p className="text-xs text-green-500 font-medium">
+                            {option.savingsNote}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+        )}
+        
         <div className="flex justify-between pt-6">
           <button type="button" onClick={onBack} data-testid="button-back" className="text-gray-400 hover:text-white transition-colors">
             <ChevronLeft className="w-6 h-6" />
@@ -1474,8 +1552,15 @@ function PaymentSummaryStep({
   onBack: () => void;
   isSubmitting?: boolean;
 }) {
-  // Calculate total including add-ons
-  const programPrice = selectedProgram?.price || 0;
+  // Get selected pricing option if any
+  const pricingOptions = (selectedProgram as any)?.pricingOptions || [];
+  const selectedPricingOption = playerData.selectedPricingOptionId 
+    ? pricingOptions.find((opt: any) => opt.id === playerData.selectedPricingOptionId)
+    : null;
+  
+  // Calculate total including add-ons - use selected pricing option price if available
+  const programPrice = selectedPricingOption?.price ?? selectedProgram?.price ?? 0;
+  const pricingLabel = selectedPricingOption?.name || (selectedProgram as any)?.billingCycle || "Standard";
   const addOnsTotal = selectedAddOns.reduce((sum, id) => {
     const item = storeItems.find(s => s.id === id);
     return sum + (item?.price || 0);
@@ -1515,9 +1600,17 @@ function PaymentSummaryStep({
             </h4>
             <div className="space-y-1">
               <div className="flex justify-between items-center">
-                <p className="font-semibold text-white" data-testid="text-selected-program-name">
-                  {selectedProgram.name}
-                </p>
+                <div>
+                  <p className="font-semibold text-white" data-testid="text-selected-program-name">
+                    {selectedProgram.name}
+                  </p>
+                  <p className="text-xs text-gray-400" data-testid="text-pricing-option">
+                    {pricingLabel}
+                    {selectedPricingOption?.savingsNote && (
+                      <span className="text-green-400 ml-2">{selectedPricingOption.savingsNote}</span>
+                    )}
+                  </p>
+                </div>
                 <span className="text-red-400 font-medium">
                   ${(programPrice / 100).toFixed(2)}
                 </span>

@@ -7090,7 +7090,16 @@ function ProgramsTab({ programs, teams, organization }: any) {
       // Multi-tier pricing fields
       comparePrice: undefined as number | undefined,
       savingsNote: "",
-      packageGroup: "",
+      pricingOptions: [] as Array<{
+        id: string;
+        name: string;
+        price: number;
+        billingCycle?: string;
+        durationDays?: number;
+        comparePrice?: number;
+        savingsNote?: string;
+        isDefault?: boolean;
+      }>,
     },
   });
 
@@ -7176,7 +7185,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
       // Multi-tier pricing fields
       comparePrice: program.comparePrice,
       savingsNote: program.savingsNote || "",
-      packageGroup: program.packageGroup || "",
+      pricingOptions: program.pricingOptions || [],
     });
     setIsDialogOpen(true);
   };
@@ -7197,7 +7206,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
 
   const downloadProgramTemplate = () => {
-    const csvContent = "Name,Description,Type,Price,Billing Cycle,Access Tag,Duration Days,Session Count,Compare Price,Savings Note,Package Group,Is Active\nYouth Club Monthly,Monthly basketball membership,Subscription,7500,Monthly,club_member,30,,,,,true\nYouth Club 3 Months,3-month basketball bundle,Subscription,19500,One-Time,club_member,90,,7500,Save $30!,youth_club,true\nYouth Club 6 Months,6-month basketball bundle,Subscription,36000,One-Time,club_member,180,,7500,Save $114!,youth_club,true\n10-Session Pack,Credit-based training,Pack,5000,,pack_holder,,10,,,training_packs,true";
+    const csvContent = "Name,Description,Type,Price,Billing Cycle,Access Tag,Duration Days,Session Count,Compare Price,Savings Note,Is Active\nYouth Club Monthly,Monthly basketball membership,Subscription,7500,Monthly,club_member,30,,,,true\n10-Session Pack,Credit-based training,Pack,5000,,pack_holder,,10,,,true";
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -7208,7 +7217,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
   };
 
   const downloadProgramsData = () => {
-    const csvHeaders = "Name,Description,Type,Price,Billing Cycle,Access Tag,Duration Days,Session Count,Compare Price,Savings Note,Package Group,Is Active";
+    const csvHeaders = "Name,Description,Type,Price,Billing Cycle,Access Tag,Duration Days,Session Count,Compare Price,Savings Note,Is Active";
     const servicePrograms = programs.filter((p: any) => p.productCategory === 'service' || !p.productCategory);
     const csvRows = servicePrograms.map((program: any) => {
       return [
@@ -7222,7 +7231,6 @@ function ProgramsTab({ programs, teams, organization }: any) {
         program.sessionCount || "",
         program.comparePrice || "",
         program.savingsNote || "",
-        program.packageGroup || "",
         program.isActive !== false ? "true" : "false"
       ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(",");
     });
@@ -7263,8 +7271,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
             sessionCount: values[7] ? parseInt(values[7]) : undefined,
             comparePrice: values[8] ? parseInt(values[8]) : undefined,
             savingsNote: values[9] || undefined,
-            packageGroup: values[10] || undefined,
-            isActive: values[11]?.toLowerCase() !== "false",
+            isActive: values[10]?.toLowerCase() !== "false",
             productCategory: "service",
           });
           successCount++;
@@ -7297,7 +7304,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
                 <DialogTitle>Bulk Upload Programs</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <p className="text-sm text-gray-600">Upload a CSV file with columns: Name, Description, Type, Price (in cents), Billing Cycle, Access Tag, Duration Days, Session Count, Compare Price (in cents), Savings Note, Package Group, Is Active</p>
+                <p className="text-sm text-gray-600">Upload a CSV file with columns: Name, Description, Type, Price (in cents), Billing Cycle, Access Tag, Duration Days, Session Count, Compare Price (in cents), Savings Note, Is Active</p>
                 <Input
                   type="file"
                   accept=".csv"
@@ -7673,23 +7680,120 @@ function ProgramsTab({ programs, teams, organization }: any) {
                       />
                     </div>
                     
-                    <FormField
-                      control={form.control}
-                      name="packageGroup"
-                      render={({ field }) => (
-                        <FormItem className="mt-3">
-                          <FormLabel>Package Group</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              placeholder="youth_club" 
-                              data-testid="input-package-group"
-                            />
-                          </FormControl>
-                          <FormDescription className="text-xs">Group related packages (e.g., "youth_club" for all Youth Club pricing tiers)</FormDescription>
-                        </FormItem>
+                    {/* Pricing Options Section */}
+                    <div className="mt-4 border-t pt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h4 className="font-medium text-sm">Bundle Pricing Options</h4>
+                          <p className="text-xs text-gray-500">Add alternative pricing tiers (e.g., 3-month, 6-month bundles)</p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const current = form.getValues("pricingOptions") || [];
+                            form.setValue("pricingOptions", [
+                              ...current,
+                              {
+                                id: `opt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                                name: "",
+                                price: 0,
+                                billingCycle: "One-Time",
+                                durationDays: 90,
+                                isDefault: current.length === 0,
+                              }
+                            ]);
+                          }}
+                          data-testid="button-add-pricing-option"
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add Option
+                        </Button>
+                      </div>
+                      
+                      {(form.watch("pricingOptions") || []).length > 0 && (
+                        <div className="space-y-3">
+                          {(form.watch("pricingOptions") || []).map((option: any, index: number) => (
+                            <div key={option.id} className="border rounded-md p-3 bg-gray-50">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-medium text-gray-600">Option {index + 1}</span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const current = form.getValues("pricingOptions") || [];
+                                    form.setValue("pricingOptions", current.filter((_: any, i: number) => i !== index));
+                                  }}
+                                  data-testid={`button-remove-option-${index}`}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="text-xs font-medium">Name</label>
+                                  <Input
+                                    placeholder="3 Months"
+                                    value={option.name}
+                                    onChange={(e) => {
+                                      const current = form.getValues("pricingOptions") || [];
+                                      current[index] = { ...current[index], name: e.target.value };
+                                      form.setValue("pricingOptions", [...current]);
+                                    }}
+                                    data-testid={`input-option-name-${index}`}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs font-medium">Price ($)</label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="195.00"
+                                    value={option.price ? (option.price / 100).toFixed(2) : ""}
+                                    onChange={(e) => {
+                                      const current = form.getValues("pricingOptions") || [];
+                                      const val = parseFloat(e.target.value);
+                                      current[index] = { ...current[index], price: isNaN(val) ? 0 : Math.round(val * 100) };
+                                      form.setValue("pricingOptions", [...current]);
+                                    }}
+                                    data-testid={`input-option-price-${index}`}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs font-medium">Duration (days)</label>
+                                  <Input
+                                    type="number"
+                                    placeholder="90"
+                                    value={option.durationDays || ""}
+                                    onChange={(e) => {
+                                      const current = form.getValues("pricingOptions") || [];
+                                      current[index] = { ...current[index], durationDays: parseInt(e.target.value) || undefined };
+                                      form.setValue("pricingOptions", [...current]);
+                                    }}
+                                    data-testid={`input-option-duration-${index}`}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs font-medium">Savings Note</label>
+                                  <Input
+                                    placeholder="Save $30!"
+                                    value={option.savingsNote || ""}
+                                    onChange={(e) => {
+                                      const current = form.getValues("pricingOptions") || [];
+                                      current[index] = { ...current[index], savingsNote: e.target.value };
+                                      form.setValue("pricingOptions", [...current]);
+                                    }}
+                                    data-testid={`input-option-savings-${index}`}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       )}
-                    />
+                    </div>
                   </div>
 
                   {waivers.length > 0 && (

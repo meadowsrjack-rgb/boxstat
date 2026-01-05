@@ -408,7 +408,10 @@ export const products = pgTable("products", {
   // Multi-tier pricing support
   comparePrice: integer("compare_price"), // For multi-month packages: equivalent monthly price to show value (in cents)
   savingsNote: varchar("savings_note"), // Display text like "Save $114!" for bundle discounts
-  packageGroup: varchar("package_group"), // Groups related packages together (e.g., "youth_club" for all Youth Club tiers)
+  packageGroup: varchar("package_group"), // DEPRECATED: Use pricingOptions instead
+  // New: Multiple pricing options within a single program (replaces packageGroup pattern)
+  // Each option: { id, name, price, billingCycle, durationDays, comparePrice, savingsNote, stripePriceId, isDefault }
+  pricingOptions: jsonb("pricing_options").default('[]'), // Array of pricing tiers for this program
 });
 
 // Program Suggested Add-ons table (many-to-many relationship between programs and store products)
@@ -1624,7 +1627,21 @@ export interface Product {
   // Multi-tier pricing support
   comparePrice?: number; // For multi-month packages: equivalent monthly price to show value (in cents)
   savingsNote?: string; // Display text like "Save $114!" for bundle discounts
-  packageGroup?: string; // Groups related packages together (e.g., "youth_club" for all Youth Club tiers)
+  packageGroup?: string; // DEPRECATED: Groups related packages together
+  pricingOptions?: PricingOption[]; // Multiple pricing tiers for this program
+}
+
+// Pricing option type for multi-tier pricing within a single program
+export interface PricingOption {
+  id: string; // Unique ID for this pricing option (e.g., nanoid)
+  name: string; // Display name (e.g., "Monthly", "3 Months", "6 Months")
+  price: number; // Price in cents
+  billingCycle?: string; // "Monthly", "One-Time", etc.
+  durationDays?: number; // How long this option lasts
+  comparePrice?: number; // Equivalent monthly price for comparison
+  savingsNote?: string; // Savings display text (e.g., "Save $30!")
+  stripePriceId?: string; // Stripe Price ID for this option
+  isDefault?: boolean; // Whether this is the default/primary option
 }
 
 export const insertProductSchema = z.object({
@@ -1672,7 +1689,19 @@ export const insertProductSchema = z.object({
   // Multi-tier pricing support
   comparePrice: z.number().optional(), // For multi-month packages: equivalent monthly price (in cents)
   savingsNote: z.string().optional(), // Display text like "Save $114!"
-  packageGroup: z.string().optional(), // Groups related packages together
+  packageGroup: z.string().optional(), // DEPRECATED: Groups related packages together
+  // Multiple pricing options within a single program
+  pricingOptions: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    price: z.number(),
+    billingCycle: z.string().optional(),
+    durationDays: z.number().optional(),
+    comparePrice: z.number().optional(),
+    savingsNote: z.string().optional(),
+    stripePriceId: z.string().optional(),
+    isDefault: z.boolean().optional(),
+  })).default([]),
 });
 
 export type InsertProduct = z.infer<typeof insertProductSchema>;

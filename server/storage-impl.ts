@@ -4043,6 +4043,7 @@ class DatabaseStorage implements IStorage {
       comparePrice: program.comparePrice,
       savingsNote: program.savingsNote,
       packageGroup: program.packageGroup,
+      pricingOptions: program.pricingOptions ?? [],
       createdAt: now,
     };
 
@@ -4100,6 +4101,7 @@ class DatabaseStorage implements IStorage {
       comparePrice: updates.comparePrice,
       savingsNote: updates.savingsNote,
       packageGroup: updates.packageGroup,
+      pricingOptions: updates.pricingOptions,
     };
 
     // Remove undefined values
@@ -5501,6 +5503,7 @@ class DatabaseStorage implements IStorage {
       comparePrice: dbProgram.comparePrice,
       savingsNote: dbProgram.savingsNote,
       packageGroup: dbProgram.packageGroup,
+      pricingOptions: (dbProgram.pricingOptions as any[]) || [],
     };
   }
   

@@ -207,7 +207,7 @@ export default function ProfileGateway() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-white">Coach View</h3>
-                  <p className="text-sm text-gray-400">Manage teams, rosters & evaluations</p>
+                  <p className="text-sm text-gray-400">Team tools,  career development</p>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
               </CardContent>

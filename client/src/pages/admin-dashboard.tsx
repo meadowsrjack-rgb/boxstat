@@ -7614,74 +7614,10 @@ function ProgramsTab({ programs, teams, organization }: any) {
                     )}
                   />
 
-                  {/* Multi-tier pricing display options */}
+                  {/* Bundle Pricing Options */}
                   <div className="border rounded-lg p-3 mt-3 bg-blue-50">
-                    <h5 className="text-sm font-medium text-blue-900 mb-2">Bundle Pricing Display (Optional)</h5>
-                    <p className="text-xs text-blue-700 mb-3">For multi-month packages, show customers the value compared to monthly pricing</p>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <FormField
-                        control={form.control}
-                        name="comparePrice"
-                        render={({ field }) => {
-                          const [displayComparePrice, setDisplayComparePrice] = useState(field.value ? (field.value / 100).toString() : "");
-                          
-                          useEffect(() => {
-                            if (field.value !== undefined) {
-                              setDisplayComparePrice(field.value > 0 ? (field.value / 100).toString() : "");
-                            }
-                          }, [editingProgram]);
-                          
-                          return (
-                            <FormItem>
-                              <FormLabel>Compare Price ($)</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="number" 
-                                  step="0.01"
-                                  min="0"
-                                  placeholder="0.00" 
-                                  data-testid="input-compare-price"
-                                  value={displayComparePrice}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setDisplayComparePrice(val);
-                                    if (val === "" || val === ".") {
-                                      field.onChange(undefined);
-                                    } else {
-                                      const parsed = parseFloat(val);
-                                      field.onChange(isNaN(parsed) ? undefined : Math.round(parsed * 100));
-                                    }
-                                  }}
-                                />
-                              </FormControl>
-                              <FormDescription className="text-xs">Equivalent monthly price for comparison</FormDescription>
-                            </FormItem>
-                          );
-                        }}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="savingsNote"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Savings Message</FormLabel>
-                            <FormControl>
-                              <Input 
-                                {...field} 
-                                placeholder="Save $114!" 
-                                data-testid="input-savings-note"
-                              />
-                            </FormControl>
-                            <FormDescription className="text-xs">Displayed prominently on pricing</FormDescription>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
                     {/* Pricing Options Section */}
-                    <div className="mt-4 border-t pt-4">
+                    <div>
                       <div className="flex items-center justify-between mb-3">
                         <div>
                           <h4 className="font-medium text-sm">Bundle Pricing Options</h4>
@@ -7748,11 +7684,11 @@ function ProgramsTab({ programs, teams, organization }: any) {
                                 <div>
                                   <label className="text-xs font-medium">Price ($)</label>
                                   <Input
-                                    type="number"
-                                    step="0.01"
+                                    type="text"
+                                    inputMode="decimal"
                                     placeholder="195.00"
-                                    value={option.price ? (option.price / 100).toFixed(2) : ""}
-                                    onChange={(e) => {
+                                    defaultValue={option.price ? (option.price / 100).toFixed(2) : ""}
+                                    onBlur={(e) => {
                                       const current = form.getValues("pricingOptions") || [];
                                       const val = parseFloat(e.target.value);
                                       current[index] = { ...current[index], price: isNaN(val) ? 0 : Math.round(val * 100) };
@@ -7808,11 +7744,11 @@ function ProgramsTab({ programs, teams, organization }: any) {
                                       <div>
                                         <label className="text-xs font-medium">Monthly Price ($)</label>
                                         <Input
-                                          type="number"
-                                          step="0.01"
+                                          type="text"
+                                          inputMode="decimal"
                                           placeholder="75.00"
-                                          value={option.monthlyPrice ? (option.monthlyPrice / 100).toFixed(2) : ""}
-                                          onChange={(e) => {
+                                          defaultValue={option.monthlyPrice ? (option.monthlyPrice / 100).toFixed(2) : ""}
+                                          onBlur={(e) => {
                                             const current = form.getValues("pricingOptions") || [];
                                             const val = parseFloat(e.target.value);
                                             current[index] = { ...current[index], monthlyPrice: isNaN(val) ? 0 : Math.round(val * 100) };

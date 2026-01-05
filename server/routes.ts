@@ -2631,7 +2631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const { firstName, lastName, dateOfBirth, gender, aauMembershipId, postalCode, concussionWaiverAcknowledged, clubAgreementAcknowledged, packageId, addOnIds } = req.body;
+      const { firstName, lastName, dateOfBirth, gender, aauMembershipId, postalCode, concussionWaiverAcknowledged, clubAgreementAcknowledged, packageId, addOnIds, selectedPricingOptionId } = req.body;
       
       // Validate required fields
       if (!firstName || !lastName) {
@@ -2658,7 +2658,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      if (!program.price || program.price <= 0) {
+      // Determine the price to charge based on selected pricing option
+      let priceToCharge = program.price || 0;
+      let selectedPricingOption: any = null;
+      let pricingOptionName = '';
+      
+      // Check if user selected a specific pricing option (bundle tier)
+      if (selectedPricingOptionId && (program as any).pricingOptions && Array.isArray((program as any).pricingOptions)) {
+        selectedPricingOption = (program as any).pricingOptions.find((opt: any) => opt.id === selectedPricingOptionId);
+        if (selectedPricingOption && selectedPricingOption.price > 0) {
+          priceToCharge = selectedPricingOption.price;
+          pricingOptionName = selectedPricingOption.name || '';
+        }
+      }
+      
+      if (!priceToCharge || priceToCharge <= 0) {
         return res.status(400).json({ 
           success: false, 
           message: "Selected program has no valid price" 
@@ -2741,20 +2755,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Build line items starting with the program
-      const lineItems: any[] = [{
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: program.name,
-            description: `Registration for ${firstName} ${lastName}`,
-          },
-          unit_amount: program.price, // Price is already in cents
-        },
-        quantity: 1,
-      }];
+      // Use Stripe Price ID if available for the selected pricing option, otherwise use price_data
+      const programLineItem: any = selectedPricingOption?.stripePriceId
+        ? {
+            price: selectedPricingOption.stripePriceId,
+            quantity: 1,
+          }
+        : {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: pricingOptionName ? `${program.name} - ${pricingOptionName}` : program.name,
+                description: `Registration for ${firstName} ${lastName}`,
+              },
+              unit_amount: priceToCharge, // Price is already in cents
+            },
+            quantity: 1,
+          };
+      
+      const lineItems: any[] = [programLineItem];
       
       // Track subtotal for platform fee
-      let subtotal = program.price;
+      let subtotal = priceToCharge;
 
       // Add any selected add-ons (validate they are goods products)
       if (addOnIds && Array.isArray(addOnIds) && addOnIds.length > 0) {
@@ -2811,6 +2833,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           playerId: playerUser.id,
           accountHolderId: id,
           packageId: packageId,
+          selectedPricingOptionId: selectedPricingOptionId || '',
+          pricingOptionName: pricingOptionName || '',
           addOnIds: addOnIds ? JSON.stringify(addOnIds) : '',
         },
       });

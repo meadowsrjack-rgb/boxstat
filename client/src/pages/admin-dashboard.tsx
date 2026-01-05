@@ -7788,6 +7788,20 @@ function ProgramsTab({ programs, teams, organization }: any) {
                                     data-testid={`input-option-savings-${index}`}
                                   />
                                 </div>
+                                <div className="col-span-2">
+                                  <label className="text-xs font-medium">Stripe Price ID</label>
+                                  <Input
+                                    placeholder="price_1ABC123..."
+                                    value={option.stripePriceId || ""}
+                                    onChange={(e) => {
+                                      const current = form.getValues("pricingOptions") || [];
+                                      current[index] = { ...current[index], stripePriceId: e.target.value };
+                                      form.setValue("pricingOptions", [...current]);
+                                    }}
+                                    data-testid={`input-option-stripe-price-${index}`}
+                                  />
+                                  <p className="text-xs text-gray-500 mt-1">Enter the Stripe Price ID from your Stripe dashboard</p>
+                                </div>
                               </div>
                             </div>
                           ))}

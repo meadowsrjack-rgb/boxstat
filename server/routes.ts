@@ -4786,8 +4786,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Team not found' });
       }
       
-      // Get users assigned to this team
-      const appUsers = await storage.getUsersByTeam(teamId);
+      // Get users assigned to this team and filter to only players
+      const allTeamUsers = await storage.getUsersByTeam(teamId);
+      const appUsers = allTeamUsers.filter(u => u.role === 'player');
       
       // Get Notion players for this team if it has a notionSlug
       let notionPlayers: any[] = [];

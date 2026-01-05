@@ -189,7 +189,7 @@ export default function ProfileGateway() {
                 <h3 className="text-lg font-semibold text-white">
                   {(user as any)?.firstName} {(user as any)?.lastName}
                 </h3>
-                <p className="text-sm text-gray-400">Manage players, enroll in programs</p>
+                <p className="text-sm text-gray-400">Manage players and account</p>
               </div>
               <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
             </CardContent>

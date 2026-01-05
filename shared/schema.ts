@@ -1640,8 +1640,12 @@ export interface PricingOption {
   durationDays?: number; // How long this option lasts
   comparePrice?: number; // Equivalent monthly price for comparison
   savingsNote?: string; // Savings display text (e.g., "Save $30!")
-  stripePriceId?: string; // Stripe Price ID for this option
+  stripePriceId?: string; // Stripe Price ID for this option (auto-created)
   isDefault?: boolean; // Whether this is the default/primary option
+  // Subscription schedule fields (bundle converts to monthly)
+  convertsToMonthly?: boolean; // If true, this bundle converts to monthly after initial period
+  monthlyPrice?: number; // Monthly price in cents after bundle ends
+  monthlyStripePriceId?: string; // Stripe Price ID for the monthly rate (auto-created)
 }
 
 export const insertProductSchema = z.object({
@@ -1701,6 +1705,10 @@ export const insertProductSchema = z.object({
     savingsNote: z.string().optional(),
     stripePriceId: z.string().optional(),
     isDefault: z.boolean().optional(),
+    // Subscription schedule fields
+    convertsToMonthly: z.boolean().optional(),
+    monthlyPrice: z.number().optional(),
+    monthlyStripePriceId: z.string().optional(),
   })).default([]),
 });
 

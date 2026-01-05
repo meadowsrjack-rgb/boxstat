@@ -1,0 +1,34 @@
+Potential Issues & Suggestions
+1. The "Subscription Update" Trap
+
+When you use inline pricing (passing a unit_amount directly to a Checkout Session instead of a price_id), Stripe creates an "ad-hoc" price behind the scenes.
+
+The Issue: If you need to "Upgrade" or "Downgrade" that customer later via the Stripe API or Dashboard, it can be difficult because that specific price doesn't exist in your standard dropdowns.
+
+Suggestion: Ensure your system can handle "Custom" as a price state. If a user is on a custom price, any automated "Plan Switch" logic should probably trigger a manual review or a new custom quote rather than an automated swap.
+
+2. Pro-ration Complexity
+
+If a customer moves from a 3-month bundle to a 6-month bundle mid-cycle, Stripe will attempt to prorate the difference.
+
+The Issue: Proration on non-monthly cycles (like 3 or 6 months) often confuses customers. They might see a credit for $42.13 and a charge for $112.10, leading to support tickets.
+
+Suggestion: Decide now if you want to disable prorations for bundle switches (making the change effective at the end of the current period) or if you want to provide a "Preview Proration" screen in BoxStat.
+
+3. Subscription "Schedules" for Bundles
+
+Since you are selling 3-month and 6-month packages as subscriptions:
+
+The Issue: If a "6-month bundle" is just a subscription with a 6-month interval, it will bill $350 forever every 6 months.
+
+The Question: Is this a "6-month commitment" that turns into month-to-month, or is it a recurring 6-month block?
+
+Suggestion: If these are meant to expire or change after one cycle, look into Stripe Subscription Schedules. This allows you to bake in a "Start on Plan A for 6 months, then move to Plan B" logic automatically.
+
+4. Legacy Pricing & Price Increases
+
+Your plan to "Honor Legacy Pricing" is great for retention, but it creates a "Price Debt."
+
+The Issue: Three years from now, you might have 50 people still paying 2023 rates while your costs have risen.
+
+Suggestion: In your database, tag these subscriptions with a is_legacy: true flag and store the original_migration_date. This allows you to run reports on how much revenue you are "leaving on the table" and makes it easier if you ever decide to do a forced price migration (e.g., "Grandfathering ends in 30 days").

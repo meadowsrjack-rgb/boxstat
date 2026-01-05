@@ -1949,17 +1949,47 @@ export default function UnifiedAccount() {
                           </div>
                         )}
                         
-                        {/* Pricing Options - show when program has bundle pricing options */}
+                        {/* Payment Options - show subscription, bundle, and installment options */}
                         {selectedPackage && !isStoreItemPurchase && (() => {
                           const pkg = (programs as any[])?.find((p: any) => p.id === selectedPackage);
-                          const pricingOptions = pkg?.pricingOptions || [];
+                          if (!pkg) return null;
                           
-                          if (pricingOptions.length === 0) return null;
+                          const pricingOptions = pkg.pricingOptions || [];
+                          const installmentPlans = pkg.installmentPlans || [];
+                          const isSubscriptionProgram = pkg.type === "Subscription" && pkg.billingCycle;
+                          const hasMultipleOptions = isSubscriptionProgram || pricingOptions.length > 0 || installmentPlans.length > 0;
+                          
+                          if (!hasMultipleOptions) return null;
                           
                           return (
                             <div className="space-y-2">
-                              <label className="text-sm font-medium">Pricing Option</label>
+                              <label className="text-sm font-medium">Payment Option</label>
                               <div className="space-y-2">
+                                {/* Monthly Subscription Option */}
+                                {isSubscriptionProgram && (
+                                  <div
+                                    onClick={() => setSelectedPricingOptionId("")}
+                                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                                      selectedPricingOptionId === ""
+                                        ? 'border-red-500 bg-red-50'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                    data-testid="pricing-option-monthly"
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <p className="font-medium text-sm">Monthly Subscription</p>
+                                        <p className="text-xs text-gray-500">Pay {pkg.billingCycle?.toLowerCase() || 'monthly'}, cancel anytime</p>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="font-semibold text-red-600">${((pkg.price || 0) / 100).toFixed(2)}</p>
+                                        <p className="text-xs text-gray-500">per {pkg.billingCycle?.toLowerCase() || 'month'}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Bundle Pricing Options */}
                                 {pricingOptions.map((option: any) => (
                                   <div
                                     key={option.id}
@@ -1975,10 +2005,10 @@ export default function UnifiedAccount() {
                                       <div>
                                         <p className="font-medium text-sm">{option.name}</p>
                                         {option.durationDays && (
-                                          <p className="text-xs text-gray-500">{option.durationDays} days</p>
+                                          <p className="text-xs text-gray-500">{option.durationDays} day prepaid</p>
                                         )}
                                         {option.convertsToMonthly && (
-                                          <p className="text-xs text-green-600">Then ${(option.monthlyPrice / 100).toFixed(2)}/month</p>
+                                          <p className="text-xs text-green-600">Then ${(option.monthlyPrice / 100).toFixed(2)}/month after</p>
                                         )}
                                       </div>
                                       <div className="text-right">
@@ -1986,6 +2016,35 @@ export default function UnifiedAccount() {
                                         {option.savingsNote && (
                                           <p className="text-xs text-green-600">{option.savingsNote}</p>
                                         )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                                
+                                {/* Installment Plan Options */}
+                                {installmentPlans.map((plan: any) => (
+                                  <div
+                                    key={plan.id}
+                                    onClick={() => setSelectedPricingOptionId(`installment_${plan.id}`)}
+                                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                                      selectedPricingOptionId === `installment_${plan.id}`
+                                        ? 'border-red-500 bg-red-50'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                    data-testid={`pricing-option-installment-${plan.id}`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <p className="font-medium text-sm">{plan.name || `${plan.numberOfPayments} Payment Plan`}</p>
+                                        <p className="text-xs text-gray-500">
+                                          {plan.numberOfPayments} payments of ${((plan.paymentAmount || 0) / 100).toFixed(2)}
+                                        </p>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="font-semibold text-red-600">
+                                          ${(((plan.paymentAmount || 0) * plan.numberOfPayments) / 100).toFixed(2)} total
+                                        </p>
+                                        <p className="text-xs text-gray-500">split into {plan.numberOfPayments} payments</p>
                                       </div>
                                     </div>
                                   </div>
@@ -2202,19 +2261,54 @@ export default function UnifiedAccount() {
                           if (!pkg) return null;
                           
                           const isStoreProduct = pkg.productCategory === 'goods';
-                          const basePrice = pkg.price || 0;
+                          const pricingOptions = pkg.pricingOptions || [];
+                          const installmentPlans = pkg.installmentPlans || [];
+                          const selectedOption = pricingOptions.find((opt: any) => opt.id === selectedPricingOptionId);
+                          
+                          // Check if an installment plan is selected
+                          const isInstallmentSelected = selectedPricingOptionId.startsWith('installment_');
+                          const selectedInstallmentId = isInstallmentSelected ? selectedPricingOptionId.replace('installment_', '') : null;
+                          const selectedInstallment = installmentPlans.find((p: any) => p.id === selectedInstallmentId);
+                          
+                          // Use selected pricing option price if available, otherwise use base price
+                          let basePrice = pkg.price || 0;
+                          let displayName = pkg.name;
+                          
+                          if (selectedOption) {
+                            basePrice = selectedOption.price;
+                            displayName = `${pkg.name} - ${selectedOption.name}`;
+                          } else if (selectedInstallment) {
+                            basePrice = (selectedInstallment.paymentAmount || 0) * selectedInstallment.numberOfPayments;
+                            displayName = `${pkg.name} - ${selectedInstallment.name || `${selectedInstallment.numberOfPayments} Payment Plan`}`;
+                          }
+                          
                           const addOnsTotal = selectedAddOns.reduce((sum, id) => {
                             const item = suggestedAddOnProducts.find((s: any) => s.id === id);
                             return sum + (item?.price || 0);
                           }, 0);
                           const totalPrice = basePrice + addOnsTotal;
                           
+                          // Determine billing type display
+                          const isBundle = !!selectedOption;
+                          const isSubscription = !isBundle && !isInstallmentSelected && pkg.type === "Subscription" && pkg.billingCycle;
+                          
                           return (
                             <div className="bg-gray-100 p-4 rounded-lg space-y-2">
                               <div className="flex justify-between text-sm">
-                                <span>{pkg.name}</span>
+                                <span>{displayName}</span>
                                 <span>${(basePrice / 100).toFixed(2)}</span>
                               </div>
+                              {selectedOption?.durationDays && (
+                                <p className="text-xs text-gray-500">
+                                  {selectedOption.durationDays} day access
+                                  {selectedOption.convertsToMonthly && ` • Then $${(selectedOption.monthlyPrice / 100).toFixed(2)}/month`}
+                                </p>
+                              )}
+                              {selectedInstallment && (
+                                <p className="text-xs text-gray-500">
+                                  First payment: ${((selectedInstallment.paymentAmount || 0) / 100).toFixed(2)} today
+                                </p>
+                              )}
                               {selectedAddOns.length > 0 && selectedAddOns.map(addonId => {
                                 const addon = suggestedAddOnProducts.find((s: any) => s.id === addonId);
                                 if (!addon) return null;
@@ -2229,9 +2323,17 @@ export default function UnifiedAccount() {
                                 <span className="font-semibold">Total:</span>
                                 <div className="text-right">
                                   <span className="text-xl font-bold">${(totalPrice / 100).toFixed(2)}</span>
-                                  {!isStoreProduct && pkg.type === "Subscription" && pkg.billingCycle && (
+                                  {isSubscription && (
                                     <p className="text-xs text-gray-500">
                                       per {pkg.billingCycle.toLowerCase()}
+                                    </p>
+                                  )}
+                                  {isBundle && !selectedOption?.convertsToMonthly && (
+                                    <p className="text-xs text-gray-500">one-time payment</p>
+                                  )}
+                                  {selectedInstallment && (
+                                    <p className="text-xs text-gray-500">
+                                      {selectedInstallment.numberOfPayments} payments
                                     </p>
                                   )}
                                 </div>

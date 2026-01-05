@@ -130,6 +130,154 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-06-30.basil" })
   : null;
 
+// Helper function to generate stable UUID for pricing options
+function generateStablePricingOptionId(): string {
+  return `po_${crypto.randomUUID()}`;
+}
+
+// Deep clone helper that preserves types (unlike JSON.stringify which loses Dates/BigInt)
+function deepClone<T>(obj: T): T {
+  if (obj === null || typeof obj !== 'object') {
+    // Handle primitives including BigInt
+    return obj;
+  }
+  if (typeof obj === 'bigint') {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(item => deepClone(item)) as unknown as T;
+  }
+  if (obj instanceof Date) {
+    return new Date(obj.getTime()) as unknown as T;
+  }
+  const cloned: any = {};
+  for (const key of Object.keys(obj)) {
+    cloned[key] = deepClone((obj as any)[key]);
+  }
+  return cloned;
+}
+
+// Helper function to ensure all pricing options have stable server-side IDs
+function assignStablePricingOptionIds(pricingOptions: any[]): any[] {
+  return pricingOptions.map((option: any) => ({
+    ...option,
+    // Only preserve IDs that are server-generated (start with 'po_')
+    // Client-generated IDs get replaced with stable server IDs
+    id: option.id && option.id.startsWith('po_') ? option.id : generateStablePricingOptionId(),
+  }));
+}
+
+// Helper function to sync program pricing options with Stripe
+// Creates/updates Stripe Products and Prices for each pricing option
+// Note: Pricing options should already have stable IDs assigned before calling this function
+async function syncProgramWithStripe(
+  program: any,
+  pricingOptions: any[] = []
+): Promise<{ stripeProductId: string | null; updatedPricingOptions: any[] }> {
+  if (!stripe) {
+    console.log('Stripe not configured, skipping sync');
+    // Just return options as-is (they should already have stable IDs)
+    return { stripeProductId: program.stripeProductId || null, updatedPricingOptions: pricingOptions };
+  }
+
+  try {
+    let stripeProductId = program.stripeProductId;
+
+    // Create or get Stripe Product for this program
+    if (!stripeProductId) {
+      const stripeProduct = await stripe.products.create({
+        name: program.name,
+        description: program.description || undefined,
+        metadata: {
+          programId: program.id,
+          organizationId: program.organizationId,
+        },
+      });
+      stripeProductId = stripeProduct.id;
+      console.log(`Created Stripe Product ${stripeProductId} for program ${program.name}`);
+    } else {
+      // Update existing product name/description if changed
+      await stripe.products.update(stripeProductId, {
+        name: program.name,
+        description: program.description || undefined,
+      });
+    }
+
+    // Create Stripe Prices for each pricing option that doesn't have one
+    // Note: All options should already have stable IDs (po_ prefix) from the route handlers
+    const updatedPricingOptions = await Promise.all(
+      pricingOptions.map(async (option: any) => {
+        const updatedOption = { ...option };
+
+        // Create main price for this option if not exists
+        // Skip zero-price options as Stripe doesn't allow $0 prices for one-time charges
+        if (!option.stripePriceId && option.price && option.price > 0) {
+          try {
+            // Determine if this is recurring or one-time based on billingCycle
+            const isRecurring = option.billingCycle === 'Monthly' || 
+                               (option.convertsToMonthly && option.durationDays && option.durationDays > 31);
+            
+            // For bundles that convert to monthly, create as one-time (the initial bundle payment)
+            // The monthly conversion will use a separate price
+            const priceParams: Stripe.PriceCreateParams = {
+              product: stripeProductId!,
+              unit_amount: option.price,
+              currency: 'usd',
+              metadata: {
+                programId: program.id,
+                pricingOptionId: option.id,
+                pricingOptionName: option.name,
+              },
+            };
+
+            // If it's a straight monthly subscription (not a bundle), make it recurring
+            if (option.billingCycle === 'Monthly' && !option.convertsToMonthly) {
+              priceParams.recurring = { interval: 'month' };
+            }
+
+            const stripePrice = await stripe.prices.create(priceParams);
+            updatedOption.stripePriceId = stripePrice.id;
+            console.log(`Created Stripe Price ${stripePrice.id} for option "${option.name}"`);
+          } catch (error: any) {
+            console.error(`Failed to create Stripe Price for option "${option.name}":`, error.message);
+          }
+        }
+
+        // Create monthly price for bundle-to-monthly conversion if needed
+        if (option.convertsToMonthly && option.monthlyPrice > 0 && !option.monthlyStripePriceId) {
+          try {
+            const monthlyPriceParams: Stripe.PriceCreateParams = {
+              product: stripeProductId!,
+              unit_amount: option.monthlyPrice,
+              currency: 'usd',
+              recurring: { interval: 'month' },
+              metadata: {
+                programId: program.id,
+                pricingOptionId: option.id,
+                pricingOptionName: `${option.name} - Monthly`,
+                isMonthlyConversion: 'true',
+              },
+            };
+
+            const monthlyPrice = await stripe.prices.create(monthlyPriceParams);
+            updatedOption.monthlyStripePriceId = monthlyPrice.id;
+            console.log(`Created monthly Stripe Price ${monthlyPrice.id} for option "${option.name}"`);
+          } catch (error: any) {
+            console.error(`Failed to create monthly Stripe Price for option "${option.name}":`, error.message);
+          }
+        }
+
+        return updatedOption;
+      })
+    );
+
+    return { stripeProductId, updatedPricingOptions };
+  } catch (error: any) {
+    console.error('Error syncing program with Stripe:', error.message);
+    return { stripeProductId: program.stripeProductId || null, updatedPricingOptions: pricingOptions };
+  }
+}
+
 // Configure multer for file uploads
 const uploadDir = path.join(process.cwd(), 'public', 'uploads');
 const awardImageDir = path.join(process.cwd(), 'client', 'public', 'trophiesbadges');
@@ -2754,90 +2902,231 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
       
-      // Build line items starting with the program
-      // Use Stripe Price ID if available for the selected pricing option, otherwise use price_data
-      const programLineItem: any = selectedPricingOption?.stripePriceId
-        ? {
-            price: selectedPricingOption.stripePriceId,
-            quantity: 1,
-          }
-        : {
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: pricingOptionName ? `${program.name} - ${pricingOptionName}` : program.name,
-                description: `Registration for ${firstName} ${lastName}`,
-              },
-              unit_amount: priceToCharge, // Price is already in cents
-            },
-            quantity: 1,
-          };
+      // Determine if this is a bundle that converts to monthly
+      const isConvertsToMonthly = selectedPricingOption?.convertsToMonthly && 
+                                   selectedPricingOption?.monthlyPrice > 0 &&
+                                   selectedPricingOption?.durationDays > 0;
       
-      const lineItems: any[] = [programLineItem];
-      
-      // Track subtotal for platform fee
-      let subtotal = priceToCharge;
-
-      // Add any selected add-ons (validate they are goods products)
-      if (addOnIds && Array.isArray(addOnIds) && addOnIds.length > 0) {
-        for (const addOnId of addOnIds) {
-          const addOn = await storage.getProgram(addOnId);
-          // Only allow goods products as add-ons
-          if (addOn && addOn.productCategory === 'goods' && addOn.price && addOn.price > 0) {
-            subtotal += addOn.price;
-            lineItems.push({
-              price_data: {
-                currency: 'usd',
-                product_data: {
-                  name: addOn.name,
-                  description: addOn.description || `Add-on for ${firstName} ${lastName}`,
-                },
-                unit_amount: addOn.price,
-              },
-              quantity: 1,
-            });
-          }
-        }
-      }
-      
-      // Add 1% BoxStat platform fee
-      const platformFee = Math.round(subtotal * 0.01); // 1% of subtotal
-      if (platformFee > 0) {
-        lineItems.push({
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'BoxStat Platform Fee',
-              description: '1% service fee',
-            },
-            unit_amount: platformFee,
-          },
-          quantity: 1,
-        });
-      }
-
       // Build success URL - include auth token for iOS to restore session after redirect
       const successUrl = isIOSApp 
         ? `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}&auth_token=${iosAuthToken}`
         : `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`;
       
-      // Create Stripe Checkout Session
-      const session = await stripe.checkout.sessions.create({
-        customer: stripeCustomerId,
-        line_items: lineItems,
-        mode: 'payment',
-        success_url: successUrl,
-        cancel_url: `${origin}/add-player?step=5&payment=cancelled`,
-        metadata: {
-          type: 'add_player',
-          playerId: playerUser.id,
-          accountHolderId: id,
-          packageId: packageId,
-          selectedPricingOptionId: selectedPricingOptionId || '',
-          pricingOptionName: pricingOptionName || '',
-          addOnIds: addOnIds ? JSON.stringify(addOnIds) : '',
-        },
-      });
+      let session: Stripe.Checkout.Session;
+      
+      if (isConvertsToMonthly) {
+        // BUNDLE-TO-MONTHLY FLOW
+        // Use subscription mode with the monthly price
+        // Bundle payment added via add_invoice_items (only charged if checkout completes)
+        // Trial period covers the bundle duration, then monthly billing begins
+        
+        const monthlyPriceId = selectedPricingOption.monthlyStripePriceId;
+        const bundleDurationDays = selectedPricingOption.durationDays;
+        
+        // Calculate trial end date (bundle period)
+        const trialEnd = Math.floor(Date.now() / 1000) + (bundleDurationDays * 24 * 60 * 60);
+        
+        // Build add_invoice_items array (items added to first invoice only if checkout completes)
+        // This prevents orphaned charges if user abandons checkout
+        const addInvoiceItems: Stripe.Checkout.SessionCreateParams.SubscriptionData.InvoiceItem[] = [];
+        
+        // Track subtotal for platform fee
+        let bundleSubtotal = priceToCharge;
+        
+        // Add bundle payment as invoice item
+        // Use product if available, otherwise use product_data
+        if ((program as any).stripeProductId) {
+          addInvoiceItems.push({
+            price_data: {
+              currency: 'usd',
+              product: (program as any).stripeProductId,
+              unit_amount: priceToCharge,
+            },
+            quantity: 1,
+            description: `${program.name} - ${pricingOptionName} (Bundle Payment)`,
+          });
+        } else {
+          addInvoiceItems.push({
+            price_data: {
+              currency: 'usd',
+              product_data: { name: `${program.name} - ${pricingOptionName}` },
+              unit_amount: priceToCharge,
+            },
+            quantity: 1,
+            description: `${program.name} - ${pricingOptionName} (Bundle Payment)`,
+          });
+        }
+        
+        // Add any add-ons as invoice items
+        if (addOnIds && Array.isArray(addOnIds) && addOnIds.length > 0) {
+          for (const addOnId of addOnIds) {
+            const addOn = await storage.getProgram(addOnId);
+            if (addOn && addOn.productCategory === 'goods' && addOn.price && addOn.price > 0) {
+              bundleSubtotal += addOn.price;
+              if ((addOn as any).stripeProductId) {
+                addInvoiceItems.push({
+                  price_data: {
+                    currency: 'usd',
+                    product: (addOn as any).stripeProductId,
+                    unit_amount: addOn.price,
+                  },
+                  quantity: 1,
+                  description: addOn.name,
+                });
+              } else {
+                addInvoiceItems.push({
+                  price_data: {
+                    currency: 'usd',
+                    product_data: { name: addOn.name },
+                    unit_amount: addOn.price,
+                  },
+                  quantity: 1,
+                  description: addOn.name,
+                });
+              }
+            }
+          }
+        }
+        
+        // Add platform fee (1% of bundle + add-ons)
+        const platformFee = Math.round(bundleSubtotal * 0.01);
+        if (platformFee > 0) {
+          addInvoiceItems.push({
+            price_data: {
+              currency: 'usd',
+              product_data: { name: 'BoxStat Platform Fee' },
+              unit_amount: platformFee,
+            },
+            quantity: 1,
+            description: 'BoxStat Platform Fee (1%)',
+          });
+        }
+        
+        // Build subscription line items (monthly price only)
+        const subscriptionLineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = monthlyPriceId
+          ? [{ price: monthlyPriceId, quantity: 1 }]
+          : [{
+              price_data: {
+                currency: 'usd',
+                product_data: {
+                  name: `${program.name} - Monthly`,
+                  description: `Monthly subscription for ${firstName} ${lastName}`,
+                },
+                unit_amount: selectedPricingOption.monthlyPrice,
+                recurring: { interval: 'month' },
+              },
+              quantity: 1,
+            }];
+        
+        session = await stripe.checkout.sessions.create({
+          customer: stripeCustomerId,
+          line_items: subscriptionLineItems,
+          mode: 'subscription',
+          subscription_data: {
+            trial_end: trialEnd,
+            add_invoice_items: addInvoiceItems,
+            metadata: {
+              type: 'add_player_subscription',
+              playerId: playerUser.id,
+              accountHolderId: id,
+              packageId: packageId,
+              bundlePricingOptionId: selectedPricingOptionId || '',
+              bundleName: pricingOptionName || '',
+            },
+          },
+          success_url: successUrl,
+          cancel_url: `${origin}/add-player?step=5&payment=cancelled`,
+          metadata: {
+            type: 'add_player',
+            playerId: playerUser.id,
+            accountHolderId: id,
+            packageId: packageId,
+            selectedPricingOptionId: selectedPricingOptionId || '',
+            pricingOptionName: pricingOptionName || '',
+            convertsToMonthly: 'true',
+            bundleDurationDays: String(bundleDurationDays),
+            addOnIds: addOnIds ? JSON.stringify(addOnIds) : '',
+          },
+        });
+        
+        console.log(`Created subscription checkout for bundle-to-monthly: ${pricingOptionName} -> Monthly after ${bundleDurationDays} days`);
+      } else {
+        // STANDARD ONE-TIME PAYMENT FLOW
+        // Build line items starting with the program
+        const programLineItem: any = selectedPricingOption?.stripePriceId
+          ? {
+              price: selectedPricingOption.stripePriceId,
+              quantity: 1,
+            }
+          : {
+              price_data: {
+                currency: 'usd',
+                product_data: {
+                  name: pricingOptionName ? `${program.name} - ${pricingOptionName}` : program.name,
+                  description: `Registration for ${firstName} ${lastName}`,
+                },
+                unit_amount: priceToCharge,
+              },
+              quantity: 1,
+            };
+        
+        const lineItems: any[] = [programLineItem];
+        let subtotal = priceToCharge;
+
+        // Add any selected add-ons (validate they are goods products)
+        if (addOnIds && Array.isArray(addOnIds) && addOnIds.length > 0) {
+          for (const addOnId of addOnIds) {
+            const addOn = await storage.getProgram(addOnId);
+            if (addOn && addOn.productCategory === 'goods' && addOn.price && addOn.price > 0) {
+              subtotal += addOn.price;
+              lineItems.push({
+                price_data: {
+                  currency: 'usd',
+                  product_data: {
+                    name: addOn.name,
+                    description: addOn.description || `Add-on for ${firstName} ${lastName}`,
+                  },
+                  unit_amount: addOn.price,
+                },
+                quantity: 1,
+              });
+            }
+          }
+        }
+        
+        // Add 1% BoxStat platform fee
+        const platformFee = Math.round(subtotal * 0.01);
+        if (platformFee > 0) {
+          lineItems.push({
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: 'BoxStat Platform Fee',
+                description: '1% service fee',
+              },
+              unit_amount: platformFee,
+            },
+            quantity: 1,
+          });
+        }
+
+        session = await stripe.checkout.sessions.create({
+          customer: stripeCustomerId,
+          line_items: lineItems,
+          mode: 'payment',
+          success_url: successUrl,
+          cancel_url: `${origin}/add-player?step=5&payment=cancelled`,
+          metadata: {
+            type: 'add_player',
+            playerId: playerUser.id,
+            accountHolderId: id,
+            packageId: packageId,
+            selectedPricingOptionId: selectedPricingOptionId || '',
+            pricingOptionName: pricingOptionName || '',
+            addOnIds: addOnIds ? JSON.stringify(addOnIds) : '',
+          },
+        });
+      }
       
       // Update player with checkout session ID
       await storage.updateUser(playerUser.id, {
@@ -7308,8 +7597,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(403).json({ message: 'Only admins can create programs' });
     }
     
-    const programData = insertProgramSchema.parse(req.body);
-    const program = await storage.createProgram(programData);
+    const parsedData = insertProgramSchema.parse(req.body);
+    
+    // Deep clone the parsed data to avoid mutating frozen Zod output
+    // Use type-preserving deepClone instead of JSON.stringify to preserve Date types
+    const programData = deepClone(parsedData);
+    
+    // Assign stable server-side IDs to pricing options BEFORE creating the program
+    if (programData.pricingOptions && programData.pricingOptions.length > 0) {
+      programData.pricingOptions = assignStablePricingOptionIds(programData.pricingOptions);
+    }
+    
+    // Create the program with stable pricing option IDs
+    let program = await storage.createProgram(programData);
+    
+    // Sync with Stripe if there are pricing options
+    if (programData.pricingOptions && programData.pricingOptions.length > 0) {
+      const { stripeProductId, updatedPricingOptions } = await syncProgramWithStripe(
+        program,
+        programData.pricingOptions // Use the already-ID'd options
+      );
+      
+      // Update program with Stripe IDs (stable IDs are already preserved)
+      if (stripeProductId || updatedPricingOptions.some((opt: any) => opt.stripePriceId)) {
+        program = await storage.updateProgram(program.id, {
+          stripeProductId,
+          pricingOptions: updatedPricingOptions,
+        }) || program;
+      }
+    }
+    
     res.json(program);
   });
   
@@ -7319,7 +7636,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(403).json({ message: 'Only admins can update programs' });
     }
     
-    const updated = await storage.updateProgram(req.params.id, req.body);
+    // Get existing program for Stripe sync
+    const existingProgram = await storage.getProgram(req.params.id);
+    if (!existingProgram) {
+      return res.status(404).json({ message: 'Program not found' });
+    }
+    
+    let updateData = { ...req.body };
+    
+    // Handle pricing options with stable IDs and deep-merge
+    if (req.body.pricingOptions && req.body.pricingOptions.length > 0) {
+      // Map existing options by their stable ID for deep merging
+      const existingOptionsById = new Map<string, any>();
+      if (existingProgram.pricingOptions) {
+        for (const opt of existingProgram.pricingOptions) {
+          if (opt.id && opt.id.startsWith('po_')) {
+            existingOptionsById.set(opt.id, opt);
+          }
+        }
+      }
+      
+      // Deep-merge incoming options: use existing option as base, overlay only defined client changes
+      const mergedOptions = req.body.pricingOptions.map((incomingOpt: any) => {
+        // If incoming option has a stable ID that exists, deep-merge with existing
+        if (incomingOpt.id && incomingOpt.id.startsWith('po_') && existingOptionsById.has(incomingOpt.id)) {
+          const existingOpt = existingOptionsById.get(incomingOpt.id);
+          
+          // Build merged option: start with deep copy of existing option
+          const merged: any = deepClone(existingOpt);
+          
+          // Overlay fields from incoming, but skip undefined and null
+          // Empty arrays [] are valid and should be overlayed
+          // This preserves nested collections unless explicitly cleared
+          for (const key of Object.keys(incomingOpt)) {
+            const value = incomingOpt[key];
+            
+            // Skip undefined - means "not provided"
+            if (value === undefined) {
+              continue;
+            }
+            
+            // Skip null - means "not provided" in JSON/form serialization
+            // Exception: if existing value is truthy and incoming is null, preserve existing
+            if (value === null) {
+              continue;
+            }
+            
+            // Accept all other values including false, 0, empty string, empty arrays
+            merged[key] = value;
+          }
+          
+          return merged;
+        }
+        // New option - needs stable ID
+        if (!incomingOpt.id || !incomingOpt.id.startsWith('po_')) {
+          return {
+            ...incomingOpt,
+            id: generateStablePricingOptionId(),
+          };
+        }
+        return incomingOpt;
+      });
+      
+      const programForSync = {
+        ...existingProgram,
+        ...updateData,
+        id: req.params.id,
+      };
+      
+      const { stripeProductId, updatedPricingOptions } = await syncProgramWithStripe(
+        programForSync,
+        mergedOptions
+      );
+      
+      // Include Stripe IDs in update
+      updateData.stripeProductId = stripeProductId;
+      updateData.pricingOptions = updatedPricingOptions;
+    }
+    
+    const updated = await storage.updateProgram(req.params.id, updateData);
     res.json(updated);
   });
   

@@ -7788,20 +7788,58 @@ function ProgramsTab({ programs, teams, organization }: any) {
                                     data-testid={`input-option-savings-${index}`}
                                   />
                                 </div>
-                                <div className="col-span-2">
-                                  <label className="text-xs font-medium">Stripe Price ID</label>
-                                  <Input
-                                    placeholder="price_1ABC123..."
-                                    value={option.stripePriceId || ""}
-                                    onChange={(e) => {
-                                      const current = form.getValues("pricingOptions") || [];
-                                      current[index] = { ...current[index], stripePriceId: e.target.value };
-                                      form.setValue("pricingOptions", [...current]);
-                                    }}
-                                    data-testid={`input-option-stripe-price-${index}`}
-                                  />
-                                  <p className="text-xs text-gray-500 mt-1">Enter the Stripe Price ID from your Stripe dashboard</p>
+                                {/* Bundle to Monthly Conversion */}
+                                <div className="col-span-2 border-t pt-2 mt-2">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Checkbox
+                                      checked={option.convertsToMonthly || false}
+                                      onCheckedChange={(checked) => {
+                                        const current = form.getValues("pricingOptions") || [];
+                                        current[index] = { ...current[index], convertsToMonthly: !!checked };
+                                        form.setValue("pricingOptions", [...current]);
+                                      }}
+                                      data-testid={`checkbox-converts-monthly-${index}`}
+                                    />
+                                    <label className="text-xs font-medium">Converts to Monthly after bundle period</label>
+                                  </div>
+                                  
+                                  {option.convertsToMonthly && (
+                                    <div className="ml-6 space-y-2">
+                                      <div>
+                                        <label className="text-xs font-medium">Monthly Price ($)</label>
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          placeholder="75.00"
+                                          value={option.monthlyPrice ? (option.monthlyPrice / 100).toFixed(2) : ""}
+                                          onChange={(e) => {
+                                            const current = form.getValues("pricingOptions") || [];
+                                            const val = parseFloat(e.target.value);
+                                            current[index] = { ...current[index], monthlyPrice: isNaN(val) ? 0 : Math.round(val * 100) };
+                                            form.setValue("pricingOptions", [...current]);
+                                          }}
+                                          data-testid={`input-monthly-price-${index}`}
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">Price charged monthly after bundle ends</p>
+                                      </div>
+                                      {option.monthlyStripePriceId && (
+                                        <div className="text-xs bg-green-50 border border-green-200 rounded px-2 py-1">
+                                          <span className="text-green-700">Monthly Stripe ID: </span>
+                                          <code className="text-green-600">{option.monthlyStripePriceId}</code>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
+                                
+                                {/* Stripe Price ID (auto-generated) */}
+                                {option.stripePriceId && (
+                                  <div className="col-span-2 text-xs bg-blue-50 border border-blue-200 rounded px-2 py-1">
+                                    <span className="text-blue-700">Stripe Price ID: </span>
+                                    <code className="text-blue-600">{option.stripePriceId}</code>
+                                    <span className="text-blue-500 ml-2">(auto-synced)</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           ))}

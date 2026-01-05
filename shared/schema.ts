@@ -460,6 +460,11 @@ export const productEnrollments = pgTable("product_enrollments", {
   totalCredits: integer("total_credits"), // Initial credits from product sessionCount
   remainingCredits: integer("remaining_credits"), // Credits left after check-ins
   metadata: jsonb().default('{}'), // Additional enrollment data
+  // Legacy/custom pricing tracking (for migrations and grandfathered rates)
+  isLegacyPricing: boolean("is_legacy_pricing").default(false), // True if this enrollment has grandfathered pricing
+  originalMigrationDate: timestamp("original_migration_date", { mode: 'string' }), // Date of original migration/grandfather
+  customPriceAmount: integer("custom_price_amount"), // Custom/legacy price in cents (if different from standard)
+  selectedPricingOptionId: varchar("selected_pricing_option_id"), // Which pricing tier was selected
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 }, (table) => [

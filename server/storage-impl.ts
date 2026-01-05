@@ -4963,7 +4963,10 @@ class DatabaseStorage implements IStorage {
     let hasLowBalance = false;
     
     for (const { enrollment, product } of enrollments) {
-      const accessTag = product?.accessTag;
+      // Use accessTag if set, otherwise derive from product type
+      const accessTag = product?.accessTag || 
+        (product?.type === 'Subscription' ? 'club_member' : 
+         product?.type === 'Pack' ? 'pack_holder' : null);
       
       if (accessTag === 'club_member') {
         hasSubscription = true;

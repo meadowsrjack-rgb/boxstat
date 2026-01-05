@@ -124,10 +124,8 @@ export default function ProfileGateway() {
     <>
       {/* iOS FULL BLEED - extends into all safe areas to prevent white gaps */}
       <div className="ios-full-bleed" />
-      
       {/* DETACHED BACKGROUND LAYER - never moves with keyboard */}
       <div className="fixed inset-0 w-full h-full z-0 pointer-events-none" style={{ background: 'linear-gradient(to bottom, #111827, #000000)' }} />
-
       {/* Main Content Wrapper */}
       <div className="ios-fixed-page relative z-10 w-full bg-transparent flex flex-col">
       {/* Settings gear icon - absolutely positioned within the fixed container */}
@@ -191,7 +189,7 @@ export default function ProfileGateway() {
                 <h3 className="text-lg font-semibold text-white">
                   {(user as any)?.firstName} {(user as any)?.lastName}
                 </h3>
-                <p className="text-sm text-gray-400">Account management</p>
+                <p className="text-sm text-gray-400">Manage players, enroll in programs</p>
               </div>
               <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
             </CardContent>

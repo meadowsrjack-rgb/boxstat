@@ -59,12 +59,12 @@ const TIER_COLORS = {
 };
 
 const TIER_TEXT_COLORS = {
-  Prospect: "text-gray-600 dark:text-gray-400",
-  Starter: "text-green-600 dark:text-green-400",
-  "All-Star": "text-blue-600 dark:text-blue-400",
-  Superstar: "text-purple-600 dark:text-purple-400",
-  HOF: "text-yellow-600 dark:text-yellow-400",
-  Legacy: "text-purple-600 dark:text-purple-400"
+  Prospect: "text-gray-400",
+  Starter: "text-green-400",
+  "All-Star": "text-blue-400",
+  Superstar: "text-purple-400",
+  HOF: "text-yellow-400",
+  Legacy: "text-purple-400"
 };
 
 const TIER_BORDER_COLORS = {
@@ -286,7 +286,7 @@ export default function TrophiesBadgesPage() {
           </div>
           <div className="text-center p-3" data-testid="card-stat-prospect">
             <p className="text-xl font-bold text-white">{stats.prospect}</p>
-            <p className="text-xs font-medium text-gray-500">Prospect</p>
+            <p className="text-xs font-medium text-gray-400">Prospect</p>
           </div>
         </div>
 
@@ -390,7 +390,7 @@ export default function TrophiesBadgesPage() {
             ) : filteredEarnedAwards.length === 0 ? (
               <Card className="bg-white/5 border-white/10">
                 <CardContent className="pt-12 pb-12 text-center">
-                  <Medal className="h-16 w-16 mx-auto mb-4 text-gray-500" />
+                  <Medal className="h-16 w-16 mx-auto mb-4 text-gray-400" />
                   <h3 className="text-xl font-semibold mb-2 text-[#9ca3af]" data-testid="text-empty-state">
                     No Awards Yet
                   </h3>
@@ -472,7 +472,7 @@ export default function TrophiesBadgesPage() {
             ) : filteredAvailableAwards.length === 0 ? (
               <Card className="bg-white/5 border-white/10">
                 <CardContent className="pt-12 pb-12 text-center">
-                  <Medal className="h-16 w-16 mx-auto mb-4 text-gray-500" />
+                  <Medal className="h-16 w-16 mx-auto mb-4 text-gray-400" />
                   <h3 className="text-xl font-semibold mb-2">
                     All Awards Earned!
                   </h3>
@@ -509,20 +509,20 @@ export default function TrophiesBadgesPage() {
                             data-testid={`img-available-award-${award.id}`}
                           />
                         ) : (
-                          <Medal className="h-20 w-20 text-gray-500" />
+                          <Medal className="h-20 w-20 text-gray-400" />
                         )}
                       </div>
-                      <CardTitle className="text-lg leading-tight text-gray-400" data-testid={`text-available-award-name-${award.id}`}>
+                      <CardTitle className="text-lg leading-tight text-gray-300" data-testid={`text-available-award-name-${award.id}`}>
                         {award.name}
                       </CardTitle>
                       {award.description && (
-                        <CardDescription className="text-gray-500 text-sm mt-2" data-testid={`text-available-award-description-${award.id}`}>
+                        <CardDescription className="text-gray-400 text-sm mt-2" data-testid={`text-available-award-description-${award.id}`}>
                           {award.description}
                         </CardDescription>
                       )}
                     </CardHeader>
                     <CardContent>
-                      <p className="text-xs text-gray-500">🔒 Not yet earned</p>
+                      <p className="text-xs text-gray-400">🔒 Not yet earned</p>
                     </CardContent>
                   </Card>
                 ))}

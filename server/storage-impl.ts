@@ -2209,6 +2209,11 @@ class MemStorage implements IStorage {
       return { tag: 'pack_holder', remainingCredits: totalCredits };
     }
     
+    // Priority 5: Not enrolled in any program
+    if (enrollments.length === 0) {
+      return { tag: 'not_enrolled' };
+    }
+    
     return { tag: 'none' };
   }
   
@@ -4985,6 +4990,11 @@ class DatabaseStorage implements IStorage {
       return { tag: 'pack_holder', remainingCredits: totalCredits };
     }
     
+    // Priority 5: Not enrolled in any program
+    if (enrollments.length === 0) {
+      return { tag: 'not_enrolled' };
+    }
+    
     return { tag: 'none' };
   }
   
@@ -5124,6 +5134,12 @@ class DatabaseStorage implements IStorage {
       // Priority 4: Pack Holder
       if (totalCredits > 0) {
         result.set(playerId, { tag: 'pack_holder', remainingCredits: totalCredits });
+        continue;
+      }
+      
+      // Priority 5: Not enrolled in any program
+      if (allPlayerEnrollments.length === 0) {
+        result.set(playerId, { tag: 'not_enrolled' });
         continue;
       }
       

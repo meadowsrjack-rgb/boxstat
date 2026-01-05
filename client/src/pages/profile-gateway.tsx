@@ -269,6 +269,12 @@ export default function ProfileGateway() {
                     className: "bg-blue-500/20 border-blue-500/50 text-blue-400",
                     description: `${player.remainingCredits || 0} credits remaining`
                   };
+                case "not_enrolled":
+                  return { 
+                    label: "Not Enrolled", 
+                    className: "bg-gray-500/20 border-gray-500/50 text-gray-400",
+                    description: "No active program"
+                  };
                 default:
                   return null;
               }

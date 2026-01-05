@@ -4062,7 +4062,7 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                               data-testid={`checkbox-user-${user.id}`}
                             />
                             <label className="text-sm cursor-pointer">
-                              {user.firstName} {user.lastName} ({user.email})
+                              {user.firstName} {user.lastName} - {user.role} ({user.email})
                             </label>
                           </div>
                         ))}

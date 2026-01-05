@@ -1,15 +1,15 @@
-const CACHE_NAME = 'boxstat-v4';
+const CACHE_NAME = 'boxstat-v5';
 const urlsToCache = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
   '/manifest.json',
   'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
 ];
 
-// Install event
+// Install event - skip waiting to activate immediately
 self.addEventListener('install', (event) => {
+  console.log('Service worker installing, version:', CACHE_NAME);
+  self.skipWaiting(); // Force immediate activation
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -57,20 +57,33 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-// Activate event
+// Activate event - claim clients immediately
 self.addEventListener('activate', (event) => {
+  console.log('Service worker activating, version:', CACHE_NAME);
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    Promise.all([
+      // Take control of all clients immediately
+      clients.claim(),
+      // Delete old caches
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME) {
+              console.log('Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      })
+    ])
   );
+});
+
+// Listen for skip waiting message from client
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // Background sync for offline actions

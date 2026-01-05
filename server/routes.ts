@@ -9774,11 +9774,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Determine which user's awards to fetch
       const targetUserId = userId || currentUserId;
       
-      // Authorization: users can view their own awards, admins/coaches can view any user's awards
-      if (targetUserId !== currentUserId && role !== 'admin' && role !== 'coach') {
-        return res.status(403).json({ message: 'Not authorized to view these awards' });
-      }
-      
       // Verify the target user exists and belongs to the same organization
       const targetUser = await storage.getUser(targetUserId);
       if (!targetUser) {
@@ -9787,6 +9782,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (targetUser.organizationId !== organizationId) {
         return res.status(403).json({ message: 'Not authorized to view awards from other organizations' });
+      }
+      
+      // Authorization: users can view their own awards, admins/coaches can view any user's awards
+      // Parents can also view their linked children's awards
+      let isAuthorized = targetUserId === currentUserId || role === 'admin' || role === 'coach';
+      
+      if (!isAuthorized && role === 'parent') {
+        // Check if target user is a linked child of the current parent
+        const linkedPlayers = await storage.getPlayersByParent(currentUserId);
+        isAuthorized = linkedPlayers.some(p => p.id === targetUserId);
+      }
+      
+      if (!isAuthorized) {
+        return res.status(403).json({ message: 'Not authorized to view these awards' });
       }
       
       const userAwardRecords = await storage.getUserAwardRecords(targetUserId);

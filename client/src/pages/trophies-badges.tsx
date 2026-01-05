@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppMode } from "@/hooks/useAppMode";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -88,15 +88,18 @@ export default function TrophiesBadgesPage() {
   const { user } = useAuth();
   const { currentChildProfile } = useAppMode();
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
   const [selectedTier, setSelectedTier] = useState<"all" | TierType>("all");
   const [selectedTrigger, setSelectedTrigger] = useState<"all" | TriggerCategory>("all");
   const [selectedProgram, setSelectedProgram] = useState<"all" | string>("all");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "tier">("newest");
 
   // Support Player Mode - show awards for the active child profile if one is selected
-  // Priority: localStorage selectedPlayerId > currentChildProfile (device config) > user.activeProfileId > user.id
+  // Priority: URL playerId param > localStorage selectedPlayerId > currentChildProfile (device config) > user.activeProfileId > user.id
+  const urlParams = new URLSearchParams(searchString);
+  const urlPlayerId = urlParams.get("playerId");
   const selectedPlayerId = typeof window !== "undefined" ? localStorage.getItem("selectedPlayerId") : null;
-  const activeProfileId = (user as any)?.activeProfileId || selectedPlayerId;
+  const activeProfileId = urlPlayerId || (user as any)?.activeProfileId || selectedPlayerId;
   const viewingUserId = activeProfileId || currentChildProfile?.id || user?.id;
 
   // Fetch award definitions

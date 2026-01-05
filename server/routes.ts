@@ -10264,9 +10264,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? `${fullUser.firstName} ${fullUser.lastName}` 
         : 'Unknown User';
       
+      const reportId = crypto.randomUUID();
+      const createdAt = new Date().toISOString();
+      
       // Save to database
       const bugReport = await storage.createBugReport({
-        id: crypto.randomUUID(),
+        id: reportId,
         organizationId,
         userId,
         userEmail,
@@ -10278,7 +10281,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'open',
       });
       
+      // Save as JSON file for easy download
+      const bugReportsDir = './bug-reports';
+      if (!fs.existsSync(bugReportsDir)) {
+        fs.mkdirSync(bugReportsDir, { recursive: true });
+      }
+      
+      const timestamp = createdAt.replace(/[:.]/g, '-');
+      const filename = `bug-report_${timestamp}_${reportId.slice(0, 8)}.json`;
+      const filePath = `${bugReportsDir}/${filename}`;
+      
+      const reportData = {
+        id: reportId,
+        title,
+        description,
+        userName,
+        userEmail,
+        userId,
+        organizationId,
+        userAgent: req.headers['user-agent'] || 'unknown',
+        platform: req.headers['sec-ch-ua-platform'] || 'unknown',
+        status: 'open',
+        createdAt,
+      };
+      
+      fs.writeFileSync(filePath, JSON.stringify(reportData, null, 2));
       console.log(`🐛 Bug report saved to database: ${bugReport.id}`);
+      console.log(`📁 Bug report saved to file: ${filePath}`);
       
       res.json({ success: true, message: "Bug report submitted successfully", id: bugReport.id });
     } catch (error: any) {

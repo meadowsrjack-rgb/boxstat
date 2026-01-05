@@ -295,6 +295,7 @@ export interface IStorage {
   getPlayerStatusTag(playerId: string): Promise<{tag: string; remainingCredits?: number; lowBalance?: boolean}>;
   getPlayerStatusTagsBulk(playerIds: string[]): Promise<Map<string, {tag: string; remainingCredits?: number; lowBalance?: boolean}>>;
   getProductEnrollmentsByOrganization(organizationId: string): Promise<ProductEnrollment[]>;
+  getEnrollmentsByAccountHolder(accountHolderId: string): Promise<ProductEnrollment[]>;
   
   // Notification Campaign operations
   getNotificationCampaign(id: number): Promise<NotificationCampaign | undefined>;
@@ -5155,6 +5156,12 @@ class DatabaseStorage implements IStorage {
   async getProductEnrollmentsByOrganization(organizationId: string): Promise<ProductEnrollment[]> {
     const results = await db.select().from(schema.productEnrollments)
       .where(eq(schema.productEnrollments.organizationId, organizationId));
+    return results as ProductEnrollment[];
+  }
+
+  async getEnrollmentsByAccountHolder(accountHolderId: string): Promise<ProductEnrollment[]> {
+    const results = await db.select().from(schema.productEnrollments)
+      .where(eq(schema.productEnrollments.accountHolderId, accountHolderId));
     return results as ProductEnrollment[];
   }
 

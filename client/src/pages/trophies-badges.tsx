@@ -109,19 +109,14 @@ export default function TrophiesBadgesPage() {
   });
 
   // Fetch user's award records (for the active profile or logged-in user)
-  const { data: userAwardRecords, isLoading: loadingUserAwards } = useQuery<UserAwardRecord[]>({
-    queryKey: ["/api/user-awards", viewingUserId],
-    queryFn: async () => {
-      // Always pass the userId we want to view - this handles parent viewing child's awards
-      const endpoint = viewingUserId && viewingUserId !== user?.id
-        ? `/api/user-awards?userId=${viewingUserId}`
-        : "/api/user-awards";
-      const res = await fetch(endpoint, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch user awards");
-      return res.json();
-    },
+  // Use /api/users/{userId}/awards endpoint which returns allAwards array
+  const { data: userAwardsResponse, isLoading: loadingUserAwards } = useQuery<{ allAwards: UserAwardRecord[] }>({
+    queryKey: ["/api/users", viewingUserId, "awards"],
     enabled: !!user && !!viewingUserId,
   });
+  
+  // Extract userAwardRecords from the response
+  const userAwardRecords = userAwardsResponse?.allAwards || [];
 
   // Fetch user's program memberships for program filter
   const { data: programMemberships = [] } = useQuery<ProgramMembership[]>({
@@ -131,7 +126,7 @@ export default function TrophiesBadgesPage() {
 
   // Combine award definitions with user award data
   const earnedAwards = useMemo<AwardWithDetails[]>(() => {
-    if (!awardDefinitions || !userAwardRecords) return [];
+    if (!awardDefinitions || userAwardRecords.length === 0) return [];
     
     return userAwardRecords
       .filter(record => record.visible)

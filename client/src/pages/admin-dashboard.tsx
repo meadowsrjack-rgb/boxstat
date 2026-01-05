@@ -3776,8 +3776,8 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
           <CardTitle>Event Management</CardTitle>
           <CardDescription>Schedule practices, games, and other events</CardDescription>
         </div>
-        <div className="flex gap-2">
-          <div className="flex border rounded-lg mr-2">
+        <div className="flex flex-wrap gap-2">
+          <div className="flex border rounded-lg">
             <Button
               variant={viewMode === "list" ? "default" : "ghost"}
               size="sm"

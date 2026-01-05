@@ -9382,6 +9382,27 @@ function SettingsTab({ organization }: any) {
         </CardContent>
       </Card>
       
+      {/* Bug Reports Download */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Bug Reports</CardTitle>
+          <CardDescription>Download all submitted bug reports</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            variant="outline" 
+            className="w-full" 
+            onClick={() => {
+              window.location.href = "/api/bug-reports/download";
+            }}
+            data-testid="button-download-bug-reports"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Download Bug Reports (JSON)
+          </Button>
+        </CardContent>
+      </Card>
+      
       {/* Danger Zone */}
       <Card className="border-red-200">
         <CardHeader>

@@ -10333,6 +10333,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Download all bug reports as JSON file (admin only)
+  app.get("/api/bug-reports/download", requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role } = req.user;
+      
+      if (role !== 'admin') {
+        return res.status(403).json({ error: "Only admins can download bug reports" });
+      }
+      
+      const reports = await storage.getBugReportsByOrganization(organizationId);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `bug-reports_${timestamp}.json`;
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.json(reports);
+    } catch (error: any) {
+      console.error('Error downloading bug reports:', error);
+      res.status(500).json({ error: "Failed to download bug reports" });
+    }
+  });
+  
   // Update bug report status (admin only)
   app.patch("/api/bug-reports/:id", requireAuth, async (req: any, res) => {
     try {

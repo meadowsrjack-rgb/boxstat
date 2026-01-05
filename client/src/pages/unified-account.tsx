@@ -1176,6 +1176,7 @@ export default function UnifiedAccount() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<string>("");
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
+  const [selectedPricingOptionId, setSelectedPricingOptionId] = useState<string>("");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isStoreItemPurchase, setIsStoreItemPurchase] = useState(false);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
@@ -1909,6 +1910,7 @@ export default function UnifiedAccount() {
                 setIsStoreItemPurchase(false);
                 setSelectedPackage("");
                 setSelectedPlayer("");
+                setSelectedPricingOptionId("");
                 setSelectedAddOns([]);
                 setSignedWaivers({});
                 setWaiverScrollStatus({});
@@ -1926,7 +1928,10 @@ export default function UnifiedAccount() {
                         {!isStoreItemPurchase && (
                           <div className="space-y-2">
                             <label className="text-sm font-medium">Program</label>
-                            <Select value={selectedPackage} onValueChange={setSelectedPackage}>
+                            <Select value={selectedPackage} onValueChange={(val) => {
+                              setSelectedPackage(val);
+                              setSelectedPricingOptionId(""); // Reset pricing option when program changes
+                            }}>
                               <SelectTrigger data-testid="select-package">
                                 <SelectValue placeholder="Select a program" />
                               </SelectTrigger>
@@ -1943,6 +1948,52 @@ export default function UnifiedAccount() {
                             </Select>
                           </div>
                         )}
+                        
+                        {/* Pricing Options - show when program has bundle pricing options */}
+                        {selectedPackage && !isStoreItemPurchase && (() => {
+                          const pkg = (programs as any[])?.find((p: any) => p.id === selectedPackage);
+                          const pricingOptions = pkg?.pricingOptions || [];
+                          
+                          if (pricingOptions.length === 0) return null;
+                          
+                          return (
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Pricing Option</label>
+                              <div className="space-y-2">
+                                {pricingOptions.map((option: any) => (
+                                  <div
+                                    key={option.id}
+                                    onClick={() => setSelectedPricingOptionId(option.id)}
+                                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                                      selectedPricingOptionId === option.id
+                                        ? 'border-red-500 bg-red-50'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                    data-testid={`pricing-option-${option.id}`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <p className="font-medium text-sm">{option.name}</p>
+                                        {option.durationDays && (
+                                          <p className="text-xs text-gray-500">{option.durationDays} days</p>
+                                        )}
+                                        {option.convertsToMonthly && (
+                                          <p className="text-xs text-green-600">Then ${(option.monthlyPrice / 100).toFixed(2)}/month</p>
+                                        )}
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="font-semibold text-red-600">${(option.price / 100).toFixed(2)}</p>
+                                        {option.savingsNote && (
+                                          <p className="text-xs text-green-600">{option.savingsNote}</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })()}
 
                         {/* Player Selection (conditionally shown based on billing model - not for store items) */}
                         {selectedPackage && !isStoreItemPurchase && (() => {
@@ -2260,6 +2311,7 @@ export default function UnifiedAccount() {
                                     packageId: selectedPackage,
                                     playerId: isStoreProduct ? null : (selectedPlayer || null),
                                     isStoreItem: isStoreProduct,
+                                    selectedPricingOptionId: selectedPricingOptionId || undefined,
                                     addOnIds: selectedAddOns.length > 0 ? selectedAddOns : undefined,
                                     signedWaiverIds: Object.keys(signedWaivers).filter(id => signedWaivers[id]),
                                   },

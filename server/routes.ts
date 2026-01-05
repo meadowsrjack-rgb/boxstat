@@ -1282,7 +1282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const { packageId, playerId, addOnIds, signedWaiverIds } = req.body;
+      const { packageId, playerId, addOnIds, signedWaiverIds, selectedPricingOptionId } = req.body;
       
       if (!packageId) {
         return res.status(400).json({ error: "Package ID is required" });
@@ -1297,6 +1297,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const program = await storage.getProgram(packageId);
       if (!program || !program.price) {
         return res.status(404).json({ error: "Package not found or has no price" });
+      }
+      
+      // Find selected pricing option if provided
+      let selectedPricingOption: any = null;
+      if (selectedPricingOptionId) {
+        const pricingOptions = (program as any).pricingOptions;
+        if (pricingOptions && Array.isArray(pricingOptions)) {
+          selectedPricingOption = pricingOptions.find((opt: any) => opt.id === selectedPricingOptionId);
+        }
+        // Validate: if pricing option ID is provided but not found, return error
+        if (!selectedPricingOption) {
+          return res.status(400).json({ error: "Invalid pricing option ID - option not found for this program" });
+        }
       }
       
       // Validate playerId if provided
@@ -1334,25 +1347,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const origin = `${req.protocol}://${req.get('host')}`;
       
       // Determine if this is a subscription or one-time payment
-      const isSubscription = program.type === 'Subscription' && program.billingCycle;
+      // Bundle pricing options are always one-time payments (may convert to subscription later)
+      const isSubscription = !selectedPricingOption && program.type === 'Subscription' && program.billingCycle;
+      const isBundleWithMonthlyConversion = selectedPricingOption?.convertsToMonthly;
       
       // Build line items - start with main program
       const lineItems: any[] = [];
+      
+      // Determine the price to use (pricing option price or program base price)
+      const priceToCharge = selectedPricingOption ? selectedPricingOption.price : program.price;
+      const itemName = selectedPricingOption 
+        ? `${program.name} - ${selectedPricingOption.name}`
+        : program.name;
+      const itemDescription = selectedPricingOption?.durationDays 
+        ? `${selectedPricingOption.durationDays} days${selectedPricingOption.convertsToMonthly ? ', then converts to monthly subscription' : ''}`
+        : (program.description || undefined);
       
       // Main program line item
       const mainLineItem: any = {
         price_data: {
           currency: 'usd',
           product_data: {
-            name: program.name,
-            description: program.description || undefined,
+            name: itemName,
+            description: itemDescription,
           },
-          unit_amount: program.price, // Price is already in cents
+          unit_amount: priceToCharge, // Price is already in cents
         },
         quantity: 1,
       };
       
-      // Add recurring for subscriptions
+      // Add recurring for subscriptions (not for bundle purchases)
       if (isSubscription) {
         const interval = (program.billingCycle || 'month').toLowerCase();
         // Map billing cycle to Stripe interval
@@ -1368,7 +1392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       lineItems.push(mainLineItem);
       
       // Calculate subtotal for platform fee
-      let subtotal = program.price;
+      let subtotal = priceToCharge;
       
       // Add add-on line items (one-time purchases only, not subscriptions)
       const addOnProductIds: string[] = [];
@@ -1437,6 +1461,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'package_purchase',
           addOnIds: addOnProductIds.length > 0 ? JSON.stringify(addOnProductIds) : '',
           signedWaiverIds: signedWaiverIds && signedWaiverIds.length > 0 ? JSON.stringify(signedWaiverIds) : '',
+          pricingOptionId: selectedPricingOptionId || '',
+          pricingOptionName: selectedPricingOption?.name || '',
+          convertsToMonthly: isBundleWithMonthlyConversion ? 'true' : '',
+          monthlyPrice: selectedPricingOption?.monthlyPrice ? String(selectedPricingOption.monthlyPrice) : '',
+          durationDays: selectedPricingOption?.durationDays ? String(selectedPricingOption.durationDays) : '',
         },
       });
       

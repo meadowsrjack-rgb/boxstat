@@ -171,11 +171,19 @@ export class NotificationService {
     console.log(`[Push Send] 🚀 Attempting to send push notification #${notificationId} to user ${userId}`);
     console.log(`[Push Send] Title: "${title}"`);
     console.log(`[Push Send] Message: "${message}"`);
+    console.log(`[Push Send] Step 1: Checking user preferences...`);
     
     try {
       // Check user preferences
-      const preferences = await this.getNotificationPreferences(userId);
-      console.log(`[Push Send] User preferences:`, preferences ? 'Found' : 'Not set (using defaults)');
+      let preferences;
+      try {
+        preferences = await this.getNotificationPreferences(userId);
+        console.log(`[Push Send] User preferences:`, preferences ? 'Found' : 'Not set (using defaults)');
+      } catch (prefError) {
+        console.error(`[Push Send] ❌ Error fetching user preferences:`, prefError);
+        console.log(`[Push Send] Continuing without preferences (defaults will be used)`);
+        preferences = null;
+      }
       
       if (preferences && !preferences.pushNotifications) {
         console.log(`[Push Send] ⏭️  Skipping - user has disabled push notifications in preferences`);
@@ -206,13 +214,20 @@ export class NotificationService {
       }
 
       // Get all active subscriptions for the user
-      console.log(`[Push Send] 🔍 Looking up active push subscriptions for user ${userId}...`);
-      const subscriptions = await db.select()
-        .from(pushSubscriptions)
-        .where(and(
-          eq(pushSubscriptions.userId, userId),
-          eq(pushSubscriptions.isActive, true)
-        ));
+      console.log(`[Push Send] Step 2: 🔍 Looking up active push subscriptions for user ${userId}...`);
+      let subscriptions;
+      try {
+        subscriptions = await db.select()
+          .from(pushSubscriptions)
+          .where(and(
+            eq(pushSubscriptions.userId, userId),
+            eq(pushSubscriptions.isActive, true)
+          ));
+        console.log(`[Push Send] ✅ Subscription query completed`);
+      } catch (subError) {
+        console.error(`[Push Send] ❌ Error querying subscriptions:`, subError);
+        throw subError; // Re-throw to be caught by outer handler
+      }
       
       console.log(`[Push Send] Found ${subscriptions.length} active subscription(s)`);
       subscriptions.forEach((sub, idx) => {

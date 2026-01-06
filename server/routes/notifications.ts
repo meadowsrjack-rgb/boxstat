@@ -138,12 +138,40 @@ export function setupNotificationRoutes(app: Express) {
       const { isAPNsConfigured } = await import("../services/apnsService");
       const { db } = await import("../db");
       const { pushSubscriptions } = await import("../../shared/schema");
-      const { eq, sql } = await import("drizzle-orm");
+      const { eq, sql, and } = await import("drizzle-orm");
       
       // Count registered devices by platform
       const iosCount = await db.select({ count: sql<number>`count(*)` })
         .from(pushSubscriptions)
         .where(eq(pushSubscriptions.platform, 'ios'));
+      
+      const iosActiveCount = await db.select({ count: sql<number>`count(*)` })
+        .from(pushSubscriptions)
+        .where(and(eq(pushSubscriptions.platform, 'ios'), eq(pushSubscriptions.isActive, true)));
+      
+      const iosProductionCount = await db.select({ count: sql<number>`count(*)` })
+        .from(pushSubscriptions)
+        .where(and(
+          eq(pushSubscriptions.platform, 'ios'), 
+          eq(pushSubscriptions.isActive, true),
+          eq(pushSubscriptions.apnsEnvironment, 'production')
+        ));
+      
+      const iosSandboxCount = await db.select({ count: sql<number>`count(*)` })
+        .from(pushSubscriptions)
+        .where(and(
+          eq(pushSubscriptions.platform, 'ios'), 
+          eq(pushSubscriptions.isActive, true),
+          eq(pushSubscriptions.apnsEnvironment, 'sandbox')
+        ));
+      
+      const iosUnknownEnvCount = await db.select({ count: sql<number>`count(*)` })
+        .from(pushSubscriptions)
+        .where(and(
+          eq(pushSubscriptions.platform, 'ios'), 
+          eq(pushSubscriptions.isActive, true),
+          sql`${pushSubscriptions.apnsEnvironment} IS NULL`
+        ));
       
       const androidCount = await db.select({ count: sql<number>`count(*)` })
         .from(pushSubscriptions)
@@ -153,6 +181,8 @@ export function setupNotificationRoutes(app: Express) {
         .from(pushSubscriptions)
         .where(eq(pushSubscriptions.platform, 'web'));
       
+      const unknownEnvCount = Number(iosUnknownEnvCount[0]?.count) || 0;
+      
       res.json({
         apnsConfigured: isAPNsConfigured(),
         apnsMode: 'PRODUCTION-first (TestFlight/App Store compatible)',
@@ -160,12 +190,20 @@ export function setupNotificationRoutes(app: Express) {
         apnsHostSandbox: 'api.sandbox.push.apple.com (only for local Xcode debug builds)',
         bundleId: process.env.APNS_BUNDLE_ID || 'boxstat.app',
         registeredDevices: {
-          ios: Number(iosCount[0]?.count) || 0,
+          ios: {
+            total: Number(iosCount[0]?.count) || 0,
+            active: Number(iosActiveCount[0]?.count) || 0,
+            production: Number(iosProductionCount[0]?.count) || 0,
+            sandbox: Number(iosSandboxCount[0]?.count) || 0,
+            unknownEnvironment: unknownEnvCount,
+          },
           android: Number(androidCount[0]?.count) || 0,
           web: Number(webCount[0]?.count) || 0,
         },
         vapidConfigured: !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
-        nodeEnv: process.env.NODE_ENV
+        nodeEnv: process.env.NODE_ENV,
+        note: 'App Store/TestFlight apps use production gateway. Xcode debug builds use sandbox gateway.',
+        warning: unknownEnvCount > 0 ? `${unknownEnvCount} active iOS token(s) have no APNs environment set - these will default to production when sending` : undefined
       });
     } catch (error) {
       console.error('Error in push debug:', error);
@@ -422,9 +460,12 @@ export function setupNotificationRoutes(app: Express) {
       
       let targetDevices: Array<{ token: string; environment?: string }> = [];
       
+      // Allow specifying environment in request body for testing
+      const requestedEnvironment = req.body.environment as 'sandbox' | 'production' | undefined;
+      
       if (deviceToken) {
-        // Use provided token - default to sandbox for manual testing
-        targetDevices = [{ token: deviceToken, environment: 'sandbox' }];
+        // Use provided token - use requested environment or default to production (for App Store apps)
+        targetDevices = [{ token: deviceToken, environment: requestedEnvironment || 'production' }];
       } else {
         // Get all active iOS devices with their APNs environment
         const { pushSubscriptions } = await import("../../shared/schema");
@@ -458,6 +499,10 @@ export function setupNotificationRoutes(app: Express) {
       res.json({
         success: result.successCount > 0,
         message: `Sent to ${result.successCount}/${targetDevices.length} devices`,
+        targetDevices: targetDevices.map(d => ({
+          tokenPreview: d.token.substring(0, 20) + '...',
+          environment: d.environment
+        })),
         details: result
       });
     } catch (error) {
@@ -470,37 +515,53 @@ export function setupNotificationRoutes(app: Express) {
   app.get('/api/push/ios-devices', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
+      const showInactive = req.query.showInactive === 'true';
       
       const { db } = await import("../db");
       const { users, pushSubscriptions } = await import("../../shared/schema");
-      const { eq } = await import("drizzle-orm");
+      const { eq, and } = await import("drizzle-orm");
       
       const [user] = await db.select().from(users).where(eq(users.id, userId));
       if (!user || user.role !== 'admin') {
         return res.status(403).json({ error: 'Admin access required' });
       }
       
+      // By default, only show active devices (can be overridden with ?showInactive=true)
+      const whereClause = showInactive 
+        ? eq(pushSubscriptions.platform, 'ios')
+        : and(eq(pushSubscriptions.platform, 'ios'), eq(pushSubscriptions.isActive, true));
+      
       const iosDevices = await db.select({
         id: pushSubscriptions.id,
         userId: pushSubscriptions.userId,
         platform: pushSubscriptions.platform,
         deviceType: pushSubscriptions.deviceType,
+        apnsEnvironment: pushSubscriptions.apnsEnvironment,
         isActive: pushSubscriptions.isActive,
         createdAt: pushSubscriptions.createdAt,
         tokenPreview: pushSubscriptions.fcmToken
       })
       .from(pushSubscriptions)
-      .where(eq(pushSubscriptions.platform, 'ios'));
+      .where(whereClause);
       
-      // Mask tokens for security
+      // Mask tokens for security and highlight status
       const maskedDevices = iosDevices.map(d => ({
         ...d,
-        tokenPreview: d.tokenPreview ? `${d.tokenPreview.substring(0, 20)}...` : null
+        tokenPreview: d.tokenPreview ? `${d.tokenPreview.substring(0, 20)}...` : null,
+        status: d.isActive ? 'ACTIVE' : 'INACTIVE',
+        environment: d.apnsEnvironment || 'unknown (will default to production)'
       }));
+      
+      const activeCount = maskedDevices.filter(d => d.isActive).length;
+      const inactiveCount = maskedDevices.filter(d => !d.isActive).length;
       
       res.json({
         count: maskedDevices.length,
-        devices: maskedDevices
+        activeCount,
+        inactiveCount,
+        showingInactive: showInactive,
+        devices: maskedDevices,
+        note: showInactive ? 'Showing all devices including inactive' : 'Showing only active devices. Add ?showInactive=true to see all.'
       });
     } catch (error) {
       console.error('Error fetching iOS devices:', error);

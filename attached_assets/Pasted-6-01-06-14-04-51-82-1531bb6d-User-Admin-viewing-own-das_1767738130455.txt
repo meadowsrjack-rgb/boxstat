@@ -1,0 +1,120 @@
+6-01-06 14:04:51.82
+1531bb6d
+User
+Admin viewing own dashboard - showing all events
+2026-01-06 14:04:51.82
+1531bb6d
+User
+userId: 1764873247759-aecinrbny
+2026-01-06 14:04:51.82
+1531bb6d
+User
+role: admin
+2026-01-06 14:04:51.84
+1531bb6d
+User
+10:04:51 PM [express] GET /api/divisions 200 in 91ms :: [{"id":"1","organizationId":"default-org","na…
+2026-01-06 14:04:51.84
+1531bb6d
+User
+10:04:51 PM [express] GET /api/auth/user 304 in 85ms :: {"id":"1764873247759-aecinrbny","organization…
+2026-01-06 14:04:51.84
+1531bb6d
+User
+10:04:51 PM [express] GET /api/events 200 in 76ms :: [{"id":"232","organizationId":"default-org","tit…
+2026-01-06 14:04:51.86
+1531bb6d
+User
+10:04:51 PM [express] GET /api/admin/notifications 200 in 82ms :: [{"id":478,"organizationId":"defaul…
+2026-01-06 14:04:51.87
+1531bb6d
+User
+10:04:51 PM [express] GET /api/organization 200 in 131ms :: {"id":"default-org","name":"UYP","subdoma…
+2026-01-06 14:04:51.87
+1531bb6d
+User
+10:04:51 PM [express] GET /api/evaluations 200 in 53ms :: [{"id":1,"organizationId":"default-org","pl…
+2026-01-06 14:04:51.89
+1531bb6d
+User
+10:04:51 PM [express] GET /api/payments 200 in 55ms :: [{"id":"3","organizationId":"default-org","use…
+2026-01-06 14:04:51.89
+1531bb6d
+User
+10:04:51 PM [express] GET /api/award-definitions 200 in 58ms :: [{"id":671,"name":"UYP Heart & Hustle…
+2026-01-06 14:04:52.01
+1531bb6d
+User
+10:04:52 PM [express] GET /api/teams 200 in 189ms :: [{"id":27,"organizationId":"default-org","name":…
+2026-01-06 14:04:52.04
+1531bb6d
+User
+10:04:52 PM [express] GET /api/users 200 in 292ms :: [{"id":"1767215198170-hj8zcahxb","organizationId…
+2026-01-06 14:04:53.90
+1531bb6d
+User
+10:04:53 PM [express] GET /api/programs 200 in 68ms :: [{"id":"1767564678352-1neh9v595","organization…
+2026-01-06 14:04:54.08
+1531bb6d
+User
+10:04:54 PM [express] GET /api/notifications/announcements 304 in 47ms :: []
+2026-01-06 14:04:54.08
+1531bb6d
+User
+10:04:54 PM [express] GET /api/notifications/feed 304 in 52ms :: [{"id":478,"types":["message","notif…
+2026-01-06 14:04:54.10
+1531bb6d
+User
+10:04:54 PM [express] GET /api/auth/user 304 in 70ms :: {"id":"1764873247759-aecinrbny","organization…
+2026-01-06 14:05:54.33
+1531bb6d
+User
+10:05:54 PM [express] GET /api/notifications/announcements 304 in 45ms :: []
+2026-01-06 14:05:54.39
+1531bb6d
+User
+10:05:54 PM [express] GET /api/notifications/feed 304 in 44ms :: [{"id":478,"types":["message","notif…
+2026-01-06 14:05:57.24
+1531bb6d
+User
+[Admin Notifications API] APNs environment override requested: production
+2026-01-06 14:05:57.24
+1531bb6d
+User
+[Admin Notification Create] Message: "test"
+2026-01-06 14:05:57.24
+1531bb6d
+User
+[Admin Notification Create] Title: "test"
+2026-01-06 14:05:57.24
+1531bb6d
+User
+[Admin Notification Create] 📢 Creating new notification for organization default-org
+2026-01-06 14:05:57.24
+1531bb6d
+User
+[Admin Notification Create] Recipient target: everyone
+2026-01-06 14:05:57.24
+1531bb6d
+User
+[Admin Notification Create] Delivery channels: [ 'in_app', 'push' ]
+2026-01-06 14:05:57.24
+1531bb6d
+User
+[Admin Notification Create] Resolving recipients...
+2026-01-06 14:05:57.28
+1531bb6d
+User
+[Admin Notification Create] Resolved 22 recipient(s), 0 skipped
+2026-01-06 14:05:57.28
+1531bb6d
+User
+[Admin Notification Create] Creating notification record in database...
+2026-01-06 14:05:57.31
+1531bb6d
+User
+[Admin Notification Create] ✅ Notification created with ID: 493
+2026-01-06 14:05:57.31
+1531bb6d
+User
+[Admin Notification Create] Creating 22 recipient record(s)...

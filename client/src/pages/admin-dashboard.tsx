@@ -6201,6 +6201,7 @@ function StoreTab({ organization }: any) {
       sessionCount: z.number().optional(),
       isRecurring: z.boolean().default(false),
       billingCycle: z.string().optional(),
+      subscriptionDisclosure: z.string().optional(),
       requiredWaivers: z.array(z.string()).default([]),
     })),
     defaultValues: {
@@ -6216,6 +6217,7 @@ function StoreTab({ organization }: any) {
       sessionCount: undefined as number | undefined,
       isRecurring: false,
       billingCycle: "Monthly",
+      subscriptionDisclosure: "",
       requiredWaivers: [] as string[],
     },
   });
@@ -6303,6 +6305,7 @@ function StoreTab({ organization }: any) {
       sessionCount: product.sessionCount,
       isRecurring: product.type === "Subscription",
       billingCycle: product.billingCycle || "Monthly",
+      subscriptionDisclosure: product.subscriptionDisclosure || "",
       requiredWaivers: product.requiredWaivers || [],
     });
     
@@ -6338,6 +6341,7 @@ function StoreTab({ organization }: any) {
       storeCategory: "gear",
       isRecurring: false,
       billingCycle: "Monthly",
+      subscriptionDisclosure: "",
       requiredWaivers: [],
     });
     setIsDialogOpen(true);
@@ -6794,31 +6798,55 @@ function StoreTab({ organization }: any) {
                 />
 
                 {isRecurring && (
-                  <FormField
-                    control={form.control}
-                    name="billingCycle"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Billing Cycle</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || "Monthly"}>
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="billingCycle"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Billing Cycle</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || "Monthly"}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-billing-cycle">
+                                <SelectValue placeholder="Select billing cycle" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Weekly">Weekly</SelectItem>
+                              <SelectItem value="28-Day">28 Days</SelectItem>
+                              <SelectItem value="Monthly">Monthly</SelectItem>
+                              <SelectItem value="Quarterly">Quarterly (every 3 months)</SelectItem>
+                              <SelectItem value="6-Month">6-Month</SelectItem>
+                              <SelectItem value="Yearly">Yearly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="subscriptionDisclosure"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Subscription Disclosure</FormLabel>
                           <FormControl>
-                            <SelectTrigger data-testid="select-billing-cycle">
-                              <SelectValue placeholder="Select billing cycle" />
-                            </SelectTrigger>
+                            <Textarea 
+                              {...field} 
+                              placeholder="You will be charged $X every [cycle]. Your subscription renews automatically until canceled. Cancel anytime from your account."
+                              rows={3}
+                              data-testid="input-subscription-disclosure"
+                            />
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Weekly">Weekly</SelectItem>
-                            <SelectItem value="28-Day">28 Days</SelectItem>
-                            <SelectItem value="Monthly">Monthly</SelectItem>
-                            <SelectItem value="Quarterly">Quarterly (every 3 months)</SelectItem>
-                            <SelectItem value="6-Month">6-Month</SelectItem>
-                            <SelectItem value="Yearly">Yearly</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormDescription>
+                            Displayed to customers before checkout. Explain billing terms, auto-renewal, and cancellation policy.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
                 )}
               </div>
 
@@ -7115,6 +7143,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
       payInFullDiscount: 0,
       accessTag: "club_member",
       sessionCount: undefined as number | undefined,
+      subscriptionDisclosure: "",
       requiredWaivers: [] as string[],
       hasSubgroups: true,
       subgroupLabel: "Team",
@@ -7210,6 +7239,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
       payInFullDiscount: program.payInFullDiscount || 0,
       accessTag: program.accessTag || "club_member",
       sessionCount: program.sessionCount,
+      subscriptionDisclosure: program.subscriptionDisclosure || "",
       requiredWaivers: program.requiredWaivers || [],
       hasSubgroups: program.hasSubgroups ?? true,
       subgroupLabel: program.subgroupLabel || "Team",
@@ -7468,56 +7498,80 @@ function ProgramsTab({ programs, teams, organization }: any) {
                   </div>
 
                   {selectedType === "Subscription" && (
-                    <div className="grid grid-cols-2 gap-3 mt-3">
-                      <FormField
-                        control={form.control}
-                        name="billingCycle"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Billing Cycle</FormLabel>
-                            <Select value={field.value} onValueChange={field.onChange}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-billing-cycle">
-                                  <SelectValue placeholder="Select cycle" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="Weekly">Weekly</SelectItem>
-                                <SelectItem value="28-Day">28 Days</SelectItem>
-                                <SelectItem value="Monthly">Monthly</SelectItem>
-                                <SelectItem value="Quarterly">Quarterly</SelectItem>
-                                <SelectItem value="6-Month">6-Month</SelectItem>
-                                <SelectItem value="Yearly">Yearly</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    <>
+                      <div className="grid grid-cols-2 gap-3 mt-3">
+                        <FormField
+                          control={form.control}
+                          name="billingCycle"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Billing Cycle</FormLabel>
+                              <Select value={field.value} onValueChange={field.onChange}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-billing-cycle">
+                                    <SelectValue placeholder="Select cycle" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="Weekly">Weekly</SelectItem>
+                                  <SelectItem value="28-Day">28 Days</SelectItem>
+                                  <SelectItem value="Monthly">Monthly</SelectItem>
+                                  <SelectItem value="Quarterly">Quarterly</SelectItem>
+                                  <SelectItem value="6-Month">6-Month</SelectItem>
+                                  <SelectItem value="Yearly">Yearly</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
+                        <FormField
+                          control={form.control}
+                          name="billingModel"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Billing Model</FormLabel>
+                              <Select value={field.value} onValueChange={field.onChange}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-billing-model">
+                                    <SelectValue placeholder="Select model" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="Per Player">Per Player</SelectItem>
+                                  <SelectItem value="Per Family">Per Family</SelectItem>
+                                  <SelectItem value="Organization-Wide">Organization-Wide</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
                       <FormField
                         control={form.control}
-                        name="billingModel"
+                        name="subscriptionDisclosure"
                         render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Billing Model</FormLabel>
-                            <Select value={field.value} onValueChange={field.onChange}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-billing-model">
-                                  <SelectValue placeholder="Select model" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="Per Player">Per Player</SelectItem>
-                                <SelectItem value="Per Family">Per Family</SelectItem>
-                                <SelectItem value="Organization-Wide">Organization-Wide</SelectItem>
-                              </SelectContent>
-                            </Select>
+                          <FormItem className="mt-3">
+                            <FormLabel>Subscription Disclosure</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                {...field} 
+                                placeholder="You will be charged $X every [cycle]. Your subscription renews automatically until canceled. Cancel anytime from your account."
+                                rows={3}
+                                data-testid="input-program-subscription-disclosure"
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Displayed to customers before checkout. Explain billing terms, auto-renewal, and cancellation policy.
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                    </div>
+                    </>
                   )}
 
                   {selectedType === "One-Time" && (

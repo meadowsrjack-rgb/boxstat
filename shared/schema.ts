@@ -412,6 +412,8 @@ export const products = pgTable("products", {
   // New: Multiple pricing options within a single program (replaces packageGroup pattern)
   // Each option: { id, name, price, billingCycle, durationDays, comparePrice, savingsNote, stripePriceId, isDefault }
   pricingOptions: jsonb("pricing_options").default('[]'), // Array of pricing tiers for this program
+  // Subscription disclosure statement shown to customers before checkout
+  subscriptionDisclosure: text("subscription_disclosure"),
 });
 
 // Program Suggested Add-ons table (many-to-many relationship between programs and store products)

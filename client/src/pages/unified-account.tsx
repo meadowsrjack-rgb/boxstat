@@ -2357,6 +2357,23 @@ export default function UnifiedAccount() {
                           );
                         })()}
 
+                        {/* Subscription Disclosure */}
+                        {(() => {
+                          const pkg = (programs as any[])?.find((p: any) => p.id === selectedPackage);
+                          const isSubscription = pkg?.type === "Subscription";
+                          const disclosure = pkg?.subscriptionDisclosure;
+                          
+                          if (isSubscription && disclosure) {
+                            return (
+                              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800" data-testid="subscription-disclosure">
+                                <p className="font-medium mb-1">Subscription Terms</p>
+                                <p className="whitespace-pre-wrap">{disclosure}</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+
                         {/* Action Buttons */}
                         <div className="flex gap-2 pt-4">
                           <Button

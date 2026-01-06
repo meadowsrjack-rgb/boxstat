@@ -4813,6 +4813,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position: user.position,
           grade: user.grade,
           hasAppAccount: true,
+          flaggedForRosterChange: user.flaggedForRosterChange || false,
         });
       }
       

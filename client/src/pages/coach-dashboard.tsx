@@ -45,6 +45,7 @@ import {
   Check,
   X,
   UserPlus,
+  Flag,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { format, isSameDay, isAfter, startOfDay } from "date-fns";
@@ -787,6 +788,8 @@ function RosterTab({
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [flagDialogOpen, setFlagDialogOpen] = useState(false);
+  const [playerToFlag, setPlayerToFlag] = useState<{id: string; name: string} | null>(null);
 
   // Fetch roster for selected team (includes all Notion players)
   const { data: teamRoster = [] } = useQuery<any[]>({
@@ -867,6 +870,26 @@ function RosterTab({
       setSearchQuery("");
       setSearchResults([]);
       toast({ title: "Success", description: "Player assigned to team" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Flag player for roster change mutation
+  const flagPlayerMutation = useMutation({
+    mutationFn: async ({ playerId, flagged }: { playerId: string; flagged: boolean }) => {
+      return await apiRequest("PATCH", `/api/users/${playerId}`, { flaggedForRosterChange: flagged });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "roster-with-notion"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({ 
+        title: "Player Flagged", 
+        description: "Admin has been notified about this roster change request" 
+      });
+      setFlagDialogOpen(false);
+      setPlayerToFlag(null);
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -1017,6 +1040,27 @@ function RosterTab({
                         >
                           <Trophy className="h-4 w-4" />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (hasAccount) {
+                              setPlayerToFlag({ id: p.appAccountId, name: p.name });
+                              setFlagDialogOpen(true);
+                            }
+                          }}
+                          disabled={!hasAccount}
+                          className={hasAccount 
+                            ? (p.flaggedForRosterChange 
+                              ? "text-red-600 hover:text-red-700 hover:bg-red-50" 
+                              : "text-gray-400 hover:text-red-600 hover:bg-red-50")
+                            : "text-gray-300 cursor-not-allowed"
+                          }
+                          data-testid={`button-flag-${playerId}`}
+                        >
+                          <Flag className={`h-4 w-4 ${p.flaggedForRosterChange ? "fill-current" : ""}`} />
+                        </Button>
                       </div>
                     </div>
                   );
@@ -1056,6 +1100,52 @@ function RosterTab({
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Flag Player Confirmation Dialog */}
+      <AlertDialog open={flagDialogOpen} onOpenChange={setFlagDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Flag className="h-5 w-5 text-red-600" />
+              Flag Player for Roster Review
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>You are flagging <strong>{playerToFlag?.name}</strong> for roster review.</p>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                  <p className="font-medium mb-2">Reasons to flag a player:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Player is no longer attending practices or games</li>
+                    <li>Player needs to move to a different team or division</li>
+                    <li>Player has behavioral or attitude concerns</li>
+                    <li>Player's skill level doesn't match current team placement</li>
+                    <li>Parent or player requested a team change</li>
+                  </ul>
+                </div>
+                <p className="text-sm text-gray-600">
+                  This will notify the admin to review this player's roster placement. 
+                  The player will remain on the roster until the admin takes action.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-flag">No, Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (playerToFlag) {
+                  flagPlayerMutation.mutate({ playerId: playerToFlag.id, flagged: true });
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={flagPlayerMutation.isPending}
+              data-testid="button-confirm-flag"
+            >
+              {flagPlayerMutation.isPending ? "Flagging..." : "Yes, Flag Player"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
   );

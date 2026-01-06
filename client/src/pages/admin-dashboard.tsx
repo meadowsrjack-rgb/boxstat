@@ -66,6 +66,7 @@ import {
   Mail,
   User,
   Search,
+  Flag,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -1751,7 +1752,18 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                 return (
                   <TableRow key={user.id} className="cursor-default" data-testid={`row-user-${user.id}`}>
                     <TableCell data-testid={`text-name-${user.id}`}>
-                      <div className="font-medium">{user.firstName || ""} {user.lastName || ""}</div>
+                      <div className="font-medium flex items-center gap-2">
+                        {user.firstName || ""} {user.lastName || ""}
+                        {user.flaggedForRosterChange && (
+                          <span 
+                            className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded" 
+                            title="Flagged for roster review by coach"
+                            data-testid={`flag-indicator-${user.id}`}
+                          >
+                            <Flag className="w-3 h-3" /> Flagged
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell data-testid={`text-email-${user.id}`}>
                       <span className="text-gray-600 text-sm">{user.email || "-"}</span>

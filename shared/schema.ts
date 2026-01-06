@@ -247,6 +247,7 @@ export const users = pgTable("users", {
   lastLogin: timestamp("last_login", { mode: 'string' }),
   defaultDashboardView: varchar("default_dashboard_view"),
   needsLegacyClaim: boolean("needs_legacy_claim").default(false), // Legacy migration flag
+  flaggedForRosterChange: boolean("flagged_for_roster_change").default(false),
 });
 // NOTE: Email uniqueness is enforced via a partial unique index in the database
 // Only parent/account holder accounts (account_holder_id IS NULL) require unique emails

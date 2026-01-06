@@ -7761,23 +7761,33 @@ function ProgramsTab({ programs, teams, organization }: any) {
                                     data-testid={`input-option-savings-${index}`}
                                   />
                                 </div>
-                                {/* Bundle to Monthly Conversion */}
+                                {/* Bundle Renewal Options */}
                                 <div className="col-span-2 border-t pt-2 mt-2">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <Checkbox
-                                      checked={option.convertsToMonthly || false}
-                                      onCheckedChange={(checked) => {
-                                        const current = form.getValues("pricingOptions") || [];
-                                        current[index] = { ...current[index], convertsToMonthly: !!checked };
-                                        form.setValue("pricingOptions", [...current]);
-                                      }}
-                                      data-testid={`checkbox-converts-monthly-${index}`}
-                                    />
-                                    <label className="text-xs font-medium">Converts to Monthly after bundle period</label>
-                                  </div>
+                                  <label className="text-xs font-medium mb-2 block">After Bundle Period</label>
+                                  <Select
+                                    value={option.renewalType || "none"}
+                                    onValueChange={(value) => {
+                                      const current = form.getValues("pricingOptions") || [];
+                                      current[index] = { 
+                                        ...current[index], 
+                                        renewalType: value,
+                                        convertsToMonthly: value === "monthly"
+                                      };
+                                      form.setValue("pricingOptions", [...current]);
+                                    }}
+                                  >
+                                    <SelectTrigger className="w-full" data-testid={`select-renewal-type-${index}`}>
+                                      <SelectValue placeholder="Select renewal option" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">No auto-renewal (ends after period)</SelectItem>
+                                      <SelectItem value="same">Auto-renew at same bundle price</SelectItem>
+                                      <SelectItem value="monthly">Convert to Monthly after period</SelectItem>
+                                    </SelectContent>
+                                  </Select>
                                   
-                                  {option.convertsToMonthly && (
-                                    <div className="ml-6 space-y-2">
+                                  {(option.renewalType === "monthly" || option.convertsToMonthly) && option.renewalType !== "same" && option.renewalType !== "none" && (
+                                    <div className="mt-3 space-y-2">
                                       <div>
                                         <label className="text-xs font-medium">Monthly Price ($)</label>
                                         <Input
@@ -7802,6 +7812,10 @@ function ProgramsTab({ programs, teams, organization }: any) {
                                         </div>
                                       )}
                                     </div>
+                                  )}
+                                  
+                                  {option.renewalType === "same" && (
+                                    <p className="text-xs text-green-600 mt-2">Bundle will automatically renew at ${option.price ? (option.price / 100).toFixed(2) : "0.00"} every {option.durationDays || 0} days</p>
                                   )}
                                 </div>
                                 

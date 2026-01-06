@@ -163,9 +163,9 @@ export default function NotificationsPage() {
   const unreadCount = unreadNotifications.length;
 
   return (
-    <div className="scrollable-page bg-gray-50 dark:bg-gray-900 safe-bottom">
+    <div className="scrollable-page bg-gray-50 dark:bg-gray-900 safe-bottom safe-top">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b sticky top-0 z-10">
+      <div className="bg-white dark:bg-gray-800 border-b sticky z-10" style={{ top: 'var(--safe-area-top, 0px)' }}>
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

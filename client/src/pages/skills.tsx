@@ -55,9 +55,9 @@ export default function SkillsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   return (
-    <div className="min-h-screen-safe bg-background safe-bottom">
+    <div className="min-h-screen-safe bg-background safe-bottom safe-top">
       {/* Header */}
-      <div className="bg-card border-b sticky top-0 z-40">
+      <div className="bg-card border-b sticky z-40" style={{ top: 'var(--safe-area-top, 0px)' }}>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-3 mb-4">
             <Button 

@@ -224,13 +224,13 @@ export default function FamilyOnboarding() {
 
   return (
     <div 
-      className="min-h-screen-safe text-white safe-bottom"
+      className="min-h-screen-safe text-white safe-bottom safe-top"
       style={{
         background: `radial-gradient(1200px 600px at 50% -10%, rgba(216,36,40,0.15), transparent 60%), #000`
       }}
     >
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-black/50 backdrop-blur-sm border-b border-white/10">
+      <header className="sticky z-10 bg-black/50 backdrop-blur-sm border-b border-white/10" style={{ top: 'var(--safe-area-top, 0px)' }}>
         <div className="max-w-4xl mx-auto px-6 py-4">
           <div className="flex items-center gap-4">
             <button

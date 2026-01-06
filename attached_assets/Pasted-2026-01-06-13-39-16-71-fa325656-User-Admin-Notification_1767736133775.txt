@@ -1,0 +1,132 @@
+2026-01-06 13:39:16.71
+fa325656
+User
+[Admin Notification Delivery] ✅ In-app notification queued
+2026-01-06 13:39:16.71
+fa325656
+User
+[Admin Notification Delivery] Channel: in_app for user parent-1764899796149-a46e45aa
+2026-01-06 13:39:16.71
+fa325656
+User
+[Admin Notification Delivery] Channel: push for user 1765397473691-7u19zrufc
+2026-01-06 13:39:16.71
+fa325656
+User
+[Push Send] 🚀 Attempting to send push notification #478 to user 1765397473691-7u19zrufc
+2026-01-06 13:39:16.71
+fa325656
+User
+[Admin Notification Delivery] Channel: push for user parent-1764899796149-a46e45aa
+2026-01-06 13:39:16.71
+fa325656
+User
+[Admin Notification Delivery] ✅ In-app notification queued
+2026-01-06 13:39:16.71
+fa325656
+User
+[Admin Notification Delivery] 📱 Calling sendPushNotification for user 1765397473691-7u19zrufc...
+2026-01-06 13:39:16.71
+fa325656
+User
+[Push Send] Message: "bn"
+2026-01-06 13:39:16.71
+fa325656
+User
+[Push Send] Title: "hjnm"
+2026-01-06 13:39:16.71
+fa325656
+User
+[Admin Notification Delivery] Channel: in_app for user 1765397473691-7u19zrufc
+2026-01-06 13:39:16.71
+fa325656
+User
+[Admin Notification Delivery] ✅ In-app notification queued
+2026-01-06 13:39:16.71
+fa325656
+User
+[Admin Notification Delivery] Processing recipient: 1767215198210-yvev778dz
+2026-01-06 13:39:16.71
+fa325656
+User
+[Admin Notification Delivery] 📱 Calling sendPushNotification for user parent-1764899796149-a46e45aa...
+2026-01-06 13:39:16.71
+fa325656
+User
+[Admin Notification Delivery] Processing recipient: parent-1764899796149-a46e45aa
+2026-01-06 13:39:16.71
+fa325656
+User
+[Push Send] 🚀 Attempting to send push notification #478 to user parent-1764899796149-a46e45aa
+2026-01-06 13:39:16.71
+fa325656
+User
+[Push Send] Message: "bn"
+2026-01-06 13:39:34.74
+fa325656
+User
+9:39:34 PM [express] GET /api/notifications/feed 200 in 95ms :: [{"id":478,"types":["message","notif…
+2026-01-06 13:40:04.78
+fa325656
+User
+9:40:04 PM [express] GET /api/notifications/announcements 304 in 113ms :: []
+2026-01-06 13:40:04.99
+fa325656
+User
+9:40:04 PM [express] GET /api/notifications/feed 304 in 21ms :: [{"id":478,"types":["message","notif…
+2026-01-06 13:40:17.34
+fa325656
+User
+9:40:17 PM [express] GET /api/push/debug 200 in 182ms :: {"apnsConfigured":true,"apnsMode":"PRODUCTI…
+2026-01-06 13:40:35.25
+fa325656
+User
+9:40:35 PM [express] GET /api/notifications/feed 304 in 90ms :: [{"id":478,"types":["message","notif…
+2026-01-06 13:41:05.12
+fa325656
+User
+9:41:05 PM [express] GET /api/notifications/announcements 304 in 110ms :: []
+2026-01-06 13:41:05.62
+fa325656
+User
+9:41:05 PM [express] GET /api/notifications/feed 304 in 24ms :: [{"id":478,"types":["message","notif…
+2026-01-06 13:41:35.90
+fa325656
+User
+9:41:35 PM [express] GET /api/notifications/feed 304 in 100ms :: [{"id":478,"types":["message","noti…
+2026-01-06 13:42:05.50
+fa325656
+User
+9:42:05 PM [express] GET /api/notifications/announcements 304 in 121ms :: []
+2026-01-06 13:42:06.14
+fa325656
+User
+9:42:06 PM [express] GET /api/notifications/feed 304 in 24ms :: [{"id":478,"types":["message","notif…
+2026-01-06 13:42:36.61
+fa325656
+User
+9:42:36 PM [express] GET /api/notifications/feed 304 in 95ms :: [{"id":478,"types":["message","notif…
+2026-01-06 13:43:05.81
+fa325656
+User
+9:43:05 PM [express] GET /api/notifications/announcements 304 in 119ms :: []
+2026-01-06 13:43:06.96
+fa325656
+User
+9:43:06 PM [express] GET /api/notifications/feed 304 in 25ms :: [{"id":478,"types":["message","notif…
+2026-01-06 13:43:37.24
+fa325656
+User
+9:43:37 PM [express] GET /api/notifications/feed 304 in 92ms :: [{"id":478,"types":["message","notif…
+2026-01-06 13:44:06.19
+fa325656
+User
+9:44:06 PM [express] GET /api/notifications/announcements 304 in 116ms :: []
+2026-01-06 13:44:07.49
+fa325656
+User
+9:44:07 PM [express] GET /api/notifications/feed 304 in 23ms :: [{"id":478,"types":["message","notif…
+2026-01-06 13:44:37.78
+fa325656
+User
+9:44:37 PM [express] GET /api/notifications/feed 304 in 91ms :: [{"id":47

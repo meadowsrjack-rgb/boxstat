@@ -1,0 +1,124 @@
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] Channel: in_app for user parent-1764899796149-a46e45aa
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] Processing recipient: 1765397473691-7u19zrufc
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Push Send] Title: "test"
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] Channel: in_app for user 1765397473691-7u19zrufc
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] Channel: in_app for user 1765214269472-jcxi73j3g
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Push Send] Message: "test"
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Push Send] Message: "test"
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] ✅ In-app notification queued
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] Processing recipient: 1767215198210-yvev778dz
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] Processing recipient: 1765214269472-jcxi73j3g
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Push Send] Title: "test"
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] 📱 Using APNs environment override: production
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] ✅ In-app notification queued
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] 📱 Calling sendPushNotification for user 1765339801110-h7r344l94...
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] Channel: push for user parent-1764899796149-a46e45aa
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Push Send] Step 1: Checking user preferences...
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] 📱 Calling sendPushNotification for user 1767215198210-yvev778dz...
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] 📱 Using APNs environment override: production
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] Channel: push for user 1767215198210-yvev778dz
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] 📱 Calling sendPushNotification for user parent-1764899796149-a46e45aa...
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] ✅ In-app notification queued
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] ✅ In-app notification queued
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Push Send] Message: "test"
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] Channel: in_app for user parent-1764899796149-a46e45aa
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] Processing recipient: 1765397473691-7u19zrufc
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Push Send] Title: "test"
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] Channel: in_app for user 1765397473691-7u19zrufc
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] Channel: in_app for user 1765214269472-jcxi73j3g
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Push Send] Message: "test"
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Push Send] Message: "test"
+2026-01-06 14:44:28.51
+8a3dc029
+User
+[Admin Notification Delivery] ✅ In-app notification queued

@@ -168,19 +168,25 @@ export class NotificationService {
   // ===== Notification Creation and Delivery =====
   
   async sendPushNotification(notificationId: number, userId: string, title: string, message: string, apnsEnvironmentOverride?: 'sandbox' | 'production'): Promise<void> {
-    console.log(`[Push Send] 🚀 Attempting to send push notification #${notificationId} to user ${userId}`);
+    const startTime = Date.now();
+    console.log(`[Push Send] ========================================`);
+    console.log(`[Push Send] 🚀 START push notification #${notificationId} to user ${userId}`);
     console.log(`[Push Send] Title: "${title}"`);
     console.log(`[Push Send] Message: "${message}"`);
     console.log(`[Push Send] Step 1: Checking user preferences...`);
     
     try {
-      // Check user preferences
+      // Check user preferences with timeout
       let preferences;
       try {
-        preferences = await this.getNotificationPreferences(userId);
-        console.log(`[Push Send] User preferences:`, preferences ? 'Found' : 'Not set (using defaults)');
+        const prefPromise = this.getNotificationPreferences(userId);
+        const timeoutPromise = new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error('Preferences lookup timed out after 5s')), 5000)
+        );
+        preferences = await Promise.race([prefPromise, timeoutPromise]);
+        console.log(`[Push Send] ✅ Step 1 COMPLETE - User preferences:`, preferences ? 'Found' : 'Not set (using defaults)');
       } catch (prefError) {
-        console.error(`[Push Send] ❌ Error fetching user preferences:`, prefError);
+        console.error(`[Push Send] ❌ Step 1 ERROR fetching user preferences:`, prefError);
         console.log(`[Push Send] Continuing without preferences (defaults will be used)`);
         preferences = null;
       }
@@ -213,23 +219,28 @@ export class NotificationService {
         return;
       }
 
-      // Get all active subscriptions for the user
+      // Get all active subscriptions for the user with timeout
       console.log(`[Push Send] Step 2: 🔍 Looking up active push subscriptions for user ${userId}...`);
-      let subscriptions;
+      let subscriptions: any[];
       try {
-        subscriptions = await db.select()
+        const subPromise = db.select()
           .from(pushSubscriptions)
           .where(and(
             eq(pushSubscriptions.userId, userId),
             eq(pushSubscriptions.isActive, true)
           ));
-        console.log(`[Push Send] ✅ Subscription query completed`);
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Subscription lookup timed out after 5s')), 5000)
+        );
+        subscriptions = await Promise.race([subPromise, timeoutPromise]);
+        console.log(`[Push Send] ✅ Step 2 COMPLETE - Found ${subscriptions.length} active subscription(s)`);
       } catch (subError) {
-        console.error(`[Push Send] ❌ Error querying subscriptions:`, subError);
-        throw subError; // Re-throw to be caught by outer handler
+        console.error(`[Push Send] ❌ Step 2 ERROR querying subscriptions:`, subError);
+        console.log(`[Push Send] ======== END (error) after ${Date.now() - startTime}ms ========`);
+        throw subError;
       }
       
-      console.log(`[Push Send] Found ${subscriptions.length} active subscription(s)`);
+      console.log(`[Push Send] Subscription details:`);
       subscriptions.forEach((sub, idx) => {
         console.log(`[Push Send]   Subscription ${idx + 1}: Platform=${sub.platform}, Type=${sub.fcmToken ? 'FCM' : 'WebPush'}`);
       });
@@ -465,6 +476,7 @@ export class NotificationService {
         ));
 
       console.log(`[Push Send] ✅ Delivery status updated in database`);
+      console.log(`[Push Send] ======== END (success) after ${Date.now() - startTime}ms ========`);
 
     } catch (error) {
       console.error('[Push Send] ❌ EXCEPTION sending push notification:', error);
@@ -473,16 +485,20 @@ export class NotificationService {
       
       // Mark as failed
       const failedStatus = '"failed"';
-      await db.update(notificationRecipients)
-        .set({ 
-          deliveryStatus: sql`jsonb_set(COALESCE(delivery_status, '{}'::jsonb), '{push}', ${failedStatus}::jsonb)` 
-        })
-        .where(and(
-          eq(notificationRecipients.notificationId, notificationId),
-          eq(notificationRecipients.userId, userId)
-        ));
-      
-      console.log(`[Push Send] ❌ Delivery status marked as failed in database`);
+      try {
+        await db.update(notificationRecipients)
+          .set({ 
+            deliveryStatus: sql`jsonb_set(COALESCE(delivery_status, '{}'::jsonb), '{push}', ${failedStatus}::jsonb)` 
+          })
+          .where(and(
+            eq(notificationRecipients.notificationId, notificationId),
+            eq(notificationRecipients.userId, userId)
+          ));
+        console.log(`[Push Send] ❌ Delivery status marked as failed in database`);
+      } catch (dbError) {
+        console.error(`[Push Send] ❌ Failed to update database with failure status:`, dbError);
+      }
+      console.log(`[Push Send] ======== END (failed) after ${Date.now() - startTime}ms ========`);
     }
   }
 

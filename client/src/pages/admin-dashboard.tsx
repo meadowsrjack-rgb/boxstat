@@ -6808,6 +6808,7 @@ function StoreTab({ organization }: any) {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="Weekly">Weekly</SelectItem>
+                            <SelectItem value="28-Day">28 Days</SelectItem>
                             <SelectItem value="Monthly">Monthly</SelectItem>
                             <SelectItem value="Quarterly">Quarterly (every 3 months)</SelectItem>
                             <SelectItem value="6-Month">6-Month</SelectItem>
@@ -7481,6 +7482,8 @@ function ProgramsTab({ programs, teams, organization }: any) {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
+                                <SelectItem value="Weekly">Weekly</SelectItem>
+                                <SelectItem value="28-Day">28 Days</SelectItem>
                                 <SelectItem value="Monthly">Monthly</SelectItem>
                                 <SelectItem value="Quarterly">Quarterly</SelectItem>
                                 <SelectItem value="6-Month">6-Month</SelectItem>

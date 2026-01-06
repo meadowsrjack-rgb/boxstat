@@ -65,6 +65,7 @@ import {
   Phone,
   Mail,
   User,
+  Search,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -613,6 +614,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [userSearchTerm, setUserSearchTerm] = useState("");
   const [detailTab, setDetailTab] = useState("team");
   const [showDobPicker, setShowDobPicker] = useState(false);
   const [showAddRoleDialog, setShowAddRoleDialog] = useState(false);
@@ -903,6 +905,18 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
     if (aStr > bStr) return sortDirection === 'asc' ? 1 : -1;
     return 0;
   }) : users;
+
+  // Filter users based on search term
+  const filteredUsers = userSearchTerm.trim() ? sortedUsers.filter((user: any) => {
+    const searchLower = userSearchTerm.toLowerCase();
+    const fullName = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase();
+    return (
+      fullName.includes(searchLower) ||
+      (user.email && user.email.toLowerCase().includes(searchLower)) ||
+      (user.role && user.role.toLowerCase().includes(searchLower)) ||
+      (user.phoneNumber && user.phoneNumber.includes(searchLower))
+    );
+  }) : sortedUsers;
 
 
   const downloadUsersData = () => {
@@ -1621,6 +1635,25 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
         
       </CardHeader>
       <CardContent>
+        {/* Search bar */}
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search by name, email, role, or phone..."
+              value={userSearchTerm}
+              onChange={(e) => setUserSearchTerm(e.target.value)}
+              className="pl-10"
+              data-testid="input-search-users"
+            />
+          </div>
+          {userSearchTerm && (
+            <p className="text-xs text-gray-500 mt-1">
+              Showing {filteredUsers.length} of {users.length} users
+            </p>
+          )}
+        </div>
+        
         {/* Top scrollbar for horizontal navigation */}
         <div 
           className="overflow-x-auto mb-2"
@@ -1709,7 +1742,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedUsers.map((user: any) => {
+              {filteredUsers.map((user: any) => {
                 const userTeam = teams.find((t: any) => t.id === user.teamId);
                 const userProgram = userTeam ? programs.find((p: any) => p.id === userTeam.programId) : null;
                 const linkedPlayers = user.role === "parent" 

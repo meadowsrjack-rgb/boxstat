@@ -673,7 +673,7 @@ export default function CoachDashboard() {
           {/* Event Detail Modal */}
           <EventDetailModal
             event={selectedEvent}
-            userId={currentUser.id}
+            userId={coachProfileId}
             userRole="coach"
             open={eventDetailOpen}
             onOpenChange={setEventDetailOpen}

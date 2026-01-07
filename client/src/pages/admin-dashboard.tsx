@@ -11601,9 +11601,13 @@ function CRMTab({ organization, users, teams }: any) {
               
               <div>
                 <FormLabel>Items</FormLabel>
-                <p className="text-sm text-gray-500 mb-2">Select programs and adjust prices if needed</p>
+                <p className="text-sm text-gray-500 mb-2">Select programs and store products, adjust prices if needed</p>
                 <div className="space-y-2 max-h-60 overflow-y-auto border rounded p-2">
-                  {programs.filter((p: any) => p.isActive).map((program: any) => {
+                  {/* Programs (services) section */}
+                  {programs.filter((p: any) => p.isActive && p.productCategory !== 'goods').length > 0 && (
+                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide pb-1 border-b">Programs</div>
+                  )}
+                  {programs.filter((p: any) => p.isActive && p.productCategory !== 'goods').map((program: any) => {
                     const items = quoteForm.watch('items');
                     const itemIndex = items.findIndex((i: any) => i.productId === program.id);
                     const isSelected = itemIndex !== -1;
@@ -11653,7 +11657,66 @@ function CRMTab({ organization, users, teams }: any) {
                           </div>
                         )}
                         {!isSelected && (
-                          <span className="text-sm text-gray-400">${(program.price / 100).toFixed(2)}</span>
+                          <span className="text-sm text-gray-400">${((program.price || 0) / 100).toFixed(2)}</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {/* Store Products (goods) section */}
+                  {storeProducts.filter((p: any) => p.isActive !== false).length > 0 && (
+                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide pb-1 border-b mt-3">Store Products</div>
+                  )}
+                  {storeProducts.filter((p: any) => p.isActive !== false).map((product: any) => {
+                    const items = quoteForm.watch('items');
+                    const itemIndex = items.findIndex((i: any) => i.productId === product.id);
+                    const isSelected = itemIndex !== -1;
+                    const currentItem = isSelected ? items[itemIndex] : null;
+                    const displayPrice = currentItem?.customPrice !== undefined ? currentItem.customPrice : product.price;
+                    
+                    return (
+                      <div key={product.id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50">
+                        <Checkbox
+                          id={`product-${product.id}`}
+                          checked={isSelected}
+                          onCheckedChange={(checked) => {
+                            const currentItems = quoteForm.getValues('items');
+                            if (checked) {
+                              quoteForm.setValue('items', [...currentItems, { type: 'store', productId: product.id, quantity: 1 }]);
+                            } else {
+                              quoteForm.setValue('items', currentItems.filter((i: any) => i.productId !== product.id));
+                            }
+                          }}
+                          data-testid={`checkbox-product-${product.id}`}
+                        />
+                        <label htmlFor={`product-${product.id}`} className="text-sm flex-1">
+                          {product.name}
+                        </label>
+                        {isSelected && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-500">$</span>
+                            <Input
+                              type="text"
+                              inputMode="decimal"
+                              className="w-20 h-7 text-sm"
+                              defaultValue={(displayPrice / 100).toFixed(2)}
+                              key={`price-${product.id}-${isSelected}`}
+                              onBlur={(e) => {
+                                const val = e.target.value.replace(/[^0-9.]/g, '');
+                                const newPrice = Math.round(parseFloat(val || '0') * 100);
+                                const currentItems = [...quoteForm.getValues('items')];
+                                const idx = currentItems.findIndex((i: any) => i.productId === product.id);
+                                if (idx !== -1) {
+                                  currentItems[idx] = { ...currentItems[idx], customPrice: newPrice };
+                                  quoteForm.setValue('items', currentItems);
+                                }
+                                e.target.value = (newPrice / 100).toFixed(2);
+                              }}
+                              data-testid={`input-price-${product.id}`}
+                            />
+                          </div>
+                        )}
+                        {!isSelected && (
+                          <span className="text-sm text-gray-400">${((product.price || 0) / 100).toFixed(2)}</span>
                         )}
                       </div>
                     );
@@ -11665,8 +11728,9 @@ function CRMTab({ organization, users, teams }: any) {
                     <span className="font-medium">Total:</span>
                     <span className="font-bold">
                       ${(quoteForm.watch('items').reduce((sum: number, item: any) => {
-                        const program = programs.find((p: any) => p.id === item.productId);
-                        const price = item.customPrice !== undefined ? item.customPrice : (program?.price || 0);
+                        const allProducts = [...programs, ...storeProducts];
+                        const product = allProducts.find((p: any) => p.id === item.productId);
+                        const price = item.customPrice !== undefined ? item.customPrice : (product?.price || 0);
                         return sum + (price * (item.quantity || 1));
                       }, 0) / 100).toFixed(2)}
                     </span>

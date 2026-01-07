@@ -7641,43 +7641,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(programs);
   });
   
+  // Store products endpoint - returns products with productCategory = 'goods'
+  app.get('/api/store-products', async (req: any, res) => {
+    try {
+      const organizationId = req.user?.organizationId || 'default-org';
+      const allProducts = await storage.getProgramsByOrganization(organizationId);
+      const storeProducts = allProducts.filter((p: any) => p.productCategory === 'goods');
+      res.json(storeProducts);
+    } catch (error: any) {
+      console.error('Error fetching store products:', error);
+      res.status(500).json({ message: 'Failed to fetch store products' });
+    }
+  });
+  
   app.post('/api/programs', requireAuth, async (req: any, res) => {
-    const { role } = req.user;
-    if (role !== 'admin') {
-      return res.status(403).json({ message: 'Only admins can create programs' });
-    }
-    
-    const parsedData = insertProgramSchema.parse(req.body);
-    
-    // Deep clone the parsed data to avoid mutating frozen Zod output
-    // Use type-preserving deepClone instead of JSON.stringify to preserve Date types
-    const programData = deepClone(parsedData);
-    
-    // Assign stable server-side IDs to pricing options BEFORE creating the program
-    if (programData.pricingOptions && programData.pricingOptions.length > 0) {
-      programData.pricingOptions = assignStablePricingOptionIds(programData.pricingOptions);
-    }
-    
-    // Create the program with stable pricing option IDs
-    let program = await storage.createProgram(programData);
-    
-    // Sync with Stripe if there are pricing options
-    if (programData.pricingOptions && programData.pricingOptions.length > 0) {
-      const { stripeProductId, updatedPricingOptions } = await syncProgramWithStripe(
-        program,
-        programData.pricingOptions // Use the already-ID'd options
-      );
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can create programs' });
+      }
       
-      // Update program with Stripe IDs (stable IDs are already preserved)
-      if (stripeProductId || updatedPricingOptions.some((opt: any) => opt.stripePriceId)) {
-        program = await storage.updateProgram(program.id, {
-          stripeProductId,
-          pricingOptions: updatedPricingOptions,
-        }) || program;
+      const parsedData = insertProgramSchema.parse(req.body);
+      
+      // Deep clone the parsed data to avoid mutating frozen Zod output
+      // Use type-preserving deepClone instead of JSON.stringify to preserve Date types
+      const programData = deepClone(parsedData);
+      
+      // Assign stable server-side IDs to pricing options BEFORE creating the program
+      if (programData.pricingOptions && programData.pricingOptions.length > 0) {
+        programData.pricingOptions = assignStablePricingOptionIds(programData.pricingOptions);
+      }
+      
+      // Create the program with stable pricing option IDs
+      let program = await storage.createProgram(programData);
+      
+      // Sync with Stripe if there are pricing options
+      if (programData.pricingOptions && programData.pricingOptions.length > 0) {
+        const { stripeProductId, updatedPricingOptions } = await syncProgramWithStripe(
+          program,
+          programData.pricingOptions // Use the already-ID'd options
+        );
+        
+        // Update program with Stripe IDs (stable IDs are already preserved)
+        if (stripeProductId || updatedPricingOptions.some((opt: any) => opt.stripePriceId)) {
+          program = await storage.updateProgram(program.id, {
+            stripeProductId,
+            pricingOptions: updatedPricingOptions,
+          }) || program;
+        }
+      }
+      
+      res.json(program);
+    } catch (error: any) {
+      console.error('Error creating program/product:', error);
+      // Return 400 for Zod validation errors, 500 for server errors
+      if (error.name === 'ZodError') {
+        res.status(400).json({ message: error.errors?.[0]?.message || 'Validation error' });
+      } else {
+        res.status(500).json({ message: 'Failed to create product' });
       }
     }
-    
-    res.json(program);
   });
   
   app.patch('/api/programs/:id', requireAuth, async (req: any, res) => {
@@ -10761,18 +10784,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { nanoid } = await import('nanoid');
       const quoteId = nanoid(12);
       
-      // Build items array with prices from programs (use customPrice if provided)
-      const programs = await storage.getProgramsByOrganization(req.user.organizationId);
+      // Build items array with prices from programs AND store products (use customPrice if provided)
+      const allProducts = await storage.getProgramsByOrganization(req.user.organizationId);
       const items = (req.body.items || []).map((item: any) => {
-        const program = programs.find((p: any) => p.id === item.productId);
-        // Use customPrice if provided, otherwise use program's default price
-        const price = item.customPrice !== undefined ? item.customPrice : (program?.price || 0);
+        const product = allProducts.find((p: any) => p.id === item.productId);
+        // Use customPrice if provided, otherwise use product's default price
+        const price = item.customPrice !== undefined ? item.customPrice : (product?.price || 0);
         return {
           type: item.type || 'program',
           productId: item.productId,
-          productName: program?.name || 'Unknown',
+          productName: product?.name || 'Unknown',
           price,
-          originalPrice: program?.price || 0, // Store original for reference
+          originalPrice: product?.price || 0, // Store original for reference
           quantity: item.quantity || 1,
         };
       });

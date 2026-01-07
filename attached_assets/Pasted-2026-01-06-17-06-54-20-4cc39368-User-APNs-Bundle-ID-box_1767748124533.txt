@@ -1,0 +1,124 @@
+2026-01-06 17:06:54.20
+4cc39368
+User
+[APNs] Bundle ID: boxstat.app
+2026-01-06 17:06:54.20
+4cc39368
+User
+[APNs] 🚀 Using PRODUCTION gateway: api.push.apple.com
+2026-01-06 17:06:54.20
+4cc39368
+User
+[APNs] ✅ Generated new JWT token
+2026-01-06 17:06:54.20
+4cc39368
+User
+[APNs] Token prefix: 1688539E6507A4C7B592...
+2026-01-06 17:06:54.20
+4cc39368
+User
+[APNs] Environment: production
+2026-01-06 17:06:54.21
+4cc39368
+User
+[APNs] Environment: production
+2026-01-06 17:06:54.21
+4cc39368
+User
+[APNs] 🚀 Using PRODUCTION gateway: api.push.apple.com
+2026-01-06 17:06:54.21
+4cc39368
+User
+[APNs] Token prefix: CA3474190F668A726F03...
+2026-01-06 17:06:54.21
+4cc39368
+User
+[APNs] Environment: production
+2026-01-06 17:06:54.21
+4cc39368
+User
+[APNs] Token prefix: 15DBC0F7B63C266581C4...
+2026-01-06 17:06:54.21
+4cc39368
+User
+[APNs] 🚀 Using PRODUCTION gateway: api.push.apple.com
+2026-01-06 17:06:54.21
+4cc39368
+User
+[APNs] Token prefix: 9956CAC508768B0286A2...
+2026-01-06 17:06:54.21
+4cc39368
+User
+[APNs] Environment: production
+2026-01-06 17:06:54.21
+4cc39368
+User
+[APNs] 🚀 Using PRODUCTION gateway: api.push.apple.com
+2026-01-06 17:06:54.21
+4cc39368
+User
+[APNs] 🚀 Using PRODUCTION gateway: api.push.apple.com
+2026-01-06 17:06:54.21
+4cc39368
+User
+[APNs] Token prefix: 28C8BD277063765A9BA6...
+2026-01-06 17:06:54.21
+4cc39368
+User
+[APNs] Environment: production
+2026-01-06 17:06:54.21
+4cc39368
+User
+[APNs] 🚀 Using PRODUCTION gateway: api.push.apple.com
+2026-01-06 17:06:54.21
+4cc39368
+User
+[APNs] Token prefix: 4987481BB4F806A12A39...
+2026-01-06 17:06:54.35
+4cc39368
+User
+[APNs] ❌ Push failed for 1688539E6507A4C7B592...: BadEnvironmentKeyInToken
+2026-01-06 17:06:54.35
+4cc39368
+User
+[APNs] ❌ Push failed for CA3474190F668A726F03...: BadEnvironmentKeyInToken
+2026-01-06 17:06:54.35
+4cc39368
+User
+[APNs] ❌ Push failed for 4987481BB4F806A12A39...: BadEnvironmentKeyInToken
+2026-01-06 17:06:54.35
+4cc39368
+User
+[APNs] ❌ Push failed for 28C8BD277063765A9BA6...: BadEnvironmentKeyInToken
+2026-01-06 17:06:54.62
+4cc39368
+User
+[Push Send] APNs Results: 0 succeeded, 6 failed
+2026-01-06 17:06:54.62
+4cc39368
+User
+[Push Send] Failure 3: Token 15DBC0F7B63C266581C4...
+2026-01-06 17:06:54.62
+4cc39368
+User
+[Push Send] Error: BadEnvironmentKeyInToken
+2026-01-06 17:06:54.62
+4cc39368
+User
+[Push Send] Failure 2: Token CA3474190F668A726F03...
+2026-01-06 17:06:54.67
+4cc39368
+User
+[Admin Notification Create] ✅ Delivery complete
+2026-01-06 17:07:10.06
+4cc39368
+User
+1:07:10 AM [express] GET /api/notifications/feed 200 in 43ms :: [{"id":530,"types":["message","notif…
+2026-01-06 17:08:02.75
+8a3dc029
+System
+system: received signal terminated
+2026-01-06 17:08:02.75
+8a3dc029
+System
+system: received signal terminated

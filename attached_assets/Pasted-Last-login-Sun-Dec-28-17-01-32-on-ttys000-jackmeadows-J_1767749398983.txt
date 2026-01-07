@@ -1,0 +1,59 @@
+Last login: Sun Dec 28 17:01:32 on ttys000
+jackmeadows@Jacks-MacBook-Air ~ % git stash
+git pull origin main
+git stash pop
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+jackmeadows@Jacks-MacBook-Air ~ % cd documents/boxstat
+jackmeadows@Jacks-MacBook-Air boxstat % git stash
+git pull origin main
+git stash pop
+Saved working directory and index state WIP on main: a120d64 iOS project configured with push notifications
+From https://github.com/meadowsrjack-rgb/boxstat
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+On branch main
+Your branch is ahead of 'origin/main' by 1 commit.
+  (use "git push" to publish your local commits)
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	new file:   ios/App/App/Assets.xcassets/AppIcon.appiconset/boxstatlogofinal.png
+
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   ios/App/App.xcodeproj/project.pbxproj
+	modified:   ios/App/App/AppDelegate.swift
+	modified:   ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents.json
+	deleted:    ios/App/App/Assets.xcassets/AppIcon.appiconset/boxstatlogo.png
+	modified:   ios/App/App/SceneDelegate.swift
+	modified:   package-lock.json
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	attached_assets/Coach Award_1754973783767.png
+	attached_assets/Season MIP Award_1754973783767.png
+	attached_assets/Season MVP Award_1754973783769.png
+	attached_assets/Spirit Award_1754973783769.png
+	attached_assets/Trophies & Badges_1755119569957.png
+	attached_assets/player-hero.png
+	attached_assets/trophies/
+	ios/.gitignore 2
+	ios/.gitignore 3
+	ios/App/App 2.xcodeproj/
+	ios/App/App 2.xcworkspace/
+	ios/App/App/App 2.entitlements
+	ios/App/App/AppDelegate 2.swift
+	ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents 2.json
+	ios/App/App/Assets.xcassets/AppIcon.appiconset/logo2.png
+	ios/App/App/Base.lproj/Main 2.storyboard
+	ios/App/App/Info 2.plist
+	ios/App/Podfile 2.lock
+	ios/capacitor-cordova-ios-plugins 2/
+	ios/capacitor-cordova-ios-plugins 3/
+	ios/capacitor-cordova-ios-plugins 4/
+
+Dropped refs/stash@{0} (8071a3209285e61390c534d23295ce61550b9fa2)
+jackmeadows@Jacks-MacBook-Air boxstat % 

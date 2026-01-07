@@ -1,0 +1,102 @@
+Last login: Tue Jan  6 17:49:06 on console
+jackmeadows@Jacks-MacBook-Air ~ % open ios/App/App.xcworkspace
+The file /Users/jackmeadows/ios/App/App.xcworkspace does not exist.
+jackmeadows@Jacks-MacBook-Air ~ % cd documents/boxstat
+jackmeadows@Jacks-MacBook-Air boxstat % open ios/App/App.xcworkspace
+jackmeadows@Jacks-MacBook-Air boxstat % cd ios/App
+pod install
+Analyzing dependencies
+[!] Could not automatically select an Xcode project. Specify one in your Podfile like so:
+
+    project 'path/to/Project.xcodeproj'
+
+jackmeadows@Jacks-MacBook-Air App % pod install --project-directory=.
+Analyzing dependencies
+[!] Could not automatically select an Xcode project. Specify one in your Podfile like so:
+
+    project 'path/to/Project.xcodeproj'
+
+jackmeadows@Jacks-MacBook-Air App % cd ~/documents/boxstat
+cd ios/App
+pod deintegrate
+pod install
+[!] A valid Xcode project file is required.
+
+Usage:
+
+    $ pod deintegrate [XCODE_PROJECT]
+
+      Deintegrate your project from CocoaPods. Removing all traces of CocoaPods from
+      your Xcode project.
+
+      If no xcodeproj is specified, then a search for an Xcode project will be made in
+      the current directory.
+
+Options:
+
+    --project-directory=/project/dir/   The path to the root of the project directory
+    --allow-root                        Allows CocoaPods to run as root
+    --silent                            Show nothing
+    --verbose                           Show more debugging information
+    --no-ansi                           Show output without ANSI codes
+    --help                              Show help banner of specified command
+Analyzing dependencies
+[!] Could not automatically select an Xcode project. Specify one in your Podfile like so:
+
+    project 'path/to/Project.xcodeproj'
+
+jackmeadows@Jacks-MacBook-Air App % ls -la ~/documents/boxstat/ios/App/
+total 24
+drwxr-xr-x  11 jackmeadows  staff   352 Jan  6 17:56 .
+drwxr-xr-x  10 jackmeadows  staff   320 Jan  6 17:56 ..
+drwxr-xr-x  15 jackmeadows  staff   480 Jan  6 17:54 App
+drwx------@  5 jackmeadows  staff   160 Dec 29 13:40 App 2.xcodeproj
+drwx------@  5 jackmeadows  staff   160 Dec 29 11:48 App 2.xcworkspace
+drwxr-xr-x@  5 jackmeadows  staff   160 Jan  6 17:41 App.xcodeproj
+drwxr-xr-x@  5 jackmeadows  staff   160 Jan  1 12:52 App.xcworkspace
+-rw-r--r--   1 jackmeadows  staff   867 Jan  6 17:41 Podfile
+-rw-------   1 jackmeadows  staff  1112 Dec 29 11:48 Podfile 2.lock
+-rw-r--r--   1 jackmeadows  staff  1112 Jan  6 17:41 Podfile.lock
+drwxr-xr-x   8 jackmeadows  staff   256 Jan  6 17:53 Pods
+jackmeadows@Jacks-MacBook-Air App % pod install --project-directory=~/documents/boxstat/ios/App --project=App.xcodeproj
+[!] Unknown option: `--project=App.xcodeproj`
+Did you mean: --repo-update?
+
+Usage:
+
+    $ pod install
+
+      Downloads all dependencies defined in `Podfile` and creates an Xcode Pods
+      library project in `./Pods`.
+
+      The Xcode project file should be specified in your `Podfile` like this:
+
+          project 'path/to/XcodeProject.xcodeproj'
+
+      If no project is specified, then a search for an Xcode project will be made. If
+      more than one Xcode project is found, the command will raise an error.
+
+      This will configure the project to reference the Pods static library, add a
+      build configuration file, and add a post build script to copy Pod resources.
+
+      This may return one of several error codes if it encounters problems. * `1`
+      Generic error code * `31` Spec not found (i.e out-of-date source repos, mistyped
+      Pod name etc...)
+
+Options:
+
+    --repo-update                       Force running `pod repo update` before install
+    --deployment                        Disallow any changes to the Podfile or the
+                                        Podfile.lock during installation
+    --clean-install                     Ignore the contents of the project cache and
+                                        force a full pod installation. This only
+                                        applies to projects that have enabled
+                                        incremental installation
+    --project-directory=/project/dir/   The path to the root of the project directory
+    --allow-root                        Allows CocoaPods to run as root
+    --silent                            Show nothing
+    --verbose                           Show more debugging information
+    --no-ansi                           Show output without ANSI codes
+    --help                              Show help banner of specified command
+jackmeadows@Jacks-MacBook-Air App % open ~/documents/boxstat/ios/App/App.xcworkspace
+jackmeadows@Jacks-MacBook-Air App % 

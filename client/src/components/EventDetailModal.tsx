@@ -274,6 +274,23 @@ export default function EventDetailModal({
     },
     enabled: open && isParent,
   });
+  
+  // Fetch all linked profiles (including coach profiles) for the account
+  const { data: allLinkedProfiles = [] } = useQuery<Array<{id: string; role: string; firstName: string; lastName: string}>>({
+    queryKey: ['/api/users', userId, 'linked-profiles'],
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch(`/api/users/${userId}/linked-profiles`, {
+        headers,
+        credentials: 'include',
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: open && !!userId,
+  });
 
   // Filter linked players to only show those invited to this event
   // A player is invited if they appear in the event's participants list (users array)
@@ -551,21 +568,41 @@ export default function EventDetailModal({
     });
   }, [users, attendances, rsvps]);
 
-  // Compute RSVP names for display (for parent: show linked players + self)
+  // Compute RSVP names for display (for parent: show linked players + all linked profiles)
   const rsvpNames = useMemo(() => {
     const attendingNames: string[] = [];
     const notAttendingNames: string[] = [];
+    const processedIds = new Set<string>();
     
     if (isParent) {
-      // Check parent's own RSVP
+      // Check parent's own RSVP (main account)
       if (userRsvp?.response === 'attending') {
-        attendingNames.push('Me');
+        attendingNames.push(currentUserName || 'Me');
+        processedIds.add(String(userId));
       } else if (userRsvp?.response === 'not_attending') {
-        notAttendingNames.push('Me');
+        notAttendingNames.push(currentUserName || 'Me');
+        processedIds.add(String(userId));
+      }
+      
+      // Check linked profiles (coach, admin profiles, etc.)
+      for (const profile of allLinkedProfiles) {
+        if (processedIds.has(profile.id)) continue;
+        processedIds.add(profile.id);
+        
+        const profileRsvp = rsvps.find(r => String(r.userId) === profile.id);
+        const profileName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.role;
+        if (profileRsvp?.response === 'attending') {
+          attendingNames.push(profileName);
+        } else if (profileRsvp?.response === 'not_attending') {
+          notAttendingNames.push(profileName);
+        }
       }
       
       // Check linked players
       for (const player of linkedPlayers) {
+        if (processedIds.has(String(player.id))) continue;
+        processedIds.add(String(player.id));
+        
         const playerRsvp = rsvps.find(r => r.userId === player.id);
         const playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'Unknown';
         if (playerRsvp?.response === 'attending') {
@@ -584,7 +621,7 @@ export default function EventDetailModal({
     }
     
     return { attendingNames, notAttendingNames };
-  }, [isParent, userRsvp, linkedPlayers, rsvps]);
+  }, [isParent, userRsvp, linkedPlayers, rsvps, allLinkedProfiles, currentUserName, userId]);
 
   // Window status for proxy actions
   const windowStatus = useMemo(() => {

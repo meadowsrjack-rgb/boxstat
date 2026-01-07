@@ -521,9 +521,13 @@ export default function EventDetailModal({
   }, [attendances, userId]);
 
   const rsvpData: RsvpData = useMemo(() => {
-    const attending = rsvps.filter(r => r.response === 'attending').length;
-    const notAttending = rsvps.filter(r => r.response === 'not_attending').length;
-    const totalInvited = users.length || 10;
+    // Only count RSVPs from users who are actually invited to this event
+    const invitedUserIds = new Set(users.map(u => String(u.id)));
+    const invitedRsvps = rsvps.filter(r => invitedUserIds.has(String(r.userId)));
+    
+    const attending = invitedRsvps.filter(r => r.response === 'attending').length;
+    const notAttending = invitedRsvps.filter(r => r.response === 'not_attending').length;
+    const totalInvited = users.length || 0;
     const noResponse = Math.max(0, totalInvited - attending - notAttending);
 
     return {

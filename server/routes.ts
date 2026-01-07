@@ -5687,6 +5687,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return true;
       }
       
+      // Special case: For parent-targeted events, also include admins who have linked children
+      // (admin accounts with children are effectively "parents" too)
+      const targetedRoles = [...(assignTo.roles || []), ...(visibility.roles || [])];
+      if (targetedRoles.includes('parent') && user.role === 'admin') {
+        // Check if this admin has any linked children
+        const hasChildren = allUsers.some((u: any) => 
+          u.parentId === user.id || u.guardianId === user.id
+        );
+        if (hasChildren) {
+          return true;
+        }
+      }
+      
       return false;
     });
     

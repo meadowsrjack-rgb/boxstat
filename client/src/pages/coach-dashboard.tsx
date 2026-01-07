@@ -790,6 +790,7 @@ function RosterTab({
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [flagDialogOpen, setFlagDialogOpen] = useState(false);
   const [playerToFlag, setPlayerToFlag] = useState<{id: string; name: string} | null>(null);
+  const [flagReason, setFlagReason] = useState("");
 
   // Fetch roster for selected team (includes all Notion players)
   const { data: teamRoster = [] } = useQuery<any[]>({
@@ -878,8 +879,11 @@ function RosterTab({
 
   // Flag player for roster change mutation
   const flagPlayerMutation = useMutation({
-    mutationFn: async ({ playerId, flagged }: { playerId: string; flagged: boolean }) => {
-      return await apiRequest("PATCH", `/api/users/${playerId}`, { flaggedForRosterChange: flagged });
+    mutationFn: async ({ playerId, flagged, reason }: { playerId: string; flagged: boolean; reason?: string }) => {
+      return await apiRequest("PATCH", `/api/users/${playerId}`, { 
+        flaggedForRosterChange: flagged,
+        flagReason: flagged ? reason : null
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "roster-with-notion"] });
@@ -890,6 +894,7 @@ function RosterTab({
       });
       setFlagDialogOpen(false);
       setPlayerToFlag(null);
+      setFlagReason("");
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -1113,7 +1118,7 @@ function RosterTab({
               <div className="space-y-3">
                 <p>You are flagging <strong>{playerToFlag?.name}</strong> for roster review.</p>
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-                  <p className="font-medium mb-2">Reasons to flag a player:</p>
+                  <p className="font-medium mb-2">Common reasons to flag a player:</p>
                   <ul className="list-disc list-inside space-y-1">
                     <li>Player is no longer attending practices or games</li>
                     <li>Player needs to move to a different team or division</li>
@@ -1121,6 +1126,19 @@ function RosterTab({
                     <li>Player's skill level doesn't match current team placement</li>
                     <li>Parent or player requested a team change</li>
                   </ul>
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="flag-reason" className="text-sm font-medium text-gray-700">
+                    Reason for flagging (required)
+                  </label>
+                  <textarea
+                    id="flag-reason"
+                    value={flagReason}
+                    onChange={(e) => setFlagReason(e.target.value)}
+                    placeholder="Describe why this player needs roster review..."
+                    className="w-full min-h-[80px] p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    data-testid="input-flag-reason"
+                  />
                 </div>
                 <p className="text-sm text-gray-600">
                   This will notify the admin to review this player's roster placement. 
@@ -1130,15 +1148,15 @@ function RosterTab({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-flag">No, Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setFlagReason("")} data-testid="button-cancel-flag">No, Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (playerToFlag) {
-                  flagPlayerMutation.mutate({ playerId: playerToFlag.id, flagged: true });
+                if (playerToFlag && flagReason.trim()) {
+                  flagPlayerMutation.mutate({ playerId: playerToFlag.id, flagged: true, reason: flagReason.trim() });
                 }
               }}
-              className="bg-red-600 hover:bg-red-700"
-              disabled={flagPlayerMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={flagPlayerMutation.isPending || !flagReason.trim()}
               data-testid="button-confirm-flag"
             >
               {flagPlayerMutation.isPending ? "Flagging..." : "Yes, Flag Player"}

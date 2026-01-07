@@ -3703,12 +3703,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.patch('/api/users/:id', requireAuth, async (req: any, res) => {
     const { role, organizationId } = req.user;
-    if (role !== 'admin') {
-      return res.status(403).json({ message: 'Only admins can update users' });
-    }
-    
     const userId = req.params.id;
     const updateData = req.body;
+    
+    // Allow coaches to only update flag-related fields
+    const flagOnlyUpdate = Object.keys(updateData).every(key => 
+      ['flaggedForRosterChange', 'flagReason'].includes(key)
+    );
+    
+    if (role !== 'admin' && !(role === 'coach' && flagOnlyUpdate)) {
+      return res.status(403).json({ message: 'Only admins can update users (coaches can only flag players)' });
+    }
     
     console.log(`[PATCH /api/users/${userId}] Update data:`, JSON.stringify(updateData, null, 2));
     
@@ -4814,6 +4819,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           grade: user.grade,
           hasAppAccount: true,
           flaggedForRosterChange: user.flaggedForRosterChange || false,
+          flagReason: user.flagReason || null,
         });
       }
       

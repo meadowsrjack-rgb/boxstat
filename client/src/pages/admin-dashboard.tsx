@@ -1756,8 +1756,8 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                         {user.firstName || ""} {user.lastName || ""}
                         {user.flaggedForRosterChange && (
                           <span 
-                            className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded" 
-                            title="Flagged for roster review by coach"
+                            className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded cursor-help" 
+                            title={user.flagReason ? `Reason: ${user.flagReason}` : "Flagged for roster review by coach"}
                             data-testid={`flag-indicator-${user.id}`}
                           >
                             <Flag className="w-3 h-3" /> Flagged

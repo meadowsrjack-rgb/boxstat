@@ -3088,6 +3088,8 @@ class DatabaseStorage implements IStorage {
       stripeCustomerId: updates.stripeCustomerId,
       defaultDashboardView: updates.defaultDashboardView,
       magicLinkSourcePlatform: updates.magicLinkSourcePlatform,
+      flaggedForRosterChange: updates.flaggedForRosterChange,
+      flagReason: updates.flagReason,
       updatedAt: new Date().toISOString(),
     };
 
@@ -5220,6 +5222,8 @@ class DatabaseStorage implements IStorage {
       isActive: Boolean(dbUser.isActive),
       needsLegacyClaim: Boolean(dbUser.needsLegacyClaim),
       defaultDashboardView: dbUser.defaultDashboardView,
+      flaggedForRosterChange: Boolean(dbUser.flaggedForRosterChange),
+      flagReason: dbUser.flagReason || null,
       createdAt: new Date(dbUser.createdAt),
       updatedAt: new Date(dbUser.updatedAt),
     };

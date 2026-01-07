@@ -5527,6 +5527,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasNonEmptyArray(visibility?.users) || hasNonEmptyArray(visibility?.teams) || hasNonEmptyArray(visibility?.divisions) || 
         hasNonEmptyArray(visibility?.roles) || hasNonEmptyArray(visibility?.programs);
     
+    console.log(`📋 Participants filter for event ${eventId}:`, {
+      teamId: event.teamId,
+      hasExplicitTargeting,
+      assignTo,
+      visibility,
+      teamMemberCount: teamMemberIds.size,
+      allUsersCount: allUsers.length
+    });
+    
     // Filter users who are invited to the event
     let invitedUsers = allUsers.filter((user: any) => {
       // If event is linked to a specific team AND has no other targeting, show only team members

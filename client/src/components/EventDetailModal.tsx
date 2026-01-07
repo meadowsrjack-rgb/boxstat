@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
-  MapPin, Calendar, Clock, 
+  MapPin, Calendar, Clock, Check,
   CheckCircle2, XCircle, Circle, Navigation,
   MapPinOff, QrCode, Locate, Users, Loader2, Settings, RefreshCw, HelpCircle, UserCheck, ClipboardList, ArrowLeft
 } from 'lucide-react';
@@ -1241,6 +1241,20 @@ export default function EventDetailModal({
                               <Circle className="h-3 w-3 mr-1" />
                               No Response
                             </Badge>
+                          )}
+                          {/* Manual check-in button for coaches */}
+                          {isAdminOrCoach && !userAttendance && user.role === 'player' && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                              disabled={coachCheckInMutation.isPending}
+                              onClick={() => coachCheckInMutation.mutate({ playerIds: [user.id] })}
+                              data-testid={`button-manual-checkin-${user.id}`}
+                              title="Check in manually"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
                           )}
                         </div>
                       </div>

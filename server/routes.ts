@@ -5508,11 +5508,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
     
+    // If event has a specific teamId, get that team's members
+    let teamMemberIds = new Set<string>();
+    if (event.teamId) {
+      const teamUsers = await storage.getUsersByTeam(String(event.teamId));
+      teamUsers.forEach((user: any) => teamMemberIds.add(user.id));
+    }
+    
+    // Check if event has any explicit targeting configured (must have non-empty arrays, not strings or other values)
+    const hasNonEmptyArray = (val: any): boolean => {
+      if (!val) return false;
+      if (!Array.isArray(val)) return false;
+      return val.length > 0;
+    };
+    const hasExplicitTargeting = 
+        hasNonEmptyArray(assignTo?.users) || hasNonEmptyArray(assignTo?.teams) || 
+        hasNonEmptyArray(assignTo?.divisions) || hasNonEmptyArray(assignTo?.roles) || hasNonEmptyArray(assignTo?.programs) ||
+        hasNonEmptyArray(visibility?.users) || hasNonEmptyArray(visibility?.teams) || hasNonEmptyArray(visibility?.divisions) || 
+        hasNonEmptyArray(visibility?.roles) || hasNonEmptyArray(visibility?.programs);
+    
     // Filter users who are invited to the event
     let invitedUsers = allUsers.filter((user: any) => {
-      // If event has no targeting, include all roles that are in participationRoles (or all players by default)
-      if (!assignTo.users && !assignTo.teams && !assignTo.divisions && !assignTo.roles && !assignTo.programs &&
-          !visibility.users && !visibility.teams && !visibility.divisions && !visibility.roles && !visibility.programs) {
+      // If event is linked to a specific team AND has no other targeting, show only team members
+      if (event.teamId && !hasExplicitTargeting) {
+        return teamMemberIds.has(user.id);
+      }
+      
+      // If event has no targeting and no teamId, include all roles that are in participationRoles (or all players by default)
+      if (!hasExplicitTargeting && !event.teamId) {
         // Default: show all players if no targeting specified
         const participationRoles = event.participationRoles || ['player'];
         return participationRoles.includes(user.role);

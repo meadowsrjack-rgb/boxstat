@@ -5521,34 +5521,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!Array.isArray(val)) return false;
       return val.length > 0;
     };
-    
-    // Check if "Everyone" targeting (all 4 roles selected) - this is NOT explicit targeting for participant list
-    const allRoles = ['player', 'coach', 'parent', 'admin'];
-    const isEveryoneTargeting = (roles: any) => {
-      if (!Array.isArray(roles)) return false;
-      return roles.length >= 4 && allRoles.every(r => roles.includes(r));
-    };
-    const assignToIsEveryone = isEveryoneTargeting(assignTo?.roles);
-    const visibilityIsEveryone = isEveryoneTargeting(visibility?.roles);
-    
-    // Explicit targeting means specific users/teams/divisions/programs OR specific roles (not all 4)
-    const hasExplicitUserTargeting = hasNonEmptyArray(assignTo?.users) || hasNonEmptyArray(visibility?.users);
-    const hasExplicitTeamTargeting = hasNonEmptyArray(assignTo?.teams) || hasNonEmptyArray(visibility?.teams);
-    const hasExplicitDivisionTargeting = hasNonEmptyArray(assignTo?.divisions) || hasNonEmptyArray(visibility?.divisions);
-    const hasExplicitProgramTargeting = hasNonEmptyArray(assignTo?.programs) || hasNonEmptyArray(visibility?.programs);
-    const hasExplicitRoleTargeting = (hasNonEmptyArray(assignTo?.roles) && !assignToIsEveryone) || 
-                                      (hasNonEmptyArray(visibility?.roles) && !visibilityIsEveryone);
-    
-    const hasExplicitTargeting = hasExplicitUserTargeting || hasExplicitTeamTargeting || 
-                                  hasExplicitDivisionTargeting || hasExplicitProgramTargeting || hasExplicitRoleTargeting;
+    const hasExplicitTargeting = 
+        hasNonEmptyArray(assignTo?.users) || hasNonEmptyArray(assignTo?.teams) || 
+        hasNonEmptyArray(assignTo?.divisions) || hasNonEmptyArray(assignTo?.roles) || hasNonEmptyArray(assignTo?.programs) ||
+        hasNonEmptyArray(visibility?.users) || hasNonEmptyArray(visibility?.teams) || hasNonEmptyArray(visibility?.divisions) || 
+        hasNonEmptyArray(visibility?.roles) || hasNonEmptyArray(visibility?.programs);
     
     console.log(`📋 Participants filter for event ${eventId}:`, {
       teamId: event.teamId,
       hasExplicitTargeting,
-      assignToIsEveryone,
-      visibilityIsEveryone,
-      hasExplicitUserTargeting,
-      hasExplicitTeamTargeting,
       assignTo,
       visibility,
       teamMemberCount: teamMemberIds.size,
@@ -5557,55 +5538,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Filter users who are invited to the event
     let invitedUsers = allUsers.filter((user: any) => {
-      // If event is linked to a specific team AND has no other explicit targeting, show only team members
+      // If event is linked to a specific team AND has no other targeting, show only team members
       if (event.teamId && !hasExplicitTargeting) {
         return teamMemberIds.has(user.id);
       }
       
-      // If "Everyone" targeting (all roles) and no teamId - this is a general announcement, don't list participants
-      if ((assignToIsEveryone || visibilityIsEveryone) && !event.teamId && !hasExplicitTargeting) {
-        return false; // No participants for "Everyone" events without team scope
-      }
-      
-      // If event has no targeting and no teamId, don't show any participants
+      // If event has no targeting and no teamId, include all roles that are in participationRoles (or all players by default)
       if (!hasExplicitTargeting && !event.teamId) {
-        return false;
+        // Default: show all players if no targeting specified
+        const participationRoles = event.participationRoles || ['player'];
+        return participationRoles.includes(user.role);
       }
       
       // When programs are targeted, ONLY include users who are members of those programs
+      // This is a strict filter - programs take precedence over roles
       if (targetedPrograms.length > 0) {
+        // User must be a member of one of the targeted programs
         if (!programMemberUserIds.has(user.id)) {
           return false;
         }
+        // If they're in the program, include them (don't need to check other criteria)
         return true;
       }
       
-      // For specific user targeting
-      if (hasExplicitUserTargeting) {
-        if (assignTo.users?.includes(user.id) || visibility.users?.includes(user.id)) {
-          return true;
-        }
+      // For non-program-based targeting, use OR logic for other filters
+      // Check user-specific assignment
+      if (assignTo.users?.includes(user.id)) {
+        return true;
       }
       
       // Check team-based visibility
-      if (hasExplicitTeamTargeting) {
-        if (user.teamId && (assignTo.teams?.includes(String(user.teamId)) || visibility.teams?.includes(String(user.teamId)))) {
-          return true;
-        }
+      if (user.teamId && (assignTo.teams?.includes(String(user.teamId)) || visibility.teams?.includes(String(user.teamId)))) {
+        return true;
       }
       
       // Check division-based visibility
-      if (hasExplicitDivisionTargeting) {
-        if (user.divisionId && (assignTo.divisions?.includes(String(user.divisionId)) || visibility.divisions?.includes(String(user.divisionId)))) {
-          return true;
-        }
+      if (user.divisionId && (assignTo.divisions?.includes(String(user.divisionId)) || visibility.divisions?.includes(String(user.divisionId)))) {
+        return true;
       }
       
-      // Check role-based visibility (only if specific roles, not "everyone")
-      if (hasExplicitRoleTargeting) {
-        if (assignTo.roles?.includes(user.role) || visibility.roles?.includes(user.role)) {
-          return true;
-        }
+      // Check role-based visibility
+      if (assignTo.roles?.includes(user.role) || visibility.roles?.includes(user.role)) {
+        return true;
       }
       
       return false;

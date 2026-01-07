@@ -1,0 +1,104 @@
+2026-01-07 12:11:14.42
+56d74728
+System
+metasidecar: loaded enterprise status from environment is_enterprise=false
+2026-01-07 12:11:14.42
+56d74728
+System
+starting up user application
+2026-01-07 12:11:14.42
+56d74728
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2026-01-07 12:11:15.04
+56d74728
+User
+> rest-express@1.0.0 start
+2026-01-07 12:11:15.04
+56d74728
+User
+> NODE_ENV=production node dist/index.js
+2026-01-07 12:11:16.23
+56d74728
+User
+✅ APNs configured for direct push notifications
+2026-01-07 12:11:16.23
+56d74728
+User
+Bundle ID: boxstat.app
+2026-01-07 12:11:16.23
+56d74728
+User
+Gateways: api.push.apple.com (production) / api.sandbox.push.apple.com (sandbox)
+2026-01-07 12:11:16.27
+56d74728
+User
+✅ Firebase Admin initialized for Android FCM push notifications
+2026-01-07 12:11:16.27
+56d74728
+User
+✅ Web Push notifications configured with VAPID keys
+2026-01-07 12:11:16.29
+56d74728
+User
+Stripe initialized in 🧪 TEST mode (key: sk_test_...)
+2026-01-07 12:11:16.34
+56d74728
+User
+Email: test@example.com
+2026-01-07 12:11:16.34
+56d74728
+User
+👤 Default admin user: admin@example.com
+2026-01-07 12:11:16.34
+56d74728
+User
+8:11:16 PM [express] serving on port 5000
+2026-01-07 12:11:16.34
+56d74728
+User
+🧪 Test Account Credentials:
+2026-01-07 12:11:16.34
+56d74728
+User
+Password: test123
+2026-01-07 12:11:16.34
+56d74728
+User
+📝 Database storage initialized
+2026-01-07 12:11:16.34
+56d74728
+User
+✅ Sports Management Platform ready!
+2026-01-07 12:11:16.34
+56d74728
+User
+🏢 Default organization: My Sports Organization
+2026-01-07 12:11:16.34
+56d74728
+User
+Role: parent
+2026-01-07 12:31:19.94
+56d74728
+User
+8:31:19 PM [express] GET /api/auth/user 401 in 2ms :: {"error":"Not authenticated"}
+2026-01-07 12:31:33.00
+56d74728
+User
+8:31:33 PM [express] POST /api/auth/login 200 in 682ms :: {"success":true,"token":"eyJhbGciOiJIUzI1N…
+2026-01-07 12:31:33.77
+56d74728
+User
+8:31:33 PM [express] GET /api/auth/user 200 in 53ms :: {"id":"1764873247759-aecinrbny","organization…
+2026-01-07 12:31:33.88
+56d74728
+User
+8:31:33 PM [express] GET /api/auth/user 304 in 24ms :: {"id":"1764873247759-aecinrbny","organization…
+2026-01-07 12:31:34.27
+56d74728
+User
+8:31:34 PM [express] GET /api/account/players 200 in 333ms :: [{"id":"1765335061474-trs1ajus3","orga…
+2026-01-07 12:31:34.41
+56d74728
+User
+8:31:34 PM [express] GET /api/auth/user 304 in 24ms :: {"id":"1764873247759-aecinrbny","organization…

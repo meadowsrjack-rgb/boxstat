@@ -1,0 +1,128 @@
+2026-01-06 18:35:33.37
+56d74728
+User
+[Admin Notification Delivery] ✅ In-app notification queued
+2026-01-06 18:35:33.37
+56d74728
+User
+[Push Send] Step 1: Checking user preferences...
+2026-01-06 18:35:33.37
+56d74728
+User
+[Push Send] ========================================
+2026-01-06 18:35:33.37
+56d74728
+User
+[Push Send] ========================================
+2026-01-06 18:35:33.37
+56d74728
+User
+[Admin Notification Delivery] Channel: push for user 1767215198170-hj8zcahxb
+2026-01-06 18:35:33.37
+56d74728
+User
+[Admin Notification Delivery] Processing recipient: 1765397473691-7u19zrufc
+2026-01-06 18:35:33.37
+56d74728
+User
+[Push Send] 🚀 START push notification #541 to user 1767215198248-ljk69tx30
+2026-01-06 18:35:33.37
+56d74728
+User
+[Admin Notification Delivery] Processing recipient: 1767215198170-hj8zcahxb
+2026-01-06 18:35:33.37
+56d74728
+User
+[Admin Notification Delivery] Channel: in_app for user 1765397473691-7u19zrufc
+2026-01-06 18:35:33.37
+56d74728
+User
+[Push Send] Message: "test2"
+2026-01-06 18:35:33.37
+56d74728
+User
+[Push Send] Step 1: Checking user preferences...
+2026-01-06 18:35:33.37
+56d74728
+User
+[Admin Notification Delivery] Channel: push for user 1767215198248-ljk69tx30
+2026-01-06 18:35:33.37
+56d74728
+User
+[Push Send] 🚀 START push notification #541 to user 1767215198170-hj8zcahxb
+2026-01-06 18:35:33.37
+56d74728
+User
+[Push Send] ========================================
+2026-01-06 18:35:33.37
+56d74728
+User
+[Admin Notification Delivery] Processing recipient: 1767215198248-ljk69tx30
+2026-01-06 18:35:33.37
+56d74728
+User
+[Push Send] Step 1: Checking user preferences...
+2026-01-06 18:35:33.37
+56d74728
+User
+[Admin Notification Delivery] 📱 Using APNs environment override: production
+2026-01-06 18:35:33.37
+56d74728
+User
+[Admin Notification Delivery] 📱 Calling sendPushNotification for user 1767215198170-hj8zcahxb...
+2026-01-06 18:35:33.37
+56d74728
+User
+[Admin Notification Delivery] 📱 Calling sendPushNotification for user 1767215198248-ljk69tx30...
+2026-01-06 18:35:33.37
+56d74728
+User
+[Push Send] 🚀 START push notification #541 to user 1765397473691-7u19zrufc
+2026-01-06 18:35:33.37
+56d74728
+User
+[Admin Notification Delivery] 📱 Using APNs environment override: production
+2026-01-06 18:35:33.37
+56d74728
+User
+[Admin Notification Delivery] Processing recipient: 1767159618272-pt2pie2rr
+2026-01-06 18:35:33.37
+56d74728
+User
+[Push Send] Message: "test2"
+2026-01-06 18:35:33.37
+56d74728
+User
+[Admin Notification Delivery] Channel: in_app for user 1767215198248-ljk69tx30
+2026-01-06 18:35:33.55
+56d74728
+User
+[Push Send] ⏭️ No subscriptions found - skipping push notification
+2026-01-06 18:35:33.55
+56d74728
+User
+[Push Send] Split into 0 WebPush and 0 FCM subscriptions
+2026-01-06 18:35:33.55
+56d74728
+User
+[Push Send] ✅ Step 2 COMPLETE - Found 0 active subscription(s)
+2026-01-06 18:35:33.61
+56d74728
+User
+[Admin Notification Delivery] ✅ Push notification sent successfully
+2026-01-06 18:35:35.52
+56d74728
+User
+[Push Send] Subscription 2: Platform=web, Type=WebPush
+2026-01-06 18:35:35.93
+56d74728
+User
+[Push Send] ✅ Delivery status updated in database
+2026-01-06 18:35:35.93
+56d74728
+User
+[Push Send] ✅ Delivery status updated in database
+2026-01-06 18:35:35.93
+56d74728
+User
+[Push Send] ✅ Delivery status updated in database

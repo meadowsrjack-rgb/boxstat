@@ -1,0 +1,128 @@
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Delivery] ✅ In-app notification queued
+2026-01-07 12:38:11.36
+56d74728
+User
+[Push Send] Message: "ji"
+2026-01-07 12:38:11.36
+56d74728
+User
+[Push Send] ========================================
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Delivery] Channel: push for user parent-1764899796149-a46e45aa
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Delivery] Channel: push for user 1767159618272-pt2pie2rr
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Delivery] Channel: push for user 1767215198248-ljk69tx30
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Delivery] Channel: in_app for user 1767159618272-pt2pie2rr
+2026-01-07 12:38:11.36
+56d74728
+User
+[Push Send] Title: "hi"
+2026-01-07 12:38:11.36
+56d74728
+User
+[Push Send] ========================================
+2026-01-07 12:38:11.36
+56d74728
+User
+[Push Send] 🚀 START push notification #671 to user 1767215198170-hj8zcahxb
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Delivery] Processing recipient: 1767215198210-yvev778dz
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Delivery] Channel: in_app for user 1767215198210-yvev778dz
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Delivery] 📱 Calling sendPushNotification for user 1767215198170-hj8zcahxb...
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Delivery] 📱 Calling sendPushNotification for user 1767159618272-pt2pie2rr...
+2026-01-07 12:38:11.36
+56d74728
+User
+[Push Send] 🚀 START push notification #671 to user parent-1764899796149-a46e45aa
+2026-01-07 12:38:11.36
+56d74728
+User
+[Push Send] Title: "hi"
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Delivery] ✅ In-app notification queued
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Delivery] 📱 Calling sendPushNotification for user 1767215198210-yvev778dz...
+2026-01-07 12:38:11.36
+56d74728
+User
+[Push Send] ========================================
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Delivery] Processing recipient: 1767215198248-ljk69tx30
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Delivery] 📤 Sending notification #671 to 22 recipient(s)
+2026-01-07 12:38:11.36
+56d74728
+User
+[Push Send] Step 1: Checking user preferences...
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Create] ✅ Recipient records created
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Delivery] 📱 Calling sendPushNotification for user 1765397473691-7u19zrufc...
+2026-01-07 12:38:11.36
+56d74728
+User
+[Push Send] Message: "ji"
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Delivery] Processing recipient: 1767159618272-pt2pie2rr
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Delivery] Channel: push for user 1767215198170-hj8zcahxb
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Delivery] ✅ In-app notification queued
+2026-01-07 12:38:11.36
+56d74728
+User
+[Push Send] Message: "ji"
+2026-01-07 12:38:11.36
+56d74728
+User
+[Admin Notification Delivery] ✅ In-app notification queued
+2026-01-07 12:38:14.81
+56d74728
+User
+8:38:14 PM [express] GET /api/notifications/feed 200 in 22ms :: [{"id":671,"types":["notification"],…
+2026-01-07 12:38:14.81
+56d74728
+User
+8:38:14 PM [express] GET /api/notifications/feed 200 in 22ms :: [{"id":671,"types":["notification"],…

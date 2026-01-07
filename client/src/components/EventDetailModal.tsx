@@ -1213,28 +1213,18 @@ export default function EventDetailModal({
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={user.profileImageUrl || undefined} />
-                            <AvatarFallback className="text-xs bg-gray-200">
+                            <AvatarFallback className={`text-xs text-white ${
+                              user.role === 'admin' ? 'bg-red-500' :
+                              user.role === 'parent' ? 'bg-purple-500' :
+                              user.role === 'coach' ? 'bg-blue-500' :
+                              'bg-green-500'
+                            }`}>
                               {initials}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-gray-900">
-                              {user.firstName} {user.lastName}
-                            </span>
-                            <Badge 
-                              className={`text-[10px] px-1.5 py-0 ${
-                                user.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-                                user.role === 'coach' ? 'bg-blue-100 text-blue-700' :
-                                user.role === 'parent' ? 'bg-amber-100 text-amber-700' :
-                                'bg-green-100 text-green-700'
-                              }`}
-                              data-testid={`badge-role-${user.id}`}
-                            >
-                              {user.role === 'admin' ? 'Admin' : 
-                               user.role === 'coach' ? 'Coach' : 
-                               user.role === 'parent' ? 'Parent' : 'Player'}
-                            </Badge>
-                          </div>
+                          <span className="text-sm font-medium text-gray-900">
+                            {user.firstName} {user.lastName}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
                           {/* RSVP Status */}

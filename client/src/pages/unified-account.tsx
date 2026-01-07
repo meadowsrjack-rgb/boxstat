@@ -1289,9 +1289,20 @@ export default function UnifiedAccount() {
     refetchInterval: 30000, // Poll every 30 seconds for cross-session updates
   });
 
-  // Fetch upcoming events
+  // Fetch upcoming events - use context=parent to get parent-scoped events for admin accounts
   const { data: events = [], isLoading: eventsLoading } = useQuery<any[]>({
-    queryKey: ["/api/events"],
+    queryKey: ["/api/events", { context: "parent" }],
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch('/api/events?context=parent', {
+        headers,
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch events');
+      return response.json();
+    },
   });
 
   // Fetch payments
@@ -1340,13 +1351,25 @@ export default function UnifiedAccount() {
   const requiredWaiverIds = selectedProgram?.requiredWaivers || [];
   const requiredWaivers = waivers.filter((w: any) => requiredWaiverIds.includes(w.id) && w.isActive);
 
+  // Show events happening today or in the future (date-based, not time-based)
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
   const upcomingEvents = events
-    .filter((e: any) => new Date(e.startTime) > new Date())
+    .filter((e: any) => {
+      const eventDate = new Date(e.startTime);
+      const eventDayStart = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+      return eventDayStart >= todayStart;
+    })
     .slice(0, 3);
 
-  // All upcoming events for Events tab
+  // All upcoming events for Events tab - show events from today onwards
   const allUpcomingEvents = events
-    .filter((e: any) => new Date(e.startTime) > new Date())
+    .filter((e: any) => {
+      const eventDate = new Date(e.startTime);
+      const eventDayStart = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+      return eventDayStart >= todayStart;
+    })
     .sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
   const pendingPayments = payments.filter((p: any) => p.status === "pending");

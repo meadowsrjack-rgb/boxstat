@@ -5304,18 +5304,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get('/api/events', requireAuth, async (req: any, res) => {
     const { organizationId, id: userId, role } = req.user;
-    const { childProfileId } = req.query;
+    const { childProfileId, context } = req.query;
     const allEvents = await storage.getEventsByOrganization(organizationId);
     
     console.log('🔍 EVENT FILTERING DEBUG - Start');
     console.log('  userId:', userId);
     console.log('  role:', role);
     console.log('  childProfileId:', childProfileId);
+    console.log('  context:', context);
     
-    // Admins see all events ONLY when viewing their own dashboard (not a child's)
-    if (role === 'admin' && !childProfileId) {
-      console.log('  Admin viewing own dashboard - showing all events');
+    // Admins see all events ONLY when on the admin dashboard, NOT the parent/unified account page
+    // If context=parent is passed, aggregate events for linked players instead
+    if (role === 'admin' && !childProfileId && context !== 'parent') {
+      console.log('  Admin viewing admin dashboard - showing all events');
       return res.json(allEvents);
+    }
+    
+    // For admins in parent context (unified account page), aggregate events for all linked players
+    if (role === 'admin' && !childProfileId && context === 'parent') {
+      console.log('  Admin in parent context - aggregating events for linked players');
+      
+      // Get all linked players for this admin
+      const linkedPlayers = await storage.getPlayersByParent(userId);
+      
+      if (linkedPlayers.length === 0) {
+        console.log('  No linked players found - returning empty');
+        return res.json([]);
+      }
+      
+      // Aggregate events from all linked players
+      const aggregatedEventIds = new Set<string>();
+      const aggregatedEvents: typeof allEvents = [];
+      
+      for (const player of linkedPlayers) {
+        // Get event scope for each player
+        const { teamIds, divisionIds, programIds, targetUserId } = await getUserEventScope(
+          userId,
+          'parent', // Use parent logic for each child
+          organizationId,
+          player.id
+        );
+        
+        console.log(`  Child ${player.id} scope - teams: [${teamIds}], programs: [${programIds}]`);
+        
+        // Filter events for this player
+        const playerEvents = filterEventsByScope(allEvents, 'parent', teamIds, divisionIds, programIds, targetUserId, false, true);
+        
+        // Add to aggregated list (dedupe by ID)
+        for (const event of playerEvents) {
+          const eventId = String(event.id);
+          if (!aggregatedEventIds.has(eventId)) {
+            aggregatedEventIds.add(eventId);
+            aggregatedEvents.push(event);
+          }
+        }
+      }
+      
+      console.log(`  Aggregated ${aggregatedEvents.length} unique events for ${linkedPlayers.length} players`);
+      console.log('🔍 EVENT FILTERING DEBUG - End\n');
+      return res.json(aggregatedEvents);
     }
     
     // Verify user exists to prevent data leaks

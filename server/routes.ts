@@ -5515,6 +5515,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       teamUsers.forEach((user: any) => teamMemberIds.add(user.id));
     }
     
+    // Build a set of user IDs who are in targeted teams (via team_memberships)
+    let targetedTeamMemberIds = new Set<string>();
+    const targetedTeams = [...(assignTo.teams || []), ...(visibility.teams || [])];
+    
+    if (targetedTeams.length > 0) {
+      for (const teamId of targetedTeams) {
+        const teamUsers = await storage.getUsersByTeam(String(teamId));
+        teamUsers.forEach((user: any) => {
+          targetedTeamMemberIds.add(user.id);
+        });
+      }
+    }
+    
     // Check if event has any explicit targeting configured (must have non-empty arrays, not strings or other values)
     const hasNonEmptyArray = (val: any): boolean => {
       if (!val) return false;
@@ -5533,6 +5546,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       assignTo,
       visibility,
       teamMemberCount: teamMemberIds.size,
+      targetedTeams,
+      targetedTeamMemberCount: targetedTeamMemberIds.size,
       allUsersCount: allUsers.length
     });
     
@@ -5550,6 +5565,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return participationRoles.includes(user.role);
       }
       
+      // When teams are targeted via assignTo.teams/visibility.teams, ONLY include team members
+      // This is a strict filter - teams take precedence over roles
+      if (targetedTeams.length > 0) {
+        // User must be a member of one of the targeted teams (via team_memberships)
+        return targetedTeamMemberIds.has(user.id);
+      }
+      
       // When programs are targeted, ONLY include users who are members of those programs
       // This is a strict filter - programs take precedence over roles
       if (targetedPrograms.length > 0) {
@@ -5561,14 +5583,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return true;
       }
       
-      // For non-program-based targeting, use OR logic for other filters
+      // For non-program/team-based targeting, use OR logic for other filters
       // Check user-specific assignment
       if (assignTo.users?.includes(user.id)) {
-        return true;
-      }
-      
-      // Check team-based visibility
-      if (user.teamId && (assignTo.teams?.includes(String(user.teamId)) || visibility.teams?.includes(String(user.teamId)))) {
         return true;
       }
       

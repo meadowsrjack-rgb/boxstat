@@ -1351,24 +1351,21 @@ export default function UnifiedAccount() {
   const requiredWaiverIds = selectedProgram?.requiredWaivers || [];
   const requiredWaivers = waivers.filter((w: any) => requiredWaiverIds.includes(w.id) && w.isActive);
 
-  // Show events happening today or in the future (date-based, not time-based)
+  // Show events that haven't ended yet (time-based)
   const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   
   const upcomingEvents = events
     .filter((e: any) => {
-      const eventDate = new Date(e.startTime);
-      const eventDayStart = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-      return eventDayStart >= todayStart;
+      const endTime = new Date(e.endTime || e.startTime);
+      return endTime > now;
     })
     .slice(0, 3);
 
-  // All upcoming events for Events tab - show events from today onwards
+  // All upcoming events for Events tab - show events that haven't ended
   const allUpcomingEvents = events
     .filter((e: any) => {
-      const eventDate = new Date(e.startTime);
-      const eventDayStart = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-      return eventDayStart >= todayStart;
+      const endTime = new Date(e.endTime || e.startTime);
+      return endTime > now;
     })
     .sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 

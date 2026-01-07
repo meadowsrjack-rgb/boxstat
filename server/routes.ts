@@ -5117,14 +5117,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Player Mode: Viewing as a specific child - only show that child's events
       const childProfile = await storage.getUser(childProfileId);
       if (childProfile) {
+        // Check legacy teamId field
         if (childProfile.teamId) {
-          teamIds = [childProfile.teamId];
-          // Get the team to find its program
+          teamIds.push(childProfile.teamId);
           const team = await storage.getTeam(String(childProfile.teamId));
           if (team?.programId) programIds.push(team.programId);
         }
+        
+        // Also check team_memberships table for active memberships
+        const memberships = await storage.getTeamMembershipsByProfile(childProfileId);
+        for (const membership of memberships) {
+          if (membership.status === 'active' && membership.teamId) {
+            teamIds.push(membership.teamId);
+            const team = await storage.getTeam(String(membership.teamId));
+            if (team?.programId) programIds.push(team.programId);
+          }
+        }
+        
         if (childProfile.divisionId) divisionIds = [childProfile.divisionId];
         targetUserId = childProfileId;
+        
+        // Deduplicate
+        teamIds = [...new Set(teamIds.map(String))];
+        programIds = [...new Set(programIds.map(String))];
       }
     } else if (role === 'parent') {
       // Parent Mode: Show events from ALL children's teams + parent's own events
@@ -5133,12 +5148,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Collect all team IDs, division IDs, and program IDs from children
       for (const child of childProfiles) {
+        // Check legacy teamId field
         if (child.teamId) {
           teamIds.push(child.teamId);
-          // Get the team to find its program
           const team = await storage.getTeam(String(child.teamId));
           if (team?.programId) programIds.push(team.programId);
         }
+        
+        // Also check team_memberships table for active memberships
+        const childMemberships = await storage.getTeamMembershipsByProfile(child.id);
+        for (const membership of childMemberships) {
+          if (membership.status === 'active' && membership.teamId) {
+            teamIds.push(membership.teamId);
+            const team = await storage.getTeam(String(membership.teamId));
+            if (team?.programId) programIds.push(team.programId);
+          }
+        }
+        
         if (child.divisionId) divisionIds.push(child.divisionId);
       }
       
@@ -5174,13 +5200,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Regular user (player): Use their own team/division
       const userProfile = await storage.getUser(userId);
       if (userProfile) {
+        // Check legacy teamId field
         if (userProfile.teamId) {
-          teamIds = [userProfile.teamId];
+          teamIds.push(userProfile.teamId);
           const team = await storage.getTeam(String(userProfile.teamId));
           if (team?.programId) programIds.push(team.programId);
         }
+        
+        // Also check team_memberships table for active memberships
+        const memberships = await storage.getTeamMembershipsByProfile(userId);
+        for (const membership of memberships) {
+          if (membership.status === 'active' && membership.teamId) {
+            teamIds.push(membership.teamId);
+            const team = await storage.getTeam(String(membership.teamId));
+            if (team?.programId) programIds.push(team.programId);
+          }
+        }
+        
         if (userProfile.divisionId) divisionIds = [userProfile.divisionId];
       }
+      
+      // Deduplicate
+      teamIds = [...new Set(teamIds.map(String))];
       programIds = [...new Set(programIds.map(String))];
     }
     

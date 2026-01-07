@@ -233,7 +233,14 @@ export class NotificationService {
           setTimeout(() => reject(new Error('Subscription lookup timed out after 5s')), 5000)
         );
         subscriptions = await Promise.race([subPromise, timeoutPromise]);
+        
+        // Enhanced logging to debug subscription lookup
+        const webSubs = subscriptions.filter((s: any) => s.endpoint);
+        const iosSubs = subscriptions.filter((s: any) => s.platform === 'ios' && s.fcmToken);
+        const androidSubs = subscriptions.filter((s: any) => s.platform === 'android' && s.fcmToken);
+        
         console.log(`[Push Send] ✅ Step 2 COMPLETE - Found ${subscriptions.length} active subscription(s)`);
+        console.log(`[Push Send]   📊 Breakdown: Web=${webSubs.length}, iOS=${iosSubs.length}, Android=${androidSubs.length}`);
       } catch (subError) {
         console.error(`[Push Send] ❌ Step 2 ERROR querying subscriptions:`, subError);
         console.log(`[Push Send] ======== END (error) after ${Date.now() - startTime}ms ========`);
@@ -351,7 +358,10 @@ export class NotificationService {
       }
 
       // Send to iOS devices via APNs (direct to Apple)
+      console.log(`[Push Send] Step 3: 🍎 iOS APNs processing for user ${userId}...`);
+      console.log(`[Push Send]   Total FCM subscriptions: ${fcmSubscriptions.length}`);
       const iosSubscriptions = fcmSubscriptions.filter((sub: any) => sub.platform === 'ios');
+      console.log(`[Push Send]   iOS subscriptions after filter: ${iosSubscriptions.length}`);
       if (iosSubscriptions.length > 0) {
         console.log(`[Push Send] 🍎 Processing ${iosSubscriptions.length} iOS subscription(s) via APNs...`);
         // Extract tokens with their environment (sandbox vs production)

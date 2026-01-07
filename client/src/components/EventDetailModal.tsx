@@ -39,6 +39,7 @@ interface RsvpResponse {
   eventId: number;
   userId: string;
   response: 'attending' | 'not_attending' | 'no_response';
+  respondedAt?: string;
 }
 
 interface Attendance {
@@ -1236,26 +1237,41 @@ export default function EventDetailModal({
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          {userAttendance ? (
-                            <Badge className="bg-green-100 text-green-800 text-xs">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Checked In
-                            </Badge>
-                          ) : userRsvpResponse?.response === 'attending' ? (
-                            <Badge className="bg-blue-100 text-blue-800 text-xs">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Going
-                            </Badge>
-                          ) : userRsvpResponse?.response === 'not_attending' ? (
-                            <Badge className="bg-red-100 text-red-800 text-xs">
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Not Going
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-gray-100 text-gray-600 text-xs">
-                              <Circle className="h-3 w-3 mr-1" />
-                              No Response
-                            </Badge>
+                          {/* RSVP Status */}
+                          <div className="flex flex-col items-center">
+                            {userRsvpResponse?.response === 'attending' ? (
+                              <Badge className="bg-blue-100 text-blue-800 text-xs">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Going
+                              </Badge>
+                            ) : userRsvpResponse?.response === 'not_attending' ? (
+                              <Badge className="bg-red-100 text-red-800 text-xs">
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Not Going
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-gray-100 text-gray-600 text-xs">
+                                <Circle className="h-3 w-3 mr-1" />
+                                No Response
+                              </Badge>
+                            )}
+                            {userRsvpResponse?.respondedAt && (
+                              <span className="text-[9px] text-gray-400 mt-0.5">
+                                {new Date(userRsvpResponse.respondedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} {new Date(userRsvpResponse.respondedAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                              </span>
+                            )}
+                          </div>
+                          {/* Check-in Status */}
+                          {userAttendance && (
+                            <div className="flex flex-col items-center">
+                              <Badge className="bg-green-100 text-green-800 text-xs">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Checked In
+                              </Badge>
+                              <span className="text-[9px] text-gray-400 mt-0.5">
+                                {new Date(userAttendance.checkedInAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} {new Date(userAttendance.checkedInAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                              </span>
+                            </div>
                           )}
                           {/* Manual check-in button for coaches */}
                           {isAdminOrCoach && !userAttendance && user.role === 'player' && (

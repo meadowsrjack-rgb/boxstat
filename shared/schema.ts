@@ -1049,6 +1049,7 @@ export const crmLeads = pgTable("crm_leads", {
   assignedTo: varchar("assigned_to"), // admin user assigned to this lead
   lastContactedAt: timestamp("last_contacted_at", { mode: 'string' }),
   convertedUserId: varchar("converted_user_id"), // links to user if converted
+  evaluation: jsonb("evaluation"), // lead evaluation form data
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 });

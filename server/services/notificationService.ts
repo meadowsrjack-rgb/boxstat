@@ -65,6 +65,21 @@ export class NotificationService {
       const isWebPush = !!subscription.endpoint;
       const isFCM = !!subscription.fcmToken;
       
+      // For iOS native push (FCM tokens), deactivate previous tokens for this user
+      // to ensure only the latest device token is active. This prevents:
+      // 1. Sending to stale/invalid tokens from previous app installs
+      // 2. Confusion between sandbox vs production APNs environments
+      if (isFCM && subscription.platform === 'ios') {
+        console.log(`[Push Subscribe] Deactivating previous iOS tokens for user ${userId}`);
+        await db.update(pushSubscriptions)
+          .set({ isActive: false })
+          .where(and(
+            eq(pushSubscriptions.userId, userId),
+            eq(pushSubscriptions.platform, 'ios'),
+            subscription.fcmToken ? sql`${pushSubscriptions.fcmToken} != ${subscription.fcmToken}` : sql`1=1`
+          ));
+      }
+      
       await db.insert(pushSubscriptions).values({
         userId,
         ...subscription

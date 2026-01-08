@@ -1,10 +1,33 @@
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 
 // API base URL - use production backend when running in Capacitor native app
 const API_BASE_URL = Capacitor.isNativePlatform() 
   ? 'https://boxstat.app' 
   : '';
+
+// Get the APNs environment from native storage (set by AppDelegate based on build type)
+// Returns 'sandbox' for debug/Xcode builds, 'production' for TestFlight/App Store
+async function getApnsEnvironment(): Promise<'sandbox' | 'production'> {
+  if (Capacitor.getPlatform() !== 'ios') {
+    return 'production'; // Only relevant for iOS
+  }
+  
+  try {
+    const { value } = await Preferences.get({ key: 'apnsEnvironment' });
+    console.log('[Push] APNs environment from native:', value);
+    if (value === 'sandbox' || value === 'production') {
+      return value;
+    }
+  } catch (error) {
+    console.warn('[Push] Failed to get APNs environment from native:', error);
+  }
+  
+  // Default to sandbox for safety during development
+  console.log('[Push] Defaulting to sandbox APNs environment');
+  return 'sandbox';
+}
 
 function getFullUrl(path: string): string {
   if (path.startsWith('http://') || path.startsWith('https://')) {
@@ -46,9 +69,9 @@ export const initPushNotifications = async () => {
         console.log('[Push Registration] ⚠️ No auth token found in localStorage');
       }
       
-      // APNs environment for token storage - defaults to 'production'
-      // Note: Actual send-time environment is controlled via admin dashboard toggle
-      const apnsEnvironment = 'production';
+      // APNs environment for token storage - detected from native build type
+      // Debug/Xcode builds use 'sandbox', TestFlight/App Store use 'production'
+      const apnsEnvironment = await getApnsEnvironment();
       console.log('[Push Registration] Storing token with APNs environment:', apnsEnvironment);
       
       const response = await fetch(url, {

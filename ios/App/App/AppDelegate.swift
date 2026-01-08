@@ -5,10 +5,24 @@ import Capacitor
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
+    
+    // APNs environment detection - set at compile time
+    static var apnsEnvironment: String {
+        #if DEBUG
+        return "sandbox"
+        #else
+        return "production"
+        #endif
+    }
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Set window background to black (MainViewController handles WebView config)
         window?.backgroundColor = UIColor.black
+        
+        // Store APNs environment in UserDefaults for JavaScript access
+        UserDefaults.standard.set(AppDelegate.apnsEnvironment, forKey: "apnsEnvironment")
+        print("📱 [AppDelegate] APNs Environment: \(AppDelegate.apnsEnvironment)")
+        
         return true
     }
 

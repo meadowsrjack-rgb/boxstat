@@ -83,6 +83,7 @@ import EventWindowsConfigurator from "@/components/EventWindowsConfigurator";
 import type { EventWindow } from "@shared/schema";
 import EventDetailModal from "@/components/EventDetailModal";
 import { SKILL_CATEGORIES } from "@/components/CoachAwardDialogs";
+import LeadEvaluationForm from "@/components/LeadEvaluationForm";
 import type { SkillCategoryName, EvalScores, Quarter } from "@/components/CoachAwardDialogs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -10742,6 +10743,7 @@ function CRMTab({ organization, users, teams }: any) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'leads' | 'messages' | 'quotes'>('leads');
   const [selectedLead, setSelectedLead] = useState<any>(null);
+  const [viewingEvaluation, setViewingEvaluation] = useState<any>(null);
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
   const [isQuoteDialogOpen, setIsQuoteDialogOpen] = useState(false);
   const [newNote, setNewNote] = useState("");
@@ -11462,6 +11464,45 @@ function CRMTab({ organization, users, teams }: any) {
               </div>
             </div>
 
+            {/* Evaluation Section */}
+            <div className="border-t pt-4">
+              <h4 className="font-medium flex items-center gap-2 mb-3">
+                <FileText className="w-4 h-4" />
+                Lead Evaluation
+              </h4>
+              
+              {selectedLead?.evaluation ? (
+                <div className="space-y-2">
+                  <div className="bg-green-50 border border-green-200 rounded p-3 text-sm">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-green-800">Evaluation Saved</p>
+                        <p className="text-green-600 text-xs">
+                          {selectedLead.evaluation.programAttended && `Program: ${selectedLead.evaluation.programAttended}`}
+                          {selectedLead.evaluation.programRecommended && ` → ${selectedLead.evaluation.programRecommended}`}
+                        </p>
+                        <p className="text-green-600 text-xs mt-1">
+                          By {selectedLead.evaluation.evaluator || 'Coach'} 
+                          {selectedLead.evaluation.savedAt && ` on ${new Date(selectedLead.evaluation.savedAt).toLocaleDateString()}`}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setViewingEvaluation(selectedLead)}
+                        data-testid="button-view-evaluation"
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        View
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">No evaluation recorded yet</p>
+              )}
+            </div>
+
             <div className="border-t pt-4">
               <h4 className="font-medium flex items-center gap-2 mb-3">
                 <StickyNote className="w-4 h-4" />
@@ -11500,6 +11541,27 @@ function CRMTab({ organization, users, teams }: any) {
               </div>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* View Evaluation Dialog */}
+      <Dialog open={!!viewingEvaluation} onOpenChange={() => setViewingEvaluation(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Lead Evaluation - {viewingEvaluation?.firstName} {viewingEvaluation?.lastName}</DialogTitle>
+            <DialogDescription>View saved evaluation details</DialogDescription>
+          </DialogHeader>
+          {viewingEvaluation?.evaluation && (
+            <LeadEvaluationForm
+              readOnly={true}
+              preselectedLeadId={viewingEvaluation.id}
+              existingEvaluation={{
+                ...viewingEvaluation.evaluation,
+                leadId: viewingEvaluation.id
+              }}
+              onClose={() => setViewingEvaluation(null)}
+            />
+          )}
         </DialogContent>
       </Dialog>
 

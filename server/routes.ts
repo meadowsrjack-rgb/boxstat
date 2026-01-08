@@ -10705,8 +10705,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get("/api/crm/leads", requireAuth, async (req: any, res) => {
     try {
-      if (req.user.role !== 'admin') {
-        return res.status(403).json({ error: "Admin access required" });
+      // Allow both admins and coaches to view leads (coaches need it for evaluation form)
+      if (req.user.role !== 'admin' && req.user.role !== 'coach') {
+        return res.status(403).json({ error: "Admin or coach access required" });
       }
       const leads = await storage.getCrmLeadsByOrganization(req.user.organizationId);
       res.json(leads);
@@ -10771,6 +10772,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error deleting lead:', error);
       res.status(500).json({ error: "Failed to delete lead" });
+    }
+  });
+  
+  // Save lead evaluation (coaches and admins can save)
+  app.patch("/api/crm/leads/:id/evaluation", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin' && req.user.role !== 'coach') {
+        return res.status(403).json({ error: "Coach or admin access required" });
+      }
+      const leadId = parseInt(req.params.id);
+      const evaluation = req.body;
+      
+      // Add metadata
+      evaluation.savedBy = req.user.id;
+      evaluation.savedAt = new Date().toISOString();
+      
+      const updated = await storage.updateCrmLead(leadId, { evaluation });
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error saving lead evaluation:', error);
+      res.status(500).json({ error: "Failed to save evaluation" });
     }
   });
   

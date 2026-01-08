@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,22 +11,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, FileDown, Users, ClipboardCheck, Share2 } from "lucide-react";
+import { CalendarIcon, FileDown, Users, ClipboardCheck, Share2, Save, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import DOMPurify from "dompurify";
 import uyplogoUrl from "@assets/UYP Logo nback.png";
-
-// Program options
-const PROGRAMS = [
-  "Youth Club",
-  "Skills Academy", 
-  "FNH",
-  "FNHTL",
-  "High School Club"
-];
 
 // Skill categories for evaluation
 const SKILL_CATEGORIES = [
@@ -37,6 +31,7 @@ const SKILL_CATEGORIES = [
 ];
 
 interface EvaluationFormData {
+  leadId: number | null;
   playerName: string;
   programAttended: string;
   programRecommended: string;
@@ -48,22 +43,96 @@ interface EvaluationFormData {
 
 interface LeadEvaluationFormProps {
   onClose?: () => void;
+  preselectedLeadId?: number;
+  readOnly?: boolean;
+  existingEvaluation?: any;
 }
 
-export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps) {
+export default function LeadEvaluationForm({ onClose, preselectedLeadId, readOnly = false, existingEvaluation }: LeadEvaluationFormProps) {
   const { user } = useAuth();
+  const { toast } = useToast();
+  
+  // Get coach's full name
+  const coachName = user ? `${(user as any).firstName || ''} ${(user as any).lastName || ''}`.trim() || 'Coach' : 'Coach';
+  
   const [formData, setFormData] = useState<EvaluationFormData>({
+    leadId: preselectedLeadId || null,
     playerName: "",
     programAttended: "",
     programRecommended: "",
     evaluationDate: new Date(),
-    evaluator: (user as any)?.email?.split('@')[0] || "Coach",
+    evaluator: coachName,
     skillScores: SKILL_CATEGORIES.reduce((acc, skill) => ({ ...acc, [skill.name]: 3 }), {}),
     notes: ""
   });
 
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  
+  // Fetch leads from CRM
+  const { data: leads = [] } = useQuery<any[]>({
+    queryKey: ['/api/crm/leads'],
+  });
+  
+  // Fetch programs
+  const { data: programs = [] } = useQuery<any[]>({
+    queryKey: ['/api/programs'],
+  });
+  
+  // Load existing evaluation data
+  useEffect(() => {
+    if (existingEvaluation) {
+      setFormData({
+        leadId: existingEvaluation.leadId || null,
+        playerName: existingEvaluation.playerName || "",
+        programAttended: existingEvaluation.programAttended || "",
+        programRecommended: existingEvaluation.programRecommended || "",
+        evaluationDate: existingEvaluation.evaluationDate ? new Date(existingEvaluation.evaluationDate) : new Date(),
+        evaluator: existingEvaluation.evaluator || coachName,
+        skillScores: existingEvaluation.skillScores || SKILL_CATEGORIES.reduce((acc, skill) => ({ ...acc, [skill.name]: 3 }), {}),
+        notes: existingEvaluation.notes || ""
+      });
+    }
+  }, [existingEvaluation, coachName]);
+  
+  // When lead is selected, auto-fill player name
+  useEffect(() => {
+    if (formData.leadId && leads.length > 0) {
+      const selectedLead = leads.find(l => l.id === formData.leadId);
+      if (selectedLead) {
+        setFormData(prev => ({
+          ...prev,
+          playerName: `${selectedLead.firstName} ${selectedLead.lastName}`
+        }));
+      }
+    }
+  }, [formData.leadId, leads]);
+  
+  // Save evaluation mutation
+  const saveEvaluationMutation = useMutation({
+    mutationFn: async (data: EvaluationFormData) => {
+      if (!data.leadId) throw new Error('No lead selected');
+      return apiRequest(`/api/crm/leads/${data.leadId}/evaluation`, {
+        method: 'PATCH',
+        data: {
+          playerName: data.playerName,
+          programAttended: data.programAttended,
+          programRecommended: data.programRecommended,
+          evaluationDate: data.evaluationDate?.toISOString(),
+          evaluator: data.evaluator,
+          skillScores: data.skillScores,
+          notes: data.notes
+        }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/crm/leads'] });
+      toast({ title: "Evaluation saved successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to save evaluation", description: error.message, variant: "destructive" });
+    }
+  });
 
   const handleSkillScoreChange = (skillName: string, value: number[]) => {
     setFormData(prev => ({
@@ -302,7 +371,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
     }
   };
 
-  const isFormValid = formData.playerName.trim() && formData.programAttended && formData.programRecommended && formData.evaluationDate;
+  const isFormValid = formData.leadId && formData.programAttended && formData.programRecommended && formData.evaluationDate;
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -329,13 +398,25 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
         <CardContent className="space-y-4">
           <div>
             <Label htmlFor="playerName">Player Name *</Label>
-            <Input
-              id="playerName"
-              value={formData.playerName}
-              onChange={(e) => setFormData(prev => ({ ...prev, playerName: e.target.value }))}
-              placeholder="Enter player's full name"
-              data-testid="input-player-name"
-            />
+            <Select 
+              value={formData.leadId?.toString() || ""} 
+              onValueChange={(value) => setFormData(prev => ({ ...prev, leadId: parseInt(value) }))}
+              disabled={readOnly || !!preselectedLeadId}
+            >
+              <SelectTrigger data-testid="select-lead">
+                <SelectValue placeholder="Select a lead" />
+              </SelectTrigger>
+              <SelectContent>
+                {leads.map((lead: any) => (
+                  <SelectItem key={lead.id} value={lead.id.toString()}>
+                    {lead.firstName} {lead.lastName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {leads.length === 0 && (
+              <p className="text-sm text-gray-500 mt-1">No leads available. Create leads in Admin Dashboard &gt; CRM first.</p>
+            )}
           </div>
 
           <div>
@@ -343,13 +424,14 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
             <Select 
               value={formData.programAttended} 
               onValueChange={(value) => setFormData(prev => ({ ...prev, programAttended: value }))}
+              disabled={readOnly}
             >
               <SelectTrigger data-testid="select-program-attended">
                 <SelectValue placeholder="Select program attended" />
               </SelectTrigger>
               <SelectContent>
-                {PROGRAMS.map(program => (
-                  <SelectItem key={program} value={program}>{program}</SelectItem>
+                {programs.map((program: any) => (
+                  <SelectItem key={program.id} value={program.name}>{program.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -360,13 +442,14 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
             <Select 
               value={formData.programRecommended} 
               onValueChange={(value) => setFormData(prev => ({ ...prev, programRecommended: value }))}
+              disabled={readOnly}
             >
               <SelectTrigger data-testid="select-program-recommended">
                 <SelectValue placeholder="Select recommended program" />
               </SelectTrigger>
               <SelectContent>
-                {PROGRAMS.map(program => (
-                  <SelectItem key={program} value={program}>{program}</SelectItem>
+                {programs.map((program: any) => (
+                  <SelectItem key={program.id} value={program.name}>{program.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -381,6 +464,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
                   className={cn("w-full justify-start text-left font-normal", 
                     !formData.evaluationDate && "text-muted-foreground")}
                   data-testid="button-date-picker"
+                  disabled={readOnly}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {formData.evaluationDate ? format(formData.evaluationDate, "PPP") : "Pick a date"}
@@ -402,10 +486,11 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
             <Input
               id="evaluator"
               value={formData.evaluator}
-              onChange={(e) => setFormData(prev => ({ ...prev, evaluator: e.target.value }))}
-              placeholder="Coach name"
+              readOnly
+              className="bg-gray-50"
               data-testid="input-evaluator"
             />
+            <p className="text-xs text-gray-500 mt-1">Auto-populated from your coach profile</p>
           </div>
         </CardContent>
       </Card>
@@ -432,6 +517,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
                 min={1}
                 step={1}
                 className="w-full"
+                disabled={readOnly}
                 data-testid={`slider-${skill.name.toLowerCase()}`}
               />
             </div>
@@ -450,33 +536,50 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
             onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
             placeholder="Add any additional observations, recommendations, or notes about the player..."
             rows={4}
+            disabled={readOnly}
             data-testid="textarea-notes"
           />
         </CardContent>
       </Card>
 
       {/* Action Buttons */}
-      <div className="flex justify-end gap-3">
-        <Button
-          onClick={sharePDF}
-          disabled={!isFormValid || isSharing}
-          variant="outline"
-          className="border-red-600 text-red-600 hover:bg-red-50"
-          data-testid="button-share-pdf"
-        >
-          <Share2 className="h-4 w-4 mr-2" />
-          {isSharing ? "Preparing..." : "Share"}
-        </Button>
-        <Button
-          onClick={generatePDF}
-          disabled={!isFormValid || isGeneratingPDF}
-          className="bg-red-600 hover:bg-red-700"
-          data-testid="button-generate-pdf"
-        >
-          <FileDown className="h-4 w-4 mr-2" />
-          {isGeneratingPDF ? "Generating PDF..." : "Export as PDF"}
-        </Button>
-      </div>
+      {!readOnly && (
+        <div className="flex justify-end gap-3">
+          <Button
+            onClick={sharePDF}
+            disabled={!isFormValid || isSharing}
+            variant="outline"
+            className="border-red-600 text-red-600 hover:bg-red-50"
+            data-testid="button-share-pdf"
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            {isSharing ? "Preparing..." : "Share"}
+          </Button>
+          <Button
+            onClick={generatePDF}
+            disabled={!isFormValid || isGeneratingPDF}
+            variant="outline"
+            className="border-red-600 text-red-600 hover:bg-red-50"
+            data-testid="button-generate-pdf"
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            {isGeneratingPDF ? "Generating..." : "Export as PDF"}
+          </Button>
+          <Button
+            onClick={() => saveEvaluationMutation.mutate(formData)}
+            disabled={!formData.leadId || !isFormValid || saveEvaluationMutation.isPending}
+            className="bg-red-600 hover:bg-red-700"
+            data-testid="button-save-evaluation"
+          >
+            {saveEvaluationMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            {saveEvaluationMutation.isPending ? "Saving..." : "Save"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

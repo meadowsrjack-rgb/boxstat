@@ -7,8 +7,8 @@ const config: CapacitorConfig = {
   appName: 'BoxStat',
   webDir: 'dist/public',
   
-  // Root-level backgroundColor ensures WebView background is black during rubber-banding
-  backgroundColor: '#000000',
+  // Root-level backgroundColor ensures WebView background matches app theme during rubber-banding
+  backgroundColor: '#ffffff',
 
   ...(isDevMode ? {} : {
     server: {
@@ -33,8 +33,8 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 3000,
       autoHide: false,
-      // FIX 3: Match splash screen to app theme
-      backgroundColor: '#000000', 
+      // Match splash screen to app theme (white background)
+      backgroundColor: '#ffffff', 
       showSpinner: true,
       androidSpinnerStyle: 'large',
       spinnerColor: '#d82428',

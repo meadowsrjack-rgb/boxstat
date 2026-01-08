@@ -41,14 +41,12 @@ function getPrivateKey(): string | null {
     return key;
   }
   
-  // Extract just the base64 content if wrapped in PEM headers (but no newlines)
-  let base64Content = key;
-  if (key.includes(PEM_HEADER)) {
-    base64Content = key
-      .replace(PEM_HEADER, '')
-      .replace(PEM_FOOTER, '')
-      .replace(/\s/g, ''); // Remove any whitespace
-  }
+  // Extract just the base64 content - strip PEM headers and ALL whitespace
+  // This handles keys that were pasted with spaces or newlines converted to spaces
+  let base64Content = key
+    .replace(PEM_HEADER, '')
+    .replace(PEM_FOOTER, '')
+    .replace(/\s/g, ''); // Remove ALL whitespace (spaces, newlines, tabs)
   
   // Format with proper 64-character line breaks for PEM
   const formattedKey = base64Content.match(/.{1,64}/g)?.join('\n') || base64Content;

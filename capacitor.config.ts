@@ -1,7 +1,5 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-const isDevMode = process.env.CAPACITOR_MODE !== 'production';
-
 const config: CapacitorConfig = {
   appId: 'boxstat.app',
   appName: 'BoxStat',
@@ -10,12 +8,12 @@ const config: CapacitorConfig = {
   // Root-level backgroundColor ensures WebView background matches app theme during rubber-banding
   backgroundColor: '#ffffff',
 
-  ...(isDevMode ? {} : {
-    server: {
-      url: 'https://boxstat.app',
-      cleartext: false,
-    },
-  }),
+  // Always load from live server for iOS - ensures latest JavaScript is used
+  // without requiring cap sync after every code change
+  server: {
+    url: 'https://boxstat.app',
+    cleartext: false,
+  },
   ios: {
     // 'never' allows app to go full-bleed behind notch, letting CSS env() handle safe areas
     contentInset: 'never',

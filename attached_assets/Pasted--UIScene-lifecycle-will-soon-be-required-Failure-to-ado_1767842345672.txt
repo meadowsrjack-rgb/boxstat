@@ -1,0 +1,197 @@
+`UIScene` lifecycle will soon be required. Failure to adopt will result in an assert in the future.
+📱 [AppDelegate] APNs Environment: sandbox
+Could not create a sandbox extension for '/var/containers/Bundle/Application/B1873C62-E889-4979-A839-7199D02076B4/App.app'
+⚡️  Loading app at https://boxstat.app...
+Networking process (0x112054190) took 1.302774 seconds to launch
+WebContent[6620] Unable to hide query parameters from script (missing data)
+⚡️  WebView loaded
+⚡️  To Native ->  Preferences get 45913067
+⚡️  To Native ->  App addListener 45913068
+⚡️  [log] - [DeepLink] Deep link listener initialized
+⚡️  TO JS {"value":null}
+⚡️  [log] - Deep link listeners initialized
+⚡️  [log] - 🔑 useAuth: Token from storage: NULL
+⚡️  [log] - ⚠️ useAuth: No token, using cookies only
+⚡️  [log] - 📡 useAuth: Fetching from: https://boxstat.app/api/auth/user
+⚡️  [log] - 📥 useAuth: Response status: 401
+⚡️  [log] - 🚫 useAuth: Not authenticated (401)
+Reporter disconnected. { function=sendMessage, reporterID=28419798597633 }
+Reporter disconnected. { function=sendMessage, reporterID=28419798597633 }
+Reporter disconnected. { function=sendMessage, reporterID=28419798597633 }
+Reporter disconnected. { function=sendMessage, reporterID=28419798597633 }
+Reporter disconnected. { function=sendMessage, reporterID=28419798597633 }
+Reporter disconnected. { function=sendMessage, reporterID=28419798597633 }
+Reporter disconnected. { function=sendMessage, reporterID=28419798597633 }
+Reporter disconnected. { function=sendMessage, reporterID=28419798597633 }
+Reporter disconnected. { function=sendMessage, reporterID=28419798597633 }
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x11ed9e6c0 h=-&- v=-&- _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11ed31e00.minX == 0   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11ec18f00 )>",
+    "<NSAutoresizingMaskLayoutConstraint:0x11ed9e710 h=-&- v=-&- H:[_TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11ed31e00]-(0)-|   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11ec18f00 )>",
+    "<NSLayoutConstraint:0x11ed9dea0 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11ed31e00.width == _UIButtonBarButton:0x11ec19180.width   (active)>",
+    "<NSLayoutConstraint:0x11ed9e580 '_UITemporaryLayoutWidth' _TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11ec18f00.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11ed9dfe0 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x11edece00]   (active, names: '|':_UIButtonBarButton:0x11ec19180 )>",
+    "<NSLayoutConstraint:0x11ed9e030 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11edece00]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11ec19180 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11ed9e030 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11edece00]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11ec19180 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x11ed9f9d0 h=-&- v=-&- _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11ed32200.minX == 0   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11ec18a00 )>",
+    "<NSAutoresizingMaskLayoutConstraint:0x11ed9fa20 h=-&- v=-&- H:[_TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11ed32200]-(0)-|   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11ec18a00 )>",
+    "<NSLayoutConstraint:0x11ed9f250 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11ed32200.width == _UIButtonBarButton:0x11ec18c80.width   (active)>",
+    "<NSLayoutConstraint:0x11ed9f890 '_UITemporaryLayoutWidth' _TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11ec18a00.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11ed9f390 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x11eded180]   (active, names: '|':_UIButtonBarButton:0x11ec18c80 )>",
+    "<NSLayoutConstraint:0x11ed9f3e0 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11eded180]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11ec18c80 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11ed9f3e0 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11eded180]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11ec18c80 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x11ee845f0 h=-&- v=-&- _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11ed32600.minX == 0   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11ec1a580 )>",
+    "<NSAutoresizingMaskLayoutConstraint:0x11ee84640 h=-&- v=-&- H:[_TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11ed32600]-(0)-|   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11ec1a580 )>",
+    "<NSLayoutConstraint:0x1174f2ad0 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11ed32600.width == _UIButtonBarButton:0x11ec18780.width   (active)>",
+    "<NSLayoutConstraint:0x11ee844b0 '_UITemporaryLayoutWidth' _TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11ec1a580.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11ed6fde0 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x11eded500]   (active, names: '|':_UIButtonBarButton:0x11ec18780 )>",
+    "<NSLayoutConstraint:0x11ee84000 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11eded500]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11ec18780 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11ee84000 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11eded500]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11ec18780 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = D1E68EAD-1DB1-4255-A4EC-D077AD941523
+<0x1065ae580> Gesture: System gesture gate timed out.
+(501) Invalidation handler invoked, clearing connection
+(501) personaAttributesForPersonaType for type:0 failed with error Error Domain=NSCocoaErrorDomain Code=4099 "The connection to service named com.apple.mobile.usermanagerd.xpc was invalidated from this process." UserInfo={NSDebugDescription=The connection to service named com.apple.mobile.usermanagerd.xpc was invalidated from this process.}
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = D1E68EAD-1DB1-4255-A4EC-D077AD941523
+⚡️  [log] - 🔐 Attempting login with email: jack@upyourperformance.org
+⚡️  [log] - 🌐 Current window location: https://boxstat.app/login
+⚡️  [log] - 📡 Sending POST to /api/auth/login
+⚡️  [log] - 🎯 Login success branch - token present? true
+⚡️  To Native ->  Preferences set 45913069
+⚡️  [log] - 💾 About to store JWT token...
+⚡️  TO JS undefined
+⚡️  [log] - 🔐 AuthPersistence: Token saved to native storage
+⚡️  [log] - ✅ Token stored with native persistence!
+⚡️  [log] - 🚀 Redirecting to: /account
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+⚡️  WebView loaded
+⚡️  [log] - [DeepLink] Deep link listener initialized
+⚡️  To Native ->  Preferences get 12055933
+⚡️  To Native ->  App addListener 12055934
+⚡️  TO JS {"value":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxNzY0ODczMjQ3NzU5LWFlY2lucmJueSIsIm9yZ2FuaXphdGlvbklkIjoiZGVmYXVsdC1vcmciLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3Njc4NDIzMTYsImV4cCI6MTc3MDQzNDMxNn0.llI5bNSmLiA0jYi_A7HO1NIfVyY3Kv8J_unwGceBOcc"}
+⚡️  [log] - Deep link listeners initialized
+⚡️  [log] - 🔐 AuthPersistence: Token retrieved from native storage
+⚡️  [log] - 🔑 useAuth: Token from storage: eyJhbGciOiJIUzI1NiIs...
+⚡️  [log] - ✅ useAuth: Added Authorization header
+⚡️  [log] - 📡 useAuth: Fetching from: https://boxstat.app/api/auth/user
+⚡️  [log] - 📥 useAuth: Response status: 200
+⚡️  [log] - 👤 useAuth: User data received: jack@upyourperformance.org
+⚡️  [log] - User authenticated, initializing push notifications...
+⚡️  [log] - [Push Init] 🔔 Initializing push notification listeners...
+⚡️  [log] - [Push Init] Platform: ios
+⚡️  To Native ->  Preferences get 12055935
+⚡️  To Native ->  PushNotifications addListener 12055936
+⚡️  To Native ->  PushNotifications addListener 12055937
+⚡️  To Native ->  PushNotifications addListener 12055938
+⚡️  To Native ->  PushNotifications addListener 12055939
+⚡️  TO JS {"value":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxNzY0ODczMjQ3NzU5LWFlY2lucmJueSIsIm9yZ2FuaXphdGlvbklkIjoiZGVmYXVsdC1vcmciLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3Njc4NDIzMTYsImV4cCI6MTc3MDQzNDMxNn0.llI5bNSmLiA0jYi_A7HO1NIfVyY3Kv8J_unwGceBOcc"}
+⚡️  [log] - [Push Init] ✅ All push notification listeners initialized successfully
+⚡️  To Native ->  PushNotifications checkPermissions 12055940
+⚡️  [log] - Push notification listeners set up
+⚡️  [log] - [Push Register] Starting push notification registration flow...
+⚡️  [log] - 🔐 AuthPersistence: Token retrieved from native storage
+⚡️  [log] - 🔑 useAuth: Token from storage: eyJhbGciOiJIUzI1NiIs...
+⚡️  [log] - ✅ useAuth: Added Authorization header
+⚡️  [log] - 📡 useAuth: Fetching from: https://boxstat.app/api/auth/user
+⚡️  TO JS {"receive":"prompt"}
+⚡️  To Native ->  PushNotifications requestPermissions 12055941
+⚡️  [log] - [Push Register] 🔐 Current permission status: prompt
+⚡️  [log] - [Push Register] 🔐 Permission not yet requested, requesting now...
+⚡️  [log] - 📥 useAuth: Response status: 200
+⚡️  [log] - 👤 useAuth: User data received: jack@upyourperformance.org
+⚡️  TO JS {"receive":"granted"}
+⚡️  [log] - [Push Register] Permission request result: granted
+⚡️  [log] - [Push Register] ✅ Push notification permissions granted
+⚡️  To Native ->  PushNotifications register 12055942
+⚡️  [log] - [Push Register] 📱 Calling PushNotifications.register() to get FCM token...
+⚡️  TO JS undefined
+⚡️  [log] - [Push Register] 📱 Registration API called successfully, waiting for FCM token callback...
+✅ [AppDelegate] APNs Device Token: b0f9e485264fd309e517f7f22b73058b3068c2d2e0d30128fff448d930874db3
+⚡️  TO JS {"value":"B0F9E485264FD309E517F7F22B73058B3068C2D2E0D30128FFF448D930874DB3"}
+⚡️  [log] - [Push Registration] ✅ FCM token received: B0F9E485264FD309E517F7F22B73058B3068C2D2E0D30128FFF448D930874DB3
+⚡️  [log] - [Push Registration] Token length: 64
+⚡️  [log] - [Push Registration] Sending token to backend: https://boxstat.app/api/push/register
+⚡️  [log] - [Push Registration] Including JWT auth token
+⚡️  To Native ->  Preferences get 12055943
+⚡️  TO JS {"value":null}
+⚡️  [log] - [Push] APNs environment from native: null
+⚡️  [log] - [Push] Defaulting to sandbox APNs environment
+⚡️  [log] - [Push Registration] Storing token with APNs environment: sandbox
+⚡️  [log] - [Push Registration] Backend response status: 200
+⚡️  [log] - [Push Registration] ✅ Token successfully registered with backend
+⚡️  [log] - [Push Registration] Backend response: {"success":true,"platform":"ios","deviceType":"iPhone","apnsEnvironment":"production"}
+⚡️  To Native ->  Preferences get 12055944
+⚡️  TO JS {"value":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxNzY0ODczMjQ3NzU5LWFlY2lucmJueSIsIm9yZ2FuaXphdGlvbklkIjoiZGVmYXVsdC1vcmciLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3Njc4NDIzMTYsImV4cCI6MTc3MDQzNDMxNn0.llI5bNSmLiA0jYi_A7HO1NIfVyY3Kv8J_unwGceBOcc"}
+⚡️  [log] - 🔐 AuthPersistence: Token retrieved from native storage
+⚡️  [log] - 🔑 useAuth: Token from storage: eyJhbGciOiJIUzI1NiIs...
+⚡️  [log] - ✅ useAuth: Added Authorization header
+⚡️  [log] - 📡 useAuth: Fetching from: https://boxstat.app/api/auth/user
+⚡️  [log] - 📥 useAuth: Response status: 200
+⚡️  [log] - 👤 useAuth: User data received: jack@upyourperformance.org
+⚡️  To Native ->  Preferences get 12055945
+⚡️  TO JS {"value":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxNzY0ODczMjQ3NzU5LWFlY2lucmJueSIsIm9yZ2FuaXphdGlvbklkIjoiZGVmYXVsdC1vcmciLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3Njc4NDIzMTYsImV4cCI6MTc3MDQzNDMxNn0.llI5bNSmLiA0jYi_A7HO1NIfVyY3Kv8J_unwGceBOcc"}
+⚡️  [log] - 🔐 AuthPersistence: Token retrieved from native storage
+⚡️  [log] - 🔑 useAuth: Token from storage: eyJhbGciOiJIUzI1NiIs...
+⚡️  [log] - ✅ useAuth: Added Authorization header
+⚡️  [log] - 📡 useAuth: Fetching from: https://boxstat.app/api/auth/user
+⚡️  [log] - 📥 useAuth: Response status: 200
+⚡️  [log] - 👤 useAuth: User data received: jack@upyourperformance.org
+⚡️  To Native ->  Preferences get 12055946
+⚡️  TO JS {"value":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxNzY0ODczMjQ3NzU5LWFlY2lucmJueSIsIm9yZ2FuaXphdGlvbklkIjoiZGVmYXVsdC1vcmciLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3Njc4NDIzMTYsImV4cCI6MTc3MDQzNDMxNn0.llI5bNSmLiA0jYi_A7HO1NIfVyY3Kv8J_unwGceBOcc"}
+⚡️  [log] - 🔐 AuthPersistence: Token retrieved from native storage
+⚡️  [log] - 🔑 useAuth: Token from storage: eyJhbGciOiJIUzI1NiIs...
+⚡️  [log] - ✅ useAuth: Added Authorization header
+⚡️  [log] - 📡 useAuth: Fetching from: https://boxstat.app/api/auth/user
+⚡️  [log] - 📥 useAuth: Response status: 200
+⚡️  [log] - 👤 useAuth: User data received: jack@upyourperformance.org
+⚡️  [warn] - Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = D1E68EAD-1DB1-4255-A4EC-D077AD941523
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = D1E68EAD-1DB1-4255-A4EC-D077AD941523
+⚡️  [log] - [Notification Form] Submitting notification: {"organizationId":"default-org","types":["message","notification"],"title":"shsj","message":"bj","recipientTarget":"everyone","recipientUserIds":[],"recipientRoles":[],"recipientTeamIds":[],"recipientDivisionIds":[],"deliveryChannels":["push","in_app"],"sentBy":"1764873247759-aecinrbny","status":"pending","apnsEnvironment":"sandbox"}

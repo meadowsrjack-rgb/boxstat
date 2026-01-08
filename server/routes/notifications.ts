@@ -109,8 +109,11 @@ export function setupNotificationRoutes(app: Express) {
       const platform = userAgent.includes('iPhone') || userAgent.includes('iPad') ? 'ios' : 'android';
       const deviceType = platform === 'ios' ? 'iPhone' : 'Android';
       
-      // Always use production APNs for iOS
-      const resolvedApnsEnv = platform === 'ios' ? 'production' : undefined;
+      // Use client-provided APNs environment (sandbox for Xcode builds, production for TestFlight/App Store)
+      // Only applicable for iOS; defaults to 'production' if not specified for backwards compatibility
+      const resolvedApnsEnv = platform === 'ios' 
+        ? (apnsEnvironment === 'sandbox' || apnsEnvironment === 'production' ? apnsEnvironment : 'production')
+        : undefined;
       
       console.log('[Push Register] Platform detected:', platform);
       console.log('[Push Register] Device type:', deviceType);

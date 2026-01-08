@@ -2,35 +2,36 @@ import UIKit
 import Capacitor
 import WebKit
 
+@objc(MainViewController)
 class MainViewController: CAPBridgeViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        // Set view controller background to black
-        view.backgroundColor = UIColor.black
+        // Set view controller background to white (matches app theme)
+        view.backgroundColor = UIColor.white
         
         // Configure WebView backgrounds and disable bouncing
-        configureWebViewForBlackBackground()
+        configureWebViewBackground()
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         // Reapply settings in case they were reset
-        configureWebViewForBlackBackground()
+        configureWebViewBackground()
     }
     
-    private func configureWebViewForBlackBackground() {
+    private func configureWebViewBackground() {
         guard let webView = webView else { return }
         
-        // Set WebView backgrounds to black
-        webView.backgroundColor = UIColor.black
-        webView.scrollView.backgroundColor = UIColor.black
+        // Set WebView backgrounds to white (matches app theme)
+        webView.backgroundColor = UIColor.white
+        webView.scrollView.backgroundColor = UIColor.white
         
         // Set layer backgrounds for complete coverage during rubber-band
-        webView.layer.backgroundColor = UIColor.black.cgColor
-        webView.scrollView.layer.backgroundColor = UIColor.black.cgColor
+        webView.layer.backgroundColor = UIColor.white.cgColor
+        webView.scrollView.layer.backgroundColor = UIColor.white.cgColor
         
         // Clip to bounds to prevent overflow
         webView.scrollView.clipsToBounds = true

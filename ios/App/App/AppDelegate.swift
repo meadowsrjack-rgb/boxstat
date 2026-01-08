@@ -19,8 +19,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Set window background to black (MainViewController handles WebView config)
         window?.backgroundColor = UIColor.black
         
-        // Store APNs environment in UserDefaults for JavaScript access
+        // Store APNs environment in UserDefaults for JavaScript access via Capacitor Preferences
+        // Capacitor Preferences uses the key directly in UserDefaults.standard
         UserDefaults.standard.set(AppDelegate.apnsEnvironment, forKey: "apnsEnvironment")
+        // Also sync to standardUserDefaults to ensure Capacitor can read it
+        UserDefaults.standard.synchronize()
         print("📱 [AppDelegate] APNs Environment: \(AppDelegate.apnsEnvironment)")
         
         return true

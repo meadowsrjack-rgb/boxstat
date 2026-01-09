@@ -182,7 +182,7 @@ export class NotificationService {
 
   // ===== Notification Creation and Delivery =====
   
-  async sendPushNotification(notificationId: number, userId: string, title: string, message: string, apnsEnvironmentOverride?: 'sandbox' | 'production'): Promise<void> {
+  async sendPushNotification(notificationId: number, userId: string, title: string, message: string): Promise<void> {
     const startTime = Date.now();
     console.log(`[Push Send] ========================================`);
     console.log(`[Push Send] 🚀 START push notification #${notificationId} to user ${userId}`);
@@ -380,17 +380,14 @@ export class NotificationService {
       if (iosSubscriptions.length > 0) {
         console.log(`[Push Send] 🍎 Processing ${iosSubscriptions.length} iOS subscription(s) via APNs...`);
         // Extract tokens with their environment (sandbox vs production)
-        // If apnsEnvironmentOverride is provided (from admin dashboard toggle), use it for all devices
+        // Each device uses its registered environment - sandbox for Xcode builds, production for TestFlight/App Store
         const devices = iosSubscriptions
           .filter((sub: any) => sub.fcmToken)
           .map((sub: any) => ({
             token: sub.fcmToken,
-            environment: apnsEnvironmentOverride || sub.apnsEnvironment || 'production' // Override takes priority, then stored, then default to production
+            environment: sub.apnsEnvironment || 'production' // Use stored environment, default to production
           }));
         console.log(`[Push Send] Extracted ${devices.length} APNs device(s)`);
-        if (apnsEnvironmentOverride) {
-          console.log(`[Push Send] ⚠️ Using APNs environment OVERRIDE: ${apnsEnvironmentOverride} (from admin toggle)`);
-        }
         devices.forEach((d: any) => console.log(`[Push Send]   Token: ${d.token.substring(0, 20)}... (${d.environment})`));
         
         if (devices.length > 0 && isAPNsConfigured()) {
@@ -666,9 +663,8 @@ export class NotificationService {
     type?: string;
     data?: Record<string, any>;
     channels?: Array<'in_app' | 'push' | 'email'>;
-    apnsEnvironment?: 'sandbox' | 'production';
   }): Promise<void> {
-    const { userId, title, message, type = 'notification', data = {}, channels = ['in_app', 'push'], apnsEnvironment } = params;
+    const { userId, title, message, type = 'notification', data = {}, channels = ['in_app', 'push'] } = params;
     
     try {
       // Create in-app notification if channel includes it
@@ -700,12 +696,12 @@ export class NotificationService {
           
           // Send push notification if channel includes it
           if (channels.includes('push')) {
-            await this.sendPushNotification(notification.id, userId, title, message, apnsEnvironment);
+            await this.sendPushNotification(notification.id, userId, title, message);
           }
         }
       } else if (channels.includes('push')) {
         // Push-only notification (no in-app record)
-        await this.sendPushNotification(0, userId, title, message, apnsEnvironment);
+        await this.sendPushNotification(0, userId, title, message);
       }
       
       // Send email notification if requested

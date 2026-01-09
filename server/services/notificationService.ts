@@ -82,7 +82,8 @@ export class NotificationService {
       
       await db.insert(pushSubscriptions).values({
         userId,
-        ...subscription
+        ...subscription,
+        isActive: true, // Explicitly set active for new subscriptions
       }).onConflictDoUpdate({
         target: isWebPush 
           ? [pushSubscriptions.userId, pushSubscriptions.endpoint]

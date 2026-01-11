@@ -20,11 +20,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         window?.backgroundColor = UIColor.black
         
         // Store APNs environment in UserDefaults for JavaScript access via Capacitor Preferences
-        // Capacitor Preferences uses the key directly in UserDefaults.standard
+        // Capacitor Preferences uses "CapacitorStorage" prefix for its keys
+        let preferencesKey = "CapacitorStorage.apnsEnvironment"
+        UserDefaults.standard.set(AppDelegate.apnsEnvironment, forKey: preferencesKey)
+        // Also store without prefix as fallback
         UserDefaults.standard.set(AppDelegate.apnsEnvironment, forKey: "apnsEnvironment")
-        // Also sync to standardUserDefaults to ensure Capacitor can read it
         UserDefaults.standard.synchronize()
-        print("📱 [AppDelegate] APNs Environment: \(AppDelegate.apnsEnvironment)")
+        print("📱 [AppDelegate] APNs Environment: \(AppDelegate.apnsEnvironment) (stored to \(preferencesKey))")
         
         return true
     }

@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { App, URLOpenListenerEvent } from '@capacitor/app';
+import { authPersistence } from './authPersistence';
 
 let deepLinkCallback: ((url: string) => void) | null = null;
 
@@ -32,11 +33,17 @@ export async function initDeepLinks(): Promise<void> {
 async function exchangeAuthToken(token: string): Promise<boolean> {
   try {
     console.log('[DeepLink] Exchanging auth token for session...');
-    const response = await fetch(`/api/auth/app-redirect?token=${token}`);
+    const response = await fetch(`https://boxstat.app/api/auth/app-redirect?token=${token}`);
     const data = await response.json();
     
     if (response.ok && data.success) {
       console.log('[DeepLink] Session created successfully');
+      
+      // Persist the JWT token for session persistence across app restarts
+      if (data.token) {
+        await authPersistence.setToken(data.token);
+        console.log('[DeepLink] JWT token saved to native storage');
+      }
       
       let redirectPath = "/profile-selection";
       if (data.user?.defaultDashboardView) {

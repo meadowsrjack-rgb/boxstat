@@ -957,9 +957,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.organizationId = user.organizationId;
       req.session.role = user.role;
       
+      // Generate JWT token for persistent auth on iOS
+      const jwtToken = jwt.sign(
+        {
+          userId: user.id,
+          organizationId: user.organizationId,
+          role: user.role
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: '30d' }
+      );
+      
       res.json({ 
         success: true, 
         message: "Session created successfully!",
+        token: jwtToken,
         user: { 
           id: user.id, 
           email: user.email, 

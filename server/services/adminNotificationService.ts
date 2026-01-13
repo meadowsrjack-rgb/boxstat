@@ -35,6 +35,11 @@ export class AdminNotificationService {
     const userIds: Set<string> = new Set();
     const skippedUsers: { userId: string; reason: string; }[] = [];
 
+    console.log(`[Recipient Resolution] 🎯 Resolving recipients`);
+    console.log(`[Recipient Resolution] Organization: ${organizationId}`);
+    console.log(`[Recipient Resolution] Target: ${recipientTarget}`);
+    console.log(`[Recipient Resolution] Options:`, JSON.stringify(options, null, 2));
+
     try {
       switch (recipientTarget) {
         case 'everyone': {
@@ -49,6 +54,8 @@ export class AdminNotificationService {
 
         case 'users': {
           // Specific users - must validate they belong to the organization
+          console.log(`[Recipient Resolution] Processing 'users' target`);
+          console.log(`[Recipient Resolution] Requested user IDs:`, options.recipientUserIds);
           if (options.recipientUserIds && options.recipientUserIds.length > 0) {
             const validUsers = await db.select({ id: users.id })
               .from(users)
@@ -57,10 +64,16 @@ export class AdminNotificationService {
                 inArray(users.id, options.recipientUserIds)
               ));
             
-            validUsers.forEach(u => userIds.add(u.id));
+            console.log(`[Recipient Resolution] Found ${validUsers.length} valid users in org`);
+            validUsers.forEach(u => {
+              console.log(`[Recipient Resolution]   Adding user: ${u.id}`);
+              userIds.add(u.id);
+            });
             
             // Security: Don't report rejected user IDs or counts to prevent cross-tenant enumeration
             // Invalid users are silently filtered - no metadata leakage
+          } else {
+            console.log(`[Recipient Resolution] ⚠️ No recipientUserIds provided for 'users' target`);
           }
           break;
         }
@@ -82,20 +95,31 @@ export class AdminNotificationService {
 
         case 'teams': {
           // Users in specific teams
+          console.log(`[Recipient Resolution] Processing 'teams' target`);
+          console.log(`[Recipient Resolution] Requested team IDs:`, options.recipientTeamIds);
           if (options.recipientTeamIds && options.recipientTeamIds.length > 0) {
             // Parse team IDs to integers since users.teamId is an integer column
             const teamIdInts = options.recipientTeamIds.map(id => parseInt(id)).filter(id => !isNaN(id));
+            console.log(`[Recipient Resolution] Parsed team IDs to integers:`, teamIdInts);
             
             if (teamIdInts.length > 0) {
-              const teamUsers = await db.select({ id: users.id })
+              const teamUsers = await db.select({ id: users.id, teamId: users.teamId })
                 .from(users)
                 .where(and(
                   eq(users.organizationId, organizationId),
                   inArray(users.teamId, teamIdInts)
                 ));
               
-              teamUsers.forEach(u => userIds.add(u.id));
+              console.log(`[Recipient Resolution] Found ${teamUsers.length} users in selected teams`);
+              teamUsers.forEach(u => {
+                console.log(`[Recipient Resolution]   Adding user: ${u.id} (team: ${u.teamId})`);
+                userIds.add(u.id);
+              });
+            } else {
+              console.log(`[Recipient Resolution] ⚠️ No valid team IDs after parsing`);
             }
+          } else {
+            console.log(`[Recipient Resolution] ⚠️ No recipientTeamIds provided for 'teams' target`);
           }
           break;
         }
@@ -116,12 +140,18 @@ export class AdminNotificationService {
         }
       }
 
+      const resolvedUserIds = Array.from(userIds);
+      console.log(`[Recipient Resolution] ✅ Final result: ${resolvedUserIds.length} recipients`);
+      if (resolvedUserIds.length <= 10) {
+        console.log(`[Recipient Resolution] User IDs:`, resolvedUserIds);
+      }
+      
       return {
-        userIds: Array.from(userIds),
+        userIds: resolvedUserIds,
         skippedUsers
       };
     } catch (error) {
-      console.error('Error resolving recipients:', error);
+      console.error('[Recipient Resolution] ❌ Error resolving recipients:', error);
       throw new Error('Failed to resolve notification recipients');
     }
   }

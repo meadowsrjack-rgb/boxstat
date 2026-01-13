@@ -3539,6 +3539,7 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
   const [recurrenceFrequency, setRecurrenceFrequency] = useState<'daily' | 'weekly' | 'biweekly' | 'monthly'>('weekly');
   const [recurrenceCount, setRecurrenceCount] = useState(4);
   const [editEventWindows, setEditEventWindows] = useState<Partial<EventWindow>[]>([]);
+  const [selectedEventIds, setSelectedEventIds] = useState<Set<number>>(new Set());
   
   // Multi-select state for event targeting
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -3547,6 +3548,41 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [deleteConfirmEvent, setDeleteConfirmEvent] = useState<any>(null);
+
+  const bulkDeleteEvents = useMutation({
+    mutationFn: async (ids: number[]) => {
+      await Promise.all(ids.map(id => apiRequest("DELETE", `/api/events/${id}`, {})));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      const count = selectedEventIds.size;
+      setSelectedEventIds(new Set());
+      toast({ title: `${count} event(s) deleted successfully` });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete some events", variant: "destructive" });
+    },
+  });
+
+  const toggleEventSelection = (eventId: number) => {
+    setSelectedEventIds(prev => {
+      const next = new Set(prev);
+      if (next.has(eventId)) {
+        next.delete(eventId);
+      } else {
+        next.add(eventId);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllEvents = (eventIds: number[]) => {
+    if (selectedEventIds.size === eventIds.length) {
+      setSelectedEventIds(new Set());
+    } else {
+      setSelectedEventIds(new Set(eventIds));
+    }
+  };
 
   // Fetch users and divisions for the multi-select
   const { data: allUsers = [] } = useQuery<any[]>({
@@ -4586,10 +4622,44 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
         </div>
       </CardHeader>
       <CardContent>
+        {selectedEventIds.size > 0 && (
+          <div className="flex items-center gap-4 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg">
+            <span className="text-sm font-medium text-red-800">
+              {selectedEventIds.size} event{selectedEventIds.size > 1 ? 's' : ''} selected
+            </span>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (confirm(`Are you sure you want to delete ${selectedEventIds.size} event(s)?`)) {
+                  bulkDeleteEvents.mutate(Array.from(selectedEventIds));
+                }
+              }}
+              disabled={bulkDeleteEvents.isPending}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {bulkDeleteEvents.isPending ? "Deleting..." : "Delete Selected"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedEventIds(new Set())}
+            >
+              Clear Selection
+            </Button>
+          </div>
+        )}
         {viewMode === "list" ? (
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox 
+                    checked={events.length > 0 && selectedEventIds.size === events.length}
+                    onCheckedChange={() => toggleAllEvents(events.map((e: any) => e.id))}
+                    aria-label="Select all events"
+                  />
+                </TableHead>
                 <TableHead>Event</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Date & Time</TableHead>
@@ -4610,6 +4680,13 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                 
                 return (
                 <TableRow key={event.id} data-testid={`row-event-${event.id}`}>
+                  <TableCell>
+                    <Checkbox 
+                      checked={selectedEventIds.has(event.id)}
+                      onCheckedChange={() => toggleEventSelection(event.id)}
+                      aria-label={`Select ${event.title}`}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">{event.title}</TableCell>
                   <TableCell>
                     <Badge>{event.type}</Badge>
@@ -4665,15 +4742,6 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                         title="Edit Event"
                       >
                         <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => setDeleteConfirmEvent(event)}
-                        data-testid={`button-delete-event-${event.id}`}
-                        title="Delete Event"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
                       </Button>
                     </div>
                   </TableCell>
@@ -4883,8 +4951,44 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
   const [imagePreview, setImagePreview] = useState<string>("");
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [selectedAwardIds, setSelectedAwardIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const tableRef = useDragScroll();
+
+  const bulkDeleteAwards = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map(id => apiRequest("DELETE", `/api/award-definitions/${id}`, {})));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/award-definitions"] });
+      const count = selectedAwardIds.size;
+      setSelectedAwardIds(new Set());
+      toast({ title: `${count} award(s) deleted successfully` });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete some awards", variant: "destructive" });
+    },
+  });
+
+  const toggleAwardSelection = (awardId: string) => {
+    setSelectedAwardIds(prev => {
+      const next = new Set(prev);
+      if (next.has(awardId)) {
+        next.delete(awardId);
+      } else {
+        next.add(awardId);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllAwards = (awardIds: string[]) => {
+    if (selectedAwardIds.size === awardIds.length) {
+      setSelectedAwardIds(new Set());
+    } else {
+      setSelectedAwardIds(new Set(awardIds));
+    }
+  };
 
   // Fetch user awards for recipients view
   const { data: userAwards = [], refetch: refetchUserAwards } = useQuery<any[]>({
@@ -6007,11 +6111,47 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
           </Select>
         </div>
 
+        {/* Bulk Action Bar */}
+        {selectedAwardIds.size > 0 && (
+          <div className="flex items-center gap-4 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg">
+            <span className="text-sm font-medium text-red-800">
+              {selectedAwardIds.size} award{selectedAwardIds.size > 1 ? 's' : ''} selected
+            </span>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (confirm(`Are you sure you want to delete ${selectedAwardIds.size} award(s)?`)) {
+                  bulkDeleteAwards.mutate(Array.from(selectedAwardIds));
+                }
+              }}
+              disabled={bulkDeleteAwards.isPending}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {bulkDeleteAwards.isPending ? "Deleting..." : "Delete Selected"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedAwardIds(new Set())}
+            >
+              Clear Selection
+            </Button>
+          </div>
+        )}
+
         {/* Awards Table */}
         <div ref={tableRef} className="overflow-x-auto hide-scrollbar drag-scroll">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox 
+                    checked={filteredAwards.length > 0 && selectedAwardIds.size === filteredAwards.length}
+                    onCheckedChange={() => toggleAllAwards(filteredAwards.map((a: any) => a.id))}
+                    aria-label="Select all awards"
+                  />
+                </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100" 
                   onClick={() => handleSort('name')}
@@ -6049,7 +6189,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
             <TableBody>
               {filteredAwards.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-gray-500 py-8">
+                  <TableCell colSpan={9} className="text-center text-gray-500 py-8">
                     No awards found
                   </TableCell>
                 </TableRow>
@@ -6060,6 +6200,13 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                     className="cursor-pointer hover:bg-gray-50"
                     data-testid={`row-award-${award.id}`}
                   >
+                    <TableCell>
+                      <Checkbox 
+                        checked={selectedAwardIds.has(award.id)}
+                        onCheckedChange={() => toggleAwardSelection(award.id)}
+                        aria-label={`Select ${award.name}`}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">{award.name}</TableCell>
                     <TableCell>
                       {award.imageUrl ? (
@@ -6131,14 +6278,6 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                           data-testid={`button-edit-award-${award.id}`}
                         >
                           <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteConfirm(award)}
-                          data-testid={`button-delete-award-${award.id}`}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
                         </Button>
                       </div>
                     </TableCell>
@@ -6246,6 +6385,42 @@ function StoreTab({ organization }: any) {
   const [selectedSuggestedPrograms, setSelectedSuggestedPrograms] = useState<string[]>([]);
   const [productImageUrl, setProductImageUrl] = useState<string>("");
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+
+  const bulkDeleteProducts = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map(id => apiRequest("DELETE", `/api/programs/${id}`, {})));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+      const count = selectedProductIds.size;
+      setSelectedProductIds(new Set());
+      toast({ title: `${count} product(s) deleted successfully` });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete some products", variant: "destructive" });
+    },
+  });
+
+  const toggleProductSelection = (productId: string) => {
+    setSelectedProductIds(prev => {
+      const next = new Set(prev);
+      if (next.has(productId)) {
+        next.delete(productId);
+      } else {
+        next.add(productId);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllProducts = (productIds: string[]) => {
+    if (selectedProductIds.size === productIds.length) {
+      setSelectedProductIds(new Set());
+    } else {
+      setSelectedProductIds(new Set(productIds));
+    }
+  };
 
   const { data: allProducts, isLoading } = useQuery<any[]>({
     queryKey: ["/api/programs"],
@@ -6597,6 +6772,33 @@ function StoreTab({ organization }: any) {
         </div>
       </CardHeader>
       <CardContent>
+        {selectedProductIds.size > 0 && (
+          <div className="flex items-center gap-4 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg">
+            <span className="text-sm font-medium text-red-800">
+              {selectedProductIds.size} product{selectedProductIds.size > 1 ? 's' : ''} selected
+            </span>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (confirm(`Are you sure you want to delete ${selectedProductIds.size} product(s)?`)) {
+                  bulkDeleteProducts.mutate(Array.from(selectedProductIds));
+                }
+              }}
+              disabled={bulkDeleteProducts.isPending}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {bulkDeleteProducts.isPending ? "Deleting..." : "Delete Selected"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedProductIds(new Set())}
+            >
+              Clear Selection
+            </Button>
+          </div>
+        )}
         {storeProducts.length === 0 ? (
           <div className="text-center py-12" data-testid="empty-store">
             <Package className="w-12 h-12 mx-auto mb-4 text-gray-400" />
@@ -6607,6 +6809,13 @@ function StoreTab({ organization }: any) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox 
+                    checked={storeProducts.length > 0 && selectedProductIds.size === storeProducts.length}
+                    onCheckedChange={() => toggleAllProducts(storeProducts.map((p: any) => p.id))}
+                    aria-label="Select all products"
+                  />
+                </TableHead>
                 <TableHead className="w-16">Image</TableHead>
                 <TableHead>Product</TableHead>
                 <TableHead>Category</TableHead>
@@ -6621,6 +6830,13 @@ function StoreTab({ organization }: any) {
             <TableBody>
               {storeProducts.map((product: any) => (
                 <TableRow key={product.id} data-testid={`row-store-${product.id}`}>
+                  <TableCell>
+                    <Checkbox 
+                      checked={selectedProductIds.has(product.id)}
+                      onCheckedChange={() => toggleProductSelection(product.id)}
+                      aria-label={`Select ${product.name}`}
+                    />
+                  </TableCell>
                   <TableCell>
                     {product.coverImageUrl ? (
                       <img 
@@ -6703,14 +6919,6 @@ function StoreTab({ organization }: any) {
                         data-testid={`button-edit-store-${product.id}`}
                       >
                         <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeleteConfirm(product)}
-                        data-testid={`button-delete-store-${product.id}`}
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
                       </Button>
                     </div>
                   </TableCell>
@@ -7168,7 +7376,43 @@ function ProgramsTab({ programs, teams, organization }: any) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProgram, setEditingProgram] = useState<any>(null);
   const [deleteConfirmProgram, setDeleteConfirmProgram] = useState<any>(null);
+  const [selectedProgramIds, setSelectedProgramIds] = useState<Set<string>>(new Set());
   const tableRef = useDragScroll();
+
+  const bulkDeletePrograms = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map(id => apiRequest("DELETE", `/api/programs/${id}`, {})));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+      const count = selectedProgramIds.size;
+      setSelectedProgramIds(new Set());
+      toast({ title: `${count} program(s) deleted successfully` });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete some programs", variant: "destructive" });
+    },
+  });
+
+  const toggleProgramSelection = (programId: string) => {
+    setSelectedProgramIds(prev => {
+      const next = new Set(prev);
+      if (next.has(programId)) {
+        next.delete(programId);
+      } else {
+        next.add(programId);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllPrograms = (programIds: string[]) => {
+    if (selectedProgramIds.size === programIds.length) {
+      setSelectedProgramIds(new Set());
+    } else {
+      setSelectedProgramIds(new Set(programIds));
+    }
+  };
 
   const { data: waivers = [] } = useQuery<any[]>({
     queryKey: ["/api/waivers"],
@@ -8153,10 +8397,44 @@ function ProgramsTab({ programs, teams, organization }: any) {
         </div>
       </CardHeader>
       <CardContent>
+        {selectedProgramIds.size > 0 && (
+          <div className="flex items-center gap-4 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg">
+            <span className="text-sm font-medium text-red-800">
+              {selectedProgramIds.size} program{selectedProgramIds.size > 1 ? 's' : ''} selected
+            </span>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (confirm(`Are you sure you want to delete ${selectedProgramIds.size} program(s)?`)) {
+                  bulkDeletePrograms.mutate(Array.from(selectedProgramIds));
+                }
+              }}
+              disabled={bulkDeletePrograms.isPending}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {bulkDeletePrograms.isPending ? "Deleting..." : "Delete Selected"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedProgramIds(new Set())}
+            >
+              Clear Selection
+            </Button>
+          </div>
+        )}
         <div ref={tableRef} className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox 
+                    checked={programs.length > 0 && selectedProgramIds.size === programs.length}
+                    onCheckedChange={() => toggleAllPrograms(programs.map((p: any) => p.id))}
+                    aria-label="Select all programs"
+                  />
+                </TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Price</TableHead>
@@ -8174,6 +8452,13 @@ function ProgramsTab({ programs, teams, organization }: any) {
                 };
                 return (
                   <TableRow key={program.id} data-testid={`row-program-${program.id}`} className="cursor-pointer hover:bg-gray-50" onClick={() => handleViewProgram(program.id)}>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox 
+                        checked={selectedProgramIds.has(program.id)}
+                        onCheckedChange={() => toggleProgramSelection(program.id)}
+                        aria-label={`Select ${program.name}`}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium" data-testid={`text-program-name-${program.id}`}>
                       <div>
                         <div className="text-blue-600 hover:underline">{program.name}</div>
@@ -8242,14 +8527,6 @@ function ProgramsTab({ programs, teams, organization }: any) {
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteConfirmProgram(program)}
-                          data-testid={`button-delete-program-${program.id}`}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -8257,7 +8534,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
               })}
               {programs.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                     No programs yet. Create your first program to get started.
                   </TableCell>
                 </TableRow>
@@ -8592,6 +8869,42 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
   const [scheduledAt, setScheduledAt] = useState('');
   const [recurrenceFrequency, setRecurrenceFrequency] = useState('daily');
   const [recurrenceTime, setRecurrenceTime] = useState('09:00');
+  const [selectedNotificationIds, setSelectedNotificationIds] = useState<Set<number>>(new Set());
+
+  const bulkDeleteNotifications = useMutation({
+    mutationFn: async (ids: number[]) => {
+      await Promise.all(ids.map(id => apiRequest("DELETE", `/api/admin/notifications/${id}`, {})));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/notifications"] });
+      const count = selectedNotificationIds.size;
+      setSelectedNotificationIds(new Set());
+      toast({ title: `${count} message(s) deleted successfully` });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete some messages", variant: "destructive" });
+    },
+  });
+
+  const toggleNotificationSelection = (notificationId: number) => {
+    setSelectedNotificationIds(prev => {
+      const next = new Set(prev);
+      if (next.has(notificationId)) {
+        next.delete(notificationId);
+      } else {
+        next.add(notificationId);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllNotifications = (notificationIds: number[]) => {
+    if (selectedNotificationIds.size === notificationIds.length) {
+      setSelectedNotificationIds(new Set());
+    } else {
+      setSelectedNotificationIds(new Set(notificationIds));
+    }
+  };
 
   const { data: currentUser } = useQuery<any>({
     queryKey: ["/api/auth/user"],
@@ -9227,21 +9540,61 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
         </div>
       </CardHeader>
       <CardContent>
+        {selectedNotificationIds.size > 0 && (
+          <div className="flex items-center gap-4 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg">
+            <span className="text-sm font-medium text-red-800">
+              {selectedNotificationIds.size} message{selectedNotificationIds.size > 1 ? 's' : ''} selected
+            </span>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (confirm(`Are you sure you want to delete ${selectedNotificationIds.size} message(s)?`)) {
+                  bulkDeleteNotifications.mutate(Array.from(selectedNotificationIds));
+                }
+              }}
+              disabled={bulkDeleteNotifications.isPending}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {bulkDeleteNotifications.isPending ? "Deleting..." : "Delete Selected"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedNotificationIds(new Set())}
+            >
+              Clear Selection
+            </Button>
+          </div>
+        )}
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <Checkbox 
+                  checked={notifications.length > 0 && selectedNotificationIds.size === notifications.length}
+                  onCheckedChange={() => toggleAllNotifications(notifications.map((n: any) => n.id))}
+                  aria-label="Select all messages"
+                />
+              </TableHead>
               <TableHead>Title</TableHead>
               <TableHead>Message</TableHead>
               <TableHead>Recipients</TableHead>
               <TableHead>Delivery Channels</TableHead>
               <TableHead>Sent Date</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {notifications.map((notification: any) => (
               <TableRow key={notification.id} data-testid={`row-notification-${notification.id}`}>
+                <TableCell>
+                  <Checkbox 
+                    checked={selectedNotificationIds.has(notification.id)}
+                    onCheckedChange={() => toggleNotificationSelection(notification.id)}
+                    aria-label={`Select ${notification.title}`}
+                  />
+                </TableCell>
                 <TableCell className="font-medium" data-testid={`text-notification-title-${notification.id}`}>
                   {notification.title}
                 </TableCell>
@@ -9265,16 +9618,6 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                   <Badge variant={notification.status === "sent" ? "default" : notification.status === "failed" ? "destructive" : "secondary"}>
                     {notification.status}
                   </Badge>
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDeleteConfirmMessage(notification)}
-                    data-testid={`button-delete-notification-${notification.id}`}
-                  >
-                    <Trash2 className="w-4 h-4 text-red-600" />
-                  </Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -9643,11 +9986,47 @@ function WaiversTab({ organization }: any) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingWaiver, setEditingWaiver] = useState<any>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
+  const [selectedWaiverIds, setSelectedWaiverIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   const { data: waivers = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/waivers'],
   });
+
+  const bulkDeleteWaivers = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map(id => apiRequest("DELETE", `/api/waivers/${id}`, {})));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/waivers"] });
+      const count = selectedWaiverIds.size;
+      setSelectedWaiverIds(new Set());
+      toast({ title: `${count} waiver(s) deleted successfully` });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete some waivers", variant: "destructive" });
+    },
+  });
+
+  const toggleWaiverSelection = (waiverId: string) => {
+    setSelectedWaiverIds(prev => {
+      const next = new Set(prev);
+      if (next.has(waiverId)) {
+        next.delete(waiverId);
+      } else {
+        next.add(waiverId);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllWaivers = (waiverIds: string[]) => {
+    if (selectedWaiverIds.size === waiverIds.length) {
+      setSelectedWaiverIds(new Set());
+    } else {
+      setSelectedWaiverIds(new Set(waiverIds));
+    }
+  };
 
   const form = useForm({
     defaultValues: {
@@ -9842,6 +10221,33 @@ function WaiversTab({ organization }: any) {
         </div>
       </CardHeader>
       <CardContent>
+        {selectedWaiverIds.size > 0 && (
+          <div className="flex items-center gap-4 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg">
+            <span className="text-sm font-medium text-red-800">
+              {selectedWaiverIds.size} waiver{selectedWaiverIds.size > 1 ? 's' : ''} selected
+            </span>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (confirm(`Are you sure you want to delete ${selectedWaiverIds.size} waiver(s)?`)) {
+                  bulkDeleteWaivers.mutate(Array.from(selectedWaiverIds));
+                }
+              }}
+              disabled={bulkDeleteWaivers.isPending}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {bulkDeleteWaivers.isPending ? "Deleting..." : "Delete Selected"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedWaiverIds(new Set())}
+            >
+              Clear Selection
+            </Button>
+          </div>
+        )}
         {isLoading ? (
           <div className="text-center py-8 text-gray-500">Loading waivers...</div>
         ) : waivers.length === 0 ? (
@@ -9852,6 +10258,13 @@ function WaiversTab({ organization }: any) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox 
+                    checked={waivers.length > 0 && selectedWaiverIds.size === waivers.length}
+                    onCheckedChange={() => toggleAllWaivers(waivers.map((w: any) => w.id))}
+                    aria-label="Select all waivers"
+                  />
+                </TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead>Requirements</TableHead>
@@ -9862,6 +10275,13 @@ function WaiversTab({ organization }: any) {
             <TableBody>
               {waivers.map((waiver: any) => (
                 <TableRow key={waiver.id} data-testid={`row-waiver-${waiver.id}`}>
+                  <TableCell>
+                    <Checkbox 
+                      checked={selectedWaiverIds.has(waiver.id)}
+                      onCheckedChange={() => toggleWaiverSelection(waiver.id)}
+                      aria-label={`Select ${waiver.name}`}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="font-medium" data-testid={`text-waiver-name-${waiver.id}`}>
                       {waiver.name}
@@ -9899,15 +10319,6 @@ function WaiversTab({ organization }: any) {
                         data-testid={`button-edit-waiver-${waiver.id}`}
                       >
                         <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeleteConfirm(waiver)}
-                        disabled={waiver.isBuiltIn}
-                        data-testid={`button-delete-waiver-${waiver.id}`}
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
                       </Button>
                     </div>
                   </TableCell>

@@ -14,7 +14,7 @@ import {
   type InsertNotificationPreferences,
   type InsertPushSubscription
 } from "../../shared/schema";
-import { eq, and, or, desc, sql } from "drizzle-orm";
+import { eq, and, or, desc, sql, inArray } from "drizzle-orm";
 import webpush from "web-push";
 import { sendAPNsNotification, isAPNsConfigured } from "./apnsService";
 import { sendNotificationEmail } from "../email";
@@ -236,13 +236,37 @@ export class NotificationService {
       }
 
       // Get all active subscriptions for the user with timeout
+      // IMPORTANT: Users can have multiple profiles (admin, coach, parent, player) with the same email.
+      // Push subscriptions might be registered under a different profile than the one receiving the notification.
+      // We need to find all user IDs for the same email and check subscriptions for all of them.
       console.log(`[Push Send] Step 2: 🔍 Looking up active push subscriptions for user ${userId}...`);
       let subscriptions: any[];
       try {
+        // Step 2a: Look up the user's email
+        const [targetUser] = await db.select({ email: users.email })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
+        
+        let userIdsToCheck: string[] = [userId];
+        
+        if (targetUser?.email) {
+          // Step 2b: Find all user IDs with the same email (handles multiple profiles per email)
+          const sameEmailUsers = await db.select({ id: users.id })
+            .from(users)
+            .where(eq(users.email, targetUser.email));
+          
+          userIdsToCheck = sameEmailUsers.map(u => u.id);
+          if (userIdsToCheck.length > 1) {
+            console.log(`[Push Send]   Found ${userIdsToCheck.length} user profiles for email ${targetUser.email}`);
+          }
+        }
+        
+        // Step 2c: Query subscriptions for all related user IDs
         const subPromise = db.select()
           .from(pushSubscriptions)
           .where(and(
-            eq(pushSubscriptions.userId, userId),
+            inArray(pushSubscriptions.userId, userIdsToCheck),
             eq(pushSubscriptions.isActive, true)
           ));
         const timeoutPromise = new Promise<never>((_, reject) => 
@@ -255,7 +279,7 @@ export class NotificationService {
         const iosSubs = subscriptions.filter((s: any) => s.platform === 'ios' && s.fcmToken);
         const androidSubs = subscriptions.filter((s: any) => s.platform === 'android' && s.fcmToken);
         
-        console.log(`[Push Send] ✅ Step 2 COMPLETE - Found ${subscriptions.length} active subscription(s)`);
+        console.log(`[Push Send] ✅ Step 2 COMPLETE - Found ${subscriptions.length} active subscription(s) across ${userIdsToCheck.length} profile(s)`);
         console.log(`[Push Send]   📊 Breakdown: Web=${webSubs.length}, iOS=${iosSubs.length}, Android=${androidSubs.length}`);
       } catch (subError) {
         console.error(`[Push Send] ❌ Step 2 ERROR querying subscriptions:`, subError);

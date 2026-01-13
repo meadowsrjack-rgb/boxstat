@@ -8916,7 +8916,7 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                                 data-testid={`checkbox-recipient-${user.id}`}
                               />
                               <span className="text-sm">
-                                {user.firstName} {user.lastName} ({user.role})
+                                {user.firstName} {user.lastName} {user.email ? `- ${user.email}` : ''} ({user.role})
                               </span>
                             </div>
                           ))}

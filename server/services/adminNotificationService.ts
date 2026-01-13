@@ -5,6 +5,7 @@ import {
   notificationRecipients,
   teams,
   divisions,
+  teamMemberships,
   type InsertNotification,
   type SelectNotification,
   type InsertNotificationRecipient
@@ -94,27 +95,45 @@ export class AdminNotificationService {
         }
 
         case 'teams': {
-          // Users in specific teams
+          // Users in specific teams - using team_memberships table
           console.log(`[Recipient Resolution] Processing 'teams' target`);
           console.log(`[Recipient Resolution] Requested team IDs:`, options.recipientTeamIds);
           if (options.recipientTeamIds && options.recipientTeamIds.length > 0) {
-            // Parse team IDs to integers since users.teamId is an integer column
+            // Parse team IDs to integers since team_memberships.teamId is an integer column
             const teamIdInts = options.recipientTeamIds.map(id => parseInt(id)).filter(id => !isNaN(id));
             console.log(`[Recipient Resolution] Parsed team IDs to integers:`, teamIdInts);
             
             if (teamIdInts.length > 0) {
-              const teamUsers = await db.select({ id: users.id, teamId: users.teamId })
-                .from(users)
+              // Query team_memberships to find users (profile_id = user id)
+              const teamMembers = await db.select({ 
+                profileId: teamMemberships.profileId, 
+                teamId: teamMemberships.teamId,
+                role: teamMemberships.role
+              })
+                .from(teamMemberships)
                 .where(and(
-                  eq(users.organizationId, organizationId),
-                  inArray(users.teamId, teamIdInts)
+                  inArray(teamMemberships.teamId, teamIdInts),
+                  eq(teamMemberships.status, 'active')
                 ));
               
-              console.log(`[Recipient Resolution] Found ${teamUsers.length} users in selected teams`);
-              teamUsers.forEach(u => {
-                console.log(`[Recipient Resolution]   Adding user: ${u.id} (team: ${u.teamId})`);
-                userIds.add(u.id);
-              });
+              console.log(`[Recipient Resolution] Found ${teamMembers.length} team memberships`);
+              
+              // Verify these profile IDs exist as users in the organization
+              if (teamMembers.length > 0) {
+                const profileIds = teamMembers.map(m => m.profileId);
+                const validUsers = await db.select({ id: users.id })
+                  .from(users)
+                  .where(and(
+                    eq(users.organizationId, organizationId),
+                    inArray(users.id, profileIds)
+                  ));
+                
+                console.log(`[Recipient Resolution] Found ${validUsers.length} valid users from team memberships`);
+                validUsers.forEach(u => {
+                  console.log(`[Recipient Resolution]   Adding user: ${u.id}`);
+                  userIds.add(u.id);
+                });
+              }
             } else {
               console.log(`[Recipient Resolution] ⚠️ No valid team IDs after parsing`);
             }

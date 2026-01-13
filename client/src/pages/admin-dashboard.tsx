@@ -622,6 +622,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
   const [showAddRoleDialog, setShowAddRoleDialog] = useState(false);
   const [selectedRoleToAdd, setSelectedRoleToAdd] = useState<string>("");
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<any>(null);
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const tableRef = useDragScroll();
 
   // Fetch user evaluations - only when viewing user in performance tab
@@ -702,6 +703,40 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
       toast({ title: "Failed to delete user", variant: "destructive" });
     },
   });
+
+  const bulkDeleteUsers = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map(id => apiRequest("DELETE", `/api/users/${id}`, {})));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setSelectedUserIds(new Set());
+      toast({ title: `${selectedUserIds.size} user(s) deleted successfully` });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete some users", variant: "destructive" });
+    },
+  });
+
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUserIds(prev => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllUsers = (userIds: string[]) => {
+    if (selectedUserIds.size === userIds.length) {
+      setSelectedUserIds(new Set());
+    } else {
+      setSelectedUserIds(new Set(userIds));
+    }
+  };
 
   const updateUser = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
@@ -1637,6 +1672,34 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
         
       </CardHeader>
       <CardContent>
+        {/* Bulk Action Bar */}
+        {selectedUserIds.size > 0 && (
+          <div className="flex items-center gap-4 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg">
+            <span className="text-sm font-medium text-red-800">
+              {selectedUserIds.size} user{selectedUserIds.size > 1 ? 's' : ''} selected
+            </span>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (confirm(`Are you sure you want to delete ${selectedUserIds.size} user(s)?`)) {
+                  bulkDeleteUsers.mutate(Array.from(selectedUserIds));
+                }
+              }}
+              disabled={bulkDeleteUsers.isPending}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {bulkDeleteUsers.isPending ? "Deleting..." : "Delete Selected"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedUserIds(new Set())}
+            >
+              Clear Selection
+            </Button>
+          </div>
+        )}
         {/* Search bar */}
         <div className="mb-4">
           <div className="relative">
@@ -1682,6 +1745,13 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox 
+                    checked={filteredUsers.length > 0 && selectedUserIds.size === filteredUsers.length}
+                    onCheckedChange={() => toggleAllUsers(filteredUsers.map((u: any) => u.id))}
+                    aria-label="Select all users"
+                  />
+                </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('firstName')}
@@ -1752,6 +1822,13 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                   : [];
                 return (
                   <TableRow key={user.id} className="cursor-default" data-testid={`row-user-${user.id}`}>
+                    <TableCell>
+                      <Checkbox 
+                        checked={selectedUserIds.has(user.id)}
+                        onCheckedChange={() => toggleUserSelection(user.id)}
+                        aria-label={`Select ${user.firstName} ${user.lastName}`}
+                      />
+                    </TableCell>
                     <TableCell data-testid={`text-name-${user.id}`}>
                       <div className="font-medium flex items-center gap-2">
                         {user.firstName || ""} {user.lastName || ""}
@@ -1876,15 +1953,6 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                           title="Edit User"
                         >
                           <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => setDeleteConfirmUser(user)}
-                          data-testid={`button-delete-user-${user.id}`}
-                          title="Delete User"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
                         </Button>
                       </div>
                     </TableCell>

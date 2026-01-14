@@ -7753,9 +7753,17 @@ function ProgramsTab({ programs, teams, organization }: any) {
             continue;
           }
           
+          const monthlyPrice = group.prices.find(p => 
+            (p.interval === 'month' && p.intervalCount === 1) ||
+            (p.interval === 'day' && p.intervalCount === 28) ||
+            (p.interval === 'week' && p.intervalCount === 4)
+          );
+          const monthlyAmount = monthlyPrice?.amount || 0;
+          
           const pricingOptions = group.prices.map((price, idx) => {
             let billingCycle = 'One-time';
             let durationDays: number | undefined;
+            let months: number | null = null;
             
             if (!price.interval || price.interval === '') {
               billingCycle = 'One-time';
@@ -7764,19 +7772,36 @@ function ProgramsTab({ programs, teams, organization }: any) {
               if (price.intervalCount === 1) {
                 billingCycle = 'Monthly';
                 durationDays = 28;
+                months = 1;
               } else {
                 billingCycle = 'One-time';
-                durationDays = price.intervalCount * 30;
+                durationDays = price.intervalCount * 28;
+                months = price.intervalCount;
               }
             } else if (price.interval === 'day') {
               billingCycle = 'One-time';
               durationDays = price.intervalCount;
+              months = price.intervalCount % 28 === 0 ? price.intervalCount / 28 : null;
             } else if (price.interval === 'week') {
               billingCycle = 'One-time';
               durationDays = price.intervalCount * 7;
+              months = (price.intervalCount * 7) % 28 === 0 ? (price.intervalCount * 7) / 28 : null;
             } else if (price.interval === 'year') {
               billingCycle = 'Yearly';
               durationDays = 365 * price.intervalCount;
+              months = null;
+            }
+            
+            let savingsNote: string | undefined;
+            let comparePrice: number | undefined;
+            
+            if (monthlyAmount > 0 && months !== null && months > 1) {
+              const equivalentTotal = monthlyAmount * months;
+              const savingsAmount = equivalentTotal - price.amount;
+              if (savingsAmount > 0) {
+                savingsNote = `Save $${Math.round(savingsAmount)}!`;
+                comparePrice = Math.round(equivalentTotal * 100);
+              }
             }
             
             return {
@@ -7786,7 +7811,9 @@ function ProgramsTab({ programs, teams, organization }: any) {
               billingCycle,
               durationDays,
               stripePriceId: price.priceId,
-              isDefault: idx === 0
+              isDefault: idx === 0,
+              savingsNote,
+              comparePrice
             };
           });
           

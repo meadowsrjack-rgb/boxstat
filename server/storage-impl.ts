@@ -4741,11 +4741,18 @@ class DatabaseStorage implements IStorage {
   }
   
   async createMigrationLookup(data: InsertMigrationLookup): Promise<SelectMigrationLookup> {
+    // Ensure stripeSubscriptionId has a value - use first from array if not provided directly
+    const subscriptionId = data.stripeSubscriptionId || 
+      (Array.isArray(data.stripeSubscriptionIds) && data.stripeSubscriptionIds.length > 0 
+        ? data.stripeSubscriptionIds[0] 
+        : null);
+    
     const results = await db.insert(schema.migrationLookup).values({
       email: data.email,
       customerName: data.customerName ?? null,
       stripeCustomerId: data.stripeCustomerId,
       customerDescription: data.customerDescription ?? null,
+      stripeSubscriptionId: subscriptionId,
       stripeSubscriptionIds: data.stripeSubscriptionIds ?? null,
       subscriptions: data.subscriptions ?? [],
       items: data.items ?? [],

@@ -9338,19 +9338,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Only admins can create migrations' });
       }
       
-      const { email, stripeCustomerId, stripeSubscriptionId, items } = req.body;
+      const { 
+        email, 
+        stripeCustomerId, 
+        stripeSubscriptionId, 
+        stripeSubscriptionIds,
+        subscriptions,
+        customerName,
+        customerDescription,
+        items 
+      } = req.body;
       
-      if (!email || !stripeCustomerId || !stripeSubscriptionId) {
-        return res.status(400).json({ error: 'Missing required fields' });
+      // Validate required fields - accept either single subscription ID or array
+      if (!email || !stripeCustomerId) {
+        return res.status(400).json({ error: 'Missing required fields: email and stripeCustomerId are required' });
+      }
+      
+      // At least one subscription ID must be provided (either single or array)
+      const hasSubscriptionId = stripeSubscriptionId || (Array.isArray(stripeSubscriptionIds) && stripeSubscriptionIds.length > 0);
+      if (!hasSubscriptionId) {
+        return res.status(400).json({ error: 'At least one subscription ID is required (stripeSubscriptionId or stripeSubscriptionIds)' });
       }
       
       // Items are optional for bulk upload - default to empty array
       const itemsArray = Array.isArray(items) ? items : [];
+      const subscriptionsArray = Array.isArray(subscriptions) ? subscriptions : [];
+      const subscriptionIdsArray = Array.isArray(stripeSubscriptionIds) ? stripeSubscriptionIds : 
+        (stripeSubscriptionId ? [stripeSubscriptionId] : []);
       
       const migration = await storage.createMigrationLookup({
         email,
         stripeCustomerId,
-        stripeSubscriptionId,
+        stripeSubscriptionId: stripeSubscriptionId || subscriptionIdsArray[0] || null,
+        stripeSubscriptionIds: subscriptionIdsArray,
+        subscriptions: subscriptionsArray,
+        customerName: customerName || null,
+        customerDescription: customerDescription || null,
         items: itemsArray,
         isClaimed: false,
       });

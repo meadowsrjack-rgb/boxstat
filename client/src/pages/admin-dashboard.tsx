@@ -10537,6 +10537,7 @@ function MigrationsTab({ organization, users }: any) {
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data: migrations = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/migrations'],
@@ -10735,7 +10736,10 @@ function MigrationsTab({ organization, users }: any) {
   };
 
   const handleCsvUpload = async () => {
-    if (!csvFile) return;
+    if (!csvFile || isUploading) return;
+    setIsUploading(true);
+    setIsUploadDialogOpen(false);
+    
     const text = await csvFile.text();
     const lines = text.split('\n').filter(line => line.trim());
     const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
@@ -10867,9 +10871,9 @@ function MigrationsTab({ organization, users }: any) {
     }
     
     queryClient.invalidateQueries({ queryKey: ['/api/admin/migrations'] });
-    setIsUploadDialogOpen(false);
     setCsvFile(null);
-    toast({ title: "Import complete", description: `Created ${successCount} migration entries from ${lines.length - 1} subscription rows` });
+    setIsUploading(false);
+    toast({ title: "Import complete", description: `Created ${successCount} migration entries from ${emailGroups.length} unique emails (${lines.length - 1} subscription rows)` });
   };
 
   return (
@@ -10929,8 +10933,10 @@ function MigrationsTab({ organization, users }: any) {
                   />
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsUploadDialogOpen(false)}>Cancel</Button>
-                  <Button onClick={handleCsvUpload} disabled={!csvFile}>Upload</Button>
+                  <Button variant="outline" onClick={() => setIsUploadDialogOpen(false)} disabled={isUploading}>Cancel</Button>
+                  <Button onClick={handleCsvUpload} disabled={!csvFile || isUploading}>
+                    {isUploading ? "Uploading..." : "Upload"}
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>

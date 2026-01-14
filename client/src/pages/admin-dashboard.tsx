@@ -10810,7 +10810,13 @@ function MigrationsTab({ organization, users }: any) {
     
     // Create migration entries
     let successCount = 0;
-    for (const emailData of Object.values(groupedByEmail)) {
+    const emailGroups = Object.values(groupedByEmail);
+    console.log('CSV headers parsed:', headers);
+    console.log('Grouped by email count:', emailGroups.length);
+    if (emailGroups.length > 0) {
+      console.log('First group sample:', emailGroups[0]);
+    }
+    for (const emailData of emailGroups) {
       try {
         await apiRequest('/api/admin/migrations', { 
           method: 'POST', 
@@ -10825,8 +10831,8 @@ function MigrationsTab({ organization, users }: any) {
           } 
         });
         successCount++;
-      } catch (e) {
-        console.error('Failed to import migration:', emailData.email);
+      } catch (e: any) {
+        console.error('Failed to import migration:', emailData.email, e?.message || e);
       }
     }
     

@@ -209,9 +209,15 @@ async function syncProgramWithStripe(
       pricingOptions.map(async (option: any) => {
         const updatedOption = { ...option };
 
+        // Skip price creation if a stripePriceId already exists (either auto-synced or linked from Stripe)
+        if (option.stripePriceId) {
+          console.log(`Using existing Stripe Price ${option.stripePriceId} for option "${option.name}"`);
+          return updatedOption;
+        }
+
         // Create main price for this option if not exists
         // Skip zero-price options as Stripe doesn't allow $0 prices for one-time charges
-        if (!option.stripePriceId && option.price && option.price > 0) {
+        if (option.price && option.price > 0) {
           try {
             // Determine if this is recurring or one-time based on billingCycle
             const isRecurring = option.billingCycle === 'Monthly' || 
@@ -7304,6 +7310,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching Stripe products:", error);
       res.status(500).json({
         error: "Error fetching products",
+        message: error.message,
+      });
+    }
+  });
+
+  // Fetch Stripe price details by ID - for linking existing prices
+  app.get('/api/stripe/prices/:priceId', requireAuth, async (req: any, res) => {
+    if (!stripe) {
+      return res.status(500).json({ error: "Stripe is not configured" });
+    }
+    
+    const { role } = req.user;
+    if (role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    
+    try {
+      const { priceId } = req.params;
+      
+      // Validate price ID format
+      if (!priceId || !priceId.startsWith('price_')) {
+        return res.status(400).json({ error: 'Invalid price ID format. Must start with "price_"' });
+      }
+      
+      // Fetch the price from Stripe
+      const price = await stripe.prices.retrieve(priceId, {
+        expand: ['product'],
+      });
+      
+      if (!price) {
+        return res.status(404).json({ error: 'Price not found' });
+      }
+      
+      // Get product details
+      const product = typeof price.product === 'object' ? price.product : null;
+      
+      // Determine billing cycle
+      let billingCycle = 'One-Time';
+      let durationDays = 0;
+      if (price.recurring) {
+        if (price.recurring.interval === 'month') {
+          billingCycle = 'Monthly';
+          durationDays = 30 * (price.recurring.interval_count || 1);
+        } else if (price.recurring.interval === 'year') {
+          billingCycle = 'Annual';
+          durationDays = 365 * (price.recurring.interval_count || 1);
+        } else if (price.recurring.interval === 'week') {
+          durationDays = 7 * (price.recurring.interval_count || 1);
+        } else if (price.recurring.interval === 'day') {
+          durationDays = price.recurring.interval_count || 1;
+        }
+      }
+      
+      res.json({
+        priceId: price.id,
+        productId: typeof price.product === 'string' ? price.product : (product as any)?.id,
+        productName: (product as any)?.name || '',
+        productDescription: (product as any)?.description || '',
+        unitAmount: price.unit_amount || 0,
+        currency: price.currency,
+        billingCycle,
+        durationDays,
+        recurring: price.recurring ? {
+          interval: price.recurring.interval,
+          intervalCount: price.recurring.interval_count,
+        } : null,
+        active: price.active,
+        metadata: price.metadata,
+      });
+    } catch (error: any) {
+      console.error("Error fetching Stripe price:", error);
+      if (error.code === 'resource_missing') {
+        return res.status(404).json({ error: 'Price not found in Stripe' });
+      }
+      res.status(500).json({
+        error: "Error fetching price",
         message: error.message,
       });
     }

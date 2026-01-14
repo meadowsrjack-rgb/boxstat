@@ -10777,6 +10777,13 @@ function MigrationsTab({ organization, users }: any) {
         row[fieldName] = values[idx] || '';
       });
       
+      // Debug first row parsing
+      if (i === 1) {
+        console.log('First row values count:', values.length);
+        console.log('First row mapped:', row);
+        console.log('Email field value:', row.email);
+      }
+      
       const email = row.email?.toLowerCase();
       if (!email) continue;
       

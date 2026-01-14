@@ -10769,7 +10769,30 @@ function MigrationsTab({ organization, users }: any) {
     }> = {};
     
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].match(/("([^"]|"")*"|[^,]*)/g)?.map(v => v.replace(/^"|"$/g, '').replace(/""/g, '"')) || [];
+      // More robust CSV parsing that correctly handles quoted fields
+      const values: string[] = [];
+      let current = '';
+      let inQuotes = false;
+      const line = lines[i];
+      
+      for (let j = 0; j < line.length; j++) {
+        const char = line[j];
+        if (char === '"') {
+          if (inQuotes && line[j + 1] === '"') {
+            current += '"';
+            j++; // Skip escaped quote
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          values.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      values.push(current.trim()); // Push last value
+      
       const row: Record<string, string> = {};
       
       headers.forEach((h, idx) => {

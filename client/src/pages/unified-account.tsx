@@ -60,6 +60,8 @@ import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { PaymentHistory } from "@/components/PaymentHistory";
 import UypTrophyRings from "@/components/UypTrophyRings";
 import { authPersistence } from "@/services/authPersistence";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -1195,6 +1197,25 @@ export default function UnifiedAccount() {
       setLocation("/player-dashboard");
     }
   }, [setLocation]);
+
+  // Listen for in-app browser close to refresh payment data (iOS Capacitor)
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    
+    const handleBrowserClosed = () => {
+      // Refresh payment-related data when returning from Stripe checkout
+      queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/payments/history'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/account/players'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+    };
+    
+    Browser.addListener('browserFinished', handleBrowserClosed);
+    
+    return () => {
+      Browser.removeAllListeners();
+    };
+  }, []);
 
   // Check for payment success in URL (including iOS auth token restoration)
   useEffect(() => {
@@ -2471,8 +2492,17 @@ export default function UnifiedAccount() {
                                   },
                                 }) as { url: string };
 
-                                // Redirect to Stripe checkout
-                                window.location.href = response.url;
+                                // Redirect to Stripe checkout - use in-app browser for iOS
+                                if (Capacitor.isNativePlatform()) {
+                                  await Browser.open({ 
+                                    url: response.url,
+                                    presentationStyle: 'fullscreen',
+                                  });
+                                  // Close the dialog and reset state - browser will handle redirect
+                                  setIsProcessingPayment(false);
+                                } else {
+                                  window.location.href = response.url;
+                                }
                               } catch (error: any) {
                                 toast({
                                   title: "Error",

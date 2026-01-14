@@ -7595,6 +7595,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
   };
 
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [isUploadingPrograms, setIsUploadingPrograms] = useState(false);
 
   const downloadProgramTemplate = () => {
     const csvContent = "Name,Description,Type,Price,Billing Cycle,Access Tag,Duration Days,Session Count,Compare Price,Savings Note,Is Active\nYouth Club Monthly,Monthly basketball membership,Subscription,7500,Monthly,club_member,30,,,,true\n10-Session Pack,Credit-based training,Pack,5000,,pack_holder,,10,,,true";
@@ -7635,45 +7636,229 @@ function ProgramsTab({ programs, teams, organization }: any) {
     window.URL.revokeObjectURL(url);
   };
 
-  const handleBulkUploadPrograms = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-    const lines = text.split('\n').filter(line => line.trim());
-    if (lines.length < 2) {
-      toast({ title: "Invalid CSV", description: "File must have a header row and at least one data row", variant: "destructive" });
-      return;
-    }
-    const dataLines = lines.slice(1);
-    let successCount = 0;
-    for (const line of dataLines) {
-      const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
-      if (values.length >= 1 && values[0]) {
-        try {
-          await apiRequest("POST", "/api/programs", {
-            organizationId: organization?.id,
-            name: values[0],
-            description: values[1] || "",
-            type: values[2] || "Subscription",
-            price: parseInt(values[3]) || 0,
-            billingCycle: values[4] || "Monthly",
-            accessTag: values[5] || "club_member",
-            durationDays: values[6] ? parseInt(values[6]) : undefined,
-            sessionCount: values[7] ? parseInt(values[7]) : undefined,
-            comparePrice: values[8] ? parseInt(values[8]) : undefined,
-            savingsNote: values[9] || undefined,
-            isActive: values[10]?.toLowerCase() !== "false",
-            productCategory: "service",
-          });
-          successCount++;
-        } catch (error) {
-          console.error("Failed to create program:", error);
+  const parseCSVLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
         }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
       }
     }
-    queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
-    toast({ title: `Bulk upload complete`, description: `Created ${successCount} programs` });
-    setIsBulkUploadOpen(false);
+    result.push(current.trim());
+    return result;
+  };
+
+  const handleBulkUploadPrograms = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || isUploadingPrograms) return;
+    setIsUploadingPrograms(true);
+    
+    try {
+      const text = await file.text();
+      const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(line => line.trim());
+      if (lines.length < 2) {
+        toast({ title: "Invalid CSV", description: "File must have a header row and at least one data row", variant: "destructive" });
+        return;
+      }
+
+      const headerLine = lines[0];
+      const headers = parseCSVLine(headerLine).map(h => h.toLowerCase().trim().replace(/\r/g, ''));
+      
+      const isStripeFormat = headers.includes('price id') && headers.includes('product id');
+      
+      if (isStripeFormat) {
+        const priceIdIdx = headers.indexOf('price id');
+        const productIdIdx = headers.indexOf('product id');
+        const productNameIdx = headers.indexOf('product name');
+        const descriptionIdx = headers.indexOf('description');
+        const amountIdx = headers.indexOf('amount');
+        const intervalIdx = headers.indexOf('interval');
+        const intervalCountIdx = headers.indexOf('interval count');
+        
+        if (productNameIdx === -1 || amountIdx === -1) {
+          toast({ title: "Invalid Stripe CSV", description: "Missing required columns: Product Name and Amount", variant: "destructive" });
+          return;
+        }
+        
+        const productGroups: Record<string, {
+          productId: string;
+          productName: string;
+          prices: Array<{
+            priceId: string;
+            description: string;
+            amount: number;
+            interval: string;
+            intervalCount: number;
+          }>;
+        }> = {};
+        
+        const dataLines = lines.slice(1);
+        for (const line of dataLines) {
+          const values = parseCSVLine(line).map(v => v.replace(/\r/g, ''));
+          const productId = values[productIdIdx] || '';
+          const productName = values[productNameIdx] || '';
+          const priceId = values[priceIdIdx] || '';
+          const description = (descriptionIdx >= 0 ? values[descriptionIdx] : '') || productName;
+          const amount = parseFloat(values[amountIdx]) || 0;
+          const interval = (intervalIdx >= 0 ? values[intervalIdx] : '') || '';
+          const intervalCount = (intervalCountIdx >= 0 ? parseInt(values[intervalCountIdx]) : 0) || 1;
+          
+          if (!productId || !productName) continue;
+          
+          if (!productGroups[productId]) {
+            productGroups[productId] = {
+              productId,
+              productName,
+              prices: []
+            };
+          }
+          
+          productGroups[productId].prices.push({
+            priceId,
+            description,
+            amount,
+            interval,
+            intervalCount
+          });
+        }
+        
+        const productGroupsList = Object.values(productGroups);
+        if (productGroupsList.length === 0) {
+          toast({ title: "No products found", description: "The CSV file did not contain any valid product data", variant: "destructive" });
+          return;
+        }
+        
+        let successCount = 0;
+        let skippedCount = 0;
+        
+        for (const group of productGroupsList) {
+          const existingProgram = programs.find((p: any) => 
+            p.name === group.productName || (p.stripeProductId && p.stripeProductId === group.productId)
+          );
+          
+          if (existingProgram) {
+            skippedCount++;
+            continue;
+          }
+          
+          const pricingOptions = group.prices.map((price, idx) => {
+            let billingCycle = 'One-time';
+            let durationDays: number | undefined;
+            
+            if (!price.interval || price.interval === '') {
+              billingCycle = 'One-time';
+              durationDays = undefined;
+            } else if (price.interval === 'month') {
+              if (price.intervalCount === 1) {
+                billingCycle = 'Monthly';
+                durationDays = 28;
+              } else {
+                billingCycle = 'One-time';
+                durationDays = price.intervalCount * 30;
+              }
+            } else if (price.interval === 'day') {
+              billingCycle = 'One-time';
+              durationDays = price.intervalCount;
+            } else if (price.interval === 'week') {
+              billingCycle = 'One-time';
+              durationDays = price.intervalCount * 7;
+            } else if (price.interval === 'year') {
+              billingCycle = 'Yearly';
+              durationDays = 365 * price.intervalCount;
+            }
+            
+            return {
+              id: `opt_${Date.now()}_${idx}`,
+              name: price.description || `Option ${idx + 1}`,
+              price: Math.round(price.amount * 100),
+              billingCycle,
+              durationDays,
+              stripePriceId: price.priceId,
+              isDefault: idx === 0
+            };
+          });
+          
+          const firstPrice = pricingOptions[0];
+          
+          try {
+            await apiRequest("POST", "/api/programs", {
+              organizationId: organization?.id,
+              name: group.productName,
+              description: "",
+              type: "Subscription",
+              price: firstPrice?.price || 0,
+              billingCycle: firstPrice?.billingCycle || "Monthly",
+              durationDays: firstPrice?.durationDays,
+              accessTag: "club_member",
+              stripeProductId: group.productId,
+              stripePriceId: firstPrice?.stripePriceId,
+              pricingOptions,
+              isActive: true,
+              productCategory: "service",
+            });
+            successCount++;
+          } catch (error) {
+            console.error("Failed to create program:", group.productName, error);
+          }
+        }
+        
+        queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+        const message = skippedCount > 0 
+          ? `Created ${successCount} programs (${skippedCount} skipped - already exist)`
+          : `Created ${successCount} programs with pricing options`;
+        toast({ title: `Stripe import complete`, description: message });
+        setIsBulkUploadOpen(false);
+        return;
+      }
+      
+      const dataLines = lines.slice(1);
+      let successCount = 0;
+      for (const line of dataLines) {
+        const values = parseCSVLine(line);
+        if (values.length >= 1 && values[0]) {
+          try {
+            await apiRequest("POST", "/api/programs", {
+              organizationId: organization?.id,
+              name: values[0],
+              description: values[1] || "",
+              type: values[2] || "Subscription",
+              price: parseInt(values[3]) || 0,
+              billingCycle: values[4] || "Monthly",
+              accessTag: values[5] || "club_member",
+              durationDays: values[6] ? parseInt(values[6]) : undefined,
+              sessionCount: values[7] ? parseInt(values[7]) : undefined,
+              comparePrice: values[8] ? parseInt(values[8]) : undefined,
+              savingsNote: values[9] || undefined,
+              isActive: values[10]?.toLowerCase() !== "false",
+              productCategory: "service",
+            });
+            successCount++;
+          } catch (error) {
+            console.error("Failed to create program:", error);
+          }
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+      toast({ title: `Bulk upload complete`, description: `Created ${successCount} programs` });
+      setIsBulkUploadOpen(false);
+    } catch (error) {
+      console.error("CSV upload error:", error);
+      toast({ title: "Upload failed", description: "An error occurred while processing the CSV file", variant: "destructive" });
+    } finally {
+      setIsUploadingPrograms(false);
+    }
   };
 
   return (
@@ -7695,14 +7880,26 @@ function ProgramsTab({ programs, teams, organization }: any) {
                 <DialogTitle>Bulk Upload Programs</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <p className="text-sm text-gray-600">Upload a CSV file with columns: Name, Description, Type, Price (in cents), Billing Cycle, Access Tag, Duration Days, Session Count, Compare Price (in cents), Savings Note, Is Active</p>
-                <Input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleBulkUploadPrograms}
-                  data-testid="input-program-csv-upload"
-                />
-                <Button variant="outline" className="w-full" onClick={downloadProgramTemplate} data-testid="button-download-program-template">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Stripe Import (Recommended)</p>
+                  <p className="text-sm text-gray-600">Download your prices.csv directly from Stripe and upload it here. Prices will be grouped by product automatically.</p>
+                  <p className="text-sm font-medium mt-3">Manual Format</p>
+                  <p className="text-sm text-gray-600">Or use columns: Name, Description, Type, Price (in cents), Billing Cycle, Access Tag, Duration Days, Session Count, Compare Price, Savings Note, Is Active</p>
+                </div>
+                {isUploadingPrograms ? (
+                  <div className="flex items-center justify-center py-4 gap-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-600"></div>
+                    <span className="text-sm text-gray-600">Importing programs...</span>
+                  </div>
+                ) : (
+                  <Input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleBulkUploadPrograms}
+                    data-testid="input-program-csv-upload"
+                  />
+                )}
+                <Button variant="outline" className="w-full" onClick={downloadProgramTemplate} disabled={isUploadingPrograms} data-testid="button-download-program-template">
                   <Download className="w-4 h-4 mr-2" />
                   Download CSV Template
                 </Button>

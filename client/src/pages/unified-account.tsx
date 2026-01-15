@@ -1247,7 +1247,7 @@ export default function UnifiedAccount() {
           if (data.success) {
             toast({
               title: "Payment Successful!",
-              description: "Your new player has been added. Welcome to the team!",
+              description: "Thank you, your payment was successful!",
             });
             
             // Refetch payment data

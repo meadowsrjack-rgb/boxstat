@@ -2514,25 +2514,26 @@ export default function UnifiedAccount() {
                                   },
                                 }) as { url: string };
 
-                                // Redirect to Stripe checkout - use in-app browser for iOS
+                                // Redirect to Stripe checkout
                                 if (Capacitor.isNativePlatform()) {
-                                  try {
-                                    console.log('[Payment] Opening Stripe checkout in native browser:', response.url);
-                                    await Browser.open({ 
-                                      url: response.url,
-                                      presentationStyle: 'fullscreen',
-                                      windowName: '_blank',
-                                    });
-                                    // Close the dialog after browser opens
-                                    setPaymentDialogOpen(false);
-                                    setIsProcessingPayment(false);
-                                  } catch (browserError: any) {
-                                    console.error('[Payment] Browser.open failed:', browserError);
-                                    // Fallback to window.open
-                                    window.open(response.url, '_blank');
-                                    setPaymentDialogOpen(false);
-                                    setIsProcessingPayment(false);
-                                  }
+                                  // Close dialog first to ensure clean state
+                                  setPaymentDialogOpen(false);
+                                  setIsProcessingPayment(false);
+                                  
+                                  // Small delay to let dialog close, then open browser
+                                  setTimeout(async () => {
+                                    try {
+                                      console.log('[Payment] Opening Stripe checkout URL:', response.url);
+                                      await Browser.open({ 
+                                        url: response.url,
+                                        toolbarColor: '#dc2626',
+                                      });
+                                    } catch (browserError: any) {
+                                      console.error('[Payment] Browser.open failed:', browserError);
+                                      // Ultimate fallback - open in Safari
+                                      window.location.href = response.url;
+                                    }
+                                  }, 100);
                                 } else {
                                   window.location.href = response.url;
                                 }

@@ -1816,7 +1816,7 @@ export default function UnifiedAccount() {
                         >
                           <div className="aspect-[16/9] bg-gray-100 overflow-hidden">
                             {item.coverImageUrl ? (
-                              <img src={item.coverImageUrl} alt={item.name} className="w-full h-full object-cover" />
+                              <img src={item.coverImageUrl} alt={item.name} className="w-full h-full object-contain bg-gray-50" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">
                                 <Crown className="w-12 h-12 text-gray-300" />

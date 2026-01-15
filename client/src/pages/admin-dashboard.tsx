@@ -8255,10 +8255,15 @@ function ProgramsTab({ programs, teams, organization }: any) {
                                   const formData = new FormData();
                                   formData.append('image', file);
                                   try {
-                                    const res = await fetch('/api/upload/product-image', { method: 'POST', body: formData, credentials: 'include' });
+                                    const headers: Record<string, string> = {};
+                                    const token = localStorage.getItem('authToken');
+                                    if (token) headers['Authorization'] = `Bearer ${token}`;
+                                    const res = await fetch('/api/upload/product-image', { method: 'POST', body: formData, credentials: 'include', headers });
                                     const data = await res.json();
                                     if (data.imageUrl) {
                                       field.onChange(data.imageUrl);
+                                    } else if (data.error) {
+                                      console.error('Upload error:', data.error);
                                     }
                                   } catch (err) {
                                     console.error('Upload failed:', err);

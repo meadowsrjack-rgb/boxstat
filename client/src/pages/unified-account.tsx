@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -1966,8 +1967,8 @@ export default function UnifiedAccount() {
               </Card>
             </Collapsible>
 
-            {/* Payment Dialog */}
-            <Dialog open={paymentDialogOpen} onOpenChange={(open) => {
+            {/* Payment Drawer - slides up from bottom for better mobile UX */}
+            <Drawer open={paymentDialogOpen} onOpenChange={(open) => {
               setPaymentDialogOpen(open);
               if (!open) {
                 setIsStoreItemPurchase(false);
@@ -1979,14 +1980,14 @@ export default function UnifiedAccount() {
                 setWaiverScrollStatus({});
               }
             }}>
-              <DialogContent className="max-w-md max-h-[85vh] mt-[env(safe-area-inset-top,20px)]" data-testid="dialog-make-payment">
-                      <DialogHeader>
-                        <DialogTitle>{isStoreItemPurchase ? "Purchase Item" : "Make a Payment"}</DialogTitle>
-                        <DialogDescription>
+              <DrawerContent className="max-h-[90vh]" data-testid="dialog-make-payment">
+                      <DrawerHeader>
+                        <DrawerTitle>{isStoreItemPurchase ? "Purchase Item" : "Make a Payment"}</DrawerTitle>
+                        <DrawerDescription>
                           {isStoreItemPurchase ? "Complete your store purchase" : "Select a program and player to enroll"}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
+                        </DrawerDescription>
+                      </DrawerHeader>
+                      <div className="space-y-4 px-4 pb-8 overflow-y-auto">
                         {/* Program Selection - only show for program purchases */}
                         {!isStoreItemPurchase && (
                           <div className="space-y-2">
@@ -2564,8 +2565,8 @@ export default function UnifiedAccount() {
                           </Button>
                         </div>
                       </div>
-                    </DialogContent>
-                  </Dialog>
+                    </DrawerContent>
+                  </Drawer>
             
             {/* Payment History Component */}
             <PaymentHistory selectedPlayer={selectedStorePlayer} />

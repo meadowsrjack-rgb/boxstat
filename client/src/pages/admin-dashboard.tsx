@@ -7625,6 +7625,8 @@ function ProgramsTab({ programs, teams, organization }: any) {
       billingCycle: "Monthly",
       billingModel: "Per Player",
       durationDays: 90,
+      durationValue: 90,
+      durationUnit: "days",
       allowInstallments: false,
       installments: 3,
       installmentPrice: 0,
@@ -7712,6 +7714,19 @@ function ProgramsTab({ programs, teams, organization }: any) {
 
   const handleEdit = (program: any) => {
     setEditingProgram(program);
+    const durationDays = program.durationDays || 90;
+    let durationValue = durationDays;
+    let durationUnit = "days";
+    if (durationDays % 365 === 0 && durationDays >= 365) {
+      durationValue = durationDays / 365;
+      durationUnit = "years";
+    } else if (durationDays % 30 === 0 && durationDays >= 30) {
+      durationValue = durationDays / 30;
+      durationUnit = "months";
+    } else if (durationDays % 7 === 0 && durationDays >= 7) {
+      durationValue = durationDays / 7;
+      durationUnit = "weeks";
+    }
     form.reset({
       organizationId: program.organizationId,
       name: program.name,
@@ -7720,7 +7735,9 @@ function ProgramsTab({ programs, teams, organization }: any) {
       price: program.price || 0,
       billingCycle: program.billingCycle || "Monthly",
       billingModel: program.billingModel || "Per Player",
-      durationDays: program.durationDays || 90,
+      durationDays: durationDays,
+      durationValue: durationValue,
+      durationUnit: durationUnit,
       allowInstallments: program.allowInstallments || false,
       installments: program.installments || 3,
       installmentPrice: program.installmentPrice || 0,
@@ -8287,26 +8304,66 @@ function ProgramsTab({ programs, teams, organization }: any) {
                   )}
 
                   {selectedType === "One-Time" && (
-                    <FormField
-                      control={form.control}
-                      name="durationDays"
-                      render={({ field }) => (
-                        <FormItem className="mt-3">
-                          <FormLabel>Duration (Days)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
-                              placeholder="90" 
-                              data-testid="input-duration-days" 
-                            />
-                          </FormControl>
-                          <FormDescription>How long access lasts after purchase</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="mt-3">
+                      <FormLabel>Duration</FormLabel>
+                      <div className="flex gap-2 mt-1">
+                        <FormField
+                          control={form.control}
+                          name="durationValue"
+                          render={({ field }) => (
+                            <FormItem className="flex-1">
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  {...field} 
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value) || 0;
+                                    field.onChange(value);
+                                    const unit = form.getValues("durationUnit") || "days";
+                                    const multipliers: Record<string, number> = { days: 1, weeks: 7, months: 30, years: 365 };
+                                    form.setValue("durationDays", value * (multipliers[unit] || 1));
+                                  }}
+                                  placeholder="28" 
+                                  data-testid="input-duration-value" 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="durationUnit"
+                          render={({ field }) => (
+                            <FormItem className="w-32">
+                              <Select 
+                                value={field.value || "days"} 
+                                onValueChange={(value) => {
+                                  field.onChange(value);
+                                  const numValue = form.getValues("durationValue") || 0;
+                                  const multipliers: Record<string, number> = { days: 1, weeks: 7, months: 30, years: 365 };
+                                  form.setValue("durationDays", numValue * (multipliers[value] || 1));
+                                }}
+                              >
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-duration-unit">
+                                    <SelectValue placeholder="Unit" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="days">Days</SelectItem>
+                                  <SelectItem value="weeks">Weeks</SelectItem>
+                                  <SelectItem value="months">Months</SelectItem>
+                                  <SelectItem value="years">Years</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">How long access lasts after purchase</p>
+                    </div>
                   )}
 
                   {selectedType === "Pack" && (

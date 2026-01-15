@@ -1806,7 +1806,6 @@ export default function UnifiedAccount() {
                           <CardContent className={item.coverImageUrl ? "p-4" : "p-4"}>
                             <div className="flex items-start justify-between mb-2">
                               <h4 className="font-semibold">{item.name}</h4>
-                              {isSubscription && <Badge className="bg-amber-100 text-amber-700 border-0">Subscription</Badge>}
                               {isPack && <Badge className="bg-blue-100 text-blue-700 border-0">{item.sessionCount || ""} Pack</Badge>}
                               {isStore && <Badge className="bg-purple-100 text-purple-700 border-0">Store</Badge>}
                             </div>
@@ -1814,16 +1813,7 @@ export default function UnifiedAccount() {
                               <p className="text-sm text-gray-500 mb-3 line-clamp-2">{item.description}</p>
                             )}
                             <div className="flex items-center justify-between">
-                              <div>
-                                <span className="text-xl font-bold">${(item.price / 100).toFixed(2)}</span>
-                                {isSubscription && item.billingCycle && (
-                                  <span className="text-gray-400 text-sm">/{item.billingCycle.toLowerCase()}</span>
-                                )}
-                                {item.savingsNote && (
-                                  <span className="ml-2 text-sm font-medium text-green-600">{item.savingsNote}</span>
-                                )}
-                              </div>
-                              <Button size="sm" className="bg-red-600 hover:bg-red-700">
+                              <Button size="sm" className="bg-red-600 hover:bg-red-700 ml-auto">
                                 {isStore ? "Buy" : "Enroll"}
                               </Button>
                             </div>

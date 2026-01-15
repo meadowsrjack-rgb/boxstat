@@ -1668,7 +1668,7 @@ export const insertProductSchema = z.object({
   slug: z.string().optional(),
   description: z.string().optional(),
   type: z.string().optional(),
-  billingCycle: z.string().optional(),
+  billingCycle: z.string().nullish(), // Accept null, undefined, or string
   price: z.number().optional(),
   billingModel: z.string().optional(),
   pricingModel: z.string().optional(), // DEPRECATED
@@ -1686,7 +1686,7 @@ export const insertProductSchema = z.object({
   autoAssignPlayers: z.boolean().default(false),
   linkedAwards: z.array(z.string()).default([]),
   accessTag: z.string().optional(), // "club_member" or "pack_holder"
-  sessionCount: z.number().optional(), // Number of sessions for one-time packs
+  sessionCount: z.number().nullish(), // Accept null, undefined, or number
   adminNotes: z.string().optional(),
   isActive: z.boolean().default(true),
   // Social toggle fields for programs

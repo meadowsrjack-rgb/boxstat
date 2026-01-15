@@ -1979,7 +1979,7 @@ export default function UnifiedAccount() {
                 setWaiverScrollStatus({});
               }
             }}>
-              <DialogContent className="max-w-md" data-testid="dialog-make-payment">
+              <DialogContent className="max-w-md max-h-[85vh] mt-[env(safe-area-inset-top,20px)]" data-testid="dialog-make-payment">
                       <DialogHeader>
                         <DialogTitle>{isStoreItemPurchase ? "Purchase Item" : "Make a Payment"}</DialogTitle>
                         <DialogDescription>
@@ -2516,12 +2516,23 @@ export default function UnifiedAccount() {
 
                                 // Redirect to Stripe checkout - use in-app browser for iOS
                                 if (Capacitor.isNativePlatform()) {
-                                  await Browser.open({ 
-                                    url: response.url,
-                                    presentationStyle: 'fullscreen',
-                                  });
-                                  // Close the dialog and reset state - browser will handle redirect
-                                  setIsProcessingPayment(false);
+                                  try {
+                                    console.log('[Payment] Opening Stripe checkout in native browser:', response.url);
+                                    await Browser.open({ 
+                                      url: response.url,
+                                      presentationStyle: 'fullscreen',
+                                      windowName: '_blank',
+                                    });
+                                    // Close the dialog after browser opens
+                                    setPaymentDialogOpen(false);
+                                    setIsProcessingPayment(false);
+                                  } catch (browserError: any) {
+                                    console.error('[Payment] Browser.open failed:', browserError);
+                                    // Fallback to window.open
+                                    window.open(response.url, '_blank');
+                                    setPaymentDialogOpen(false);
+                                    setIsProcessingPayment(false);
+                                  }
                                 } else {
                                   window.location.href = response.url;
                                 }

@@ -10821,6 +10821,7 @@ function MigrationsTab({ organization, users }: any) {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadType, setUploadType] = useState<'subscriptions' | 'payments'>('subscriptions');
 
   const { data: migrations = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/migrations'],
@@ -11159,6 +11160,229 @@ function MigrationsTab({ organization, users }: any) {
     toast({ title: "Import complete", description: `Created ${successCount} migration entries from ${emailGroups.length} unique emails (${lines.length - 1} subscription rows)` });
   };
 
+  const handlePaymentsCsvUpload = async () => {
+    if (!csvFile || isUploading) return;
+    setIsUploading(true);
+    setIsUploadDialogOpen(false);
+    
+    const text = await csvFile.text();
+    const lines = text.replace(/\r\n/g, '\n').split('\n').filter(line => line.trim());
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+    
+    const headerMap: Record<string, string> = {
+      'amount': 'amount',
+      'status': 'status',
+      'description': 'description',
+      'customer': 'customer',
+      'date': 'date',
+      'payment method': 'paymentMethod',
+      'id': 'paymentId',
+    };
+    
+    const groupedByEmail: Record<string, {
+      email: string;
+      payments: Array<{
+        amount: number;
+        description: string;
+        date: string;
+        paymentId: string;
+      }>;
+    }> = {};
+    
+    let skippedDateCount = 0;
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values: string[] = [];
+      let current = '';
+      let inQuotes = false;
+      const line = lines[i];
+      
+      for (let j = 0; j < line.length; j++) {
+        const char = line[j];
+        if (char === '"') {
+          if (inQuotes && line[j + 1] === '"') {
+            current += '"';
+            j++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          values.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      values.push(current.trim());
+      
+      const row: Record<string, string> = {};
+      headers.forEach((h, idx) => {
+        const fieldName = headerMap[h] || h.replace(/[^a-z0-9]/gi, '');
+        row[fieldName] = values[idx] || '';
+      });
+      
+      const email = row.customer?.toLowerCase();
+      if (!email || !email.includes('@')) continue;
+      
+      const amountStr = row.amount?.replace(/[^0-9.-]/g, '') || '0';
+      const amount = parseFloat(amountStr);
+      
+      if (!groupedByEmail[email]) {
+        groupedByEmail[email] = { email, payments: [] };
+      }
+      
+      // Parse date - require year in the data for historical accuracy
+      let parsedDate = '';
+      const rawDate = row.date?.trim() || '';
+      if (rawDate) {
+        // Check if date contains a year (2020-2030 range)
+        const hasYear = /\b20[2-3]\d\b/.test(rawDate);
+        if (!hasYear) {
+          console.warn(`Date "${rawDate}" for ${email} is missing year, skipping row`);
+          skippedDateCount++;
+          continue;
+        }
+        
+        // Try direct parsing (handles ISO, "Jan 14, 2025, 2:45 PM", etc.)
+        const testDate = new Date(rawDate);
+        
+        if (!isNaN(testDate.getTime())) {
+          // Verify the parsed date has a reasonable year (2020-2030 range)
+          const year = testDate.getFullYear();
+          if (year >= 2020 && year <= 2030) {
+            parsedDate = testDate.toISOString();
+          } else {
+            console.warn(`Date "${rawDate}" for ${email} has unexpected year ${year}, skipping row`);
+            skippedDateCount++;
+            continue;
+          }
+        } else {
+          console.warn(`Could not parse date "${rawDate}" for ${email}, skipping row`);
+          skippedDateCount++;
+          continue;
+        }
+      } else {
+        console.warn(`Missing date for payment from ${email}, skipping row`);
+        skippedDateCount++;
+        continue;
+      }
+      
+      groupedByEmail[email].payments.push({
+        amount,
+        description: row.description || '',
+        date: parsedDate,
+        paymentId: row.paymentId || `pay_${Date.now()}_${i}`,
+      });
+    }
+    
+    let successCount = 0;
+    let matchedCount = 0;
+    let unmatchedCount = 0;
+    const emailGroups = Object.values(groupedByEmail);
+    
+    for (const emailData of emailGroups) {
+      try {
+        const subscriptions: any[] = [];
+        const items: any[] = [];
+        
+        for (const payment of emailData.payments) {
+          const matchedProgram = programs.find((p: any) => {
+            const programName = p.name?.toLowerCase() || '';
+            const paymentDesc = payment.description?.toLowerCase() || '';
+            return programName && paymentDesc && (
+              paymentDesc.includes(programName) || 
+              programName.includes(paymentDesc) ||
+              paymentDesc.split(' ').some((word: string) => word.length > 3 && programName.includes(word))
+            );
+          });
+          
+          let periodEndUtc = '';
+          if (payment.date && matchedProgram) {
+            const paymentDate = new Date(payment.date);
+            if (!isNaN(paymentDate.getTime())) {
+              const defaultOption = matchedProgram.pricingOptions?.find((o: any) => o.isDefault) || matchedProgram.pricingOptions?.[0];
+              const durationDays = defaultOption?.durationDays || matchedProgram.durationDays || 28;
+              const endDate = new Date(paymentDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+              periodEndUtc = endDate.toISOString();
+            }
+          }
+          
+          subscriptions.push({
+            subscriptionId: payment.paymentId,
+            plan: matchedProgram?.stripeProductId || '',
+            quantity: 1,
+            currency: 'usd',
+            interval: '',
+            amount: String(Math.round(payment.amount * 100)),
+            status: 'active',
+            createdUtc: payment.date || '',
+            startDateUtc: payment.date || '',
+            currentPeriodStartUtc: payment.date || '',
+            currentPeriodEndUtc: periodEndUtc,
+            metadata: { description: payment.description, programId: matchedProgram?.id?.toString() || '' },
+          });
+          
+          if (matchedProgram) {
+            matchedCount++;
+            const existingItem = items.find((item: any) => item.itemId === String(matchedProgram.id));
+            if (!existingItem) {
+              items.push({
+                itemId: String(matchedProgram.id),
+                itemType: 'program',
+                itemName: matchedProgram.name,
+                quantity: 1,
+              });
+            }
+          } else {
+            unmatchedCount++;
+          }
+        }
+        
+        await apiRequest('/api/admin/migrations', { 
+          method: 'POST', 
+          data: { 
+            email: emailData.email, 
+            stripeCustomerId: `legacy_${Date.now()}`,
+            customerName: '',
+            customerDescription: 'Imported from payments CSV',
+            stripeSubscriptionIds: subscriptions.map(s => s.subscriptionId),
+            subscriptions,
+            items,
+          } 
+        });
+        successCount++;
+      } catch (e: any) {
+        console.error('Failed to import payment migration:', emailData.email, e?.message || e);
+      }
+    }
+    
+    queryClient.invalidateQueries({ queryKey: ['/api/admin/migrations'] });
+    setCsvFile(null);
+    setIsUploading(false);
+    
+    let description = `Created ${successCount} migration entries. Matched ${matchedCount} payments to programs.`;
+    if (skippedDateCount > 0) {
+      description += ` Skipped ${skippedDateCount} rows with invalid dates.`;
+    }
+    if (unmatchedCount > 0) {
+      description += ` ${unmatchedCount} payments could not be matched to programs.`;
+    }
+    
+    toast({ 
+      title: "Payments import complete", 
+      description,
+      variant: skippedDateCount > 0 || unmatchedCount > 0 ? "default" : "default"
+    });
+  };
+
+  const handleUpload = () => {
+    if (uploadType === 'payments') {
+      handlePaymentsCsvUpload();
+    } else {
+      handleCsvUpload();
+    }
+  };
+
   return (
     <Card data-testid="migrations-tab">
       <CardHeader>
@@ -11183,10 +11407,40 @@ function MigrationsTab({ organization, users }: any) {
                 <DialogHeader>
                   <DialogTitle>Bulk Upload Migrations</DialogTitle>
                   <DialogDescription>
-                    Upload a Stripe subscription export CSV. Rows with the same email will be grouped together with multiple subscription IDs.
+                    Upload a Stripe export CSV to import legacy customer data.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Button
+                      variant={uploadType === 'subscriptions' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setUploadType('subscriptions')}
+                      className="flex-1"
+                    >
+                      Subscriptions CSV
+                    </Button>
+                    <Button
+                      variant={uploadType === 'payments' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setUploadType('payments')}
+                      className="flex-1"
+                    >
+                      Payments CSV
+                    </Button>
+                  </div>
+                  
+                  <div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground">
+                    {uploadType === 'subscriptions' ? (
+                      <p>Upload a Stripe <strong>Subscriptions</strong> export. Rows with the same email will be grouped with multiple subscription IDs and period dates.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        <p>Upload a Stripe <strong>Payments</strong> export. Payments will be matched to programs by description and end dates calculated from program duration.</p>
+                        <p className="text-amber-600 font-medium">Note: Dates must include the year (e.g., "Jan 14, 2025"). Rows without valid dates will be skipped.</p>
+                      </div>
+                    )}
+                  </div>
+                  
                   <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
                     <Download className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground flex-1">Need the template?</span>
@@ -11194,12 +11448,14 @@ function MigrationsTab({ organization, users }: any) {
                       variant="outline" 
                       size="sm"
                       onClick={() => {
-                        const template = "id,Customer ID,Customer Description,Customer Email,Plan,Quantity,Currency,Interval,Amount,Status,Created (UTC),Start Date (UTC),Current Period Start (UTC),Current Period End (UTC),Customer Name\nsub_xxx,cus_xxx,,example@email.com,price_xxx,1,usd,month,2500,active,2025-01-01 00:00,2025-01-01 00:00,2025-01-01 00:00,2025-02-01 00:00,John Doe";
+                        const template = uploadType === 'subscriptions'
+                          ? "id,Customer ID,Customer Description,Customer Email,Plan,Quantity,Currency,Interval,Amount,Status,Created (UTC),Start Date (UTC),Current Period Start (UTC),Current Period End (UTC),Customer Name\nsub_xxx,cus_xxx,,example@email.com,price_xxx,1,usd,month,2500,active,2025-01-01 00:00,2025-01-01 00:00,2025-01-01 00:00,2025-02-01 00:00,John Doe"
+                          : "Amount,Status,Payment method,Description,Customer,Date\n$350.00,Succeeded,**** 1234,Youth Club,customer@email.com,Jan 14 2025 2:45 PM";
                         const blob = new Blob([template], { type: 'text/csv' });
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = 'stripe_subscriptions_template.csv';
+                        a.download = uploadType === 'subscriptions' ? 'stripe_subscriptions_template.csv' : 'stripe_payments_template.csv';
                         a.click();
                         URL.revokeObjectURL(url);
                       }}
@@ -11217,7 +11473,7 @@ function MigrationsTab({ organization, users }: any) {
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsUploadDialogOpen(false)} disabled={isUploading}>Cancel</Button>
-                  <Button onClick={handleCsvUpload} disabled={!csvFile || isUploading}>
+                  <Button onClick={handleUpload} disabled={!csvFile || isUploading}>
                     {isUploading ? "Uploading..." : "Upload"}
                   </Button>
                 </DialogFooter>

@@ -9736,6 +9736,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Helper function to find subscription dates for a program
+      const findSubscriptionDatesForProgram = (programId: string, itemName?: string) => {
+        const subscriptions = migration.subscriptions || [];
+        const programIdStr = String(programId);
+        
+        // First try to match by programId in metadata (convert both to strings)
+        for (const sub of subscriptions) {
+          const metadata = sub.metadata || {};
+          const metaProgramId = metadata.programId ? String(metadata.programId) : '';
+          if (metaProgramId === programIdStr) {
+            return {
+              startDate: sub.currentPeriodStartUtc || sub.startDateUtc || sub.createdUtc || undefined,
+              endDate: sub.currentPeriodEndUtc || undefined,
+            };
+          }
+        }
+        
+        // Second try to match by item name in description
+        if (itemName) {
+          const itemNameLower = itemName.toLowerCase();
+          for (const sub of subscriptions) {
+            const metadata = sub.metadata || {};
+            const descLower = (metadata.description || '').toLowerCase();
+            if (descLower && (descLower.includes(itemNameLower) || itemNameLower.includes(descLower.split(' ')[0]))) {
+              return {
+                startDate: sub.currentPeriodStartUtc || sub.startDateUtc || sub.createdUtc || undefined,
+                endDate: sub.currentPeriodEndUtc || undefined,
+              };
+            }
+          }
+        }
+        
+        // Fallback: use the first subscription's dates only if there's exactly one
+        if (subscriptions.length === 1) {
+          const firstSub = subscriptions[0];
+          return {
+            startDate: firstSub.currentPeriodStartUtc || firstSub.startDateUtc || firstSub.createdUtc || undefined,
+            endDate: firstSub.currentPeriodEndUtc || undefined,
+          };
+        }
+        
+        return { startDate: undefined, endDate: undefined };
+      };
+
       // Enroll player in the SPECIFIC item being assigned (not all items)
       if (itemId) {
         // Find the specific item being assigned
@@ -9743,6 +9787,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (itemToAssign && itemToAssign.itemType === 'program') {
           try {
             const program = await storage.getProgram(itemToAssign.itemId);
+            const { startDate, endDate } = findSubscriptionDatesForProgram(itemToAssign.itemId, itemToAssign.itemName);
             
             await storage.createEnrollment({
               organizationId: player.organizationId,
@@ -9750,11 +9795,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               accountHolderId: userId,
               profileId: playerId,
               status: 'active',
-              source: 'migrated',
+              source: 'migration',
               remainingCredits: program?.sessionCount ?? undefined,
               totalCredits: program?.sessionCount ?? undefined,
+              startDate: startDate || new Date().toISOString(),
+              endDate: endDate || undefined,
+              originalMigrationDate: new Date().toISOString(),
+              isLegacyPricing: true,
             });
-            console.log(`✅ Enrolled player ${playerId} in program ${itemToAssign.itemId} (${itemToAssign.itemName})`);
+            console.log(`✅ Enrolled player ${playerId} in program ${itemToAssign.itemId} (${itemToAssign.itemName}) with end date: ${endDate || 'none'}`);
             
             // Update player's payment status to paid (legacy subscription covers payment)
             await storage.updateUser(playerId, { paymentStatus: 'paid' });
@@ -9769,6 +9818,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (item.itemId && item.itemType === 'program') {
             try {
               const program = await storage.getProgram(item.itemId);
+              const { startDate, endDate } = findSubscriptionDatesForProgram(item.itemId, item.itemName);
               
               await storage.createEnrollment({
                 organizationId: player.organizationId,
@@ -9776,11 +9826,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 accountHolderId: userId,
                 profileId: playerId,
                 status: 'active',
-                source: 'migrated',
+                source: 'migration',
                 remainingCredits: program?.sessionCount ?? undefined,
                 totalCredits: program?.sessionCount ?? undefined,
+                startDate: startDate || new Date().toISOString(),
+                endDate: endDate || undefined,
+                originalMigrationDate: new Date().toISOString(),
+                isLegacyPricing: true,
               });
-              console.log(`✅ Enrolled player ${playerId} in program ${item.itemId} (${item.itemName})`);
+              console.log(`✅ Enrolled player ${playerId} in program ${item.itemId} (${item.itemName}) with end date: ${endDate || 'none'}`);
               
               // Update player's payment status to paid
               await storage.updateUser(playerId, { paymentStatus: 'paid' });

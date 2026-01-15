@@ -1905,6 +1905,11 @@ export default function UnifiedAccount() {
                               ? `${player.firstName} ${player.lastName}` 
                               : user ? `${(user as any).firstName || ''} ${(user as any).lastName || ''}`.trim() || 'You' : 'You';
                             
+                            const endDate = enrollment.endDate ? new Date(enrollment.endDate) : null;
+                            const now = new Date();
+                            const isExpired = endDate && endDate < now;
+                            const isExpiringSoon = endDate && !isExpired && (endDate.getTime() - now.getTime()) < 14 * 24 * 60 * 60 * 1000;
+                            
                             return (
                               <div key={enrollment.id} className="flex items-center justify-between py-3 px-4 border rounded-lg">
                                 <div className="flex items-center gap-3">
@@ -1928,11 +1933,28 @@ export default function UnifiedAccount() {
                                         <span className="text-xs text-gray-500">{remainingCredits}/{totalCredits} sessions</span>
                                       </div>
                                     )}
+                                    {endDate && !isPack && (
+                                      <p className={`text-xs mt-1 ${isExpired ? 'text-red-600' : isExpiringSoon ? 'text-amber-600' : 'text-gray-500'}`}>
+                                        {isExpired 
+                                          ? `Expired ${endDate.toLocaleDateString()}` 
+                                          : `Expires ${endDate.toLocaleDateString()}`}
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
-                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                  Active
-                                </Badge>
+                                {isExpired ? (
+                                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                                    Expired
+                                  </Badge>
+                                ) : isExpiringSoon ? (
+                                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                                    Expiring Soon
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                    Active
+                                  </Badge>
+                                )}
                               </div>
                             );
                           })}

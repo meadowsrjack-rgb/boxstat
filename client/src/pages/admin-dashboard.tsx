@@ -8938,7 +8938,6 @@ function ProgramsTab({ programs, teams, organization }: any) {
                   />
                 </TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Teams</TableHead>
                 <TableHead>Status</TableHead>
@@ -8968,18 +8967,6 @@ function ProgramsTab({ programs, teams, organization }: any) {
                           <div className="text-xs text-gray-500 truncate max-w-[200px]">{program.description}</div>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={
-                        program.type === "Subscription" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                        program.type === "Pack" ? "bg-purple-50 text-purple-700 border-purple-200" :
-                        "bg-green-50 text-green-700 border-green-200"
-                      }>
-                        {program.type || "One-Time"}
-                      </Badge>
-                      {program.billingCycle && program.type === "Subscription" && (
-                        <div className="text-xs text-gray-500 mt-1">{program.billingCycle}</div>
-                      )}
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">{formatPrice(program.price)}</div>

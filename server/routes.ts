@@ -1396,14 +1396,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Add recurring for subscriptions (not for bundle purchases)
       if (isSubscription) {
-        const interval = (program.billingCycle || 'month').toLowerCase();
-        // Map billing cycle to Stripe interval
-        const stripeInterval = interval === 'monthly' ? 'month' : 
-                               interval === 'yearly' ? 'year' : 
-                               interval === 'weekly' ? 'week' :
-                               interval === 'daily' ? 'day' : interval;
+        const billingCycle = (program.billingCycle || 'Monthly').toLowerCase();
+        // Map billing cycle to Stripe interval and interval_count
+        // Stripe only supports: day, week, month, year with optional interval_count
+        let stripeInterval: 'day' | 'week' | 'month' | 'year' = 'month';
+        let intervalCount = 1;
+        
+        if (billingCycle === 'monthly' || billingCycle === 'month') {
+          stripeInterval = 'month';
+          intervalCount = 1;
+        } else if (billingCycle === 'quarterly') {
+          stripeInterval = 'month';
+          intervalCount = 3;
+        } else if (billingCycle === '6-month' || billingCycle === '6 month' || billingCycle === 'semi-annual') {
+          stripeInterval = 'month';
+          intervalCount = 6;
+        } else if (billingCycle === 'yearly' || billingCycle === 'year' || billingCycle === 'annual') {
+          stripeInterval = 'year';
+          intervalCount = 1;
+        } else if (billingCycle === 'weekly' || billingCycle === 'week') {
+          stripeInterval = 'week';
+          intervalCount = 1;
+        } else if (billingCycle === 'daily' || billingCycle === 'day') {
+          stripeInterval = 'day';
+          intervalCount = 1;
+        }
+        
         mainLineItem.price_data.recurring = {
-          interval: stripeInterval as 'day' | 'week' | 'month' | 'year',
+          interval: stripeInterval,
+          interval_count: intervalCount,
         };
       }
       
@@ -1452,13 +1473,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // For subscriptions, the fee must also be recurring
         if (isSubscription) {
-          const interval = (program.billingCycle || 'month').toLowerCase();
-          const stripeInterval = interval === 'monthly' ? 'month' : 
-                                 interval === 'yearly' ? 'year' : 
-                                 interval === 'weekly' ? 'week' :
-                                 interval === 'daily' ? 'day' : interval;
+          const billingCycle = (program.billingCycle || 'Monthly').toLowerCase();
+          let stripeInterval: 'day' | 'week' | 'month' | 'year' = 'month';
+          let intervalCount = 1;
+          
+          if (billingCycle === 'monthly' || billingCycle === 'month') {
+            stripeInterval = 'month';
+            intervalCount = 1;
+          } else if (billingCycle === 'quarterly') {
+            stripeInterval = 'month';
+            intervalCount = 3;
+          } else if (billingCycle === '6-month' || billingCycle === '6 month' || billingCycle === 'semi-annual') {
+            stripeInterval = 'month';
+            intervalCount = 6;
+          } else if (billingCycle === 'yearly' || billingCycle === 'year' || billingCycle === 'annual') {
+            stripeInterval = 'year';
+            intervalCount = 1;
+          } else if (billingCycle === 'weekly' || billingCycle === 'week') {
+            stripeInterval = 'week';
+            intervalCount = 1;
+          } else if (billingCycle === 'daily' || billingCycle === 'day') {
+            stripeInterval = 'day';
+            intervalCount = 1;
+          }
+          
           platformFeeItem.price_data.recurring = {
-            interval: stripeInterval as 'day' | 'week' | 'month' | 'year',
+            interval: stripeInterval,
+            interval_count: intervalCount,
           };
         }
         

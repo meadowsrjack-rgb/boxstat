@@ -1,6 +1,6 @@
 import { db } from "../db";
 import { users, awardDefinitions, userAwards, attendances, productEnrollments, rsvpResponses } from "@shared/schema";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, or } from "drizzle-orm";
 import type { IStorage } from "../storage";
 import type { TriggerCategory, SelectAwardDefinition } from "@shared/schema";
 
@@ -358,11 +358,18 @@ async function evaluateTimeAward(user: any, award: SelectAwardDefinition): Promi
 async function evaluateStoreAward(userId: string, award: SelectAwardDefinition): Promise<boolean> {
   if (!award.referenceId) return false;
   
+  // Check if user (or their linked players) has purchased the specific product
+  // referenceId should contain the product ID (programId in enrollments table)
   const purchases = await db
     .select()
     .from(productEnrollments)
     .where(and(
-      eq(productEnrollments.accountHolderId, userId),
+      // Check for parent purchases (accountHolderId) OR player purchases (profileId)
+      or(
+        eq(productEnrollments.accountHolderId, userId),
+        eq(productEnrollments.profileId, userId)
+      ),
+      eq(productEnrollments.programId, award.referenceId),
       eq(productEnrollments.status, 'active')
     ));
   

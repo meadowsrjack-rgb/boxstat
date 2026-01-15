@@ -1649,6 +1649,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       totalCredits: program.sessionCount ?? undefined,
                     });
                     console.log(`✅ Created enrollment for player ${playerId} in program ${packageId}`);
+                    
+                    // Evaluate store awards for the player after purchase
+                    try {
+                      await evaluateAwardsForUser(playerId, storage, { category: 'store' });
+                      console.log(`✅ Awards evaluated for player ${playerId} after store purchase`);
+                    } catch (awardError: any) {
+                      console.error('⚠️ Award evaluation failed (non-fatal):', awardError.message);
+                    }
                   } else {
                     console.log(`ℹ️ Player ${playerId} already has enrollment for program ${packageId}`);
                   }
@@ -1779,6 +1787,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     totalCredits: program.sessionCount ?? undefined,
                   });
                   console.log(`✅ Created enrollment for player ${playerId} in program ${packageId}`);
+                  
+                  // Evaluate store awards for the player after purchase
+                  try {
+                    await evaluateAwardsForUser(playerId, storage, { category: 'store' });
+                    console.log(`✅ Awards evaluated for player ${playerId} after store purchase`);
+                  } catch (awardError: any) {
+                    console.error('⚠️ Award evaluation failed (non-fatal):', awardError.message);
+                  }
                 } else if (hasEnrollment) {
                   console.log(`ℹ️ Player ${playerId} already has enrollment for program ${packageId}`);
                 }

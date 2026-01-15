@@ -5197,6 +5197,12 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
   const { data: teams = [] } = useQuery<any[]>({
     queryKey: ["/api/teams"],
   });
+  
+  // Fetch store products for store trigger awards
+  const { data: allStoreProducts = [] } = useQuery<any[]>({
+    queryKey: ["/api/products"],
+  });
+  const storeGoodsProducts = allStoreProducts.filter((p: any) => p.productCategory === 'goods' && p.isActive !== false);
 
   const form = useForm({
     resolver: zodResolver(awardFormSchema),
@@ -6150,15 +6156,26 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                         name="referenceId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Product SKU or ID</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                placeholder="e.g., program-foundation"
-                                data-testid="input-store-reference"
-                              />
-                            </FormControl>
-                            <FormDescription>The product identifier that triggers this award when purchased</FormDescription>
+                            <FormLabel>Store Product</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-store-product">
+                                  <SelectValue placeholder="Select a store product..." />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {storeGoodsProducts.length === 0 ? (
+                                  <SelectItem value="_none" disabled>No store products available</SelectItem>
+                                ) : (
+                                  storeGoodsProducts.map((product: any) => (
+                                    <SelectItem key={product.id} value={product.id}>
+                                      {product.name} {product.price ? `($${(product.price / 100).toFixed(2)})` : ''}
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>Award is granted when a player's parent purchases this product</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}

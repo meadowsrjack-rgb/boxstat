@@ -1787,29 +1787,16 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
-                  data-testid="sort-subscriptions"
-                >
-                  Subscriptions
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('team')}
                   data-testid="sort-team"
                 >
-                  Team
+                  Teams
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
-                  data-testid="sort-program"
+                  data-testid="sort-programs"
                 >
-                  Program
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
-                  onClick={() => handleSort('isActive')}
-                  data-testid="sort-status"
-                >
-                  Status
+                  Programs
                 </TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -1848,7 +1835,13 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                       <span className="text-gray-600 text-sm">{user.email || "-"}</span>
                     </TableCell>
                     <TableCell data-testid={`text-phone-${user.id}`}>
-                      <span className="text-gray-600 text-sm">{user.phoneNumber || user.phone || "-"}</span>
+                      {(() => {
+                        if (user.role === "player" && user.accountHolderId) {
+                          const accountHolder = users.find((u: any) => u.id === user.accountHolderId);
+                          return <span className="text-gray-600 text-sm">{accountHolder?.phoneNumber || accountHolder?.phone || "-"}</span>;
+                        }
+                        return <span className="text-gray-600 text-sm">{user.phoneNumber || user.phone || "-"}</span>;
+                      })()}
                     </TableCell>
                     <TableCell>
                       <Badge 
@@ -1886,49 +1879,67 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                         <span className="text-gray-400 text-sm">-</span>
                       )}
                     </TableCell>
-                    <TableCell data-testid={`text-subscriptions-${user.id}`}>
-                      {user.role === "player" && user.statusTag && user.statusTag !== "none" ? (
-                        <Badge 
-                          variant="outline" 
-                          className={`text-xs ${
-                            user.statusTag === "payment_due" 
-                              ? "bg-red-500/20 border-red-500/50 text-red-600" 
-                              : user.statusTag === "low_balance" 
-                              ? "bg-amber-500/20 border-amber-500/50 text-amber-600" 
-                              : user.statusTag === "club_member" 
-                              ? "bg-green-500/20 border-green-500/50 text-green-600" 
-                              : user.statusTag === "pack_holder" 
-                              ? "bg-blue-500/20 border-blue-500/50 text-blue-600" 
-                              : ""
-                          }`}
-                          data-testid={`badge-subscription-${user.id}`}
-                        >
-                          {user.statusTag === "payment_due" ? "Payment Due" 
-                            : user.statusTag === "low_balance" ? "Low Balance" 
-                            : user.statusTag === "club_member" ? "Club Member" 
-                            : user.statusTag === "pack_holder" ? "Pack Holder" 
-                            : "-"}
-                        </Badge>
-                      ) : (
-                        <span className="text-gray-400 text-sm">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell data-testid={`text-team-${user.id}`}>
-                      <span className="text-sm">{userTeam?.name || "-"}</span>
-                    </TableCell>
-                    <TableCell data-testid={`text-program-${user.id}`}>
-                      <span className="text-sm">{userProgram?.name || "-"}</span>
-                    </TableCell>
-                    <TableCell data-testid={`text-status-${user.id}`}>
-                      <Badge 
-                        variant="outline" 
-                        className={user.isActive !== false 
-                          ? "bg-green-50 text-green-700 border-green-200" 
-                          : "bg-gray-50 text-gray-500 border-gray-200"
+                    <TableCell data-testid={`text-teams-${user.id}`}>
+                      {(() => {
+                        const allTeams: Array<{name: string, programName?: string}> = [];
+                        if (user.role === "parent") {
+                          linkedPlayers.forEach((player: any) => {
+                            const playerTeam = teams.find((t: any) => t.id === player.teamId);
+                            if (playerTeam) {
+                              const prog = programs.find((p: any) => p.id === playerTeam.programId);
+                              allTeams.push({ name: playerTeam.name, programName: prog?.name });
+                            }
+                          });
+                        } else if (userTeam) {
+                          allTeams.push({ name: userTeam.name, programName: userProgram?.name });
                         }
-                      >
-                        {user.isActive !== false ? "Active" : "Inactive"}
-                      </Badge>
+                        if (allTeams.length === 0) {
+                          return <span className="text-gray-400 text-sm">-</span>;
+                        }
+                        return (
+                          <div className="flex flex-col gap-0.5">
+                            {allTeams.slice(0, 3).map((t, idx) => (
+                              <span key={idx} className="text-xs text-gray-600">
+                                {t.programName ? `(${t.programName}) ` : ""}{t.name}
+                              </span>
+                            ))}
+                            {allTeams.length > 3 && (
+                              <span className="text-xs text-gray-400">+{allTeams.length - 3} more</span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </TableCell>
+                    <TableCell data-testid={`text-programs-${user.id}`}>
+                      {(() => {
+                        const userPrograms: string[] = [];
+                        if (user.role === "parent") {
+                          linkedPlayers.forEach((player: any) => {
+                            const playerTeam = teams.find((t: any) => t.id === player.teamId);
+                            if (playerTeam) {
+                              const prog = programs.find((p: any) => p.id === playerTeam.programId);
+                              if (prog && !userPrograms.includes(prog.name)) {
+                                userPrograms.push(prog.name);
+                              }
+                            }
+                          });
+                        } else if (userProgram) {
+                          userPrograms.push(userProgram.name);
+                        }
+                        if (userPrograms.length === 0) {
+                          return <span className="text-gray-400 text-sm">-</span>;
+                        }
+                        return (
+                          <div className="flex flex-col gap-0.5">
+                            {userPrograms.slice(0, 3).map((name, idx) => (
+                              <span key={idx} className="text-xs text-gray-600">{name}</span>
+                            ))}
+                            {userPrograms.length > 3 && (
+                              <span className="text-xs text-gray-400">+{userPrograms.length - 3} more</span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">

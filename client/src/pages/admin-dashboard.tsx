@@ -185,6 +185,11 @@ export default function AdminDashboard() {
     queryKey: ["/api/programs"],
   });
 
+  // Fetch enrollments
+  const { data: enrollments = [], isLoading: enrollmentsLoading } = useQuery<any[]>({
+    queryKey: ["/api/enrollments"],
+  });
+
   // Fetch award definitions
   const { data: awardDefinitions = [], isLoading: awardDefinitionsLoading } = useQuery<any[]>({
     queryKey: ["/api/award-definitions"],
@@ -212,7 +217,7 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/notifications"],
   });
 
-  const isLoading = orgLoading || usersLoading || teamsLoading || eventsLoading || programsLoading || awardDefinitionsLoading || paymentsLoading || divisionsLoading || evaluationsLoading || notificationsLoading;
+  const isLoading = orgLoading || usersLoading || teamsLoading || eventsLoading || programsLoading || enrollmentsLoading || awardDefinitionsLoading || paymentsLoading || divisionsLoading || evaluationsLoading || notificationsLoading;
 
   // Calculate stats
   // Accounts = unique emails (distinct registered people), Users = all profiles including linked ones
@@ -1805,9 +1810,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
               {filteredUsers.map((user: any) => {
                 const userTeam = teams.find((t: any) => String(t.id) === String(user.teamId));
                 const userProgram = userTeam ? programs.find((p: any) => String(p.id) === String(userTeam.programId)) : null;
-                const linkedPlayers = user.role === "parent" 
-                  ? users.filter((u: any) => (u.accountHolderId === user.id || u.parentId === user.id) && u.role === "player")
-                  : [];
+                const linkedPlayers = users.filter((u: any) => (u.accountHolderId === user.id || u.parentId === user.id) && u.role === "player");
                 return (
                   <TableRow key={user.id} className="cursor-default" data-testid={`row-user-${user.id}`}>
                     <TableCell>
@@ -1867,49 +1870,50 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                       </Badge>
                     </TableCell>
                     <TableCell data-testid={`text-players-${user.id}`}>
-                      {user.role === "parent" ? (
-                        linkedPlayers.length > 0 ? (
-                          <div className="flex flex-col gap-0.5">
-                            {linkedPlayers.slice(0, 3).map((p: any) => (
-                              <span key={p.id} className="text-xs text-gray-600">{p.firstName} {p.lastName}</span>
-                            ))}
-                            {linkedPlayers.length > 3 && (
-                              <span className="text-xs text-gray-400">+{linkedPlayers.length - 3} more</span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-sm">-</span>
-                        )
+                      {linkedPlayers.length > 0 ? (
+                        <div className="flex flex-col gap-0.5">
+                          {linkedPlayers.slice(0, 3).map((p: any) => (
+                            <span key={p.id} className="text-xs text-gray-600">{p.firstName} {p.lastName}</span>
+                          ))}
+                          {linkedPlayers.length > 3 && (
+                            <span className="text-xs text-gray-400">+{linkedPlayers.length - 3} more</span>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-gray-400 text-sm">-</span>
                       )}
                     </TableCell>
                     <TableCell data-testid={`text-programs-${user.id}`}>
                       {(() => {
-                        const userPrograms: string[] = [];
-                        if (user.role === "parent") {
-                          linkedPlayers.forEach((player: any) => {
-                            const playerTeam = teams.find((t: any) => String(t.id) === String(player.teamId));
-                            if (playerTeam) {
-                              const prog = programs.find((p: any) => String(p.id) === String(playerTeam.programId));
-                              if (prog && !userPrograms.includes(prog.name)) {
-                                userPrograms.push(prog.name);
-                              }
+                        const userProgramNames: string[] = [];
+                        const userEnrollments = enrollments.filter((e: any) => 
+                          e.accountHolderId === user.id || e.profileId === user.id
+                        );
+                        userEnrollments.forEach((enrollment: any) => {
+                          const prog = programs.find((p: any) => String(p.id) === String(enrollment.programId));
+                          if (prog && !userProgramNames.includes(prog.name)) {
+                            userProgramNames.push(prog.name);
+                          }
+                        });
+                        linkedPlayers.forEach((player: any) => {
+                          const playerEnrollments = enrollments.filter((e: any) => e.profileId === player.id);
+                          playerEnrollments.forEach((enrollment: any) => {
+                            const prog = programs.find((p: any) => String(p.id) === String(enrollment.programId));
+                            if (prog && !userProgramNames.includes(prog.name)) {
+                              userProgramNames.push(prog.name);
                             }
                           });
-                        } else if (userProgram) {
-                          userPrograms.push(userProgram.name);
-                        }
-                        if (userPrograms.length === 0) {
+                        });
+                        if (userProgramNames.length === 0) {
                           return <span className="text-gray-400 text-sm">-</span>;
                         }
                         return (
                           <div className="flex flex-col gap-0.5">
-                            {userPrograms.slice(0, 3).map((name, idx) => (
+                            {userProgramNames.slice(0, 3).map((name, idx) => (
                               <span key={idx} className="text-xs text-gray-600">{name}</span>
                             ))}
-                            {userPrograms.length > 3 && (
-                              <span className="text-xs text-gray-400">+{userPrograms.length - 3} more</span>
+                            {userProgramNames.length > 3 && (
+                              <span className="text-xs text-gray-400">+{userProgramNames.length - 3} more</span>
                             )}
                           </div>
                         );
@@ -1917,30 +1921,26 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     </TableCell>
                     <TableCell data-testid={`text-teams-${user.id}`}>
                       {(() => {
-                        const allTeams: Array<{name: string, programName?: string}> = [];
-                        if (user.role === "parent") {
-                          linkedPlayers.forEach((player: any) => {
-                            const playerTeam = teams.find((t: any) => String(t.id) === String(player.teamId));
-                            if (playerTeam) {
-                              const prog = programs.find((p: any) => String(p.id) === String(playerTeam.programId));
-                              allTeams.push({ name: playerTeam.name, programName: prog?.name });
-                            }
-                          });
-                        } else if (userTeam) {
-                          allTeams.push({ name: userTeam.name, programName: userProgram?.name });
+                        const allTeamNames: string[] = [];
+                        if (userTeam && !allTeamNames.includes(userTeam.name)) {
+                          allTeamNames.push(userTeam.name);
                         }
-                        if (allTeams.length === 0) {
+                        linkedPlayers.forEach((player: any) => {
+                          const playerTeam = teams.find((t: any) => String(t.id) === String(player.teamId));
+                          if (playerTeam && !allTeamNames.includes(playerTeam.name)) {
+                            allTeamNames.push(playerTeam.name);
+                          }
+                        });
+                        if (allTeamNames.length === 0) {
                           return <span className="text-gray-400 text-sm">-</span>;
                         }
                         return (
                           <div className="flex flex-col gap-0.5">
-                            {allTeams.slice(0, 3).map((t, idx) => (
-                              <span key={idx} className="text-xs text-gray-600">
-                                {t.programName ? `(${t.programName}) ` : ""}{t.name}
-                              </span>
+                            {allTeamNames.slice(0, 3).map((name, idx) => (
+                              <span key={idx} className="text-xs text-gray-600">{name}</span>
                             ))}
-                            {allTeams.length > 3 && (
-                              <span className="text-xs text-gray-400">+{allTeams.length - 3} more</span>
+                            {allTeamNames.length > 3 && (
+                              <span className="text-xs text-gray-400">+{allTeamNames.length - 3} more</span>
                             )}
                           </div>
                         );

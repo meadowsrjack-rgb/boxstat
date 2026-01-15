@@ -185,9 +185,9 @@ export default function AdminDashboard() {
     queryKey: ["/api/programs"],
   });
 
-  // Fetch enrollments
+  // Fetch enrollments (admin endpoint to get all enrollments)
   const { data: enrollments = [], isLoading: enrollmentsLoading } = useQuery<any[]>({
-    queryKey: ["/api/enrollments"],
+    queryKey: ["/api/admin/enrollments"],
   });
 
   // Fetch award definitions

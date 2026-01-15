@@ -8449,6 +8449,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(enrollments);
   });
 
+  // Get ALL enrollments (admin only - for admin dashboard)
+  app.get('/api/admin/enrollments', requireAuth, async (req: any, res) => {
+    try {
+      const { role, organizationId } = req.user;
+      
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      const enrollments = await db.select()
+        .from(productEnrollments)
+        .where(eq(productEnrollments.organizationId, organizationId));
+
+      res.json(enrollments);
+    } catch (error) {
+      console.error('Error fetching all enrollments:', error);
+      res.status(500).json({ message: 'Failed to fetch enrollments' });
+    }
+  });
+
   // Get current user's enrollments (for parent dashboard)
   app.get('/api/enrollments', requireAuth, async (req: any, res) => {
     try {

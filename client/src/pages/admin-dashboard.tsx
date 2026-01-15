@@ -373,7 +373,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="users">
-            <UsersTab users={users} teams={teams} programs={programs} divisions={divisions} organization={organization} />
+            <UsersTab users={users} teams={teams} programs={programs} divisions={divisions} organization={organization} enrollments={enrollments} />
           </TabsContent>
 
           <TabsContent value="programs">
@@ -612,7 +612,7 @@ function RecentTransactionsCard({ payments, users, programs }: any) {
 }
 
 // Users Tab Component  
-function UsersTab({ users, teams, programs, divisions, organization }: any) {
+function UsersTab({ users, teams, programs, divisions, organization, enrollments }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);

@@ -4033,6 +4033,8 @@ class DatabaseStorage implements IStorage {
       chatMode: program.chatMode ?? 'two_way',
       // Programs vs Store separation
       productCategory: program.productCategory ?? 'service',
+      displayCategory: program.displayCategory ?? 'general',
+      iconName: program.iconName,
       coverImageUrl: program.coverImageUrl,
       requiredGearProductIds: program.requiredGearProductIds ?? [],
       seasonStartDate: program.seasonStartDate,
@@ -4091,6 +4093,8 @@ class DatabaseStorage implements IStorage {
       chatMode: updates.chatMode,
       // Programs vs Store separation
       productCategory: updates.productCategory,
+      displayCategory: updates.displayCategory,
+      iconName: updates.iconName,
       coverImageUrl: updates.coverImageUrl,
       requiredGearProductIds: updates.requiredGearProductIds,
       seasonStartDate: updates.seasonStartDate,
@@ -5522,6 +5526,8 @@ class DatabaseStorage implements IStorage {
       chatMode: dbProgram.chatMode ?? 'two_way',
       // Programs vs Store separation
       productCategory: dbProgram.productCategory ?? 'service',
+      displayCategory: dbProgram.displayCategory ?? 'general',
+      iconName: dbProgram.iconName,
       coverImageUrl: dbProgram.coverImageUrl,
       requiredGearProductIds: dbProgram.requiredGearProductIds || [],
       seasonStartDate: dbProgram.seasonStartDate,

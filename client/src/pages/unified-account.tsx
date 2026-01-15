@@ -52,6 +52,9 @@ import {
   Crown,
   Package,
   FileText,
+  CircleDot,
+  Star,
+  Medal,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useEffect, useState, useRef } from "react";
@@ -1671,84 +1674,97 @@ export default function UnifiedAccount() {
               </div>
             </div>
 
-            {/* Category-Based Store Tiles */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4" data-testid="store-categories">
-              {[
-                { id: "programs", label: "Programs", icon: <Crown className="w-8 h-8" />, color: "from-red-500 to-red-600", desc: "Memberships & subscriptions", typeMatch: ["Subscription", "Program"] },
-                { id: "training", label: "Training & Camps", icon: <Target className="w-8 h-8" />, color: "from-blue-500 to-blue-600", desc: "Private sessions, camps", typeMatch: ["Pack", "One-Time"] },
-                { id: "gear", label: "Gear & Apparel", icon: <Shirt className="w-8 h-8" />, color: "from-purple-500 to-purple-600", desc: "Jerseys, equipment", productCategory: "goods" },
-                { id: "digital", label: "Digital Academy", icon: <Trophy className="w-8 h-8" />, color: "from-green-500 to-green-600", desc: "Online training programs", typeMatch: ["Program"] },
-              ].map((category) => {
-                const categoryItems = programs?.filter((p: any) => {
-                  const tags = p.tags || [];
-                  const isActive = p.isActive !== false;
-                  const hasPrice = p.price && p.price > 0;
-                  if (!isActive || !hasPrice) return false;
-                  
-                  // First check tags if available
-                  if (tags.length > 0 && tags.includes(category.id)) return true;
-                  
-                  // Fallback: match by type or productCategory
-                  if ((category as any).productCategory && p.productCategory === (category as any).productCategory) return true;
-                  if ((category as any).typeMatch && (category as any).typeMatch.includes(p.type)) return true;
-                  
-                  return false;
-                }) || [];
-                
-                return (
-                  <div
-                    key={category.id}
-                    className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${category.color} p-4 cursor-pointer hover:scale-105 transition-transform shadow-lg`}
-                    onClick={() => setSelectedStoreCategory(selectedStoreCategory === category.id ? "" : category.id)}
-                    data-testid={`category-tile-${category.id}`}
+            {/* Category Filter Buttons - Dynamic from programs */}
+            {(() => {
+              const categoryIconMap: Record<string, any> = {
+                basketball: <CircleDot className="w-4 h-4" />,
+                target: <Target className="w-4 h-4" />,
+                tent: <Calendar className="w-4 h-4" />,
+                users: <Users className="w-4 h-4" />,
+                trophy: <Trophy className="w-4 h-4" />,
+                calendar: <Calendar className="w-4 h-4" />,
+                star: <Star className="w-4 h-4" />,
+                medal: <Medal className="w-4 h-4" />,
+                crown: <Crown className="w-4 h-4" />,
+              };
+              
+              const categoryLabelMap: Record<string, string> = {
+                general: "All Programs",
+                basketball: "Basketball",
+                training: "Training",
+                camps: "Camps",
+                clinics: "Clinics",
+                league: "League",
+                tournament: "Tournament",
+                membership: "Membership",
+              };
+              
+              // Get unique categories from programs
+              const activePrograms = programs?.filter((p: any) => 
+                p.isActive !== false && p.price && p.price > 0 && p.productCategory === 'service'
+              ) || [];
+              
+              const uniqueCategories = [...new Set(activePrograms.map((p: any) => p.displayCategory || 'general'))] as string[];
+              
+              return (
+                <div className="flex flex-wrap gap-2" data-testid="category-filter-buttons">
+                  <Button
+                    variant={!selectedStoreCategory ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedStoreCategory("")}
+                    className="rounded-full"
                   >
-                    <div className="text-white/90 mb-2">{category.icon}</div>
-                    <h3 className="text-white font-bold text-sm">{category.label}</h3>
-                    <p className="text-white/70 text-xs">{category.desc}</p>
-                    {categoryItems.length > 0 && (
-                      <Badge className="absolute top-2 right-2 bg-white/20 text-white border-0">
-                        {categoryItems.length}
-                      </Badge>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    <Crown className="w-4 h-4 mr-1" />
+                    All
+                  </Button>
+                  {uniqueCategories.filter(c => c !== 'general').map((category) => {
+                    const count = activePrograms.filter((p: any) => (p.displayCategory || 'general') === category).length;
+                    const firstProgramIcon = activePrograms.find((p: any) => (p.displayCategory || 'general') === category)?.iconName;
+                    const icon = categoryIconMap[firstProgramIcon] || categoryIconMap[category] || <Crown className="w-4 h-4" />;
+                    
+                    return (
+                      <Button
+                        key={category}
+                        variant={selectedStoreCategory === category ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setSelectedStoreCategory(selectedStoreCategory === category ? "" : category)}
+                        className="rounded-full"
+                        data-testid={`category-filter-${category}`}
+                      >
+                        {icon}
+                        <span className="ml-1">{categoryLabelMap[category] || category}</span>
+                        <Badge variant="secondary" className="ml-1 h-5 px-1.5">{count}</Badge>
+                      </Button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {/* Products Grid - Filtered by Category */}
             {(() => {
-              const categoryConfig: Record<string, { typeMatch?: string[], productCategory?: string }> = {
-                programs: { typeMatch: ["Subscription", "Program"] },
-                training: { typeMatch: ["Pack", "One-Time"] },
-                gear: { productCategory: "goods" },
-                digital: { typeMatch: ["Program"] },
+              const categoryLabelMap: Record<string, string> = {
+                general: "All Programs",
+                basketball: "Basketball",
+                training: "Training",
+                camps: "Camps",
+                clinics: "Clinics",
+                league: "League",
+                tournament: "Tournament",
+                membership: "Membership",
               };
               
               const filteredProducts = programs?.filter((p: any) => {
-                const tags = p.tags || [];
                 const isActive = p.isActive !== false;
                 const hasPrice = p.price && p.price > 0;
-                if (!isActive || !hasPrice) return false;
+                const isService = p.productCategory === 'service';
+                if (!isActive || !hasPrice || !isService) return false;
                 
                 if (!selectedStoreCategory) return true; // Show all when no filter
                 
-                // Check tags first - explicit tag match takes priority
-                if (tags.length > 0 && tags.includes(selectedStoreCategory)) return true;
-                
-                // For gear (apparel) - only match products with 'gear' tag OR goods without other category tags
-                if (selectedStoreCategory === 'gear') {
-                  const otherCategoryTags = ['training', 'membership', 'digital'];
-                  const hasOtherCategoryTag = tags.some((t: string) => otherCategoryTags.includes(t));
-                  // Only include if it's a goods product WITHOUT training/membership/digital tags
-                  if (p.productCategory === 'goods' && !hasOtherCategoryTag) return true;
-                  return false;
-                }
-                
-                // Fallback to type/productCategory matching for other categories
-                const config = categoryConfig[selectedStoreCategory];
-                if (config?.typeMatch && config.typeMatch.includes(p.type)) return true;
-                
-                return false;
+                // Match by displayCategory
+                const programCategory = p.displayCategory || 'general';
+                return programCategory === selectedStoreCategory;
               }) || [];
               
               if (filteredProducts.length === 0 && selectedStoreCategory) {
@@ -1772,8 +1788,8 @@ export default function UnifiedAccount() {
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-lg">
                       {selectedStoreCategory ? 
-                        {programs: "Programs", training: "Training & Camps", gear: "Gear & Apparel", digital: "Digital Academy"}[selectedStoreCategory] || "All Products" 
-                        : "All Products"}
+                        (categoryLabelMap[selectedStoreCategory] || selectedStoreCategory)
+                        : "All Programs"}
                     </h3>
                     {selectedStoreCategory && (
                       <Button variant="ghost" size="sm" onClick={() => setSelectedStoreCategory("")}>

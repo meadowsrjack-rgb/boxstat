@@ -7641,6 +7641,8 @@ function ProgramsTab({ programs, teams, organization }: any) {
       chatMode: "two_way",
       isActive: true,
       productCategory: "service",
+      displayCategory: "general",
+      iconName: "",
       // Multi-tier pricing fields
       comparePrice: undefined as number | undefined,
       savingsNote: "",
@@ -7756,6 +7758,8 @@ function ProgramsTab({ programs, teams, organization }: any) {
       // Multi-tier pricing fields
       comparePrice: program.comparePrice,
       savingsNote: program.savingsNote || "",
+      displayCategory: program.displayCategory || "general",
+      iconName: program.iconName || "",
       coverImageUrl: program.coverImageUrl || "",
       pricingOptions: program.pricingOptions || [],
     });
@@ -8157,6 +8161,65 @@ function ProgramsTab({ programs, teams, organization }: any) {
                     </FormItem>
                   )}
                 />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="displayCategory"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-program-category">
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="general">General</SelectItem>
+                            <SelectItem value="basketball">Basketball</SelectItem>
+                            <SelectItem value="training">Training</SelectItem>
+                            <SelectItem value="camps">Camps</SelectItem>
+                            <SelectItem value="clinics">Clinics</SelectItem>
+                            <SelectItem value="league">League</SelectItem>
+                            <SelectItem value="tournament">Tournament</SelectItem>
+                            <SelectItem value="membership">Membership</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="iconName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Icon</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-program-icon">
+                              <SelectValue placeholder="Select icon" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="basketball">Basketball</SelectItem>
+                            <SelectItem value="target">Target</SelectItem>
+                            <SelectItem value="tent">Tent (Camps)</SelectItem>
+                            <SelectItem value="users">Users (Team)</SelectItem>
+                            <SelectItem value="trophy">Trophy</SelectItem>
+                            <SelectItem value="calendar">Calendar</SelectItem>
+                            <SelectItem value="star">Star</SelectItem>
+                            <SelectItem value="medal">Medal</SelectItem>
+                            <SelectItem value="crown">Crown</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}

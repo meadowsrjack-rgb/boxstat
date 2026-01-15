@@ -399,6 +399,8 @@ export const products = pgTable("products", {
   chatMode: varchar("chat_mode").default('two_way'), // 'disabled', 'announcements', 'two_way'
   // New fields for Programs vs Store separation
   productCategory: varchar("product_category").default('service'), // 'service' (Programs) or 'goods' (Store)
+  displayCategory: varchar("display_category").default('general'), // For filter buttons: basketball, training, camps, clinics, etc.
+  iconName: varchar("icon_name"), // Icon identifier for display
   coverImageUrl: varchar("cover_image_url"), // Cover photo for program overview
   requiredGearProductIds: text("required_gear_product_ids").array().default(sql`ARRAY[]::text[]`), // Store product IDs required for this program
   seasonStartDate: timestamp("season_start_date", { mode: 'string' }), // Program season start
@@ -1626,6 +1628,8 @@ export interface Product {
   chatMode?: string; // 'disabled', 'announcements', 'two_way'
   // Programs vs Store separation
   productCategory?: string; // 'service' (Programs) or 'goods' (Store)
+  displayCategory?: string; // For filter buttons: basketball, training, camps, clinics, etc.
+  iconName?: string; // Icon identifier for display
   coverImageUrl?: string; // Cover photo for program overview
   requiredGearProductIds?: string[]; // Store product IDs required for this program
   seasonStartDate?: string; // Program season start
@@ -1692,6 +1696,8 @@ export const insertProductSchema = z.object({
   chatMode: z.string().default('two_way'),
   // Programs vs Store separation
   productCategory: z.string().default('service'), // 'service' or 'goods'
+  displayCategory: z.string().default('general'), // For filter buttons
+  iconName: z.string().optional(), // Icon identifier
   coverImageUrl: z.string().optional(),
   requiredGearProductIds: z.array(z.string()).default([]),
   seasonStartDate: z.string().optional(),

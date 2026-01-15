@@ -1803,6 +1803,12 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                 >
                   Teams
                 </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  data-testid="sort-status"
+                >
+                  Status
+                </TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -1943,6 +1949,137 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                               <span className="text-xs text-gray-400">+{allTeamNames.length - 3} more</span>
                             )}
                           </div>
+                        );
+                      })()}
+                    </TableCell>
+                    <TableCell data-testid={`text-status-${user.id}`}>
+                      {(() => {
+                        const now = new Date();
+                        const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+                        
+                        // Get all enrollments for this user and their linked players
+                        const allRelevantEnrollments: any[] = [];
+                        
+                        // User's own enrollments
+                        const userEnrollments = enrollments.filter((e: any) => 
+                          e.accountHolderId === user.id || e.profileId === user.id
+                        );
+                        allRelevantEnrollments.push(...userEnrollments);
+                        
+                        // Linked players' enrollments
+                        linkedPlayers.forEach((player: any) => {
+                          const playerEnrollments = enrollments.filter((e: any) => 
+                            e.profileId === player.id
+                          );
+                          allRelevantEnrollments.push(...playerEnrollments);
+                        });
+                        
+                        // Get unique enrollments
+                        const uniqueEnrollments = allRelevantEnrollments.filter((e, i, arr) => 
+                          arr.findIndex(x => x.id === e.id) === i
+                        );
+                        
+                        // Check for players without teams (Pending Assignment)
+                        const hasActiveEnrollmentWithoutTeam = (() => {
+                          // Check if user is a player with active enrollment but no team
+                          if (user.role === "player") {
+                            const hasActiveEnrollment = uniqueEnrollments.some((e: any) => 
+                              e.profileId === user.id && e.status === 'active'
+                            );
+                            if (hasActiveEnrollment && !user.teamId) return true;
+                          }
+                          // Check linked players
+                          return linkedPlayers.some((player: any) => {
+                            const playerHasActive = uniqueEnrollments.some((e: any) => 
+                              e.profileId === player.id && e.status === 'active'
+                            );
+                            return playerHasActive && !player.teamId;
+                          });
+                        })();
+                        
+                        // Check for payment failed (check status field)
+                        const hasPaymentFailed = uniqueEnrollments.some((e: any) => 
+                          e.status === 'payment_failed' || e.paymentStatus === 'failed'
+                        );
+                        
+                        // Check for low balance (expiring within 3 days)
+                        const hasLowBalance = uniqueEnrollments.some((e: any) => {
+                          if (e.status !== 'active' || !e.endDate) return false;
+                          const endDate = new Date(e.endDate);
+                          return endDate <= threeDaysFromNow && endDate > now;
+                        });
+                        
+                        // Check for active subscriber (has stripeSubscriptionId)
+                        const hasActiveSubscriber = uniqueEnrollments.some((e: any) => 
+                          e.status === 'active' && e.stripeSubscriptionId
+                        );
+                        
+                        // Check for active one-time (active without subscription)
+                        const hasActiveOneTime = uniqueEnrollments.some((e: any) => 
+                          e.status === 'active' && !e.stripeSubscriptionId
+                        );
+                        
+                        // Check for expired
+                        const hasExpired = uniqueEnrollments.some((e: any) => 
+                          e.status === 'expired' || e.status === 'cancelled'
+                        );
+                        
+                        // Determine badge based on priority
+                        // Priority: Pending Assignment > Payment Failed > Low Balance > Active Subscriber > Active (Program) > Expired > No Enrollment
+                        
+                        if (hasActiveEnrollmentWithoutTeam) {
+                          return (
+                            <Badge className="bg-amber-500 text-white hover:bg-amber-600 whitespace-nowrap">
+                              Pending Assignment
+                            </Badge>
+                          );
+                        }
+                        
+                        if (hasPaymentFailed) {
+                          return (
+                            <Badge className="bg-red-600 text-white hover:bg-red-700 whitespace-nowrap">
+                              Payment Failed
+                            </Badge>
+                          );
+                        }
+                        
+                        if (hasLowBalance) {
+                          return (
+                            <Badge className="bg-yellow-400 text-yellow-900 hover:bg-yellow-500 whitespace-nowrap">
+                              Low Balance
+                            </Badge>
+                          );
+                        }
+                        
+                        if (hasActiveSubscriber) {
+                          return (
+                            <Badge className="bg-green-600 text-white hover:bg-green-700 whitespace-nowrap">
+                              Active Subscriber
+                            </Badge>
+                          );
+                        }
+                        
+                        if (hasActiveOneTime) {
+                          return (
+                            <Badge className="bg-green-400 text-green-900 hover:bg-green-500 whitespace-nowrap">
+                              Active (Program)
+                            </Badge>
+                          );
+                        }
+                        
+                        if (hasExpired) {
+                          return (
+                            <Badge className="bg-gray-500 text-white hover:bg-gray-600 whitespace-nowrap">
+                              Expired
+                            </Badge>
+                          );
+                        }
+                        
+                        // No enrollment
+                        return (
+                          <Badge className="bg-gray-200 text-gray-600 hover:bg-gray-300 whitespace-nowrap">
+                            No Enrollment
+                          </Badge>
                         );
                       })()}
                     </TableCell>

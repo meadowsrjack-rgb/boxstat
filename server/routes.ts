@@ -2252,6 +2252,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { registrationType, parentInfo, players, password, email } = req.body;
       
+      console.log('[Registration] Received data:', {
+        registrationType,
+        parentInfo: parentInfo ? {
+          firstName: parentInfo.firstName,
+          lastName: parentInfo.lastName,
+          email: parentInfo.email,
+          phoneNumber: parentInfo.phoneNumber,
+        } : null,
+        playersCount: players?.length,
+      });
+      
       const organizationId = "default-org";
       
       // Helper function to sanitize date strings (convert empty strings to null)

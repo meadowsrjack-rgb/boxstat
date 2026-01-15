@@ -1798,25 +1798,24 @@ export default function UnifiedAccount() {
                           }}
                           data-testid={`product-card-${item.id}`}
                         >
-                          {item.coverImageUrl && (
-                            <div className="h-32 overflow-hidden">
+                          <div className="aspect-[16/9] bg-gray-100 overflow-hidden">
+                            {item.coverImageUrl ? (
                               <img src={item.coverImageUrl} alt={item.name} className="w-full h-full object-cover" />
-                            </div>
-                          )}
-                          <CardContent className={item.coverImageUrl ? "p-4" : "p-4"}>
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Crown className="w-12 h-12 text-gray-300" />
+                              </div>
+                            )}
+                          </div>
+                          <CardContent className="p-4">
                             <div className="flex items-start justify-between mb-2">
                               <h4 className="font-semibold">{item.name}</h4>
                               {isPack && <Badge className="bg-blue-100 text-blue-700 border-0">{item.sessionCount || ""} Pack</Badge>}
                               {isStore && <Badge className="bg-purple-100 text-purple-700 border-0">Store</Badge>}
                             </div>
-                            {item.description && (
-                              <p className="text-sm text-gray-500 mb-3 line-clamp-2">{item.description}</p>
-                            )}
-                            <div className="flex items-center justify-between">
-                              <Button size="sm" className="bg-red-600 hover:bg-red-700 ml-auto">
-                                {isStore ? "Buy" : "Enroll"}
-                              </Button>
-                            </div>
+                            <Button size="sm" className="bg-red-600 hover:bg-red-700 w-full">
+                              {isStore ? "Buy" : "Enroll"}
+                            </Button>
                           </CardContent>
                         </Card>
                       );

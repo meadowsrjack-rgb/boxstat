@@ -7644,6 +7644,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
       // Multi-tier pricing fields
       comparePrice: undefined as number | undefined,
       savingsNote: "",
+      coverImageUrl: "",
       pricingOptions: [] as Array<{
         id: string;
         name: string;
@@ -7755,6 +7756,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
       // Multi-tier pricing fields
       comparePrice: program.comparePrice,
       savingsNote: program.savingsNote || "",
+      coverImageUrl: program.coverImageUrl || "",
       pricingOptions: program.pricingOptions || [],
     });
     setIsDialogOpen(true);
@@ -8151,6 +8153,60 @@ function ProgramsTab({ programs, teams, organization }: any) {
                       <FormControl>
                         <Textarea {...field} placeholder="Competitive basketball program for high school players" data-testid="input-program-description" />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="coverImageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cover Image</FormLabel>
+                      <div className="space-y-2">
+                        {field.value && (
+                          <div className="aspect-[16/9] w-full max-w-xs bg-gray-100 rounded-lg overflow-hidden relative">
+                            <img src={field.value} alt="Cover" className="w-full h-full object-cover" />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-2 right-2"
+                              onClick={() => field.onChange("")}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+                        {!field.value && (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="file"
+                              accept="image/*"
+                              className="flex-1"
+                              data-testid="input-program-cover-image"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const formData = new FormData();
+                                  formData.append('file', file);
+                                  try {
+                                    const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                                    const data = await res.json();
+                                    if (data.url) {
+                                      field.onChange(data.url);
+                                    }
+                                  } catch (err) {
+                                    console.error('Upload failed:', err);
+                                  }
+                                }
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <FormDescription>Recommended: 16:9 aspect ratio (1280x720 or similar)</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

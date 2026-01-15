@@ -6792,21 +6792,30 @@ function StoreTab({ organization }: any) {
     formData.append('image', file);
     
     try {
+      // Get auth token from localStorage for file upload
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch('/api/upload/product-image', {
         method: 'POST',
         body: formData,
         credentials: 'include',
+        headers,
       });
       
       if (!response.ok) {
-        throw new Error('Failed to upload image');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to upload image');
       }
       
       const data = await response.json();
       setProductImageUrl(data.imageUrl);
       toast({ title: "Image uploaded successfully" });
-    } catch (error) {
-      toast({ title: "Failed to upload image", variant: "destructive" });
+    } catch (error: any) {
+      toast({ title: "Failed to upload image", description: error.message, variant: "destructive" });
     } finally {
       setUploadingImage(false);
     }

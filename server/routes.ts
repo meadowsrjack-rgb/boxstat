@@ -1300,7 +1300,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const { packageId, playerId, addOnIds, signedWaiverIds, selectedPricingOptionId } = req.body;
+      const { packageId, playerId, addOnIds, signedWaiverIds, selectedPricingOptionId, platform } = req.body;
+      const isNativeIOS = platform === 'ios';
       
       if (!packageId) {
         return res.status(400).json({ error: "Package ID is required" });
@@ -1507,12 +1508,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Create Stripe Checkout Session
+      // For iOS native app, use deep links so the app can close the in-app browser
+      const successUrl = isNativeIOS 
+        ? `boxstat://payment-success?session_id={CHECKOUT_SESSION_ID}`
+        : `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = isNativeIOS 
+        ? `boxstat://payment-canceled`
+        : `${origin}/unified-account?payment=canceled`;
+        
       const session = await stripe.checkout.sessions.create({
         customer: stripeCustomerId,
         line_items: lineItems,
         mode: isSubscription ? 'subscription' : 'payment',
-        success_url: `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${origin}/unified-account?payment=canceled`,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
         metadata: {
           userId: user.id,
           packageId: packageId,

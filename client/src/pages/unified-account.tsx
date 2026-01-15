@@ -1294,6 +1294,14 @@ export default function UnifiedAccount() {
       queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
       queryClient.invalidateQueries({ queryKey: ['/api/payments/history'] });
       window.history.replaceState({}, '', '/unified-account');
+    } else if (urlParams.get('payment') === 'canceled') {
+      // Payment was canceled - show friendly message
+      toast({
+        title: "Payment Canceled",
+        description: "Your payment was canceled. You can try again when you're ready.",
+        variant: "default",
+      });
+      window.history.replaceState({}, '', '/unified-account');
     }
   }, [toast]);
 
@@ -2505,6 +2513,7 @@ export default function UnifiedAccount() {
                                 console.log('[Payment] Starting checkout for package:', selectedPackage);
                                 
                                 // Create checkout session - backend handles both program and store purchases
+                                // Pass platform so server can use deep links for iOS
                                 const response = await apiRequest("/api/payments/create-checkout", {
                                   method: "POST",
                                   data: {
@@ -2514,6 +2523,7 @@ export default function UnifiedAccount() {
                                     selectedPricingOptionId: selectedPricingOptionId || undefined,
                                     addOnIds: selectedAddOns.length > 0 ? selectedAddOns : undefined,
                                     signedWaiverIds: Object.keys(signedWaivers).filter(id => signedWaivers[id]),
+                                    platform: Capacitor.getPlatform() === 'ios' ? 'ios' : 'web',
                                   },
                                 }) as { url: string };
 
@@ -2525,25 +2535,20 @@ export default function UnifiedAccount() {
                                   setPaymentDialogOpen(false);
                                   setIsProcessingPayment(false);
                                   
-                                  // DEBUG: Show alert with URL (remove after debugging)
-                                  if (typeof window !== 'undefined') {
-                                    alert('DEBUG: Opening checkout URL: ' + response.url?.substring(0, 50) + '...');
-                                  }
-                                  
-                                  // Small delay to let drawer close, then open browser
+                                  // Small delay to let drawer close, then open in-app browser
+                                  // Success/cancel redirects use boxstat:// deep links which close the browser
+                                  // and return to the app automatically
                                   setTimeout(async () => {
                                     try {
-                                      console.log('[Payment] Opening Stripe checkout URL:', response.url);
+                                      console.log('[Payment] Opening Stripe checkout in-app browser');
                                       await Browser.open({ 
                                         url: response.url,
                                         toolbarColor: '#dc2626',
                                         presentationStyle: 'popover',
                                       });
-                                      console.log('[Payment] Browser.open completed successfully');
                                     } catch (browserError: any) {
                                       console.error('[Payment] Browser.open failed:', browserError);
-                                      alert('DEBUG: Browser.open failed - ' + (browserError?.message || 'Unknown error'));
-                                      // Ultimate fallback - open in Safari
+                                      // Fallback - redirect in main webview
                                       window.location.href = response.url;
                                     }
                                   }, 200);
@@ -2552,7 +2557,6 @@ export default function UnifiedAccount() {
                                 }
                               } catch (error: any) {
                                 console.error('[Payment] Checkout error:', error);
-                                alert('DEBUG: Checkout error - ' + (error?.message || 'Unknown error'));
                                 toast({
                                   title: "Error",
                                   description: error.message || "Failed to create checkout session",

@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { App, URLOpenListenerEvent } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
 import { authPersistence } from './authPersistence';
 
 let deepLinkCallback: ((url: string) => void) | null = null;
@@ -86,6 +87,49 @@ export function handleDeepLink(url: string): void {
         exchangeAuthToken(token);
         return;
       }
+    }
+
+    // Handle payment success deep link - close in-app browser and show confirmation
+    if (protocol === 'boxstat:' && (host === 'payment-success' || pathname === '/payment-success' || pathname === 'payment-success')) {
+      console.log('[DeepLink] Payment success detected, closing browser...');
+      const sessionId = searchParams.get('session_id');
+      
+      // Close the in-app browser
+      try {
+        Browser.close();
+        console.log('[DeepLink] In-app browser closed');
+      } catch (e) {
+        console.log('[DeepLink] Browser close error (may already be closed):', e);
+      }
+      
+      // Verify session token is still valid before navigating
+      // The unified-account page will use the persisted token from native storage
+      authPersistence.getToken().then((token) => {
+        if (token) {
+          console.log('[DeepLink] Session token exists, navigating to account page');
+        } else {
+          console.log('[DeepLink] No session token, user may need to re-login');
+        }
+        // Navigate regardless - the page will handle auth state
+        window.location.href = `/unified-account?payment=success&session_id=${sessionId || ''}`;
+      });
+      return;
+    }
+
+    // Handle payment canceled deep link
+    if (protocol === 'boxstat:' && (host === 'payment-canceled' || pathname === '/payment-canceled' || pathname === 'payment-canceled')) {
+      console.log('[DeepLink] Payment canceled, closing browser...');
+      
+      // Close the in-app browser
+      try {
+        Browser.close();
+      } catch (e) {
+        console.log('[DeepLink] Browser close error:', e);
+      }
+      
+      // Navigate to account page
+      window.location.href = '/unified-account?payment=canceled';
+      return;
     }
 
     if (pathname === '/magic-link-login' || pathname.startsWith('/magic-link-login')) {

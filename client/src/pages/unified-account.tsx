@@ -2502,6 +2502,8 @@ export default function UnifiedAccount() {
 
                               setIsProcessingPayment(true);
                               try {
+                                console.log('[Payment] Starting checkout for package:', selectedPackage);
+                                
                                 // Create checkout session - backend handles both program and store purchases
                                 const response = await apiRequest("/api/payments/create-checkout", {
                                   method: "POST",
@@ -2515,30 +2517,42 @@ export default function UnifiedAccount() {
                                   },
                                 }) as { url: string };
 
+                                console.log('[Payment] Got checkout URL:', response.url);
+
                                 // Redirect to Stripe checkout
                                 if (Capacitor.isNativePlatform()) {
-                                  // Close dialog first to ensure clean state
+                                  // Close drawer first to ensure clean state
                                   setPaymentDialogOpen(false);
                                   setIsProcessingPayment(false);
                                   
-                                  // Small delay to let dialog close, then open browser
+                                  // DEBUG: Show alert with URL (remove after debugging)
+                                  if (typeof window !== 'undefined') {
+                                    alert('DEBUG: Opening checkout URL: ' + response.url?.substring(0, 50) + '...');
+                                  }
+                                  
+                                  // Small delay to let drawer close, then open browser
                                   setTimeout(async () => {
                                     try {
                                       console.log('[Payment] Opening Stripe checkout URL:', response.url);
                                       await Browser.open({ 
                                         url: response.url,
                                         toolbarColor: '#dc2626',
+                                        presentationStyle: 'popover',
                                       });
+                                      console.log('[Payment] Browser.open completed successfully');
                                     } catch (browserError: any) {
                                       console.error('[Payment] Browser.open failed:', browserError);
+                                      alert('DEBUG: Browser.open failed - ' + (browserError?.message || 'Unknown error'));
                                       // Ultimate fallback - open in Safari
                                       window.location.href = response.url;
                                     }
-                                  }, 100);
+                                  }, 200);
                                 } else {
                                   window.location.href = response.url;
                                 }
                               } catch (error: any) {
+                                console.error('[Payment] Checkout error:', error);
+                                alert('DEBUG: Checkout error - ' + (error?.message || 'Unknown error'));
                                 toast({
                                   title: "Error",
                                   description: error.message || "Failed to create checkout session",

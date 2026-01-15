@@ -1928,9 +1928,18 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                     <TableCell data-testid={`text-teams-${user.id}`}>
                       {(() => {
                         const allTeamNames: string[] = [];
+                        // User's own team (as player)
                         if (userTeam && !allTeamNames.includes(userTeam.name)) {
                           allTeamNames.push(userTeam.name);
                         }
+                        // Teams where user is the coach
+                        const coachedTeams = teams.filter((t: any) => t.coachId === user.id);
+                        coachedTeams.forEach((team: any) => {
+                          if (!allTeamNames.includes(team.name)) {
+                            allTeamNames.push(team.name);
+                          }
+                        });
+                        // Linked players' teams
                         linkedPlayers.forEach((player: any) => {
                           const playerTeam = teams.find((t: any) => String(t.id) === String(player.teamId));
                           if (playerTeam && !allTeamNames.includes(playerTeam.name)) {

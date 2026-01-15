@@ -8253,12 +8253,12 @@ function ProgramsTab({ programs, teams, organization }: any) {
                                 const file = e.target.files?.[0];
                                 if (file) {
                                   const formData = new FormData();
-                                  formData.append('file', file);
+                                  formData.append('image', file);
                                   try {
-                                    const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                                    const res = await fetch('/api/upload/product-image', { method: 'POST', body: formData, credentials: 'include' });
                                     const data = await res.json();
-                                    if (data.url) {
-                                      field.onChange(data.url);
+                                    if (data.imageUrl) {
+                                      field.onChange(data.imageUrl);
                                     }
                                   } catch (err) {
                                     console.error('Upload failed:', err);

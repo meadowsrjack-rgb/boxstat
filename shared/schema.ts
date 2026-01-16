@@ -407,7 +407,8 @@ export const products = pgTable("products", {
   seasonEndDate: timestamp("season_end_date", { mode: 'string' }), // Program season end
   // Store-specific fields (for physical goods)
   inventorySizes: text("inventory_sizes").array().default(sql`ARRAY[]::text[]`), // Available sizes: ["S", "M", "L", "XL"]
-  inventoryCount: integer("inventory_count"), // Current stock count
+  inventoryCount: integer("inventory_count"), // Current stock count (total or fallback)
+  sizeStock: jsonb("size_stock").default('{}'), // Stock per size: {"S": 10, "M": 15, "L": 20, "XL": 5}
   shippingRequired: boolean("shipping_required").default(false), // Does this item need shipping?
   // Multi-tier pricing support
   comparePrice: integer("compare_price"), // For multi-month packages: equivalent monthly price to show value (in cents)
@@ -1636,7 +1637,8 @@ export interface Product {
   seasonEndDate?: string; // Program season end
   // Store-specific fields (for physical goods)
   inventorySizes?: string[]; // Available sizes: ["S", "M", "L", "XL"]
-  inventoryCount?: number; // Current stock count
+  inventoryCount?: number; // Current stock count (total or fallback)
+  sizeStock?: Record<string, number>; // Stock per size: {"S": 10, "M": 15, "L": 20, "XL": 5}
   shippingRequired?: boolean; // Does this item need shipping?
   // Multi-tier pricing support
   comparePrice?: number; // For multi-month packages: equivalent monthly price to show value (in cents)
@@ -1705,6 +1707,7 @@ export const insertProductSchema = z.object({
   // Store-specific fields
   inventorySizes: z.array(z.string()).default([]),
   inventoryCount: z.number().optional(),
+  sizeStock: z.record(z.string(), z.number()).optional(), // Stock per size: {"S": 10, "M": 15}
   shippingRequired: z.boolean().default(false),
   // Multi-tier pricing support
   comparePrice: z.number().optional(), // For multi-month packages: equivalent monthly price (in cents)

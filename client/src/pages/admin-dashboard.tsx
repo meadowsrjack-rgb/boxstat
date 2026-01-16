@@ -6631,6 +6631,7 @@ function StoreTab({ organization }: any) {
       price: z.number().min(0, "Price must be positive"),
       inventorySizes: z.array(z.string()).default([]),
       inventoryCount: z.number().optional(),
+      sizeStock: z.record(z.string(), z.number()).optional(),
       shippingRequired: z.boolean().default(false),
       isActive: z.boolean().default(true),
       storeCategory: z.string().optional(),
@@ -6647,6 +6648,7 @@ function StoreTab({ organization }: any) {
       price: 0,
       inventorySizes: [] as string[],
       inventoryCount: 0,
+      sizeStock: {} as Record<string, number>,
       shippingRequired: false,
       isActive: true,
       storeCategory: "gear",
@@ -6675,7 +6677,8 @@ function StoreTab({ organization }: any) {
         tags: data.storeCategory ? [data.storeCategory] : [],
         sessionCount: isTraining ? (data.sessionCount || 0) : null,
         inventorySizes: isGear ? (data.inventorySizes || []) : [],
-        inventoryCount: isGear ? (data.inventoryCount || 0) : null,
+        inventoryCount: isGear && (!data.inventorySizes || data.inventorySizes.length === 0) ? (data.inventoryCount || 0) : null,
+        sizeStock: isGear && data.inventorySizes && data.inventorySizes.length > 0 ? (data.sizeStock || {}) : null,
         shippingRequired: isGear ? (data.shippingRequired || false) : false,
         requiredWaivers: data.requiredWaivers || [],
       };
@@ -6735,6 +6738,7 @@ function StoreTab({ organization }: any) {
       price: product.price || 0,
       inventorySizes: product.inventorySizes || [],
       inventoryCount: product.inventoryCount || 0,
+      sizeStock: product.sizeStock || {},
       shippingRequired: product.shippingRequired || false,
       isActive: product.isActive ?? true,
       storeCategory: product.tags?.[0] || "gear",
@@ -6772,6 +6776,7 @@ function StoreTab({ organization }: any) {
       price: 0,
       inventorySizes: [],
       inventoryCount: 0,
+      sizeStock: {},
       shippingRequired: false,
       isActive: true,
       storeCategory: "gear",
@@ -7086,7 +7091,25 @@ function StoreTab({ organization }: any) {
                     )}
                   </TableCell>
                   <TableCell>
-                    {product.inventoryCount !== undefined && product.inventoryCount !== null ? (
+                    {product.sizeStock && Object.keys(product.sizeStock).length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {Object.entries(product.sizeStock as Record<string, number>).slice(0, 3).map(([size, count]) => {
+                          const stockCount = count as number;
+                          return (
+                            <Badge 
+                              key={size} 
+                              variant={stockCount > 10 ? "outline" : stockCount > 0 ? "secondary" : "destructive"}
+                              className="text-xs"
+                            >
+                              {size}: {stockCount}
+                            </Badge>
+                          );
+                        })}
+                        {Object.keys(product.sizeStock).length > 3 && (
+                          <Badge variant="outline" className="text-xs">+{Object.keys(product.sizeStock).length - 3}</Badge>
+                        )}
+                      </div>
+                    ) : product.inventoryCount !== undefined && product.inventoryCount !== null ? (
                       <Badge variant={product.inventoryCount > 10 ? "outline" : product.inventoryCount > 0 ? "secondary" : "destructive"}>
                         {product.inventoryCount}
                       </Badge>
@@ -7349,6 +7372,10 @@ function StoreTab({ organization }: any) {
                                     field.onChange([...current, size]);
                                   } else {
                                     field.onChange(current.filter((s: string) => s !== size));
+                                    // Clean up sizeStock when size is deselected
+                                    const currentStock = form.getValues("sizeStock") || {};
+                                    const { [size]: _, ...rest } = currentStock as Record<string, number>;
+                                    form.setValue("sizeStock", rest);
                                   }
                                 }}
                                 data-testid={`checkbox-size-${size.toLowerCase()}`}
@@ -7362,27 +7389,68 @@ function StoreTab({ organization }: any) {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="inventoryCount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Stock Count</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="50"
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value || "0"))}
-                            value={field.value || ""}
-                            data-testid="input-stock-count"
-                          />
-                        </FormControl>
-                        <FormDescription>Leave empty for unlimited</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {/* Size-specific stock inputs - shown when sizes are selected */}
+                  {(form.watch("inventorySizes") || []).length > 0 ? (
+                    <FormField
+                      control={form.control}
+                      name="sizeStock"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Stock per Size</FormLabel>
+                          <FormDescription>Enter quantity available for each size</FormDescription>
+                          <div className="grid grid-cols-2 gap-2 mt-2">
+                            {(form.watch("inventorySizes") || []).map((size: string) => (
+                              <div key={size} className="flex items-center gap-2">
+                                <Label className="w-12 text-sm font-medium">{size}</Label>
+                                <Input
+                                  type="number"
+                                  placeholder="0"
+                                  min="0"
+                                  className="w-20"
+                                  value={(field.value as Record<string, number>)?.[size] ?? ""}
+                                  onChange={(e) => {
+                                    const rawVal = e.target.value;
+                                    const val = rawVal === "" ? 0 : parseInt(rawVal, 10);
+                                    const safeVal = isNaN(val) ? 0 : val;
+                                    const current = (field.value as Record<string, number>) || {};
+                                    field.onChange({ ...current, [size]: safeVal });
+                                  }}
+                                  data-testid={`input-stock-${size.toLowerCase()}`}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <FormField
+                      control={form.control}
+                      name="inventoryCount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Total Stock Count</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="50"
+                              min="0"
+                              {...field}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value || "0", 10);
+                                field.onChange(isNaN(val) ? 0 : val);
+                              }}
+                              value={field.value ?? ""}
+                              data-testid="input-stock-count"
+                            />
+                          </FormControl>
+                          <FormDescription>Leave empty for unlimited (select sizes above for size-specific stock)</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
                   <FormField
                     control={form.control}

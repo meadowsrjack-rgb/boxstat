@@ -30,6 +30,11 @@ type Program = {
   accessTag?: string;
   sessionCount?: number;
   isActive?: boolean;
+  displayCategory?: string;
+  iconName?: string;
+  coverImageUrl?: string;
+  inventorySizes?: string[];
+  sizeStock?: Record<string, number>;
 };
 
 type Enrollment = {
@@ -207,6 +212,16 @@ function StoreItemCard({
 }) {
   return (
     <Card className="bg-white/5 border-white/10 hover:border-white/20 transition-all group overflow-hidden">
+      {/* Cover Image with 16:9 aspect ratio */}
+      {item.coverImageUrl && (
+        <div className="relative aspect-[16/9] bg-black/20">
+          <img 
+            src={item.coverImageUrl} 
+            alt={item.name}
+            className="w-full h-full object-contain"
+          />
+        </div>
+      )}
       <CardContent className="p-5">
         <div className="flex items-start justify-between mb-3">
           <div className="p-2 rounded-lg bg-purple-500/20 group-hover:bg-purple-500/30 transition-colors">
@@ -673,6 +688,7 @@ export default function PaymentsPage() {
   const [selectedStoreItem, setSelectedStoreItem] = useState<Program | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedStoreCategory, setSelectedStoreCategory] = useState<string | null>(null);
   
   const urlParams = new URLSearchParams(window.location.search);
   const paymentSuccess = urlParams.get('success') === 'true';
@@ -954,14 +970,80 @@ export default function PaymentsPage() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {storeItems.map(item => (
-                  <StoreItemCard
-                    key={item.id}
-                    item={item}
-                    onPurchase={handlePurchaseItem}
-                  />
-                ))}
+              <div className="space-y-4">
+                {/* Category filter buttons */}
+                {(() => {
+                  const uniqueCategories = [...new Set(storeItems.map((p) => p.displayCategory || 'general'))] as string[];
+                  
+                  return (
+                    <div className="flex flex-wrap gap-2" data-testid="store-category-filter">
+                      <Button
+                        variant={!selectedStoreCategory ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setSelectedStoreCategory(null)}
+                        className={!selectedStoreCategory ? "bg-red-600 text-white" : "border-white/20 text-white hover:bg-white/10"}
+                        data-testid="filter-all-store"
+                      >
+                        All
+                      </Button>
+                      {uniqueCategories.filter(c => c !== 'general').map((category) => {
+                        const count = storeItems.filter((p) => (p.displayCategory || 'general') === category).length;
+                        
+                        return (
+                          <Button
+                            key={category}
+                            variant={selectedStoreCategory === category ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setSelectedStoreCategory(category)}
+                            className={selectedStoreCategory === category ? "bg-red-600 text-white" : "border-white/20 text-white hover:bg-white/10"}
+                            data-testid={`filter-${category}`}
+                          >
+                            {category.charAt(0).toUpperCase() + category.slice(1)} ({count})
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+                
+                {/* Filtered store items */}
+                {(() => {
+                  const filteredItems = storeItems.filter((item) => {
+                    if (!selectedStoreCategory) return true;
+                    return (item.displayCategory || 'general') === selectedStoreCategory;
+                  });
+                  
+                  if (filteredItems.length === 0 && selectedStoreCategory) {
+                    return (
+                      <Card className="bg-white/5 border-white/10">
+                        <CardContent className="py-12 text-center">
+                          <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-white/30" />
+                          <p className="text-white/60">No items in this category</p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-4 border-white/20 text-white hover:bg-white/10"
+                            onClick={() => setSelectedStoreCategory(null)}
+                          >
+                            Show all items
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+                  
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredItems.map(item => (
+                        <StoreItemCard
+                          key={item.id}
+                          item={item}
+                          onPurchase={handlePurchaseItem}
+                        />
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </TabsContent>

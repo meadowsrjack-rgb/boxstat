@@ -722,6 +722,9 @@ export const awardDefinitions = pgTable("award_definitions", {
   programIds: text("program_ids").array(), // array of program IDs to scope the award
   teamIds: integer("team_ids").array(), // array of team IDs to scope the award
   
+  // Award earning limits
+  allowMultiple: boolean("allow_multiple").default(false), // Can this award be earned multiple times?
+  
   // Legacy fields (kept for backwards compatibility during migration)
   class: text(),
   prestige: text().default('Prospect'),
@@ -1448,6 +1451,9 @@ export interface AwardDefinition {
   triggerOperator: string;
   triggerValue?: number;
   triggerType: string;
+  
+  // Award earning limits
+  allowMultiple?: boolean; // Can this award be earned multiple times?
   
   active: boolean;
   organizationId?: string;

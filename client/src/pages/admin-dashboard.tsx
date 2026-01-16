@@ -5498,6 +5498,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     description: z.string().optional(),
     imageUrl: z.string().optional(),
     active: z.boolean().default(true),
+    allowMultiple: z.boolean().default(false), // Can this award be earned multiple times?
     // New simplified trigger system
     triggerCategory: z.enum(["checkin", "rsvp", "system", "time", "store", "manual"]).default("manual"),
     eventFilter: z.enum(["game", "practice", "skills", "fnh", "any"]).optional(),
@@ -5545,6 +5546,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       description: "",
       imageUrl: "",
       active: true,
+      allowMultiple: false,
       triggerCategory: "manual" as const,
       eventFilter: undefined,
       countMode: undefined,
@@ -5572,12 +5574,12 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/award-definitions"] });
-      toast({ title: "Award definition created successfully" });
+      toast({ title: "Award created successfully" });
       setIsDialogOpen(false);
       form.reset();
     },
     onError: () => {
-      toast({ title: "Failed to create award definition", variant: "destructive" });
+      toast({ title: "Failed to create award", variant: "destructive" });
     },
   });
 
@@ -5587,11 +5589,11 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/award-definitions"] });
-      toast({ title: "Award definition updated successfully" });
+      toast({ title: "Award updated successfully" });
       setEditingAward(null);
     },
     onError: () => {
-      toast({ title: "Failed to update award definition", variant: "destructive" });
+      toast({ title: "Failed to update award", variant: "destructive" });
     },
   });
 
@@ -5601,11 +5603,11 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/award-definitions"] });
-      toast({ title: "Award definition deleted successfully" });
+      toast({ title: "Award deleted successfully" });
       setDeleteConfirm(null);
     },
     onError: () => {
-      toast({ title: "Failed to delete award definition", variant: "destructive" });
+      toast({ title: "Failed to delete award", variant: "destructive" });
     },
   });
 
@@ -5806,11 +5808,13 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       description: award.description || "",
       imageUrl: award.imageUrl || "",
       active: award.active ?? true,
+      allowMultiple: award.allowMultiple ?? false,
       triggerCategory: award.triggerCategory || "manual",
       eventFilter: award.eventFilter || undefined,
       countMode: award.countMode || undefined,
       threshold: award.threshold != null ? Number(award.threshold) : undefined,
       referenceId: award.referenceId || undefined,
+      targetTier: award.targetTier || undefined,
       timeUnit: award.timeUnit || undefined,
       programIds: award.programIds || [],
       teamIds: award.teamIds || [],
@@ -5995,6 +5999,28 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                           </SelectContent>
                         </Select>
                         <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="allowMultiple"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <FormLabel>Can be earned multiple times</FormLabel>
+                          <FormDescription className="text-xs">
+                            Enable if players can earn this award more than once
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            data-testid="switch-allow-multiple"
+                          />
+                        </FormControl>
                       </FormItem>
                     )}
                   />

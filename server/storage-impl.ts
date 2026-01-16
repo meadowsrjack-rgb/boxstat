@@ -3426,6 +3426,8 @@ class DatabaseStorage implements IStorage {
       teamId: updates.teamId,
       opponentTeam: updates.opponentTeam,
       isActive: updates.isActive,
+      assignTo: updates.assignTo,
+      visibility: updates.visibility,
     };
 
     Object.keys(dbUpdates).forEach(key => {

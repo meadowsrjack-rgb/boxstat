@@ -3701,6 +3701,9 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceFrequency, setRecurrenceFrequency] = useState<'daily' | 'weekly' | 'biweekly' | 'monthly'>('weekly');
   const [recurrenceCount, setRecurrenceCount] = useState(4);
+  const [recurrenceDays, setRecurrenceDays] = useState<number[]>([]); // 0=Sun, 1=Mon, ..., 6=Sat
+  const [recurrenceEndType, setRecurrenceEndType] = useState<'count' | 'date'>('count');
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState<string>('');
   const [editEventWindows, setEditEventWindows] = useState<Partial<EventWindow>[]>([]);
   const [selectedEventIds, setSelectedEventIds] = useState<Set<number>>(new Set());
   
@@ -3834,33 +3837,127 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
       const endDate = new Date(rest.endTime);
       const duration = endDate.getTime() - startDate.getTime();
       
-      if (isRecurring && recurrenceCount > 1) {
-        for (let i = 0; i < recurrenceCount; i++) {
-          const newStartDate = new Date(startDate);
-          const newEndDate = new Date(startDate);
-          
-          // Calculate offset based on frequency
-          if (recurrenceFrequency === 'daily') {
-            newStartDate.setDate(startDate.getDate() + i);
-          } else if (recurrenceFrequency === 'weekly') {
-            newStartDate.setDate(startDate.getDate() + (i * 7));
-          } else if (recurrenceFrequency === 'biweekly') {
-            newStartDate.setDate(startDate.getDate() + (i * 14));
-          } else if (recurrenceFrequency === 'monthly') {
-            newStartDate.setMonth(startDate.getMonth() + i);
-          }
-          
-          newEndDate.setTime(newStartDate.getTime() + duration);
-          
-          eventsToCreate.push({
-            ...basePayload,
-            startTime: newStartDate.toISOString(),
-            endTime: newEndDate.toISOString(),
+      if (isRecurring) {
+        // Validate: weekly/biweekly requires at least one day selected
+        if ((recurrenceFrequency === 'weekly' || recurrenceFrequency === 'biweekly') && recurrenceDays.length === 0) {
+          toast({
+            title: "Select Days",
+            description: "Please select at least one day of the week for recurring events.",
+            variant: "destructive",
           });
+          return;
+        }
+        
+        // Validate: end-by-date requires an end date
+        if (recurrenceEndType === 'date' && !recurrenceEndDate) {
+          toast({
+            title: "Select End Date",
+            description: "Please select an end date for the recurring events.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Determine end boundary: by count or by date
+        // Parse end date as local time (not UTC) and set to end-of-day
+        let maxEndDateTime: Date | null = null;
+        if (recurrenceEndType === 'date' && recurrenceEndDate) {
+          // Parse YYYY-MM-DD as local midnight by appending T00:00:00 (local time)
+          const [year, month, day] = recurrenceEndDate.split('-').map(Number);
+          maxEndDateTime = new Date(year, month - 1, day, 23, 59, 59, 999);
+        }
+        // For date-based, allow up to 1000 events (covers ~10 years of weekly events)
+        // For count-based, use the user's selection
+        const maxCount = recurrenceEndType === 'count' ? recurrenceCount : 1000;
+        
+        // For weekly/biweekly with specific days selected
+        if ((recurrenceFrequency === 'weekly' || recurrenceFrequency === 'biweekly') && recurrenceDays.length > 0) {
+          const weekInterval = recurrenceFrequency === 'biweekly' ? 2 : 1;
+          let currentWeekStart = new Date(startDate);
+          // Move to start of week (Sunday)
+          currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay());
+          
+          let eventCount = 0;
+          const maxIterations = 520; // Safety limit: ~10 years of weeks
+          let iterations = 0;
+          let shouldStop = false;
+          
+          while (eventCount < maxCount && iterations < maxIterations && !shouldStop) {
+            for (const dayOfWeek of recurrenceDays.sort((a, b) => a - b)) {
+              // Check if we've reached max count
+              if (eventCount >= maxCount) {
+                shouldStop = true;
+                break;
+              }
+              
+              const eventDate = new Date(currentWeekStart);
+              eventDate.setDate(currentWeekStart.getDate() + dayOfWeek);
+              
+              // Skip dates before the start date (compare date portion only)
+              const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+              const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+              if (eventDateOnly < startDateOnly) continue;
+              
+              // Create event for this day with the same time as original
+              const newStartDate = new Date(eventDate);
+              newStartDate.setHours(startDate.getHours(), startDate.getMinutes(), startDate.getSeconds(), startDate.getMilliseconds());
+              
+              // Check if event datetime has passed the end datetime
+              if (maxEndDateTime && newStartDate > maxEndDateTime) {
+                shouldStop = true;
+                break;
+              }
+              
+              const newEndDate = new Date(newStartDate.getTime() + duration);
+              
+              eventsToCreate.push({
+                ...basePayload,
+                startTime: newStartDate.toISOString(),
+                endTime: newEndDate.toISOString(),
+              });
+              eventCount++;
+            }
+            
+            // Move to next week(s)
+            currentWeekStart.setDate(currentWeekStart.getDate() + (7 * weekInterval));
+            iterations++;
+          }
+        } else {
+          // Original logic for daily/monthly or weekly without specific days
+          for (let i = 0; i < maxCount; i++) {
+            const newStartDate = new Date(startDate);
+            
+            // Calculate offset based on frequency
+            if (recurrenceFrequency === 'daily') {
+              newStartDate.setDate(startDate.getDate() + i);
+            } else if (recurrenceFrequency === 'weekly') {
+              newStartDate.setDate(startDate.getDate() + (i * 7));
+            } else if (recurrenceFrequency === 'biweekly') {
+              newStartDate.setDate(startDate.getDate() + (i * 14));
+            } else if (recurrenceFrequency === 'monthly') {
+              newStartDate.setMonth(startDate.getMonth() + i);
+            }
+            
+            // Check if event datetime has passed the end datetime
+            if (maxEndDateTime && newStartDate > maxEndDateTime) break;
+            
+            const newEndDate = new Date(newStartDate.getTime() + duration);
+            
+            eventsToCreate.push({
+              ...basePayload,
+              startTime: newStartDate.toISOString(),
+              endTime: newEndDate.toISOString(),
+            });
+          }
         }
       } else {
         eventsToCreate.push(basePayload);
       }
+      
+      // Check if max count was reached (potential truncation warning)
+      // For non-recurring events, no limit warning needed
+      const effectiveMaxCount = isRecurring ? (recurrenceEndType === 'count' ? recurrenceCount : 1000) : Infinity;
+      const wasLimitReached = isRecurring && eventsToCreate.length >= effectiveMaxCount;
       
       // Create all events
       const createdEvents: any[] = [];
@@ -3879,12 +3976,23 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
         }
       }
       
-      return createdEvents[0];
+      return { events: createdEvents, wasLimitReached, count: eventsToCreate.length };
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      const count = isRecurring ? recurrenceCount : 1;
-      toast({ title: count > 1 ? `${count} events created successfully` : "Event created successfully" });
+      const count = data?.count || 1;
+      const wasLimitReached = data?.wasLimitReached;
+      
+      if (wasLimitReached) {
+        toast({ 
+          title: `${count} events created (limit reached)`, 
+          description: "Maximum event limit was reached. Some events may not have been created.",
+          variant: "destructive" 
+        });
+      } else {
+        toast({ title: count > 1 ? `${count} events created successfully` : "Event created successfully" });
+      }
+      
       setIsDialogOpen(false);
       form.reset();
       setEventWindows([]);
@@ -3896,6 +4004,9 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
       setIsRecurring(false);
       setRecurrenceFrequency('weekly');
       setRecurrenceCount(4);
+      setRecurrenceDays([]);
+      setRecurrenceEndType('count');
+      setRecurrenceEndDate('');
     },
     onError: () => {
       toast({ title: "Failed to create event", variant: "destructive" });
@@ -4257,44 +4368,125 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                     </div>
                     
                     {isRecurring && (
-                      <div className="grid grid-cols-2 gap-4 pt-2">
-                        <div className="space-y-2">
-                          <Label>Frequency</Label>
-                          <Select
-                            value={recurrenceFrequency}
-                            onValueChange={(value: 'daily' | 'weekly' | 'biweekly' | 'monthly') => setRecurrenceFrequency(value)}
-                          >
-                            <SelectTrigger data-testid="select-recurrence-frequency">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="daily">Daily</SelectItem>
-                              <SelectItem value="weekly">Weekly</SelectItem>
-                              <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
-                              <SelectItem value="monthly">Monthly</SelectItem>
-                            </SelectContent>
-                          </Select>
+                      <div className="space-y-4 pt-2">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Frequency</Label>
+                            <Select
+                              value={recurrenceFrequency}
+                              onValueChange={(value: 'daily' | 'weekly' | 'biweekly' | 'monthly') => {
+                                setRecurrenceFrequency(value);
+                                // Clear day selection when switching to non-weekly
+                                if (value !== 'weekly' && value !== 'biweekly') {
+                                  setRecurrenceDays([]);
+                                }
+                              }}
+                            >
+                              <SelectTrigger data-testid="select-recurrence-frequency">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="daily">Daily</SelectItem>
+                                <SelectItem value="weekly">Weekly</SelectItem>
+                                <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
+                                <SelectItem value="monthly">Monthly</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Ends</Label>
+                            <Select
+                              value={recurrenceEndType}
+                              onValueChange={(value: 'count' | 'date') => setRecurrenceEndType(value)}
+                            >
+                              <SelectTrigger data-testid="select-recurrence-end-type">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="count">After # of events</SelectItem>
+                                <SelectItem value="date">On specific date</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label>Number of Occurrences</Label>
-                          <Select
-                            value={String(recurrenceCount)}
-                            onValueChange={(value) => setRecurrenceCount(parseInt(value))}
-                          >
-                            <SelectTrigger data-testid="select-recurrence-count">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {[2, 3, 4, 5, 6, 7, 8, 10, 12, 16, 20, 24].map((count) => (
-                                <SelectItem key={count} value={String(count)}>
-                                  {count} events
-                                </SelectItem>
+                        
+                        {/* Day of Week Selection - Only for weekly/biweekly */}
+                        {(recurrenceFrequency === 'weekly' || recurrenceFrequency === 'biweekly') && (
+                          <div className="space-y-2">
+                            <Label>Repeat On</Label>
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                { day: 0, label: 'Sun' },
+                                { day: 1, label: 'Mon' },
+                                { day: 2, label: 'Tue' },
+                                { day: 3, label: 'Wed' },
+                                { day: 4, label: 'Thu' },
+                                { day: 5, label: 'Fri' },
+                                { day: 6, label: 'Sat' },
+                              ].map(({ day, label }) => (
+                                <Button
+                                  key={day}
+                                  type="button"
+                                  variant={recurrenceDays.includes(day) ? "default" : "outline"}
+                                  size="sm"
+                                  className={`w-12 ${recurrenceDays.includes(day) ? 'bg-red-600 hover:bg-red-700' : ''}`}
+                                  onClick={() => {
+                                    if (recurrenceDays.includes(day)) {
+                                      setRecurrenceDays(recurrenceDays.filter(d => d !== day));
+                                    } else {
+                                      setRecurrenceDays([...recurrenceDays, day]);
+                                    }
+                                  }}
+                                  data-testid={`btn-day-${label.toLowerCase()}`}
+                                >
+                                  {label}
+                                </Button>
                               ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <p className="col-span-2 text-xs text-gray-500">
-                          This will create {recurrenceCount} separate events, each {recurrenceFrequency === 'daily' ? '1 day' : recurrenceFrequency === 'weekly' ? '1 week' : recurrenceFrequency === 'biweekly' ? '2 weeks' : '1 month'} apart.
+                            </div>
+                            <p className="text-xs text-gray-500">Select which days of the week this event repeats</p>
+                          </div>
+                        )}
+                        
+                        {/* End Condition */}
+                        {recurrenceEndType === 'count' ? (
+                          <div className="space-y-2">
+                            <Label>Number of Occurrences</Label>
+                            <Select
+                              value={String(recurrenceCount)}
+                              onValueChange={(value) => setRecurrenceCount(parseInt(value))}
+                            >
+                              <SelectTrigger data-testid="select-recurrence-count">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {[2, 3, 4, 5, 6, 7, 8, 10, 12, 16, 20, 24, 30, 40, 52].map((count) => (
+                                  <SelectItem key={count} value={String(count)}>
+                                    {count} events
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <Label>End Date</Label>
+                            <Input
+                              type="date"
+                              value={recurrenceEndDate}
+                              onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                              data-testid="input-recurrence-end-date"
+                            />
+                            <p className="text-xs text-gray-500">Events will be created until this date</p>
+                          </div>
+                        )}
+                        
+                        <p className="text-xs text-gray-500 border-t pt-2">
+                          {recurrenceDays.length > 0 ? (
+                            <>This will create events every {recurrenceDays.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ')} {recurrenceFrequency === 'biweekly' ? 'every 2 weeks' : 'weekly'}{recurrenceEndType === 'count' ? ` (${recurrenceCount} total)` : recurrenceEndDate ? ` until ${new Date(recurrenceEndDate).toLocaleDateString()}` : ''}.</>
+                          ) : (
+                            <>This will create events {recurrenceFrequency === 'daily' ? 'every day' : recurrenceFrequency === 'weekly' ? 'every week' : recurrenceFrequency === 'biweekly' ? 'every 2 weeks' : 'every month'}{recurrenceEndType === 'count' ? ` (${recurrenceCount} total)` : recurrenceEndDate ? ` until ${new Date(recurrenceEndDate).toLocaleDateString()}` : ''}.</>
+                          )}
                         </p>
                       </div>
                     )}

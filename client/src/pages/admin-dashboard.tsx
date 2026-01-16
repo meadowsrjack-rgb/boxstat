@@ -5085,14 +5085,14 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                     const parts: string[] = [];
                     if (event.assignTo.teams?.length > 0) {
                       const teamNames = event.assignTo.teams.map((id: string) => {
-                        const team = teams.find((t: any) => String(t.id) === String(id));
+                        const team = (teams || []).find((t: any) => String(t.id) === String(id));
                         return team?.name || `Team ${id}`;
                       });
                       parts.push(teamNames.join(", "));
                     }
                     if (event.assignTo.programs?.length > 0) {
                       const programNames = event.assignTo.programs.map((id: string) => {
-                        const prog = programs.find((p: any) => String(p.id) === String(id));
+                        const prog = (programs || []).find((p: any) => String(p.id) === String(id));
                         return prog?.name || `Program ${id}`;
                       });
                       parts.push(programNames.join(", "));
@@ -5102,7 +5102,7 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                     }
                     if (event.assignTo.users?.length > 0) {
                       const userNames = event.assignTo.users.map((id: string) => {
-                        const user = users.find((u: any) => String(u.id) === String(id));
+                        const user = (users || []).find((u: any) => String(u.id) === String(id));
                         return user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : `User ${id}`;
                       });
                       parts.push(userNames.join(", "));
@@ -5114,7 +5114,7 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                       forDisplay = parts.join("; ");
                     }
                   } else if (event.targetType && event.targetType !== "all") {
-                    const eventTeam = event.teamId ? teams.find((t: any) => t.id === parseInt(event.teamId)) : null;
+                    const eventTeam = event.teamId ? (teams || []).find((t: any) => t.id === parseInt(event.teamId)) : null;
                     if (eventTeam) {
                       forDisplay = eventTeam.name;
                     } else {

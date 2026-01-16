@@ -3805,18 +3805,38 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
         assignTo = { roles: ['player', 'coach', 'parent', 'admin'] };
         visibility = { roles: ['player', 'coach', 'parent', 'admin'] };
       } else if (targetType === 'user') {
+        if (selectedUsers.length === 0) {
+          toast({ title: "Select Users", description: "Please select at least one user.", variant: "destructive" });
+          return;
+        }
         assignTo = { users: selectedUsers };
         visibility = { users: selectedUsers };
       } else if (targetType === 'team') {
+        if (selectedTeams.length === 0) {
+          toast({ title: "Select Teams", description: "Please select at least one team.", variant: "destructive" });
+          return;
+        }
         assignTo = { teams: selectedTeams.map(String) };
         visibility = { teams: selectedTeams.map(String) };
       } else if (targetType === 'division') {
+        if (selectedDivisions.length === 0) {
+          toast({ title: "Select Divisions", description: "Please select at least one division.", variant: "destructive" });
+          return;
+        }
         assignTo = { divisions: selectedDivisions.map(String) };
         visibility = { divisions: selectedDivisions.map(String) };
       } else if (targetType === 'program') {
+        if (selectedPrograms.length === 0) {
+          toast({ title: "Select Programs", description: "Please select at least one program.", variant: "destructive" });
+          return;
+        }
         assignTo = { programs: selectedPrograms.map(String) };
         visibility = { programs: selectedPrograms.map(String) };
       } else if (targetType === 'role') {
+        if (selectedRoles.length === 0) {
+          toast({ title: "Select Roles", description: "Please select at least one role.", variant: "destructive" });
+          return;
+        }
         assignTo = { roles: selectedRoles };
         visibility = { roles: selectedRoles };
       }

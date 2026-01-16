@@ -5044,7 +5044,15 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                   </TableCell>
                   <TableCell className="font-medium">{event.title}</TableCell>
                   <TableCell>
-                    <Badge>{event.type}</Badge>
+                    <Badge className={
+                      (event.eventType || event.type) === 'practice' ? 'bg-blue-100 text-blue-700' :
+                      (event.eventType || event.type) === 'game' ? 'bg-red-100 text-red-700' :
+                      (event.eventType || event.type) === 'training' ? 'bg-green-100 text-green-700' :
+                      (event.eventType || event.type) === 'meeting' ? 'bg-purple-100 text-purple-700' :
+                      'bg-gray-100 text-gray-700'
+                    }>
+                      {(event.eventType || event.type || 'unknown').charAt(0).toUpperCase() + (event.eventType || event.type || 'unknown').slice(1)}
+                    </Badge>
                   </TableCell>
                   <TableCell>{new Date(event.startTime).toLocaleString()}</TableCell>
                   <TableCell>{event.location || "-"}</TableCell>

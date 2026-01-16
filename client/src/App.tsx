@@ -62,6 +62,7 @@ import QuoteCheckout from "@/pages/QuoteCheckout";
 import { useQuery } from "@tanstack/react-query";
 import { initPushNotifications, registerPushNotifications } from "@/services/pushNotificationService";
 import { initDeepLinks } from "@/services/deepLinkService";
+import { UpdatePrompt } from "@/components/UpdatePrompt";
 
 type Profile = {
   id: string;
@@ -494,6 +495,7 @@ export default function App() {
       <WouterRouter>
         <AppRouter />
         <Toaster />
+        <UpdatePrompt />
       </WouterRouter>
     </QueryClientProvider>
   );

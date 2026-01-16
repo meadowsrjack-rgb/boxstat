@@ -423,6 +423,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupAdminNotificationRoutes(app);
   
   // =============================================
+  // APP VERSION ROUTES
+  // =============================================
+  
+  // Get app version requirements for update prompts
+  app.get('/api/app/version', (req, res) => {
+    // Version configuration - update these when releasing new iOS versions
+    const versionConfig = {
+      // Current latest version available in App Store
+      latestVersion: process.env.APP_LATEST_VERSION || '1.0.0',
+      // Minimum version required to use the app (force update below this)
+      minimumVersion: process.env.APP_MINIMUM_VERSION || '1.0.0',
+      // Whether to show update prompt for versions between minimum and latest
+      showSoftPrompt: process.env.APP_SHOW_SOFT_PROMPT !== 'false',
+      // App Store URL for updates
+      appStoreUrl: 'https://apps.apple.com/app/boxstat/id6742976949',
+      // Optional message to show with update
+      updateMessage: process.env.APP_UPDATE_MESSAGE || 'A new version of BoxStat is available with improvements and bug fixes.',
+      // Optional message for force updates
+      forceUpdateMessage: process.env.APP_FORCE_UPDATE_MESSAGE || 'This version of BoxStat is no longer supported. Please update to continue using the app.',
+    };
+    
+    res.json(versionConfig);
+  });
+  
+  // =============================================
   // AUTH ROUTES
   // =============================================
   

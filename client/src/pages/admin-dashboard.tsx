@@ -381,7 +381,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="events">
-            <EventsTab events={events} teams={teams} programs={programs} organization={organization} currentUser={currentUser} />
+            <EventsTab events={events} teams={teams} programs={programs} organization={organization} currentUser={currentUser} users={users} />
           </TabsContent>
 
           <TabsContent value="awards">
@@ -3689,7 +3689,7 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
 }
 
 // Events Tab - Full Implementation with Calendar and List View
-function EventsTab({ events, teams, programs, organization, currentUser }: any) {
+function EventsTab({ events, teams, programs, organization, currentUser, users }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);

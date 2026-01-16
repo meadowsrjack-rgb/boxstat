@@ -4054,6 +4054,9 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
       if (targetType === 'team' && targetId) {
         payload.assignTo = { teams: [String(targetId)] };
         payload.visibility = { teams: [String(targetId)] };
+      } else if (targetType === 'program' && targetId) {
+        payload.assignTo = { programs: [String(targetId)] };
+        payload.visibility = { programs: [String(targetId)] };
       } else if (targetType === 'division' && targetId) {
         payload.assignTo = { divisions: [String(targetId)] };
         payload.visibility = { divisions: [String(targetId)] };
@@ -5232,9 +5235,20 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                           const eventToEdit = { ...event };
                           
                           // Determine targetType from assignTo/visibility
-                          if (event.assignTo?.teams && event.assignTo.teams.length > 0) {
+                          // Check for "Everyone" first - all 4 roles present
+                          const allRoles = ['player', 'coach', 'parent', 'admin'];
+                          const hasAllRoles = event.assignTo?.roles && 
+                            allRoles.every(r => event.assignTo.roles.includes(r));
+                          
+                          if (hasAllRoles) {
+                            eventToEdit.targetType = 'all';
+                            eventToEdit.targetId = '';
+                          } else if (event.assignTo?.teams && event.assignTo.teams.length > 0) {
                             eventToEdit.targetType = 'team';
                             eventToEdit.targetId = String(event.assignTo.teams[0]);
+                          } else if (event.assignTo?.programs && event.assignTo.programs.length > 0) {
+                            eventToEdit.targetType = 'program';
+                            eventToEdit.targetId = String(event.assignTo.programs[0]);
                           } else if (event.assignTo?.divisions && event.assignTo.divisions.length > 0) {
                             eventToEdit.targetType = 'division';
                             eventToEdit.targetId = String(event.assignTo.divisions[0]);

@@ -5964,10 +5964,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('📍 UPDATE EVENT - Received body:', JSON.stringify({
         location: req.body.location,
         latitude: req.body.latitude,
-        longitude: req.body.longitude
+        longitude: req.body.longitude,
+        playerRsvpEnabled: req.body.playerRsvpEnabled
       }, null, 2));
       
       const updated = await storage.updateEvent(req.params.id, req.body);
+      console.log('📍 UPDATE EVENT - Result playerRsvpEnabled:', updated?.playerRsvpEnabled);
       res.json(updated);
     } catch (error: any) {
       console.error('Error updating event:', error);

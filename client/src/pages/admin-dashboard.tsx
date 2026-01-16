@@ -5025,36 +5025,51 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
             </TableHeader>
             <TableBody>
               {(() => {
-                // Group recurring events by title+type+location to show as single entry
+                // Group recurring events by title+type+location+time to show as single entry
                 const groupedEvents: any[] = [];
-                const seenRecurring = new Map<string, any>();
+                const seenSeries = new Map<string, any>();
                 
                 const sortedEvents = [...events].sort((a: any, b: any) => 
                   new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
                 );
                 
+                // Helper to get time of day (HH:MM) from a date
+                const getTimeOfDay = (dateStr: string) => {
+                  const d = new Date(dateStr);
+                  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+                };
+                
                 for (const event of sortedEvents) {
-                  if (event.isRecurring) {
-                    const key = `${event.title}|${event.eventType || event.type}|${event.location || ''}`;
-                    if (!seenRecurring.has(key)) {
-                      // Find all events in this recurring series
-                      const seriesEvents = sortedEvents.filter((e: any) => 
-                        e.isRecurring && 
-                        e.title === event.title && 
+                  // Group by title + type + location + time of day
+                  const timeOfDay = getTimeOfDay(event.startTime);
+                  const key = `${event.title}|${event.eventType || event.type}|${event.location || ''}|${timeOfDay}`;
+                  
+                  if (!seenSeries.has(key)) {
+                    // Find all events in this series (same title, type, location, time)
+                    const seriesEvents = sortedEvents.filter((e: any) => {
+                      const eTime = getTimeOfDay(e.startTime);
+                      return e.title === event.title && 
                         (e.eventType || e.type) === (event.eventType || event.type) &&
-                        (e.location || '') === (event.location || '')
-                      );
-                      seenRecurring.set(key, {
+                        (e.location || '') === (event.location || '') &&
+                        eTime === timeOfDay;
+                    });
+                    
+                    if (seriesEvents.length > 1) {
+                      // It's a series - show as grouped
+                      seenSeries.set(key, {
                         ...event,
                         seriesEvents,
                         seriesCount: seriesEvents.length,
                         firstDate: seriesEvents[0]?.startTime,
                         lastDate: seriesEvents[seriesEvents.length - 1]?.startTime,
+                        isSeries: true,
                       });
-                      groupedEvents.push(seenRecurring.get(key));
+                      groupedEvents.push(seenSeries.get(key));
+                    } else {
+                      // Single event - show as is
+                      seenSeries.set(key, event);
+                      groupedEvents.push(event);
                     }
-                  } else {
-                    groupedEvents.push(event);
                   }
                 }
                 
@@ -5109,7 +5124,7 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                   
                   // Build date/time display
                   let dateTimeDisplay;
-                  if (event.seriesCount > 1) {
+                  if (event.isSeries && event.seriesCount > 1) {
                     const firstDate = new Date(event.firstDate);
                     const lastDate = new Date(event.lastDate);
                     const time = firstDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -5133,12 +5148,12 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                   <TableRow key={event.id} data-testid={`row-event-${event.id}`}>
                     <TableCell>
                       <Checkbox 
-                        checked={event.seriesEvents 
+                        checked={event.isSeries 
                           ? event.seriesEvents.some((e: any) => selectedEventIds.has(e.id))
                           : selectedEventIds.has(event.id)
                         }
                         onCheckedChange={() => {
-                          if (event.seriesEvents) {
+                          if (event.isSeries && event.seriesEvents) {
                             // Toggle all events in series
                             const allSelected = event.seriesEvents.every((e: any) => selectedEventIds.has(e.id));
                             const newSelected = new Set(selectedEventIds);

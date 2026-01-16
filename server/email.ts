@@ -2,7 +2,7 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM_EMAIL = 'BoxStat <onboarding@boxstat.app>';
+const FROM_EMAIL = 'BoxStat <verify@boxstat.app>';
 
 // Use environment-aware domain for email links
 function getDomain(): string {

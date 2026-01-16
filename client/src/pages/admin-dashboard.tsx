@@ -5940,7 +5940,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>{editingAward ? "Edit Award Definition" : "Create Award Definition"}</DialogTitle>
+                <DialogTitle>{editingAward ? "Edit Award" : "Create Award"}</DialogTitle>
               </DialogHeader>
               <Form {...form}>
                 <form

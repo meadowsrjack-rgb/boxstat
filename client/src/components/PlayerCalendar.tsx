@@ -39,22 +39,6 @@ export default function PlayerCalendar({
   
   const { toast } = useToast();
 
-  // Constants for time windows
-  const MS = { HOUR: 60 * 60 * 1000, MIN: 60 * 1000 };
-  const RSVP_OPEN_HOURS = 72; // 3 days before tip-off
-  const RSVP_CLOSE_HOURS = 24; // 1 day before tip-off
-  const ONSITE_OPEN_HOURS = 3;
-
-  // Helper functions for time windows
-  const isRsvpWindow = (start: Date, now = new Date()) => {
-    const t = start.getTime(), n = now.getTime();
-    return n >= t - RSVP_OPEN_HOURS * MS.HOUR && n <= t - RSVP_CLOSE_HOURS * MS.HOUR;
-  };
-  
-  const isOnsiteWindow = (start: Date, now = new Date()) => {
-    const t = start.getTime(), n = now.getTime();
-    return n >= t - ONSITE_OPEN_HOURS * MS.HOUR && n <= t;
-  };
 
   // Checkins query
   const { data: checkins = [] as Attendance[] } = useQuery<Attendance[]>({

@@ -30,16 +30,6 @@ export default function EventDetailPanel({
 }: EventDetailPanelProps) {
   const [qrOpen, setQrOpen] = useState(false);
   const { toast } = useToast();
-  const RSVP_OPEN_HOURS = 72; // 3 days before event
-  const RSVP_CLOSE_HOURS = 24; // 1 day before event
-
-  // Check if we're in RSVP window
-  const isRsvpWindow = useMemo(() => {
-    if (!event) return false;
-    const now = Date.now();
-    const eventTime = new Date(event.startTime).getTime();
-    return now >= eventTime - RSVP_OPEN_HOURS * MS.HOUR && now <= eventTime - RSVP_CLOSE_HOURS * MS.HOUR;
-  }, [event?.startTime]);
 
   // Fetch RSVP status
   const { data: rsvps = [] } = useQuery<any[]>({
@@ -47,11 +37,59 @@ export default function EventDetailPanel({
     enabled: open && !!event,
   });
 
-  // Fetch event windows for check-in timing
+  // Fetch event windows for RSVP and check-in timing
   const { data: eventWindows = [] } = useQuery<any[]>({
-    queryKey: ['/api/events', event?.id, 'windows'],
+    queryKey: ['/api/event-windows/event', event?.id],
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch(`/api/event-windows/event/${event?.id}`, {
+        headers,
+        credentials: 'include',
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
     enabled: open && !!event?.id,
   });
+
+  // Helper function to calculate offset from event start
+  const offsetFromStart = (base: Date, amount: number, unit: string, direction: string) => {
+    const multiplier = direction === 'before' ? -1 : 1;
+    let ms = amount;
+    if (unit === 'minutes') ms *= 60 * 1000;
+    else if (unit === 'hours') ms *= 60 * 60 * 1000;
+    else if (unit === 'days') ms *= 24 * 60 * 60 * 1000;
+    return new Date(base.getTime() + multiplier * ms);
+  };
+
+  // Calculate RSVP window times from event-specific settings
+  const rsvpTimes = useMemo(() => {
+    if (!event) return { open: undefined, close: undefined };
+    
+    const eventStart = new Date(event.startTime);
+    const farFuture = new Date(eventStart.getTime() + 100 * 365 * 24 * 60 * 60 * 1000);
+    
+    const rsvpOpenWindow = eventWindows.find((w: any) => w.windowType === 'rsvp' && w.openRole === 'open');
+    const rsvpCloseWindow = eventWindows.find((w: any) => w.windowType === 'rsvp' && w.openRole === 'close');
+    
+    return {
+      open: rsvpOpenWindow
+        ? offsetFromStart(eventStart, rsvpOpenWindow.amount, rsvpOpenWindow.unit, rsvpOpenWindow.direction)
+        : new Date(eventStart.getTime() - 3 * 24 * 60 * 60 * 1000), // Default 3 days before
+      close: rsvpCloseWindow
+        ? offsetFromStart(eventStart, rsvpCloseWindow.amount, rsvpCloseWindow.unit, rsvpCloseWindow.direction)
+        : farFuture, // Default: never closes
+    };
+  }, [event, eventWindows]);
+
+  // Check if we're in RSVP window using event-specific times
+  const isRsvpWindow = useMemo(() => {
+    if (!rsvpTimes.open || !rsvpTimes.close) return false;
+    const now = Date.now();
+    return now >= rsvpTimes.open.getTime() && now <= rsvpTimes.close.getTime();
+  }, [rsvpTimes]);
 
   // Calculate check-in window times
   const checkinTimes = useMemo(() => {
@@ -62,15 +100,6 @@ export default function EventDetailPanel({
     
     const checkinOpenWindow = eventWindows.find((w: any) => w.windowType === 'checkin' && w.openRole === 'open');
     const checkinCloseWindow = eventWindows.find((w: any) => w.windowType === 'checkin' && w.openRole === 'close');
-    
-    const offsetFromStart = (base: Date, amount: number, unit: string, direction: string) => {
-      const multiplier = direction === 'before' ? -1 : 1;
-      let ms = amount;
-      if (unit === 'minutes') ms *= 60 * 1000;
-      else if (unit === 'hours') ms *= 60 * 60 * 1000;
-      else if (unit === 'days') ms *= 24 * 60 * 60 * 1000;
-      return new Date(base.getTime() + multiplier * ms);
-    };
     
     return {
       open: checkinOpenWindow

@@ -10,7 +10,7 @@ import {
   type SelectNotification,
   type InsertNotificationRecipient
 } from "../../shared/schema";
-import { eq, and, desc, sql, inArray, or } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, or, ne } from "drizzle-orm";
 import { notificationService } from "./notificationService";
 import { sendNotificationEmail } from "../email";
 
@@ -353,7 +353,7 @@ export class AdminNotificationService {
     }
   }
 
-  // Get all notifications (admin view)
+  // Get all notifications (admin view) - excludes system-sent notifications
   async getAllNotifications(organizationId: string, options: {
     limit?: number;
     offset?: number;
@@ -362,7 +362,11 @@ export class AdminNotificationService {
     try {
       const { limit = 50, offset = 0, status } = options;
       
-      const conditions = [eq(notifications.organizationId, organizationId)];
+      // Filter to only show manually sent notifications (exclude system-sent ones)
+      const conditions = [
+        eq(notifications.organizationId, organizationId),
+        ne(notifications.sentBy, 'system')
+      ];
       if (status) {
         conditions.push(eq(notifications.status, status));
       }

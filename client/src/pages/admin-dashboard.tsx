@@ -88,7 +88,7 @@ import LeadEvaluationForm from "@/components/LeadEvaluationForm";
 import type { SkillCategoryName, EvalScores, Quarter } from "@/components/CoachAwardDialogs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ChevronDown, RefreshCw } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { DateScrollPicker } from "react-date-wheel-picker";
@@ -5126,20 +5126,24 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                   let dateTimeDisplay;
                   if (event.isSeries && event.seriesCount > 1) {
                     const firstDate = new Date(event.firstDate);
-                    const lastDate = new Date(event.lastDate);
-                    const time = firstDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-                    dateTimeDisplay = (
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1">
-                          <RefreshCw className="w-3 h-3 text-blue-500" />
-                          <span className="text-blue-600 font-medium">{event.seriesCount} events</span>
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {firstDate.toLocaleDateString()} - {lastDate.toLocaleDateString()}
-                        </div>
-                        <div className="text-xs text-gray-500">at {time}</div>
-                      </div>
-                    );
+                    const startTime = firstDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                    // Get end time if available
+                    const endDate = event.endTime ? new Date(event.endTime) : null;
+                    const endTime = endDate ? endDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : null;
+                    
+                    // Get unique days of week from series
+                    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                    const uniqueDays = new Set<number>();
+                    event.seriesEvents.forEach((e: any) => {
+                      const d = new Date(e.startTime);
+                      uniqueDays.add(d.getDay());
+                    });
+                    const sortedDays = Array.from(uniqueDays).sort((a, b) => a - b);
+                    const daysStr = sortedDays.map(d => dayNames[d]).join(', ');
+                    
+                    // Format: "5:30PM - 7PM Tue, Thu Recurring"
+                    const timeRange = endTime ? `${startTime} - ${endTime}` : startTime;
+                    dateTimeDisplay = `${timeRange} ${daysStr} Recurring`;
                   } else {
                     dateTimeDisplay = new Date(event.startTime).toLocaleString();
                   }

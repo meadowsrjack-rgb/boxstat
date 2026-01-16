@@ -3,6 +3,7 @@ import { users, awardDefinitions, userAwards, attendances, productEnrollments, r
 import { eq, and, sql, desc, or } from "drizzle-orm";
 import type { IStorage } from "../storage";
 import type { TriggerCategory, SelectAwardDefinition } from "@shared/schema";
+import { notificationService } from "../services/notificationService";
 
 interface AwardSummary {
   id: number;
@@ -486,16 +487,38 @@ async function sendAwardNotification(
     const user = await storage.getUser(notification.userId);
     if (!user) return;
 
-    await storage.createNotification({
+    const title = `🏆 New Award Earned: ${notification.awardName}`;
+    const message = `Congratulations! You've earned the "${notification.awardName}" (${notification.awardTier}) award!`;
+
+    // Create in-app notification
+    const createdNotification = await storage.createNotification({
       organizationId: user.organizationId,
-      title: `🏆 New Award Earned: ${notification.awardName}`,
-      message: `Congratulations! You've earned the "${notification.awardName}" (${notification.awardTier}) award!`,
+      title,
+      message,
       types: ["notification"],
       recipientTarget: "users",
       recipientUserIds: [notification.userId],
       status: "sent",
-      sendAt: new Date().toISOString(),
+      deliveryChannels: ["in_app", "push"],
+      sentBy: "system",
     });
+
+    // Send push notification only if in-app notification was created successfully
+    if (createdNotification?.id) {
+      try {
+        await notificationService.sendPushNotification(
+          createdNotification.id,
+          notification.userId,
+          title,
+          message
+        );
+        console.log(`📱 Push notification sent to user ${notification.userId} for award "${notification.awardName}"`);
+      } catch (pushError) {
+        console.error(`Push notification failed for award:`, pushError);
+      }
+    } else {
+      console.warn(`⚠️ Skipping push notification - in-app notification creation failed for user ${notification.userId}`);
+    }
 
     console.log(`📣 Sent award notification to user ${notification.userId}`);
   } catch (error) {

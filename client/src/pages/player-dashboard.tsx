@@ -56,6 +56,7 @@ import { useEffect, useMemo, useState } from "react";
 import { format, isSameDay, isAfter, startOfDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isToday as isDateToday } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useAwardToast } from "@/hooks/useAwardToast";
 import {
   Select,
   SelectContent,
@@ -202,6 +203,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   const [newMessage, setNewMessage] = useState("");
   const [ws, setWs] = useState<WebSocket | null>(null);
   const { toast } = useToast();
+  useAwardToast(); // Listen for new awards and show toasts
   const queryClient = useQueryClient();
   const [location, setLocation] = useLocation();
   

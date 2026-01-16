@@ -6998,11 +6998,14 @@ function StoreTab({ organization }: any) {
 
   const createProduct = useMutation({
     mutationFn: async (data: any) => {
+      if (!organization?.id) {
+        throw new Error("Organization not loaded. Please try again.");
+      }
       const isTraining = data.storeCategory === "training";
       const isGear = data.storeCategory === "gear";
       const payload = {
         ...data,
-        organizationId: organization?.id,
+        organizationId: organization.id,
         productCategory: "goods",
         type: data.isRecurring ? "Subscription" : (isTraining ? "Pack" : "One-Time"),
         billingCycle: data.isRecurring ? (data.billingCycle || "Monthly") : null,
@@ -7042,8 +7045,13 @@ function StoreTab({ organization }: any) {
       setProductImageUrl("");
       form.reset();
     },
-    onError: () => {
-      toast({ title: "Failed to save product", variant: "destructive" });
+    onError: (error: any) => {
+      console.error("Failed to save product:", error);
+      toast({ 
+        title: "Failed to save product", 
+        description: error?.message || "Please try again",
+        variant: "destructive" 
+      });
     },
   });
 

@@ -56,6 +56,7 @@ import LeadEvaluationForm from "@/components/LeadEvaluationForm";
 import { AwardsDialog, EvaluationDialog, SKILL_CATEGORIES, type PlayerLite, type EvalScores, type Quarter, type SkillCategoryName } from "@/components/CoachAwardDialogs";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
+import PushNotificationSetup from "@/components/PushNotificationSetup";
 
 /* =================== Types =================== */
 
@@ -490,6 +491,10 @@ export default function CoachDashboard() {
         {/* Announcement Banner */}
         <div className="px-6 pt-4">
           <AnnouncementBanner />
+        </div>
+        {/* Push Notification Setup */}
+        <div className="px-6 pt-4">
+          <PushNotificationSetup compact />
         </div>
         {/* Avatar header */}
         <div className="px-6 py-6 text-center">

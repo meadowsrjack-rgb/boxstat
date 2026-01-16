@@ -36,11 +36,21 @@ export default function PushNotificationSetup({ onDismiss, compact = false }: Pu
         });
       },
       onError: (error: any) => {
-        toast({
-          title: "Failed to Enable Notifications",
-          description: error.message || "Please try again or check your browser settings.",
-          variant: "destructive",
-        });
+        const errorMessage = error.message || "";
+        // Check if it's a permission denied error - show softer message
+        if (errorMessage.toLowerCase().includes('denied') || errorMessage.toLowerCase().includes('permission')) {
+          setIsDismissed(true);
+          toast({
+            title: "Notifications Not Available",
+            description: "You can enable notifications later in your browser or device settings.",
+          });
+        } else {
+          toast({
+            title: "Failed to Enable Notifications",
+            description: error.message || "Please try again or check your browser settings.",
+            variant: "destructive",
+          });
+        }
       },
     });
   };

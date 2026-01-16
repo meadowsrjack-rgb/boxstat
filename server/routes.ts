@@ -1634,6 +1634,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (updatedPlayer) {
             console.log(`✅ Player ${playerId} registration finalized after payment`);
             
+            // Send payment confirmation notification
+            try {
+              const amount = session.amount_total ? session.amount_total / 100 : 0;
+              const playerName = `${updatedPlayer.firstName || ''} ${updatedPlayer.lastName || ''}`.trim();
+              
+              // Notify parent/account holder
+              if (accountHolderId) {
+                await pushNotifications.parentPaymentSuccessful(storage, accountHolderId, playerName, amount);
+              }
+              
+              // Notify admins about new payment
+              const parent = await storage.getUser(accountHolderId);
+              const parentName = parent ? `${parent.firstName || ''} ${parent.lastName || ''}`.trim() : 'Unknown';
+              await pushNotifications.notifyAllAdmins(storage, 
+                '💰 Payment Received',
+                `${parentName} paid $${amount.toFixed(2)} for ${playerName}'s registration`
+              );
+            } catch (notifError: any) {
+              console.error('⚠️ Payment notification failed (non-fatal):', notifError.message);
+            }
+            
             // Create a payment record
             if (session.amount_total) {
               try {
@@ -5054,6 +5075,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Also update legacy teamId field for backwards compatibility
       const updatedPlayer = await storage.updateUser(playerId, { teamId: teamIdNum } as any);
       
+      // Send notification about team assignment
+      try {
+        const teamName = team.name || 'a new team';
+        const playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'Your player';
+        
+        // Notify parent about team assignment
+        if (player.linkedParentId) {
+          await pushNotifications.parentPlayerTeamAssignment(storage, player.linkedParentId, playerName, teamName);
+        }
+        
+        // Notify coach about new player on team
+        if (team.coachId) {
+          await pushNotifications.coachNewPlayerAssigned(storage, team.coachId, playerName, teamName);
+        }
+      } catch (notifError: any) {
+        console.error('⚠️ Team assignment notification failed (non-fatal):', notifError.message);
+      }
+      
       console.log(`Assigned player ${playerId} to team ${teamId} via team_memberships`);
       res.json({ success: true, player: updatedPlayer });
     } catch (error: any) {
@@ -7355,6 +7394,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }));
         }
       });
+    }
+    
+    // Send push notification to team members about new message
+    try {
+      const team = await storage.getTeam(req.params.teamId);
+      const sender = await storage.getUser(validatedSenderId);
+      const senderName = sender ? `${sender.firstName || ''} ${sender.lastName || ''}`.trim() : 'Someone';
+      
+      if (team) {
+        // Notify coach about player/parent messages
+        if (team.coachId && validatedSenderId !== team.coachId) {
+          const isFromParent = channel === 'parents';
+          await pushNotifications.coachNewMessage(storage, team.coachId, parseInt(req.params.teamId), senderName, isFromParent);
+        }
+      }
+    } catch (notifError: any) {
+      console.error('⚠️ Message notification failed (non-fatal):', notifError.message);
     }
     
     res.json(newMessage);

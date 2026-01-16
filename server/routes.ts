@@ -10802,32 +10802,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // =============================================
-  // SCHEDULED TASKS - Award Synchronization
-  // =============================================
-  
-  // Sync awards for all users every hour
-  cron.schedule('0 * * * *', async () => {
-    try {
-      console.log('🏆 Starting hourly award sync for all users...');
-      // Get all users from default organization
-      const allUsers = await storage.getUsersByOrganization('default-org');
-      
-      let syncCount = 0;
-      for (const user of allUsers) {
-        try {
-          await evaluateAwardsForUser(user.id, storage);
-          syncCount++;
-        } catch (error) {
-          console.error(`Failed to sync awards for user ${user.id}:`, error);
-        }
-      }
-      
-      console.log(`✅ Award sync completed: ${syncCount}/${allUsers.length} users synced`);
-    } catch (error) {
-      console.error('Error in hourly award sync:', error);
-    }
-  });
+  // Awards are evaluated immediately after actions (check-in, RSVP, purchase, etc.)
+  // No scheduled sync needed - awards are granted in real-time
 
   // =============================================
   // BUG REPORTS

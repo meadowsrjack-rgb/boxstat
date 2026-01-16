@@ -11078,13 +11078,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { message } = req.body;
       const user = await storage.getUser(req.user.id);
+      const senderName = user ? `${user.firstName} ${user.lastName}` : 'Unknown';
       const msg = await storage.createContactManagementMessage({
         organizationId: req.user.organizationId,
         senderId: req.user.id,
-        senderName: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
+        senderName,
         senderEmail: user?.email || null,
         message,
       });
+      
+      // Notify all admins about new contact message
+      try {
+        await pushNotifications.notifyAllAdmins(
+          storage,
+          "💬 New Contact Message",
+          `${senderName}: ${message.substring(0, 50)}${message.length > 50 ? '...' : ''}`
+        );
+      } catch (notifyError) {
+        console.error('Error sending admin contact notification:', notifyError);
+      }
+      
       res.json(msg);
     } catch (error: any) {
       console.error('Error creating contact message:', error);

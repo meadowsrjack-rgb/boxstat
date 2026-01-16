@@ -617,6 +617,8 @@ export const events = pgTable("events", {
   // Role-based participation control
   participationRoles: text("participation_roles").array(), // Roles that can RSVP/check-in (player, parent, coach, admin)
   proxyCheckinRoles: text("proxy_checkin_roles").array(), // Roles that can check in others (typically parent for player events)
+  // Player RSVP control
+  playerRsvpEnabled: boolean("player_rsvp_enabled").default(true), // If false, only parent/guardian can RSVP for players
 });
 
 // Event Targets table (normalized targeting for events)
@@ -1275,6 +1277,7 @@ export interface Event {
   isActive: boolean;
   participationRoles?: string[];
   proxyCheckinRoles?: string[];
+  playerRsvpEnabled?: boolean; // If false, only parent/guardian can RSVP for players
   createdAt: Date;
 }
 
@@ -1314,6 +1317,7 @@ export const insertEventSchema = z.object({
   createdBy: z.string().optional(),
   status: z.string().default('active'),
   isActive: z.boolean().default(true),
+  playerRsvpEnabled: z.boolean().default(true),
 });
 
 export type InsertEvent = z.infer<typeof insertEventSchema>;

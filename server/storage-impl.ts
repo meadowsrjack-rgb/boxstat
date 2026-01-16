@@ -3405,6 +3405,7 @@ class DatabaseStorage implements IStorage {
       createdBy: event.createdBy ?? undefined,
       status: event.status || 'active',
       isActive: event.isActive ?? true,
+      playerRsvpEnabled: event.playerRsvpEnabled ?? true,
       createdAt: new Date().toISOString(),
     };
 
@@ -3428,6 +3429,7 @@ class DatabaseStorage implements IStorage {
       isActive: updates.isActive,
       assignTo: updates.assignTo,
       visibility: updates.visibility,
+      playerRsvpEnabled: updates.playerRsvpEnabled,
     };
 
     Object.keys(dbUpdates).forEach(key => {
@@ -5288,6 +5290,7 @@ class DatabaseStorage implements IStorage {
       createdBy: dbEvent.createdBy ?? undefined,
       status: dbEvent.status || 'active',
       isActive: dbEvent.isActive ?? true,
+      playerRsvpEnabled: dbEvent.playerRsvpEnabled ?? true,
       createdAt: new Date(dbEvent.createdAt),
     };
   }

@@ -657,11 +657,11 @@ export default function EventDetailModal({
   };
 
   const handleRsvpClick = (response?: 'attending' | 'not_attending') => {
-    // Players cannot RSVP - parent/guardian must do it for them
-    if (userRole === 'player') {
+    // Players cannot RSVP if playerRsvpEnabled is false
+    if (userRole === 'player' && event?.playerRsvpEnabled === false) {
       toast({
         title: "RSVP Not Available",
-        description: "Your parent or guardian must RSVP for you from their account.",
+        description: "Your account owner, parent, or guardian must RSVP for this event on your behalf.",
         variant: "destructive"
       });
       return;
@@ -1058,16 +1058,31 @@ export default function EventDetailModal({
             )}
 
             <div className="grid grid-cols-1 gap-4">
-              <RSVPWheel
-                data={rsvpData}
-                openTime={eventWindows.rsvpOpen}
-                closeTime={eventWindows.rsvpClose}
-                onRsvpClick={handleRsvpClick}
-                userResponse={userRsvp?.response || 'no_response'}
-                disabled={rsvpMutation.isPending}
-                attendingNames={rsvpNames.attendingNames}
-                notAttendingNames={rsvpNames.notAttendingNames}
-              />
+              {/* Show message for players when playerRsvpEnabled is false */}
+              {userRole === 'player' && event?.playerRsvpEnabled === false ? (
+                <Card className="p-4 bg-amber-50 border-amber-200">
+                  <div className="flex items-center gap-3">
+                    <Users className="h-5 w-5 text-amber-600" />
+                    <div>
+                      <h4 className="font-medium text-amber-900">RSVP Not Available for Players</h4>
+                      <p className="text-sm text-amber-700">
+                        Your account owner, parent, or guardian must RSVP for this event on your behalf.
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              ) : (
+                <RSVPWheel
+                  data={rsvpData}
+                  openTime={eventWindows.rsvpOpen}
+                  closeTime={eventWindows.rsvpClose}
+                  onRsvpClick={handleRsvpClick}
+                  userResponse={userRsvp?.response || 'no_response'}
+                  disabled={rsvpMutation.isPending}
+                  attendingNames={rsvpNames.attendingNames}
+                  notAttendingNames={rsvpNames.notAttendingNames}
+                />
+              )}
 
               <CheckInWheel
                 data={checkInData}

@@ -23,7 +23,7 @@ PostgreSQL, hosted on Neon serverless, is used with Drizzle ORM. The schema is o
 -   **User & Player Management**: Supports single parent accounts with linked child profiles, a PIN-secured Dual Mode System (Parent/Player), and Parental Device Lock.
 -   **Team & Coach Management**: Coaches manage teams, view rosters, evaluate players, award badges, and utilize real-time team chat.
 -   **Admin Team Assignment with Auto-Enrollment**: Provides methods for assigning players to teams with automatic enrollment into associated programs.
--   **Event & Scheduling**: In-app CRUD for events with color-coded UI, player RSVP, and GPS-based check-in (200m geofencing) using OpenStreetMap.
+-   **Event & Scheduling**: In-app CRUD for events with color-coded UI, player RSVP, and GPS-based check-in (200m geofencing) using OpenStreetMap. Events support configurable player self-RSVP toggle - when disabled, only parent/guardian can RSVP for players, with an informational message displayed to players.
 -   **Payment & Awards**: Stripe integration for secure payments supporting various billing models, and a comprehensive 100-trophy/badge achievement system.
 -   **Admin Panel**: Comprehensive CRUD for system entities, detailed user views, and a calendar for event management. Includes dedicated tabs for Overview, Users, Programs, Events, Awards, Store, Waivers, and Notifications. Programs serve as a central management hub.
 -   **Notifications**: Multi-channel (in-app, email, push) notification system with advanced recipient targeting and web push support. Features scheduled and recurring messaging with campaign management.

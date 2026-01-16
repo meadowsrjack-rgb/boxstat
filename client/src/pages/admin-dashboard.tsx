@@ -3704,6 +3704,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
   const [recurrenceDays, setRecurrenceDays] = useState<number[]>([]); // 0=Sun, 1=Mon, ..., 6=Sat
   const [recurrenceEndType, setRecurrenceEndType] = useState<'count' | 'date'>('count');
   const [recurrenceEndDate, setRecurrenceEndDate] = useState<string>('');
+  const [playerRsvpEnabled, setPlayerRsvpEnabled] = useState(true);
   const [editEventWindows, setEditEventWindows] = useState<Partial<EventWindow>[]>([]);
   const [selectedEventIds, setSelectedEventIds] = useState<Set<number>>(new Set());
   
@@ -3848,6 +3849,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
         organizationId: organization.id,
         assignTo,
         visibility,
+        playerRsvpEnabled,
       };
       console.log('Event API payload:', basePayload);
       
@@ -4027,6 +4029,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
       setRecurrenceDays([]);
       setRecurrenceEndType('count');
       setRecurrenceEndDate('');
+      setPlayerRsvpEnabled(true);
     },
     onError: () => {
       toast({ title: "Failed to create event", variant: "destructive" });
@@ -4515,6 +4518,28 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                     )}
                   </div>
                   
+                  {/* Player RSVP Toggle */}
+                  <div className="border rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="player-rsvp-toggle" className="font-medium cursor-pointer">
+                          Allow Player Self-RSVP
+                        </Label>
+                        <p className="text-xs text-gray-500">
+                          {playerRsvpEnabled 
+                            ? "Players can RSVP to this event themselves" 
+                            : "Only parent/guardian can RSVP for players"}
+                        </p>
+                      </div>
+                      <Switch
+                        id="player-rsvp-toggle"
+                        checked={playerRsvpEnabled}
+                        onCheckedChange={setPlayerRsvpEnabled}
+                        data-testid="switch-player-rsvp"
+                      />
+                    </div>
+                  </div>
+                  
                   <FormField
                     control={form.control}
                     name="location"
@@ -4956,6 +4981,28 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                       onChange={(e) => setEditingEvent({...editingEvent, description: e.target.value})}
                       data-testid="input-edit-event-description"
                     />
+                  </div>
+                  
+                  {/* Player RSVP Toggle */}
+                  <div className="border rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="edit-player-rsvp-toggle" className="font-medium cursor-pointer">
+                          Allow Player Self-RSVP
+                        </Label>
+                        <p className="text-xs text-gray-500">
+                          {editingEvent.playerRsvpEnabled !== false
+                            ? "Players can RSVP to this event themselves" 
+                            : "Only parent/guardian can RSVP for players"}
+                        </p>
+                      </div>
+                      <Switch
+                        id="edit-player-rsvp-toggle"
+                        checked={editingEvent.playerRsvpEnabled !== false}
+                        onCheckedChange={(checked) => setEditingEvent({...editingEvent, playerRsvpEnabled: checked})}
+                        data-testid="switch-edit-player-rsvp"
+                      />
+                    </div>
                   </div>
                   
                   <div className="border-t pt-4">

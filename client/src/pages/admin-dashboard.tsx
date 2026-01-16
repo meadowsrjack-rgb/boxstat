@@ -5024,43 +5024,156 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
               </TableRow>
             </TableHeader>
             <TableBody>
-              {events
-                .sort((a: any, b: any) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
-                .map((event: any) => {
-                // Look up team if event is team-specific
-                const eventTeam = event.teamId ? teams.find((t: any) => t.id === parseInt(event.teamId)) : null;
-                const teamDisplay = eventTeam 
-                  ? `${eventTeam.name}${eventTeam.programType ? ` (${eventTeam.programType})` : ''}`
-                  : null;
+              {(() => {
+                // Group recurring events by title+type+location to show as single entry
+                const groupedEvents: any[] = [];
+                const seenRecurring = new Map<string, any>();
                 
-                return (
-                <TableRow key={event.id} data-testid={`row-event-${event.id}`}>
-                  <TableCell>
-                    <Checkbox 
-                      checked={selectedEventIds.has(event.id)}
-                      onCheckedChange={() => toggleEventSelection(event.id)}
-                      aria-label={`Select ${event.title}`}
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">{event.title}</TableCell>
-                  <TableCell>
-                    <Badge className={
-                      (event.eventType || event.type) === 'practice' ? 'bg-blue-100 text-blue-700' :
-                      (event.eventType || event.type) === 'game' ? 'bg-red-100 text-red-700' :
-                      (event.eventType || event.type) === 'training' ? 'bg-green-100 text-green-700' :
-                      (event.eventType || event.type) === 'meeting' ? 'bg-purple-100 text-purple-700' :
-                      'bg-gray-100 text-gray-700'
-                    }>
-                      {(event.eventType || event.type || 'unknown').charAt(0).toUpperCase() + (event.eventType || event.type || 'unknown').slice(1)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{new Date(event.startTime).toLocaleString()}</TableCell>
-                  <TableCell>{event.location || "-"}</TableCell>
-                  <TableCell>
-                    {event.targetType === "all" ? "Everyone" : 
-                     event.targetType === "team" && teamDisplay ? teamDisplay :
-                     event.targetType}
-                  </TableCell>
+                const sortedEvents = [...events].sort((a: any, b: any) => 
+                  new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+                );
+                
+                for (const event of sortedEvents) {
+                  if (event.isRecurring) {
+                    const key = `${event.title}|${event.eventType || event.type}|${event.location || ''}`;
+                    if (!seenRecurring.has(key)) {
+                      // Find all events in this recurring series
+                      const seriesEvents = sortedEvents.filter((e: any) => 
+                        e.isRecurring && 
+                        e.title === event.title && 
+                        (e.eventType || e.type) === (event.eventType || event.type) &&
+                        (e.location || '') === (event.location || '')
+                      );
+                      seenRecurring.set(key, {
+                        ...event,
+                        seriesEvents,
+                        seriesCount: seriesEvents.length,
+                        firstDate: seriesEvents[0]?.startTime,
+                        lastDate: seriesEvents[seriesEvents.length - 1]?.startTime,
+                      });
+                      groupedEvents.push(seenRecurring.get(key));
+                    }
+                  } else {
+                    groupedEvents.push(event);
+                  }
+                }
+                
+                // Sort by first date descending
+                groupedEvents.sort((a: any, b: any) => 
+                  new Date(b.firstDate || b.startTime).getTime() - new Date(a.firstDate || a.startTime).getTime()
+                );
+                
+                return groupedEvents.map((event: any) => {
+                  // Build 'For' display from assignTo
+                  let forDisplay = "Everyone";
+                  if (event.assignTo) {
+                    const parts: string[] = [];
+                    if (event.assignTo.teams?.length > 0) {
+                      const teamNames = event.assignTo.teams.map((id: string) => {
+                        const team = teams.find((t: any) => String(t.id) === String(id));
+                        return team?.name || `Team ${id}`;
+                      });
+                      parts.push(teamNames.join(", "));
+                    }
+                    if (event.assignTo.programs?.length > 0) {
+                      const programNames = event.assignTo.programs.map((id: string) => {
+                        const prog = programs.find((p: any) => String(p.id) === String(id));
+                        return prog?.name || `Program ${id}`;
+                      });
+                      parts.push(programNames.join(", "));
+                    }
+                    if (event.assignTo.divisions?.length > 0) {
+                      parts.push(`Divisions: ${event.assignTo.divisions.join(", ")}`);
+                    }
+                    if (event.assignTo.users?.length > 0) {
+                      const userNames = event.assignTo.users.map((id: string) => {
+                        const user = users.find((u: any) => String(u.id) === String(id));
+                        return user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : `User ${id}`;
+                      });
+                      parts.push(userNames.join(", "));
+                    }
+                    if (event.assignTo.roles?.length > 0) {
+                      parts.push(`Roles: ${event.assignTo.roles.map((r: string) => r.charAt(0).toUpperCase() + r.slice(1)).join(", ")}`);
+                    }
+                    if (parts.length > 0) {
+                      forDisplay = parts.join("; ");
+                    }
+                  } else if (event.targetType && event.targetType !== "all") {
+                    const eventTeam = event.teamId ? teams.find((t: any) => t.id === parseInt(event.teamId)) : null;
+                    if (eventTeam) {
+                      forDisplay = eventTeam.name;
+                    } else {
+                      forDisplay = event.targetType.charAt(0).toUpperCase() + event.targetType.slice(1);
+                    }
+                  }
+                  
+                  // Build date/time display
+                  let dateTimeDisplay;
+                  if (event.seriesCount > 1) {
+                    const firstDate = new Date(event.firstDate);
+                    const lastDate = new Date(event.lastDate);
+                    const time = firstDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                    dateTimeDisplay = (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1">
+                          <RefreshCw className="w-3 h-3 text-blue-500" />
+                          <span className="text-blue-600 font-medium">{event.seriesCount} events</span>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {firstDate.toLocaleDateString()} - {lastDate.toLocaleDateString()}
+                        </div>
+                        <div className="text-xs text-gray-500">at {time}</div>
+                      </div>
+                    );
+                  } else {
+                    dateTimeDisplay = new Date(event.startTime).toLocaleString();
+                  }
+                  
+                  return (
+                  <TableRow key={event.id} data-testid={`row-event-${event.id}`}>
+                    <TableCell>
+                      <Checkbox 
+                        checked={event.seriesEvents 
+                          ? event.seriesEvents.some((e: any) => selectedEventIds.has(e.id))
+                          : selectedEventIds.has(event.id)
+                        }
+                        onCheckedChange={() => {
+                          if (event.seriesEvents) {
+                            // Toggle all events in series
+                            const allSelected = event.seriesEvents.every((e: any) => selectedEventIds.has(e.id));
+                            const newSelected = new Set(selectedEventIds);
+                            event.seriesEvents.forEach((e: any) => {
+                              if (allSelected) {
+                                newSelected.delete(e.id);
+                              } else {
+                                newSelected.add(e.id);
+                              }
+                            });
+                            setSelectedEventIds(newSelected);
+                          } else {
+                            toggleEventSelection(event.id);
+                          }
+                        }}
+                        aria-label={`Select ${event.title}`}
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">{event.title}</TableCell>
+                    <TableCell>
+                      <Badge className={
+                        (event.eventType || event.type) === 'practice' ? 'bg-blue-100 text-blue-700' :
+                        (event.eventType || event.type) === 'game' ? 'bg-red-100 text-red-700' :
+                        (event.eventType || event.type) === 'training' ? 'bg-green-100 text-green-700' :
+                        (event.eventType || event.type) === 'meeting' ? 'bg-purple-100 text-purple-700' :
+                        'bg-gray-100 text-gray-700'
+                      }>
+                        {(event.eventType || event.type || 'unknown').charAt(0).toUpperCase() + (event.eventType || event.type || 'unknown').slice(1)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{dateTimeDisplay}</TableCell>
+                    <TableCell>{event.location || "-"}</TableCell>
+                    <TableCell className="max-w-[200px] truncate" title={forDisplay}>
+                      {forDisplay}
+                    </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button 
@@ -5109,8 +5222,9 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                     </div>
                   </TableCell>
                 </TableRow>
-                );
-              })}
+                  );
+                });
+              })()}
             </TableBody>
           </Table>
         ) : (

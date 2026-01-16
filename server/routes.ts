@@ -6950,6 +6950,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/rsvp', requireAuth, async (req: any, res) => {
     try {
+      // Players cannot RSVP - parent/guardian must do it for them
+      if (req.user?.role === 'player') {
+        return res.status(403).json({ 
+          error: 'Players cannot RSVP directly. Your parent or guardian must RSVP for you from their account.' 
+        });
+      }
+      
       const rsvpData = insertRsvpResponseSchema.parse(req.body);
       
       // Check if response already exists

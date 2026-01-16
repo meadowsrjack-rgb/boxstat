@@ -737,7 +737,13 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   };
 
   const doAdvanceCheckIn = async (eventId: string | number) => {
-    createCheckInMutation.mutate({ eventId, type: "advance" });
+    // Players cannot RSVP - parent/guardian must do it for them
+    toast({ 
+      title: "RSVP Not Available", 
+      description: "Your parent or guardian must RSVP for you from their account.",
+      variant: "destructive"
+    });
+    return;
   };
 
   const doOnsiteCheckIn = async (ev: any) => {

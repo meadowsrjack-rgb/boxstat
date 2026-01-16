@@ -657,6 +657,16 @@ export default function EventDetailModal({
   };
 
   const handleRsvpClick = (response?: 'attending' | 'not_attending') => {
+    // Players cannot RSVP - parent/guardian must do it for them
+    if (userRole === 'player') {
+      toast({
+        title: "RSVP Not Available",
+        description: "Your parent or guardian must RSVP for you from their account.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // For parents, show RSVP popup with inline buttons for each person
     if (isParent) {
       setShowPlayerSelect('rsvp');

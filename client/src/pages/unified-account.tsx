@@ -1686,6 +1686,8 @@ export default function UnifiedAccount() {
                 star: <Star className="w-4 h-4" />,
                 medal: <Medal className="w-4 h-4" />,
                 crown: <Crown className="w-4 h-4" />,
+                gear: <ShoppingBag className="w-4 h-4" />,
+                digital: <Star className="w-4 h-4" />,
               };
               
               const categoryLabelMap: Record<string, string> = {
@@ -1697,14 +1699,22 @@ export default function UnifiedAccount() {
                 league: "League",
                 tournament: "Tournament",
                 membership: "Membership",
+                gear: "Gear & Apparel",
+                digital: "Digital Academy",
               };
               
-              // Get unique categories from programs
+              // Get unique categories from programs and store products
               const activePrograms = programs?.filter((p: any) => 
-                p.isActive !== false && p.price && p.price > 0 && p.productCategory === 'service'
+                p.isActive !== false && p.price && p.price > 0 && (p.productCategory === 'service' || p.productCategory === 'goods')
               ) || [];
               
-              const uniqueCategories = [...new Set(activePrograms.map((p: any) => p.displayCategory || 'general'))] as string[];
+              // Store products use tags[0] for category, programs use displayCategory
+              const getCategory = (p: any) => {
+                if (p.productCategory === 'goods' && p.tags?.[0]) return p.tags[0];
+                return p.displayCategory || 'general';
+              };
+              
+              const uniqueCategories = [...new Set(activePrograms.map(getCategory))] as string[];
               
               return (
                 <div className="flex flex-wrap gap-2" data-testid="category-filter-buttons">
@@ -1718,8 +1728,8 @@ export default function UnifiedAccount() {
                     All
                   </Button>
                   {uniqueCategories.filter(c => c !== 'general').map((category) => {
-                    const count = activePrograms.filter((p: any) => (p.displayCategory || 'general') === category).length;
-                    const firstProgramIcon = activePrograms.find((p: any) => (p.displayCategory || 'general') === category)?.iconName;
+                    const count = activePrograms.filter((p: any) => getCategory(p) === category).length;
+                    const firstProgramIcon = activePrograms.find((p: any) => getCategory(p) === category)?.iconName;
                     const icon = categoryIconMap[firstProgramIcon] || categoryIconMap[category] || <Crown className="w-4 h-4" />;
                     
                     return (
@@ -1752,19 +1762,26 @@ export default function UnifiedAccount() {
                 league: "League",
                 tournament: "Tournament",
                 membership: "Membership",
+                gear: "Gear & Apparel",
+                digital: "Digital Academy",
+              };
+              
+              // Helper to get category from program or store product
+              const getCategoryForItem = (p: any) => {
+                if (p.productCategory === 'goods' && p.tags?.[0]) return p.tags[0];
+                return p.displayCategory || 'general';
               };
               
               const filteredProducts = programs?.filter((p: any) => {
                 const isActive = p.isActive !== false;
                 const hasPrice = p.price && p.price > 0;
-                const isService = p.productCategory === 'service';
-                if (!isActive || !hasPrice || !isService) return false;
+                const isServiceOrGoods = p.productCategory === 'service' || p.productCategory === 'goods';
+                if (!isActive || !hasPrice || !isServiceOrGoods) return false;
                 
                 if (!selectedStoreCategory) return true; // Show all when no filter
                 
-                // Match by displayCategory
-                const programCategory = p.displayCategory || 'general';
-                return programCategory === selectedStoreCategory;
+                // Match by displayCategory or tags for store products
+                return getCategoryForItem(p) === selectedStoreCategory;
               }) || [];
               
               if (filteredProducts.length === 0 && selectedStoreCategory) {

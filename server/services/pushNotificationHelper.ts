@@ -15,7 +15,12 @@ async function sendNotification(storage: IStorage, params: NotificationParams) {
   const { userId, title, message, channels = ['in_app', 'push'] } = params;
   
   try {
-    const createdNotification = await storage.createNotificationRequest({
+    // Get user's organization for notification
+    const user = await getUserById(userId);
+    const organizationId = user?.organizationId || 'default';
+    
+    const createdNotification = await storage.createNotification({
+      organizationId,
       title,
       message,
       types: ["notification"],
@@ -62,7 +67,7 @@ async function getProgramById(programId: string) {
   return program;
 }
 
-async function getProductById(productId: number) {
+async function getProductById(productId: string) {
   const [product] = await db.select().from(products).where(eq(products.id, productId)).limit(1);
   return product;
 }
@@ -124,7 +129,7 @@ export const pushNotifications = {
     await sendNotification(storage, {
       userId: playerId,
       title: "📋 RSVP Requested",
-      message: `Please RSVP for ${event.title} on ${new Date(event.date).toLocaleDateString()}`,
+      message: `Please RSVP for ${event.title} on ${new Date(event.startTime).toLocaleDateString()}`,
     });
   },
 

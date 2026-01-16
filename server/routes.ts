@@ -39,6 +39,7 @@ import {
 } from "@shared/schema";
 import { evaluateAwardsForUser } from "./utils/awardEngine";
 import { populateAwards } from "./utils/populateAwards";
+import { pushNotifications } from "./services/pushNotificationHelper";
 import { db } from "./db";
 import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards } from "@shared/schema";
 import { eq, and, or, sql, desc, inArray } from "drizzle-orm";
@@ -6108,6 +6109,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('⚠️ Award evaluation failed (non-fatal):', awardError.message);
       }
       
+      // Send check-in confirmation notification to player
+      try {
+        const eventId = typeof attendanceData.eventId === 'number' ? attendanceData.eventId : parseInt(String(attendanceData.eventId));
+        if (!isNaN(eventId) && attendanceData.userId) {
+          await pushNotifications.playerCheckedIn(storage, attendanceData.userId, eventId);
+          
+          // Also notify parent if player has a linked parent account
+          const player = await storage.getUser(attendanceData.userId);
+          if (player?.linkedParentId) {
+            const playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'Your player';
+            await pushNotifications.parentPlayerCheckedIn(storage, player.linkedParentId, playerName, eventId);
+          }
+        }
+      } catch (notifError: any) {
+        console.error('⚠️ Check-in notification failed (non-fatal):', notifError.message);
+      }
+      
       res.json(attendance);
     } catch (error: any) {
       console.error("Attendance creation error:", error);
@@ -6927,6 +6945,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (awardError: any) {
         // Log error but don't fail the RSVP operation
         console.error('⚠️ Award evaluation failed (non-fatal):', awardError.message);
+      }
+      
+      // Send RSVP confirmation notification (only for 'attending')
+      try {
+        if (rsvpData.response === 'attending' && rsvpData.userId) {
+          // Get event to notify coaches about RSVP summary
+          const event = await storage.getEvent(rsvpData.eventId.toString());
+          if (event?.teamId) {
+            const team = await storage.getTeam(event.teamId);
+            if (team?.coachId) {
+              // Get count of attending responses
+              const responses = await storage.getRsvpResponsesByEvent(rsvpData.eventId);
+              const attendingCount = responses.filter((r: any) => r.response === 'attending').length;
+              
+              // Only notify if this brings attendance below threshold (e.g., 5 players)
+              if (attendingCount < 5) {
+                await pushNotifications.coachLowAttendanceWarning(storage, team.coachId, rsvpData.eventId, attendingCount);
+              }
+            }
+          }
+        }
+      } catch (notifError: any) {
+        console.error('⚠️ RSVP notification failed (non-fatal):', notifError.message);
       }
       
       res.json(result);
@@ -8910,6 +8951,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
               skillsAssessments: scores // Also store latest skills on player record
             });
             console.log(`[Eval] Updated player ${evaluationData.playerId} OVR to ${ovrRating} (avg: ${avgScore.toFixed(2)} from ${scoreCount} skills)`);
+            
+            // Send notification to player and parent about skills evaluation
+            try {
+              const coach = await storage.getUser(coachId);
+              const coachName = `${coach?.firstName || ''} ${coach?.lastName || ''}`.trim() || 'Your coach';
+              
+              await pushNotifications.playerSkillsEvaluated(storage, evaluationData.playerId, coachName);
+              
+              // Also notify parent
+              const player = await storage.getUser(evaluationData.playerId);
+              if (player?.linkedParentId) {
+                const playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'Your player';
+                await pushNotifications.parentPlayerSkillsUpdated(storage, player.linkedParentId, playerName, coachName);
+              }
+            } catch (notifError: any) {
+              console.error('⚠️ Skills notification failed (non-fatal):', notifError.message);
+            }
           }
         } catch (ovrError: any) {
           console.error('[Eval] Failed to update player OVR (non-fatal):', ovrError.message);

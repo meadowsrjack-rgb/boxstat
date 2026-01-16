@@ -1706,8 +1706,8 @@ export const insertProductSchema = z.object({
   seasonEndDate: z.string().optional(),
   // Store-specific fields
   inventorySizes: z.array(z.string()).default([]),
-  inventoryCount: z.number().optional(),
-  sizeStock: z.record(z.string(), z.number()).optional(), // Stock per size: {"S": 10, "M": 15}
+  inventoryCount: z.number().nullish(), // Accept null, undefined, or number
+  sizeStock: z.record(z.string(), z.number()).nullish(), // Stock per size: {"S": 10, "M": 15}
   shippingRequired: z.boolean().default(false),
   // Multi-tier pricing support
   comparePrice: z.number().optional(), // For multi-month packages: equivalent monthly price (in cents)

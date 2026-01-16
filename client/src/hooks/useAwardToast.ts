@@ -40,7 +40,7 @@ export function useAwardToast() {
   });
   
   useEffect(() => {
-    if (!awards || awards.length === 0) return;
+    if (!awards || !Array.isArray(awards) || awards.length === 0) return;
     
     const currentAwardKeys = new Set(
       awards.map((a) => `${a.id}-${a.earnedAt || a.id}`)

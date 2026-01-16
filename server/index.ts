@@ -6,6 +6,7 @@ import path from "path";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { db } from "./db";
+import { notificationScheduler } from "./services/notificationScheduler";
 
 const app = express();
 
@@ -179,5 +180,8 @@ app.use((req, res, next) => {
     console.log('   Email: test@example.com');
     console.log('   Password: test123');
     console.log('   Role: parent\n');
+    
+    // Start the notification scheduler for automatic reminders
+    notificationScheduler.start();
   });
 })();

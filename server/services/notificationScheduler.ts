@@ -17,23 +17,30 @@ export class NotificationScheduler {
     
     this.jobs.set('campaignProcessor', campaignProcessorJob);
     
-    // DISABLED: storage.getUpcomingEvents not implemented yet
     // Check for upcoming events every 15 minutes
-    // const eventReminderJob = cron.schedule('*/15 * * * *', async () => {
-    //   await this.processEventReminders();
-    // }, {
-    //   scheduled: false
-    // });
+    const eventReminderJob = cron.schedule('*/15 * * * *', async () => {
+      await this.processEventReminders();
+    }, {
+      scheduled: false
+    });
 
     // Check for check-in availability every 5 minutes  
-    // const checkinAvailableJob = cron.schedule('*/5 * * * *', async () => {
-    //   await this.processCheckInAvailability();
-    // }, {
-    //   scheduled: false
-    // });
+    const checkinAvailableJob = cron.schedule('*/5 * * * *', async () => {
+      await this.processCheckInAvailability();
+    }, {
+      scheduled: false
+    });
+    
+    // Check for RSVP window closing every 5 minutes
+    const rsvpClosingJob = cron.schedule('*/5 * * * *', async () => {
+      await this.processRsvpWindowClosing();
+    }, {
+      scheduled: false
+    });
 
-    // this.jobs.set('eventReminders', eventReminderJob);
-    // this.jobs.set('checkinAvailable', checkinAvailableJob);
+    this.jobs.set('eventReminders', eventReminderJob);
+    this.jobs.set('checkinAvailable', checkinAvailableJob);
+    this.jobs.set('rsvpClosing', rsvpClosingJob);
 
     // Start all jobs
     this.jobs.forEach((job, name) => {
@@ -56,7 +63,7 @@ export class NotificationScheduler {
       console.log('Processing event reminders...');
       
       // Get events happening in the next 24 hours
-      const upcomingEvents = await storage.getUpcomingEvents(24);
+      const upcomingEvents = await storage.getUpcomingEventsWithinHours(24);
       
       for (const event of upcomingEvents) {
         const eventStart = new Date(event.startTime);
@@ -81,24 +88,24 @@ export class NotificationScheduler {
 
             // Get team members for the event
             if (event.teamId) {
-              const teamMembers = await storage.getTeamMembers(event.teamId);
+              const teamMembers = await storage.getUsersByTeam(event.teamId.toString());
               
               for (const member of teamMembers) {
                 // Check if reminder was already sent by looking for recent notifications
-                const recentNotifications = await notificationService.getUserNotifications(member.userId, {
+                const recentNotifications = await notificationService.getUserNotifications(member.id.toString(), {
                   limit: 10,
                   unreadOnly: false
                 });
                 
                 const alreadySent = recentNotifications.some(n => 
-                  n.type === 'event_reminder' && 
-                  n.data?.eventId === event.id &&
-                  n.createdAt > new Date(now.getTime() - 30 * 60 * 1000).toISOString() // Last 30 minutes
+                  n.types?.includes('event_reminder') && 
+                  n.relatedEventId === event.id &&
+                  n.createdAt && n.createdAt > new Date(now.getTime() - 30 * 60 * 1000).toISOString()
                 );
 
                 if (!alreadySent) {
                   await notificationService.notifyEventReminder(
-                    member.userId,
+                    member.id,
                     event.id,
                     event.title,
                     timeUntil
@@ -119,7 +126,7 @@ export class NotificationScheduler {
       console.log('Processing check-in availability notifications...');
       
       // Get events happening in the next 2 hours
-      const upcomingEvents = await storage.getUpcomingEvents(2);
+      const upcomingEvents = await storage.getUpcomingEventsWithinHours(2);
       
       for (const event of upcomingEvents) {
         const eventStart = new Date(event.startTime);
@@ -130,29 +137,29 @@ export class NotificationScheduler {
         if (minutesUntilEvent <= 30 && minutesUntilEvent > 25) {
           
           if (event.teamId) {
-            const teamMembers = await storage.getTeamMembers(event.teamId);
+            const teamMembers = await storage.getUsersByTeam(event.teamId.toString());
             
             for (const member of teamMembers) {
               // Check if user already has a check-in for this event
-              const existingCheckin = await storage.getUserAttendances(member.userId);
-              const hasCheckedIn = existingCheckin.some(attendance => attendance.eventId === event.id);
+              const existingCheckin = await storage.getAttendance(event.id.toString(), member.id.toString());
+              const hasCheckedIn = !!existingCheckin?.checkedInAt;
               
               if (!hasCheckedIn) {
                 // Check if notification was already sent
-                const recentNotifications = await notificationService.getUserNotifications(member.userId, {
+                const recentNotifications = await notificationService.getUserNotifications(member.id.toString(), {
                   limit: 10,
                   unreadOnly: false
                 });
                 
                 const alreadySent = recentNotifications.some(n => 
-                  n.type === 'event_checkin_available' && 
-                  n.data?.eventId === event.id &&
-                  n.createdAt > new Date(now.getTime() - 15 * 60 * 1000).toISOString() // Last 15 minutes
+                  n.types?.includes('event_checkin_available') && 
+                  n.relatedEventId === event.id &&
+                  n.createdAt && n.createdAt > new Date(now.getTime() - 15 * 60 * 1000).toISOString()
                 );
 
                 if (!alreadySent) {
                   await notificationService.notifyEventCheckInAvailable(
-                    member.userId,
+                    member.id,
                     event.id,
                     event.title
                   );
@@ -174,6 +181,66 @@ export class NotificationScheduler {
 
   async triggerCheckInNotifications() {
     await this.processCheckInAvailability();
+  }
+  
+  async triggerRsvpClosingNotifications() {
+    await this.processRsvpWindowClosing();
+  }
+  
+  private async processRsvpWindowClosing() {
+    try {
+      console.log('Processing RSVP window closing notifications...');
+      
+      // Get events happening in the next 2 hours
+      const upcomingEvents = await storage.getUpcomingEventsWithinHours(2);
+      
+      for (const event of upcomingEvents) {
+        const eventStart = new Date(event.startTime);
+        const now = new Date();
+        const minutesUntilEvent = (eventStart.getTime() - now.getTime()) / (1000 * 60);
+        
+        // Notify when RSVP window closes soon (30 minutes before it closes)
+        // Default: RSVP closes 30 min before event, so notify at ~60 min before event
+        // This gives users 30 min warning that RSVP is about to close
+        if (minutesUntilEvent <= 60 && minutesUntilEvent > 55) {
+          
+          if (event.teamId) {
+            const teamMembers = await storage.getUsersByTeam(event.teamId.toString());
+            
+            for (const member of teamMembers) {
+              // Check if user has already responded via the RSVP responses table
+              const rsvpResponse = await storage.getRsvpResponseByUserAndEvent(member.id.toString(), event.id);
+              
+              // Only notify users who haven't responded yet
+              if (!rsvpResponse || rsvpResponse.response === 'no_response') {
+                // Check if notification was already sent
+                const recentNotifications = await notificationService.getUserNotifications(member.id.toString(), {
+                  limit: 10,
+                  unreadOnly: false
+                });
+                
+                const alreadySent = recentNotifications.some(n => 
+                  n.types?.includes('event_rsvp_closing') && 
+                  n.relatedEventId === event.id &&
+                  n.createdAt && n.createdAt > new Date(now.getTime() - 30 * 60 * 1000).toISOString()
+                );
+
+                if (!alreadySent) {
+                  await notificationService.notifyRsvpClosing(
+                    member.id,
+                    event.id,
+                    event.title,
+                    '30 minutes'
+                  );
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error processing RSVP window closing notifications:', error);
+    }
   }
   
   // Process scheduled notification campaigns

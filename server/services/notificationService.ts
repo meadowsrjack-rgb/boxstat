@@ -737,6 +737,41 @@ export class NotificationService {
     }
   }
 
+  // ===== Scheduled Event Notifications =====
+  
+  async notifyEventReminder(userId: string | number, eventId: number, eventTitle: string, timeUntil: string): Promise<void> {
+    await this.sendMultiChannelNotification({
+      userId: userId.toString(),
+      title: `Event Reminder: ${eventTitle}`,
+      message: `Your event "${eventTitle}" starts ${timeUntil}. Don't forget to check in!`,
+      type: 'event_reminder',
+      data: { eventId, eventTitle },
+      channels: ['in_app', 'push']
+    });
+  }
+  
+  async notifyEventCheckInAvailable(userId: string | number, eventId: number, eventTitle: string): Promise<void> {
+    await this.sendMultiChannelNotification({
+      userId: userId.toString(),
+      title: 'Check-In Now Available',
+      message: `Check-in is now open for "${eventTitle}". Tap to check in!`,
+      type: 'event_checkin_available',
+      data: { eventId, eventTitle },
+      channels: ['in_app', 'push']
+    });
+  }
+  
+  async notifyRsvpClosing(userId: string | number, eventId: number, eventTitle: string, timeUntil: string): Promise<void> {
+    await this.sendMultiChannelNotification({
+      userId: userId.toString(),
+      title: 'RSVP Closing Soon',
+      message: `RSVP for "${eventTitle}" closes in ${timeUntil}. Let us know if you're attending!`,
+      type: 'event_rsvp_closing',
+      data: { eventId, eventTitle },
+      channels: ['in_app', 'push']
+    });
+  }
+
 }
 
 export const notificationService = new NotificationService();

@@ -123,6 +123,7 @@ export interface IStorage {
   getEventsByOrganization(organizationId: string): Promise<Event[]>;
   getEventsByTeam(teamId: string): Promise<Event[]>;
   getUpcomingEvents(organizationId: string): Promise<Event[]>;
+  getUpcomingEventsWithinHours(hours: number): Promise<Event[]>;
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: string, updates: Partial<Event>): Promise<Event | undefined>;
   deleteEvent(id: string): Promise<void>;
@@ -1113,6 +1114,14 @@ class MemStorage implements IStorage {
     const now = new Date();
     return Array.from(this.events.values())
       .filter(event => event.organizationId === organizationId && event.startTime > now && event.isActive)
+      .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+  }
+  
+  async getUpcomingEventsWithinHours(hours: number): Promise<Event[]> {
+    const now = new Date();
+    const endTime = new Date(now.getTime() + hours * 60 * 60 * 1000);
+    return Array.from(this.events.values())
+      .filter(event => event.startTime > now && event.startTime <= endTime && event.isActive)
       .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
   }
   
@@ -3378,6 +3387,18 @@ class DatabaseStorage implements IStorage {
     const results = await db.select().from(schema.events)
       .where(and(
         gte(schema.events.startTime, now),
+        eq(schema.events.isActive, true)
+      ));
+    return results.map(event => this.mapDbEventToEvent(event));
+  }
+  
+  async getUpcomingEventsWithinHours(hours: number): Promise<Event[]> {
+    const now = new Date();
+    const endTime = new Date(now.getTime() + hours * 60 * 60 * 1000);
+    const results = await db.select().from(schema.events)
+      .where(and(
+        gte(schema.events.startTime, now.toISOString()),
+        lte(schema.events.startTime, endTime.toISOString()),
         eq(schema.events.isActive, true)
       ));
     return results.map(event => this.mapDbEventToEvent(event));

@@ -10424,6 +10424,9 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                           <SelectItem value="divisions">Divisions</SelectItem>
                         </SelectContent>
                       </Select>
+                      <p className="text-sm text-blue-600 bg-blue-50 p-2 rounded-md mt-2">
+                        Push notifications are sent to all devices registered with the recipient's email address. If multiple accounts share the same email login, all their devices will receive the notification.
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}

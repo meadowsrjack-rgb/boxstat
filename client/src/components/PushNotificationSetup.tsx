@@ -12,8 +12,29 @@ interface PushNotificationSetupProps {
   compact?: boolean;
 }
 
+const DISMISS_KEY = "push_notification_prompt_dismissed";
+const DISMISS_HOURS = 24;
+
+function checkDismissedState(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const dismissedTime = localStorage.getItem(DISMISS_KEY);
+    if (dismissedTime) {
+      const hoursSinceDismissed = (Date.now() - parseInt(dismissedTime)) / (1000 * 60 * 60);
+      if (hoursSinceDismissed < DISMISS_HOURS) {
+        return true;
+      } else {
+        localStorage.removeItem(DISMISS_KEY);
+      }
+    }
+  } catch (e) {
+    // localStorage may not be available
+  }
+  return false;
+}
+
 export default function PushNotificationSetup({ onDismiss, compact = false }: PushNotificationSetupProps) {
-  const [isDismissed, setIsDismissed] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(checkDismissedState);
   const { toast } = useToast();
   const {
     isSupported,
@@ -75,6 +96,11 @@ export default function PushNotificationSetup({ onDismiss, compact = false }: Pu
 
   const handleDismiss = () => {
     setIsDismissed(true);
+    try {
+      localStorage.setItem(DISMISS_KEY, Date.now().toString());
+    } catch (e) {
+      // localStorage may not be available
+    }
     onDismiss?.();
   };
 

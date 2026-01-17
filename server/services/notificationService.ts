@@ -235,29 +235,59 @@ export class NotificationService {
         return;
       }
 
-      // Get all active subscriptions for the specific user only
-      // Push notifications go to the exact user ID - no cross-profile delivery
-      console.log(`[Push Send] Step 2: 🔍 Looking up active push subscriptions for user ${userId}...`);
+      // EMAIL-BASED PUSH DELIVERY:
+      // Look up the user's email, then find ALL users with that email,
+      // then send to ALL their devices. This ensures that when multiple
+      // accounts (parent, player, coach) share the same email login,
+      // all their devices receive the notification.
+      console.log(`[Push Send] Step 2: 🔍 Looking up user email and finding all devices...`);
       let subscriptions: any[];
       try {
-        // Query subscriptions for this specific user only
-        const subPromise = db.select()
-          .from(pushSubscriptions)
-          .where(and(
-            eq(pushSubscriptions.userId, userId),
-            eq(pushSubscriptions.isActive, true)
-          ));
-        const timeoutPromise = new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Subscription lookup timed out after 5s')), 5000)
-        );
-        subscriptions = await Promise.race([subPromise, timeoutPromise]);
+        // First, get the user's email
+        const [targetUser] = await db.select({ email: users.email })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
+        
+        if (!targetUser?.email) {
+          console.log(`[Push Send] ⚠️  No email found for user ${userId} - falling back to user-only lookup`);
+          // Fallback to user-only lookup
+          subscriptions = await db.select()
+            .from(pushSubscriptions)
+            .where(and(
+              eq(pushSubscriptions.userId, userId),
+              eq(pushSubscriptions.isActive, true)
+            ));
+        } else {
+          console.log(`[Push Send] 📧 User email: ${targetUser.email}`);
+          
+          // Find all users with this email
+          const emailUsers = await db.select({ id: users.id })
+            .from(users)
+            .where(eq(users.email, targetUser.email));
+          
+          const emailUserIds = emailUsers.map(u => u.id);
+          console.log(`[Push Send] 👥 Found ${emailUserIds.length} user(s) with email ${targetUser.email}: [${emailUserIds.join(', ')}]`);
+          
+          // Get all active subscriptions for ALL users with this email
+          const subPromise = db.select()
+            .from(pushSubscriptions)
+            .where(and(
+              inArray(pushSubscriptions.userId, emailUserIds),
+              eq(pushSubscriptions.isActive, true)
+            ));
+          const timeoutPromise = new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error('Subscription lookup timed out after 5s')), 5000)
+          );
+          subscriptions = await Promise.race([subPromise, timeoutPromise]);
+        }
         
         // Enhanced logging to debug subscription lookup
         const webSubs = subscriptions.filter((s: any) => s.endpoint);
         const iosSubs = subscriptions.filter((s: any) => s.platform === 'ios' && s.fcmToken);
         const androidSubs = subscriptions.filter((s: any) => s.platform === 'android' && s.fcmToken);
         
-        console.log(`[Push Send] ✅ Step 2 COMPLETE - Found ${subscriptions.length} active subscription(s) for user ${userId}`);
+        console.log(`[Push Send] ✅ Step 2 COMPLETE - Found ${subscriptions.length} active subscription(s) across all devices`);
         console.log(`[Push Send]   📊 Breakdown: Web=${webSubs.length}, iOS=${iosSubs.length}, Android=${androidSubs.length}`);
       } catch (subError) {
         console.error(`[Push Send] ❌ Step 2 ERROR querying subscriptions:`, subError);

@@ -9292,6 +9292,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(500).json({ error: 'Failed to send push', message: error.message });
       }
     });
+
+    // DEV ONLY: Trigger all notification scheduler jobs immediately
+    app.post('/api/dev/trigger-all-notifications', async (req: any, res) => {
+      try {
+        console.log(`[DEV] Triggering all notification jobs...`);
+        
+        await notificationScheduler.triggerEventReminders();
+        await notificationScheduler.triggerCheckInNotifications();
+        await notificationScheduler.triggerRsvpClosingNotifications();
+        
+        res.json({ success: true, message: 'All notification jobs triggered' });
+      } catch (error: any) {
+        console.error('[DEV] Trigger notifications error:', error);
+        res.status(500).json({ error: 'Failed to trigger notifications', message: error.message });
+      }
+    });
   }
 
   // Manually trigger event reminders (admin only, for testing)

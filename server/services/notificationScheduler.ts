@@ -7,13 +7,14 @@ export class NotificationScheduler {
   private jobs: Map<string, cron.ScheduledTask> = new Map();
 
   // Helper to get all participants for an event based on assignTo targeting
-  private async getEventParticipants(event: Event): Promise<number[]> {
-    const participantIds = new Set<number>();
+  // Returns string user IDs (e.g., "1764873247759-aecinrbny")
+  private async getEventParticipants(event: Event): Promise<string[]> {
+    const participantIds = new Set<string>();
     
     // First check teamId (legacy direct team assignment)
     if (event.teamId) {
       const teamMembers = await storage.getUsersByTeam(event.teamId.toString());
-      teamMembers.forEach(m => participantIds.add(m.id));
+      teamMembers.forEach(m => participantIds.add(String(m.id)));
     }
     
     // Then check assignTo for role-based targeting
@@ -24,14 +25,14 @@ export class NotificationScheduler {
       if (assignTo.teams && assignTo.teams.length > 0) {
         for (const teamId of assignTo.teams) {
           const teamMembers = await storage.getUsersByTeam(teamId);
-          teamMembers.forEach(m => participantIds.add(m.id));
+          teamMembers.forEach(m => participantIds.add(String(m.id)));
         }
       }
       
-      // User targeting (direct user IDs)
+      // User targeting (direct user IDs - keep as strings!)
       if (assignTo.users && assignTo.users.length > 0) {
         for (const userId of assignTo.users) {
-          participantIds.add(parseInt(userId));
+          participantIds.add(userId);
         }
       }
       
@@ -40,7 +41,7 @@ export class NotificationScheduler {
         const allUsers = await storage.getAllUsers();
         for (const user of allUsers) {
           if (assignTo.roles.includes(user.role)) {
-            participantIds.add(user.id);
+            participantIds.add(String(user.id));
           }
         }
       }
@@ -51,7 +52,7 @@ export class NotificationScheduler {
           const enrollments = await storage.getEnrollmentsByProgram(parseInt(programId));
           for (const enrollment of enrollments) {
             if (enrollment.userId) {
-              participantIds.add(enrollment.userId);
+              participantIds.add(String(enrollment.userId));
             }
           }
         }

@@ -115,15 +115,15 @@ export interface APNsSendResult {
   statusCode?: number;
 }
 
-async function sendSingleNotification(
+async function sendWithGateway(
   deviceToken: string,
   notification: APNsNotification,
-  apnsEnvironment?: string // 'sandbox' or 'production'
+  useSandbox: boolean
 ): Promise<APNsSendResult> {
   return new Promise((resolve) => {
-    const token = generateJWT();
+    const jwtToken = generateJWT();
     
-    if (!token) {
+    if (!jwtToken) {
       resolve({
         success: false,
         deviceToken,
@@ -148,14 +148,9 @@ async function sendSingleNotification(
     // Clean device token (remove spaces and angle brackets if present)
     const cleanToken = deviceToken.replace(/[<>\s]/g, '');
 
-    // Route to correct gateway based on token environment
-    // Sandbox tokens (from Xcode debug builds) need sandbox gateway
-    // Production tokens (TestFlight/App Store) need production gateway
-    const isSandbox = apnsEnvironment === 'sandbox';
-    const host = isSandbox ? APNS_HOST_SANDBOX : APNS_HOST_PRODUCTION;
-    console.log(`[APNs] 🚀 Using ${isSandbox ? 'SANDBOX' : 'PRODUCTION'} gateway: ${host}`);
+    const host = useSandbox ? APNS_HOST_SANDBOX : APNS_HOST_PRODUCTION;
+    console.log(`[APNs] 🚀 Using ${useSandbox ? 'SANDBOX' : 'PRODUCTION'} gateway: ${host}`);
     console.log(`[APNs]    Token prefix: ${cleanToken.substring(0, 20)}...`);
-    console.log(`[APNs]    Environment: ${apnsEnvironment || 'default (production)'}`);
     
     const client = http2.connect(`https://${host}`);
     
@@ -171,7 +166,7 @@ async function sendSingleNotification(
     const req = client.request({
       ':method': 'POST',
       ':path': `/3/device/${cleanToken}`,
-      'authorization': `bearer ${token}`,
+      'authorization': `bearer ${jwtToken}`,
       'apns-topic': APNS_BUNDLE_ID,
       'apns-push-type': 'alert',
       'apns-priority': '10',
@@ -231,6 +226,34 @@ async function sendSingleNotification(
     req.write(payload);
     req.end();
   });
+}
+
+// Wrapper that tries both gateways if needed
+// For iOS App Store apps that may have registered with wrong environment
+async function sendSingleNotification(
+  deviceToken: string,
+  notification: APNsNotification,
+  apnsEnvironment?: string
+): Promise<APNsSendResult> {
+  // Try the specified environment first (default to production for App Store)
+  const useSandbox = apnsEnvironment === 'sandbox';
+  const result = await sendWithGateway(deviceToken, notification, useSandbox);
+  
+  // If failed with a token/environment mismatch error, try the other gateway
+  const retryableErrors = ['BadDeviceToken', 'DeviceTokenNotForTopic', 'Unregistered'];
+  if (!result.success && result.error && retryableErrors.includes(result.error)) {
+    console.log(`[APNs] 🔄 Retrying with ${useSandbox ? 'PRODUCTION' : 'SANDBOX'} gateway...`);
+    const retryResult = await sendWithGateway(deviceToken, notification, !useSandbox);
+    
+    if (retryResult.success) {
+      console.log(`[APNs] ✅ Retry successful! Token was for ${!useSandbox ? 'SANDBOX' : 'PRODUCTION'} environment`);
+      // Note: In a full implementation, we'd update the stored environment for this token
+    }
+    
+    return retryResult;
+  }
+  
+  return result;
 }
 
 export interface APNsDevice {

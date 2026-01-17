@@ -1,9 +1,65 @@
 import cron from 'node-cron';
 import { storage } from '../storage';
 import { notificationService } from './notificationService';
+import type { Event } from '@shared/schema';
 
 export class NotificationScheduler {
   private jobs: Map<string, cron.ScheduledTask> = new Map();
+
+  // Helper to get all participants for an event based on assignTo targeting
+  private async getEventParticipants(event: Event): Promise<number[]> {
+    const participantIds = new Set<number>();
+    
+    // First check teamId (legacy direct team assignment)
+    if (event.teamId) {
+      const teamMembers = await storage.getUsersByTeam(event.teamId.toString());
+      teamMembers.forEach(m => participantIds.add(m.id));
+    }
+    
+    // Then check assignTo for role-based targeting
+    const assignTo = event.assignTo as { teams?: string[], roles?: string[], users?: string[], programs?: string[], divisions?: string[] } | null;
+    
+    if (assignTo) {
+      // Team targeting
+      if (assignTo.teams && assignTo.teams.length > 0) {
+        for (const teamId of assignTo.teams) {
+          const teamMembers = await storage.getUsersByTeam(teamId);
+          teamMembers.forEach(m => participantIds.add(m.id));
+        }
+      }
+      
+      // User targeting (direct user IDs)
+      if (assignTo.users && assignTo.users.length > 0) {
+        for (const userId of assignTo.users) {
+          participantIds.add(parseInt(userId));
+        }
+      }
+      
+      // Role targeting
+      if (assignTo.roles && assignTo.roles.length > 0) {
+        const allUsers = await storage.getAllUsers();
+        for (const user of allUsers) {
+          if (assignTo.roles.includes(user.role)) {
+            participantIds.add(user.id);
+          }
+        }
+      }
+      
+      // Program targeting
+      if (assignTo.programs && assignTo.programs.length > 0) {
+        for (const programId of assignTo.programs) {
+          const enrollments = await storage.getEnrollmentsByProgram(parseInt(programId));
+          for (const enrollment of enrollments) {
+            if (enrollment.userId) {
+              participantIds.add(enrollment.userId);
+            }
+          }
+        }
+      }
+    }
+    
+    return Array.from(participantIds);
+  }
 
   start() {
     console.log('Starting notification scheduler...');
@@ -64,18 +120,24 @@ export class NotificationScheduler {
       
       // Get events happening in the next 24 hours
       const upcomingEvents = await storage.getUpcomingEventsWithinHours(24);
+      console.log(`Found ${upcomingEvents.length} upcoming events within 24 hours`);
       
       for (const event of upcomingEvents) {
         const eventStart = new Date(event.startTime);
         const now = new Date();
         const hoursUntilEvent = (eventStart.getTime() - now.getTime()) / (1000 * 60 * 60);
+        console.log(`Checking event: ${event.title} (ID: ${event.id}), hours until: ${hoursUntilEvent.toFixed(2)}`);
         
         // Send reminders at 24 hours, 2 hours, and 30 minutes before
         const reminderTimes = [24, 2, 0.5];
         
         for (const reminderHours of reminderTimes) {
-          // Check if we're within 5 minutes of the reminder time
-          if (Math.abs(hoursUntilEvent - reminderHours) <= 0.08) { // 5 minutes tolerance
+          // Check if we're within the reminder window (generous tolerance)
+          // For 24h reminder: trigger between 23-24.5 hours before
+          // For 2h reminder: trigger between 1.75-2.25 hours before  
+          // For 30min reminder: trigger between 25-35 minutes before
+          const tolerance = reminderHours >= 24 ? 0.75 : (reminderHours >= 2 ? 0.25 : 0.17);
+          if (hoursUntilEvent <= (reminderHours + tolerance) && hoursUntilEvent > (reminderHours - tolerance)) {
             
             let timeUntil = '';
             if (reminderHours >= 24) {
@@ -86,31 +148,30 @@ export class NotificationScheduler {
               timeUntil = 'in 30 minutes';
             }
 
-            // Get team members for the event
-            if (event.teamId) {
-              const teamMembers = await storage.getUsersByTeam(event.teamId.toString());
+            // Get all participants for the event
+            const participantIds = await this.getEventParticipants(event);
+            console.log(`  Found ${participantIds.length} participants for reminder ${reminderHours}h: ${participantIds.join(', ')}`);
+            
+            for (const memberId of participantIds) {
+              // Check if reminder was already sent by looking for recent notifications
+              const recentNotifications = await notificationService.getUserNotifications(memberId.toString(), {
+                limit: 10,
+                unreadOnly: false
+              });
               
-              for (const member of teamMembers) {
-                // Check if reminder was already sent by looking for recent notifications
-                const recentNotifications = await notificationService.getUserNotifications(member.id.toString(), {
-                  limit: 10,
-                  unreadOnly: false
-                });
-                
-                const alreadySent = recentNotifications.some(n => 
-                  n.types?.includes('event_reminder') && 
-                  n.relatedEventId === event.id &&
-                  n.createdAt && n.createdAt > new Date(now.getTime() - 30 * 60 * 1000).toISOString()
-                );
+              const alreadySent = recentNotifications.some(n => 
+                n.types?.includes('event_reminder') && 
+                n.relatedEventId === event.id &&
+                n.createdAt && n.createdAt > new Date(now.getTime() - 30 * 60 * 1000).toISOString()
+              );
 
-                if (!alreadySent) {
-                  await notificationService.notifyEventReminder(
-                    member.id,
-                    event.id,
-                    event.title,
-                    timeUntil
-                  );
-                }
+              if (!alreadySent) {
+                await notificationService.notifyEventReminder(
+                  memberId,
+                  event.id,
+                  event.title,
+                  timeUntil
+                );
               }
             }
           }
@@ -135,35 +196,32 @@ export class NotificationScheduler {
         
         // Notify about check-in availability 30 minutes before event starts
         if (minutesUntilEvent <= 30 && minutesUntilEvent > 25) {
+          const participantIds = await this.getEventParticipants(event);
           
-          if (event.teamId) {
-            const teamMembers = await storage.getUsersByTeam(event.teamId.toString());
+          for (const memberId of participantIds) {
+            // Check if user already has a check-in for this event
+            const existingCheckin = await storage.getAttendance(event.id.toString(), memberId.toString());
+            const hasCheckedIn = !!existingCheckin?.checkedInAt;
             
-            for (const member of teamMembers) {
-              // Check if user already has a check-in for this event
-              const existingCheckin = await storage.getAttendance(event.id.toString(), member.id.toString());
-              const hasCheckedIn = !!existingCheckin?.checkedInAt;
+            if (!hasCheckedIn) {
+              // Check if notification was already sent
+              const recentNotifications = await notificationService.getUserNotifications(memberId.toString(), {
+                limit: 10,
+                unreadOnly: false
+              });
               
-              if (!hasCheckedIn) {
-                // Check if notification was already sent
-                const recentNotifications = await notificationService.getUserNotifications(member.id.toString(), {
-                  limit: 10,
-                  unreadOnly: false
-                });
-                
-                const alreadySent = recentNotifications.some(n => 
-                  n.types?.includes('event_checkin_available') && 
-                  n.relatedEventId === event.id &&
-                  n.createdAt && n.createdAt > new Date(now.getTime() - 15 * 60 * 1000).toISOString()
-                );
+              const alreadySent = recentNotifications.some(n => 
+                n.types?.includes('event_checkin_available') && 
+                n.relatedEventId === event.id &&
+                n.createdAt && n.createdAt > new Date(now.getTime() - 15 * 60 * 1000).toISOString()
+              );
 
-                if (!alreadySent) {
-                  await notificationService.notifyEventCheckInAvailable(
-                    member.id,
-                    event.id,
-                    event.title
-                  );
-                }
+              if (!alreadySent) {
+                await notificationService.notifyEventCheckInAvailable(
+                  memberId,
+                  event.id,
+                  event.title
+                );
               }
             }
           }
@@ -203,36 +261,33 @@ export class NotificationScheduler {
         // Default: RSVP closes 30 min before event, so notify at ~60 min before event
         // This gives users 30 min warning that RSVP is about to close
         if (minutesUntilEvent <= 60 && minutesUntilEvent > 55) {
+          const participantIds = await this.getEventParticipants(event);
           
-          if (event.teamId) {
-            const teamMembers = await storage.getUsersByTeam(event.teamId.toString());
+          for (const memberId of participantIds) {
+            // Check if user has already responded via the RSVP responses table
+            const rsvpResponse = await storage.getRsvpResponseByUserAndEvent(memberId.toString(), event.id);
             
-            for (const member of teamMembers) {
-              // Check if user has already responded via the RSVP responses table
-              const rsvpResponse = await storage.getRsvpResponseByUserAndEvent(member.id.toString(), event.id);
+            // Only notify users who haven't responded yet
+            if (!rsvpResponse || rsvpResponse.response === 'no_response') {
+              // Check if notification was already sent
+              const recentNotifications = await notificationService.getUserNotifications(memberId.toString(), {
+                limit: 10,
+                unreadOnly: false
+              });
               
-              // Only notify users who haven't responded yet
-              if (!rsvpResponse || rsvpResponse.response === 'no_response') {
-                // Check if notification was already sent
-                const recentNotifications = await notificationService.getUserNotifications(member.id.toString(), {
-                  limit: 10,
-                  unreadOnly: false
-                });
-                
-                const alreadySent = recentNotifications.some(n => 
-                  n.types?.includes('event_rsvp_closing') && 
-                  n.relatedEventId === event.id &&
-                  n.createdAt && n.createdAt > new Date(now.getTime() - 30 * 60 * 1000).toISOString()
-                );
+              const alreadySent = recentNotifications.some(n => 
+                n.types?.includes('event_rsvp_closing') && 
+                n.relatedEventId === event.id &&
+                n.createdAt && n.createdAt > new Date(now.getTime() - 30 * 60 * 1000).toISOString()
+              );
 
-                if (!alreadySent) {
-                  await notificationService.notifyRsvpClosing(
-                    member.id,
-                    event.id,
-                    event.title,
-                    '30 minutes'
-                  );
-                }
+              if (!alreadySent) {
+                await notificationService.notifyRsvpClosing(
+                  memberId,
+                  event.id,
+                  event.title,
+                  '30 minutes'
+                );
               }
             }
           }

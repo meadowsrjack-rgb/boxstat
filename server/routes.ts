@@ -40,6 +40,7 @@ import {
 import { evaluateAwardsForUser } from "./utils/awardEngine";
 import { populateAwards } from "./utils/populateAwards";
 import { pushNotifications } from "./services/pushNotificationHelper";
+import { notificationScheduler } from "./services/notificationScheduler";
 import { db } from "./db";
 import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards } from "@shared/schema";
 import { eq, and, or, sql, desc, inArray } from "drizzle-orm";
@@ -9268,6 +9269,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Manually trigger event reminders (admin only, for testing)
+  app.post('/api/notifications/trigger-event-reminders', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can trigger event reminders' });
+      }
+      await notificationScheduler.triggerEventReminders();
+      res.json({ success: true, message: 'Event reminders triggered' });
+    } catch (error: any) {
+      console.error('Error triggering event reminders:', error);
+      res.status(500).json({ error: 'Failed to trigger event reminders', message: error.message });
+    }
+  });
+
   // Mark all notifications as read for the current user
   app.post('/api/notifications/mark-all-read', requireAuth, async (req: any, res) => {
     try {

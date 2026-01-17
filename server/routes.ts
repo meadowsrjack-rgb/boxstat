@@ -41,6 +41,7 @@ import { evaluateAwardsForUser } from "./utils/awardEngine";
 import { populateAwards } from "./utils/populateAwards";
 import { pushNotifications } from "./services/pushNotificationHelper";
 import { notificationScheduler } from "./services/notificationScheduler";
+import { notificationService } from "./services/notificationService";
 import { db } from "./db";
 import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards } from "@shared/schema";
 import { eq, and, or, sql, desc, inArray } from "drizzle-orm";
@@ -9269,6 +9270,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // DEV ONLY: Test push notification to a specific user (no auth required)
+  if (process.env.NODE_ENV === 'development') {
+    app.post('/api/dev/test-push/:userId', async (req: any, res) => {
+      try {
+        const { userId } = req.params;
+        const { title, message } = req.body;
+        
+        console.log(`[DEV] Testing push notification to user ${userId}`);
+        
+        await notificationService.sendPushNotification(
+          0,
+          userId,
+          title || 'Test Push Notification',
+          message || `Testing push delivery - sent at ${new Date().toLocaleTimeString()}`
+        );
+        
+        res.json({ success: true, message: 'Push notification sent' });
+      } catch (error: any) {
+        console.error('[DEV] Test push error:', error);
+        res.status(500).json({ error: 'Failed to send push', message: error.message });
+      }
+    });
+  }
+
   // Manually trigger event reminders (admin only, for testing)
   app.post('/api/notifications/trigger-event-reminders', requireAuth, async (req: any, res) => {
     try {

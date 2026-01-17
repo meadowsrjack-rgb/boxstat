@@ -235,19 +235,36 @@ async function sendSingleNotification(
   notification: APNsNotification,
   apnsEnvironment?: string
 ): Promise<APNsSendResult> {
-  // Try the specified environment first (default to production for App Store)
-  const useSandbox = apnsEnvironment === 'sandbox';
+  // Determine which gateway to use:
+  // - Explicit 'sandbox' -> use sandbox
+  // - Explicit 'production' -> use production
+  // - Undefined/null -> use APNS_DEFAULT_PRODUCTION setting (defaults to production for App Store)
+  let useSandbox: boolean;
+  if (apnsEnvironment === 'sandbox') {
+    useSandbox = true;
+  } else if (apnsEnvironment === 'production') {
+    useSandbox = false;
+  } else {
+    // No environment specified - use default (production for App Store builds)
+    useSandbox = !APNS_DEFAULT_PRODUCTION;
+  }
+  
   const result = await sendWithGateway(deviceToken, notification, useSandbox);
   
-  // If failed with a token/environment mismatch error, try the other gateway
-  const retryableErrors = ['BadDeviceToken', 'DeviceTokenNotForTopic', 'Unregistered'];
-  if (!result.success && result.error && retryableErrors.includes(result.error)) {
-    console.log(`[APNs] 🔄 Retrying with ${useSandbox ? 'PRODUCTION' : 'SANDBOX'} gateway...`);
+  // Only retry on status codes 400/410 with specific environment mismatch errors
+  // BadDeviceToken (400) - can indicate wrong environment
+  // DeviceTokenNotForTopic (400) - wrong bundle ID or environment  
+  const mismatchErrors = ['BadDeviceToken', 'DeviceTokenNotForTopic'];
+  const isRetryableStatus = result.statusCode === 400 || result.statusCode === 410;
+  
+  if (!result.success && result.error && mismatchErrors.includes(result.error) && isRetryableStatus) {
+    console.log(`[APNs] 🔄 Token environment mismatch detected - retrying with ${useSandbox ? 'PRODUCTION' : 'SANDBOX'} gateway...`);
     const retryResult = await sendWithGateway(deviceToken, notification, !useSandbox);
     
     if (retryResult.success) {
-      console.log(`[APNs] ✅ Retry successful! Token was for ${!useSandbox ? 'SANDBOX' : 'PRODUCTION'} environment`);
-      // Note: In a full implementation, we'd update the stored environment for this token
+      const correctEnv = !useSandbox ? 'sandbox' : 'production';
+      console.log(`[APNs] ✅ Retry successful! Token is for ${correctEnv.toUpperCase()} environment`);
+      // TODO: Update stored token environment in database to prevent future retries
     }
     
     return retryResult;

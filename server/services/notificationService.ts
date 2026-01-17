@@ -240,17 +240,36 @@ export class NotificationService {
       // then send to ALL their devices. This ensures that when multiple
       // accounts (parent, player, coach) share the same email login,
       // all their devices receive the notification.
+      // For child players without email, we also check their parent's email.
       console.log(`[Push Send] Step 2: 🔍 Looking up user email and finding all devices...`);
       let subscriptions: any[];
       try {
-        // First, get the user's email
-        const [targetUser] = await db.select({ email: users.email })
+        // First, get the user's email and parent_id
+        const [targetUser] = await db.select({ 
+          email: users.email,
+          parentId: users.parentId
+        })
           .from(users)
           .where(eq(users.id, userId))
           .limit(1);
         
-        if (!targetUser?.email) {
-          console.log(`[Push Send] ⚠️  No email found for user ${userId} - falling back to user-only lookup`);
+        let lookupEmail = targetUser?.email;
+        
+        // If no email but has a parent, look up parent's email
+        if (!lookupEmail && targetUser?.parentId) {
+          console.log(`[Push Send] 👶 User has no email but has parent ID: ${targetUser.parentId}`);
+          const [parentUser] = await db.select({ email: users.email })
+            .from(users)
+            .where(eq(users.id, targetUser.parentId))
+            .limit(1);
+          if (parentUser?.email) {
+            lookupEmail = parentUser.email;
+            console.log(`[Push Send] 👪 Using parent's email: ${lookupEmail}`);
+          }
+        }
+        
+        if (!lookupEmail) {
+          console.log(`[Push Send] ⚠️  No email found for user ${userId} or parent - falling back to user-only lookup`);
           // Fallback to user-only lookup
           subscriptions = await db.select()
             .from(pushSubscriptions)
@@ -259,15 +278,15 @@ export class NotificationService {
               eq(pushSubscriptions.isActive, true)
             ));
         } else {
-          console.log(`[Push Send] 📧 User email: ${targetUser.email}`);
+          console.log(`[Push Send] 📧 Lookup email: ${lookupEmail}`);
           
           // Find all users with this email
           const emailUsers = await db.select({ id: users.id })
             .from(users)
-            .where(eq(users.email, targetUser.email));
+            .where(eq(users.email, lookupEmail));
           
           const emailUserIds = emailUsers.map(u => u.id);
-          console.log(`[Push Send] 👥 Found ${emailUserIds.length} user(s) with email ${targetUser.email}: [${emailUserIds.join(', ')}]`);
+          console.log(`[Push Send] 👥 Found ${emailUserIds.length} user(s) with email ${lookupEmail}: [${emailUserIds.join(', ')}]`);
           
           // Get all active subscriptions for ALL users with this email
           const subPromise = db.select()

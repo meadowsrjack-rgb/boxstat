@@ -10085,6 +10085,12 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
 
   const recipientTarget = form.watch("recipientTarget");
   const deliveryChannels = form.watch("deliveryChannels") || [];
+  const isPushSelected = deliveryChannels.includes("push");
+  
+  // Filter users to only show accounts with emails when push is selected
+  const filteredUsersForNotification = isPushSelected 
+    ? users.filter((u: any) => u.email && u.email.trim() !== '')
+    : users;
 
   const createMessage = useMutation({
     mutationFn: async (data: any) => {
@@ -10418,15 +10424,22 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="everyone">Everyone</SelectItem>
-                          <SelectItem value="users">Specific Users</SelectItem>
+                          <SelectItem value="users">{isPushSelected ? "Specific Accounts (with email)" : "Specific Users"}</SelectItem>
                           <SelectItem value="roles">Roles</SelectItem>
                           <SelectItem value="teams">Teams</SelectItem>
                           <SelectItem value="divisions">Divisions</SelectItem>
                         </SelectContent>
                       </Select>
-                      <p className="text-sm text-blue-600 bg-blue-50 p-2 rounded-md mt-2">
-                        Push notifications are sent to all devices registered with the recipient's email address. If multiple accounts share the same email login, all their devices will receive the notification.
-                      </p>
+                      {isPushSelected && (
+                        <p className="text-sm text-blue-600 bg-blue-50 p-2 rounded-md mt-2">
+                          Push notifications are email-based. Only accounts with email addresses are shown. Notifications will be sent to all devices registered under the recipient's email.
+                        </p>
+                      )}
+                      {!isPushSelected && recipientTarget === "users" && (
+                        <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded-md mt-2">
+                          In-app notifications will appear in the selected user's dashboard notification center.
+                        </p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -10438,29 +10451,39 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                     name="recipientUserIds"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Select Users</FormLabel>
+                        <FormLabel>{isPushSelected ? "Select Accounts" : "Select Users"}</FormLabel>
                         <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
-                          {users.map((user: any) => (
-                            <div key={user.id} className="flex items-center gap-2">
-                              <Checkbox
-                                checked={(field.value as string[] | undefined)?.includes(user.id) ?? false}
-                                onCheckedChange={(checked) => {
-                                  const current = (field.value as string[]) || [];
-                                  if (checked) {
-                                    field.onChange([...current, user.id]);
-                                  } else {
-                                    field.onChange(current.filter((id: string) => id !== user.id));
-                                  }
-                                }}
-                                data-testid={`checkbox-recipient-${user.id}`}
-                              />
-                              <span className="text-sm">
-                                {user.firstName} {user.lastName} {user.email ? `- ${user.email}` : ''} ({user.role})
-                              </span>
-                            </div>
-                          ))}
+                          {filteredUsersForNotification.length === 0 ? (
+                            <p className="text-sm text-gray-500 italic">
+                              {isPushSelected 
+                                ? "No accounts with email addresses found. Push notifications require accounts with email."
+                                : "No users found."}
+                            </p>
+                          ) : (
+                            filteredUsersForNotification.map((user: any) => (
+                              <div key={user.id} className="flex items-center gap-2">
+                                <Checkbox
+                                  checked={(field.value as string[] | undefined)?.includes(user.id) ?? false}
+                                  onCheckedChange={(checked) => {
+                                    const current = (field.value as string[]) || [];
+                                    if (checked) {
+                                      field.onChange([...current, user.id]);
+                                    } else {
+                                      field.onChange(current.filter((id: string) => id !== user.id));
+                                    }
+                                  }}
+                                  data-testid={`checkbox-recipient-${user.id}`}
+                                />
+                                <span className="text-sm">
+                                  {user.firstName} {user.lastName} {user.email ? `- ${user.email}` : ''} ({user.role})
+                                </span>
+                              </div>
+                            ))
+                          )}
                         </div>
-                        <p className="text-sm text-gray-500 mt-1">Selected: {field.value?.length || 0} user(s)</p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          Selected: {field.value?.length || 0} {isPushSelected ? "account(s)" : "user(s)"}
+                        </p>
                         <FormMessage />
                       </FormItem>
                     )}

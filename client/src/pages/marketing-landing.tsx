@@ -131,12 +131,6 @@ export default function MarketingLanding() {
       <section className="relative z-10 pt-20 pb-32 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-4xl mx-auto">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8">
-              <Zap className="w-4 h-4 text-red-500" />
-              <span className="text-sm text-gray-300">The Future of Sports Management</span>
-            </div>
-
             {/* Main headline */}
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6">
               <span className="bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent">

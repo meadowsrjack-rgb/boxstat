@@ -17,7 +17,7 @@ import {
   Play,
   Check
 } from "lucide-react";
-import logo from "@assets/logo2_1762477206651.png";
+import logo from "@assets/dark_1768778870984.png";
 
 export default function MarketingLanding() {
   const [, setLocation] = useLocation();
@@ -97,7 +97,7 @@ export default function MarketingLanding() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={logo} alt="BoxStat" className="h-10 w-auto" />
+              <img src={logo} alt="BoxStat" className="h-20 w-auto" />
             </div>
             
             <div className="hidden md:flex items-center gap-8">
@@ -528,7 +528,7 @@ export default function MarketingLanding() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
             <div>
-              <img src={logo} alt="BoxStat" className="h-8 w-auto mb-4" />
+              <img src={logo} alt="BoxStat" className="h-16 w-auto mb-4" />
               <p className="text-sm text-gray-500">
                 The all-in-one platform for basketball league management.
               </p>

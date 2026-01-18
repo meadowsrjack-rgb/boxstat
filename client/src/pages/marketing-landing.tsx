@@ -175,25 +175,6 @@ export default function MarketingLanding() {
               </Button>
             </div>
 
-            {/* Role-based login cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
-              {[
-                { role: "Parent", icon: Users, desc: "Manage your family" },
-                { role: "Player", icon: Trophy, desc: "Track your progress" },
-                { role: "Coach", icon: BarChart3, desc: "Lead your team" }
-              ].map((item) => (
-                <button
-                  key={item.role}
-                  onClick={() => setLocation('/login')}
-                  className="group relative p-6 rounded-2xl bg-gradient-to-b from-white/10 to-white/5 border border-white/10 hover:border-red-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-red-500/10"
-                >
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-red-500/0 to-red-500/0 group-hover:from-red-500/10 group-hover:to-transparent transition-all duration-300" />
-                  <item.icon className="w-8 h-8 text-red-500 mb-3 mx-auto" />
-                  <h3 className="font-semibold text-lg mb-1">{item.role} Login</h3>
-                  <p className="text-sm text-gray-500">{item.desc}</p>
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       </section>

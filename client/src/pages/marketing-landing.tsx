@@ -17,7 +17,7 @@ import {
   Play,
   Check
 } from "lucide-react";
-import logo from "@assets/dark_1768778870984.png";
+import logo from "@assets/dark_1768780320449.png";
 
 export default function MarketingLanding() {
   const [, setLocation] = useLocation();

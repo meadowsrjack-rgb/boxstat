@@ -7102,6 +7102,24 @@ function StoreTab({ organization }: any) {
 
   const selectedStoreCategory = form.watch("storeCategory");
   const isRecurring = form.watch("isRecurring");
+  const watchedProductPrice = form.watch("price");
+  const watchedProductBillingCycle = form.watch("billingCycle");
+  const watchedProductSubscriptionDisclosure = form.watch("subscriptionDisclosure");
+  
+  // Auto-generate subscription disclosure for store products when price or billing cycle changes
+  useEffect(() => {
+    if (isRecurring && watchedProductPrice !== undefined && watchedProductBillingCycle) {
+      const priceInDollars = (watchedProductPrice / 100).toFixed(2);
+      const cycleText = watchedProductBillingCycle.toLowerCase();
+      const generatedDisclosure = `You will be charged $${priceInDollars} every ${cycleText}. Your subscription renews automatically until canceled. Cancel anytime from your account.`;
+      
+      // Only auto-fill if the field is empty or matches a previously generated pattern
+      if (!watchedProductSubscriptionDisclosure || 
+          watchedProductSubscriptionDisclosure.startsWith("You will be charged $")) {
+        form.setValue("subscriptionDisclosure", generatedDisclosure);
+      }
+    }
+  }, [isRecurring, watchedProductPrice, watchedProductBillingCycle, form]);
 
   const createProduct = useMutation({
     mutationFn: async (data: any) => {
@@ -8205,6 +8223,24 @@ function ProgramsTab({ programs, teams, organization }: any) {
   const selectedType = form.watch("type");
   const selectedAccessTag = form.watch("accessTag");
   const allowInstallments = form.watch("allowInstallments");
+  const watchedPrice = form.watch("price");
+  const watchedBillingCycle = form.watch("billingCycle");
+  const watchedSubscriptionDisclosure = form.watch("subscriptionDisclosure");
+  
+  // Auto-generate subscription disclosure when price or billing cycle changes
+  useEffect(() => {
+    if (selectedType === "Subscription" && watchedPrice !== undefined && watchedBillingCycle) {
+      const priceInDollars = (watchedPrice / 100).toFixed(2);
+      const cycleText = watchedBillingCycle.toLowerCase();
+      const generatedDisclosure = `You will be charged $${priceInDollars} every ${cycleText}. Your subscription renews automatically until canceled. Cancel anytime from your account.`;
+      
+      // Only auto-fill if the field is empty or matches a previously generated pattern
+      if (!watchedSubscriptionDisclosure || 
+          watchedSubscriptionDisclosure.startsWith("You will be charged $")) {
+        form.setValue("subscriptionDisclosure", generatedDisclosure);
+      }
+    }
+  }, [selectedType, watchedPrice, watchedBillingCycle, form]);
 
   const createProgram = useMutation({
     mutationFn: async (data: any) => {

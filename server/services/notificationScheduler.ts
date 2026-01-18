@@ -49,10 +49,10 @@ export class NotificationScheduler {
       // Program targeting
       if (assignTo.programs && assignTo.programs.length > 0) {
         for (const programId of assignTo.programs) {
-          const enrollments = await storage.getEnrollmentsByProgram(parseInt(programId));
+          const enrollments = await storage.getEnrollmentsByProgram(programId);
           for (const enrollment of enrollments) {
             if (enrollment.userId) {
-              participantIds.add(String(enrollment.userId));
+              participantIds.add(enrollment.userId);
             }
           }
         }

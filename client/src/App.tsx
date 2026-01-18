@@ -10,6 +10,7 @@ import Teams from "@/pages/teams";
 import PrivacySettingsPage from "@/pages/privacy";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import Landing from "@/pages/landing";
+import MarketingLanding from "@/pages/marketing-landing";
 import AccountSetup from "@/pages/account-setup";
 import PlayerDashboard from "@/pages/player-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
@@ -196,6 +197,32 @@ const ProtectedTestRoute = () => <ProtectedRoute component={TestRoute} />;
 const ProtectedTrophiesBadges = () => <ProtectedRoute component={TrophiesBadges} />;
 const ProtectedSkills = () => <ProtectedRoute component={Skills} />;
 
+// Platform-aware landing that shows marketing page for web, app landing for iOS
+function PlatformAwareLanding() {
+  // Check if running in Capacitor native app (iOS/Android)
+  // Only consider it native if isNativePlatform() explicitly returns true
+  // This prevents false positives when Capacitor is bundled in web builds
+  const capacitor = (window as any).Capacitor;
+  
+  // isNativePlatform() is the definitive check - it returns true ONLY on actual native apps
+  // getPlatform() returns 'web' for browsers, 'ios' or 'android' for native
+  const isNativePlatform = capacitor?.isNativePlatform?.() === true;
+  const platform = capacitor?.getPlatform?.();
+  const isNativeByPlatform = platform === 'ios' || platform === 'android';
+  
+  // Both checks must agree, OR we trust isNativePlatform alone
+  // Default to marketing page for web (platform === 'web' or undefined)
+  const isNativeApp = isNativePlatform || (isNativeByPlatform && platform !== 'web');
+  
+  // For iOS/Android app users, show the original app landing page
+  if (isNativeApp) {
+    return <Landing />;
+  }
+  
+  // For web browser users, show the marketing landing page
+  return <MarketingLanding />;
+}
+
 // Special route components with custom logic
 function AccountRoute() {
   const { user, isLoading } = useAuth();
@@ -376,8 +403,10 @@ function AppRouter() {
       <Route path="/logout" component={Logout} />
       <Route path="/checkout/:checkoutId" component={QuoteCheckout} />
       
-      {/* Landing page - always accessible at root */}
-      <Route path="/" component={Landing} />
+      {/* Landing page - marketing for web, app landing for iOS */}
+      <Route path="/" component={PlatformAwareLanding} />
+      {/* Original app landing for direct access */}
+      <Route path="/app" component={Landing} />
       
       {/* Protected routes */}
       <Route path="/home" component={ProtectedDashboardDispatcher} />

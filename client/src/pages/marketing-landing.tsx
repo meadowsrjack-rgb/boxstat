@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { SiApple } from "react-icons/si";
 import logo from "@assets/dark_1768778870984.png";
+import logoIcon from "@assets/logo2_1768865601299.png";
 import screenshot1 from "@assets/1_1768860806315.png";
 import screenshot2 from "@assets/2_1768860806316.png";
 import screenshot3 from "@assets/3_1768860806317.png";
@@ -417,9 +418,7 @@ export default function MarketingLanding() {
       <section id="contact" className="relative z-10 py-24 px-6">
         <div className="max-w-4xl mx-auto">
           <div className="p-12 rounded-3xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 mb-6">
-              <Smartphone className="w-8 h-8" />
-            </div>
+            <img src={logoIcon} alt="BoxStat" className="w-16 h-16 mx-auto mb-6" />
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               Ready to Transform Your Club?
             </h2>

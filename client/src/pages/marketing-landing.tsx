@@ -138,9 +138,7 @@ export default function MarketingLanding() {
           <div className="text-center max-w-4xl mx-auto">
             {/* Main headline */}
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6">
-              <span className="bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent">
-                Run Your League
-              </span>
+              <span className="bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent">Compete.</span>
               <br />
               <span className="bg-gradient-to-r from-red-500 via-red-400 to-white bg-clip-text text-transparent">
                 Like a Pro

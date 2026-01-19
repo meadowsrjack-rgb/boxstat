@@ -19,12 +19,12 @@ import {
 } from "lucide-react";
 import { SiApple } from "react-icons/si";
 import logo from "@assets/dark_1768778870984.png";
-import screenshot1 from "@assets/1_1768783120998.png";
-import screenshot2 from "@assets/3_1768783120999.png";
-import screenshot3 from "@assets/4_1768783120999.png";
-import screenshot4 from "@assets/5_1768783120999.png";
-import screenshot5 from "@assets/6_1768783120999.png";
-import screenshot6 from "@assets/7_1768783120999.png";
+import screenshot1 from "@assets/1_1768851831121.png";
+import screenshot2 from "@assets/2_1768851831122.png";
+import screenshot3 from "@assets/3_1768851831123.png";
+import screenshot4 from "@assets/4_1768851831123.png";
+import screenshot5 from "@assets/5_1768851831123.png";
+import screenshot6 from "@assets/6_1768851831124.png";
 
 export default function MarketingLanding() {
   const [, setLocation] = useLocation();
@@ -253,23 +253,15 @@ export default function MarketingLanding() {
 
           {/* App Screenshots Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
-            {[
-              { img: screenshot1, label: "Player Profile" },
-              { img: screenshot2, label: "Skills Assessment" },
-              { img: screenshot3, label: "Family Management" },
-              { img: screenshot4, label: "Event Details" },
-              { img: screenshot5, label: "Team Communication" },
-              { img: screenshot6, label: "Calendar & Events" }
-            ].map((item, i) => (
+            {[screenshot1, screenshot2, screenshot3, screenshot4, screenshot5, screenshot6].map((img, i) => (
               <div key={i} className="group">
                 <div className="relative overflow-hidden rounded-2xl">
                   <img 
-                    src={item.img} 
-                    alt={item.label}
+                    src={img} 
+                    alt={`App screenshot ${i + 1}`}
                     className="w-full h-auto rounded-2xl shadow-lg group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>
-                <p className="text-center text-xs text-gray-500 mt-2">{item.label}</p>
               </div>
             ))}
           </div>

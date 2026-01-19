@@ -79,6 +79,7 @@ export default function Landing() {
           <Button 
             size="lg" 
             onClick={() => setLocation('/registration')}
+            className="hover:shadow-[0_0_30px_rgba(239,68,68,0.6)] active:shadow-[0_0_40px_rgba(239,68,68,0.8)] transition-shadow duration-300"
             style={{
               backgroundColor: 'rgba(0,0,0,0.2)',
               color: 'white',

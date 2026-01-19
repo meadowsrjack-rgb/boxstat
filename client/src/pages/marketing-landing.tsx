@@ -117,7 +117,7 @@ export default function MarketingLanding() {
             <div className="flex items-center gap-3">
               <Button 
                 variant="ghost" 
-                className="text-white hover:bg-white/10 hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all duration-300"
+                className="text-white hover:bg-white/10 hover:text-white hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all duration-300"
                 onClick={() => setLocation('/login')}
               >
                 Sign In

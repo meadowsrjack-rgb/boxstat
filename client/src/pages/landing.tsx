@@ -101,6 +101,7 @@ export default function Landing() {
             <span style={{ opacity: 0.8 }}>HAVE AN ACCOUNT? </span>
             <button 
               onClick={() => setLocation('/login')}
+              className="hover:drop-shadow-[0_0_8px_rgba(239,68,68,0.8)] active:drop-shadow-[0_0_12px_rgba(239,68,68,1)] transition-all duration-300"
               style={{
                 color: 'white',
                 fontWeight: 'bold',

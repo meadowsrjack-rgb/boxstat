@@ -4,7 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Shield, ChevronRight, Settings, UserPlus, LogOut, Crown, Bug, X, Sparkles, Users, Calendar, CreditCard, MessageCircle } from "lucide-react";
+import { User, Shield, ChevronRight, Settings, UserPlus, LogOut, Crown, Bug } from "lucide-react";
+import { useTutorial } from "@/contexts/TutorialContext";
 import { BanterLoader } from "@/components/BanterLoader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,19 +37,7 @@ export default function ProfileGateway() {
   const [bugDialogOpen, setBugDialogOpen] = useState(false);
   const [bugTitle, setBugTitle] = useState("");
   const [bugDescription, setBugDescription] = useState("");
-  const [showOnboarding, setShowOnboarding] = useState(false);
-
-  useEffect(() => {
-    const hasSeenOnboarding = localStorage.getItem("hasSeenProfileGatewayOnboarding");
-    if (!hasSeenOnboarding) {
-      setShowOnboarding(true);
-    }
-  }, []);
-
-  const dismissOnboarding = () => {
-    setShowOnboarding(false);
-    localStorage.setItem("hasSeenProfileGatewayOnboarding", "true");
-  };
+  const { currentStep, setStep, isActive: tutorialActive } = useTutorial();
 
   const submitBugMutation = useMutation({
     mutationFn: async (bugData: { title: string; description: string }) => {
@@ -80,6 +69,12 @@ export default function ProfileGateway() {
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
   });
+
+  useEffect(() => {
+    if (tutorialActive && currentStep === "add-player" && players.length > 0) {
+      setStep("open-parent-dashboard");
+    }
+  }, [tutorialActive, currentStep, players.length, setStep]);
 
   if (isLoading || playersLoading) {
     return (
@@ -186,89 +181,6 @@ export default function ProfileGateway() {
           <div className="text-center mb-6">
             <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-who-is-watching">Whose ball?</h1>
           </div>
-
-          {showOnboarding && (
-            <div className="mb-6 p-4 rounded-xl bg-gradient-to-br from-red-900/30 to-gray-900/50 border border-red-500/30 relative">
-              <button 
-                onClick={dismissOnboarding}
-                className="absolute top-3 right-3 p-1 text-gray-400 hover:text-white transition-colors"
-                aria-label="Dismiss guide"
-              >
-                <X className="w-4 h-4" />
-              </button>
-              
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-5 h-5 text-red-400" />
-                <h2 className="text-lg font-semibold text-white">Welcome to BoxStat!</h2>
-              </div>
-              
-              <div className="space-y-4 text-sm">
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center text-red-400 text-xs font-bold">1</div>
-                  <div>
-                    <p className="text-gray-200 font-medium">This is your Profile Gateway</p>
-                    <p className="text-gray-400 mt-0.5">Switch between your parent account and player profiles. Tap any card to enter that dashboard.</p>
-                  </div>
-                </div>
-                
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center text-red-400 text-xs font-bold">2</div>
-                  <div>
-                    <p className="text-gray-200 font-medium">Add your players</p>
-                    <p className="text-gray-400 mt-0.5">Use the <span className="text-red-400 font-medium">+ button</span> at the bottom to create player profiles for your children.</p>
-                  </div>
-                </div>
-                
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center text-red-400 text-xs font-bold">3</div>
-                  <div>
-                    <p className="text-gray-200 font-medium">Open your Parent Dashboard</p>
-                    <p className="text-gray-400 mt-0.5">Tap your name above to access:</p>
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      <div className="flex items-center gap-1.5 text-gray-300">
-                        <Calendar className="w-3.5 h-3.5 text-blue-400" />
-                        <span>Events</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-gray-300">
-                        <CreditCard className="w-3.5 h-3.5 text-green-400" />
-                        <span>Payments</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-gray-300">
-                        <MessageCircle className="w-3.5 h-3.5 text-purple-400" />
-                        <span>Team Chats</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-gray-300">
-                        <Users className="w-3.5 h-3.5 text-orange-400" />
-                        <span>Management</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center text-red-400 text-xs font-bold">4</div>
-                  <div>
-                    <p className="text-gray-200 font-medium">Register your players</p>
-                    <p className="text-gray-400 mt-0.5">Go to the <span className="text-green-400 font-medium">Payments</span> tab in your parent dashboard to enroll players in programs or assign existing subscriptions.</p>
-                  </div>
-                </div>
-                
-                <div className="mt-4 pt-3 border-t border-gray-700/50">
-                  <p className="text-gray-400 text-xs flex items-center gap-1.5">
-                    <span className="text-blue-400">Tip:</span> Players can log in later on their own phones to access their player dashboards!
-                  </p>
-                </div>
-              </div>
-              
-              <Button 
-                onClick={dismissOnboarding}
-                size="sm"
-                className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white"
-              >
-                Got it!
-              </Button>
-            </div>
-          )}
 
         <div className="space-y-4">
           {/* Account Card - styled like other profiles */}

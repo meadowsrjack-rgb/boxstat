@@ -64,6 +64,8 @@ import { useQuery } from "@tanstack/react-query";
 import { initPushNotifications, registerPushNotifications } from "@/services/pushNotificationService";
 import { initDeepLinks } from "@/services/deepLinkService";
 import { UpdatePrompt } from "@/components/UpdatePrompt";
+import { TutorialProvider } from "@/contexts/TutorialContext";
+import { TutorialOverlay } from "@/components/TutorialOverlay";
 
 type Profile = {
   id: string;
@@ -521,11 +523,14 @@ function AppRouter() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <WouterRouter>
-        <AppRouter />
-        <Toaster />
-        <UpdatePrompt />
-      </WouterRouter>
+      <TutorialProvider>
+        <WouterRouter>
+          <AppRouter />
+          <Toaster />
+          <UpdatePrompt />
+          <TutorialOverlay />
+        </WouterRouter>
+      </TutorialProvider>
     </QueryClientProvider>
   );
 }

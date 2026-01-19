@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import backgroundImage from "@assets/landing-background.png";
-import logo from "@assets/logo2_1762477206651.png";
+import logo from "@assets/landlogo_1768866479310.png";
 
 export default function Landing() {
   const [, setLocation] = useLocation();

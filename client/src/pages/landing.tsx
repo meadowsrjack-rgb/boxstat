@@ -55,7 +55,7 @@ export default function Landing() {
           src={logo} 
           alt="BoxStat Logo" 
           style={{
-            width: '540px',
+            width: '320px',
             height: 'auto',
             filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.5))',
           }}

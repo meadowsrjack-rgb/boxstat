@@ -19,6 +19,12 @@ import {
 } from "lucide-react";
 import { SiApple } from "react-icons/si";
 import logo from "@assets/dark_1768778870984.png";
+import screenshot1 from "@assets/1_1768783120998.png";
+import screenshot2 from "@assets/3_1768783120999.png";
+import screenshot3 from "@assets/4_1768783120999.png";
+import screenshot4 from "@assets/5_1768783120999.png";
+import screenshot5 from "@assets/6_1768783120999.png";
+import screenshot6 from "@assets/7_1768783120999.png";
 
 export default function MarketingLanding() {
   const [, setLocation] = useLocation();
@@ -233,104 +239,61 @@ export default function MarketingLanding() {
           </div>
         </div>
       </section>
-      {/* Dashboard Preview Section */}
+      {/* App Screenshots Section */}
       <section className="relative z-10 py-24 px-6 overflow-hidden">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-bold mb-4">
               <span className="bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                Beautiful Dashboards
+                See It In Action
               </span>
             </h2>
             <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-              Intuitive interfaces tailored for every role
+              Beautiful, intuitive interfaces designed for players, parents, and coaches
             </p>
           </div>
 
-          {/* Dashboard previews */}
+          {/* App Screenshots Carousel */}
           <div className="relative">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Coach Dashboard Preview */}
-              <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-orange-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative p-6 rounded-2xl bg-gradient-to-b from-gray-900 to-gray-950 border border-white/10 overflow-hidden">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-3 h-3 rounded-full bg-red-500" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                    <div className="w-3 h-3 rounded-full bg-green-500" />
-                  </div>
-                  <div className="space-y-3">
-                    <div className="h-8 bg-white/10 rounded-lg w-3/4" />
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="h-20 bg-red-500/20 rounded-lg" />
-                      <div className="h-20 bg-white/5 rounded-lg" />
-                    </div>
-                    <div className="h-24 bg-white/5 rounded-lg" />
-                  </div>
-                  <div className="absolute bottom-4 left-6 right-6">
-                    <span className="text-sm font-medium text-gray-400">Coach Dashboard</span>
+            <div className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory scrollbar-hide">
+              {[
+                { img: screenshot1, label: "Player Profile" },
+                { img: screenshot2, label: "Skills Assessment" },
+                { img: screenshot3, label: "Family Management" },
+                { img: screenshot4, label: "Event Details" },
+                { img: screenshot5, label: "Team Communication" },
+                { img: screenshot6, label: "Calendar & Events" }
+              ].map((item, i) => (
+                <div key={i} className="flex-shrink-0 snap-center">
+                  <div className="relative group">
+                    <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-red-400/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <img 
+                      src={item.img} 
+                      alt={item.label}
+                      className="relative h-[500px] w-auto rounded-3xl shadow-2xl shadow-black/50 border border-white/10"
+                    />
+                    <p className="text-center text-sm text-gray-400 mt-4 font-medium">{item.label}</p>
                   </div>
                 </div>
-              </div>
-
-              {/* Parent Dashboard Preview */}
-              <div className="relative group md:-mt-8">
-                <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-orange-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative p-6 rounded-2xl bg-gradient-to-b from-gray-900 to-gray-950 border border-red-500/30 overflow-hidden ring-1 ring-red-500/20">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-3 h-3 rounded-full bg-red-500" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                    <div className="w-3 h-3 rounded-full bg-green-500" />
-                  </div>
-                  <div className="space-y-3">
-                    <div className="h-8 bg-white/10 rounded-lg w-1/2" />
-                    <div className="flex gap-2">
-                      <div className="h-16 w-16 bg-red-500/30 rounded-full" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-4 bg-white/10 rounded w-3/4" />
-                        <div className="h-4 bg-white/5 rounded w-1/2" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="h-12 bg-white/5 rounded-lg" />
-                      <div className="h-12 bg-white/5 rounded-lg" />
-                      <div className="h-12 bg-white/5 rounded-lg" />
-                    </div>
-                    <div className="h-20 bg-white/5 rounded-lg" />
-                  </div>
-                  <div className="absolute bottom-4 left-6 right-6">
-                    <span className="text-sm font-medium text-red-400">Parent Dashboard</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Player Dashboard Preview */}
-              <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-orange-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative p-6 rounded-2xl bg-gradient-to-b from-gray-900 to-gray-950 border border-white/10 overflow-hidden">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-3 h-3 rounded-full bg-red-500" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                    <div className="w-3 h-3 rounded-full bg-green-500" />
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 bg-red-500/20 rounded-full" />
-                      <div className="h-6 bg-white/10 rounded w-1/2" />
-                    </div>
-                    <div className="flex gap-2">
-                      {[1,2,3,4].map(i => (
-                        <div key={i} className="h-10 w-10 bg-yellow-500/20 rounded-lg" />
-                      ))}
-                    </div>
-                    <div className="h-28 bg-white/5 rounded-lg" />
-                  </div>
-                  <div className="absolute bottom-4 left-6 right-6">
-                    <span className="text-sm font-medium text-gray-400">Player Dashboard</span>
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
+          </div>
+
+          {/* Download CTA */}
+          <div className="text-center mt-12">
+            <a 
+              href="https://apps.apple.com/us/app/boxstat/id6754899159"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-3 px-8 py-4 rounded-xl bg-white text-black hover:bg-gray-100 transition-all duration-300 shadow-xl"
+            >
+              <SiApple className="w-8 h-8" />
+              <div className="text-left">
+                <div className="text-xs text-gray-600">Download on the</div>
+                <div className="text-lg font-semibold">App Store</div>
+              </div>
+            </a>
+            <p className="text-sm text-gray-500 mt-4">Android coming soon</p>
           </div>
         </div>
       </section>

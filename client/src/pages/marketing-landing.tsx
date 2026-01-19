@@ -91,7 +91,6 @@ export default function MarketingLanding() {
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-red-500/15 rounded-full blur-[100px] animate-pulse delay-1000" />
         <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-orange-500/10 rounded-full blur-[80px] animate-pulse delay-500" />
       </div>
-
       {/* Navigation */}
       <nav className="relative z-50 border-b border-white/10 backdrop-blur-xl bg-black/50 sticky top-0">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -126,7 +125,6 @@ export default function MarketingLanding() {
           </div>
         </div>
       </nav>
-
       {/* Hero Section */}
       <section className="relative z-10 pt-20 pb-32 px-6">
         <div className="max-w-7xl mx-auto">
@@ -172,7 +170,6 @@ export default function MarketingLanding() {
           </div>
         </div>
       </section>
-
       {/* Stats Section */}
       <section className="relative z-10 py-16 border-y border-white/10 bg-white/[0.02]">
         <div className="max-w-7xl mx-auto px-6">
@@ -188,7 +185,6 @@ export default function MarketingLanding() {
           </div>
         </div>
       </section>
-
       {/* Features Section */}
       <section id="features" className="relative z-10 py-24 px-6">
         <div className="max-w-7xl mx-auto">
@@ -219,7 +215,6 @@ export default function MarketingLanding() {
           </div>
         </div>
       </section>
-
       {/* Dashboard Preview Section */}
       <section className="relative z-10 py-24 px-6 overflow-hidden">
         <div className="max-w-7xl mx-auto">
@@ -321,7 +316,6 @@ export default function MarketingLanding() {
           </div>
         </div>
       </section>
-
       {/* Testimonials Section */}
       <section id="testimonials" className="relative z-10 py-24 px-6 bg-gradient-to-b from-transparent via-white/[0.02] to-transparent">
         <div className="max-w-7xl mx-auto">
@@ -362,7 +356,6 @@ export default function MarketingLanding() {
           </div>
         </div>
       </section>
-
       {/* Pricing Section */}
       <section id="pricing" className="relative z-10 py-24 px-6">
         <div className="max-w-7xl mx-auto">
@@ -458,7 +451,6 @@ export default function MarketingLanding() {
           </div>
         </div>
       </section>
-
       {/* Contact Section for Club Owners */}
       <section id="contact" className="relative z-10 py-24 px-6">
         <div className="max-w-4xl mx-auto">
@@ -497,7 +489,6 @@ export default function MarketingLanding() {
           </div>
         </div>
       </section>
-
       {/* Footer */}
       <footer className="relative z-10 border-t border-white/10 py-12 px-6">
         <div className="max-w-7xl mx-auto">
@@ -536,7 +527,7 @@ export default function MarketingLanding() {
               © {new Date().getFullYear()} BoxStat. All rights reserved.
             </p>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-500">Made with ❤️ for basketball</span>
+              <span className="text-sm text-gray-500">Made by athletes, for athletes</span>
             </div>
           </div>
         </div>

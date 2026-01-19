@@ -137,7 +137,7 @@ export default function MarketingLanding() {
                 Run Your League
               </span>
               <br />
-              <span className="bg-gradient-to-r from-red-500 via-red-400 to-orange-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-red-500 via-red-400 to-white bg-clip-text text-transparent">
                 Like a Pro
               </span>
             </h1>

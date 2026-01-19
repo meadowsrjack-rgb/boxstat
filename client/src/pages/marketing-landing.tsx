@@ -19,12 +19,12 @@ import {
 } from "lucide-react";
 import { SiApple } from "react-icons/si";
 import logo from "@assets/dark_1768778870984.png";
-import screenshot1 from "@assets/1_1768851831121.png";
-import screenshot2 from "@assets/2_1768851831122.png";
-import screenshot3 from "@assets/3_1768851831123.png";
-import screenshot4 from "@assets/4_1768851831123.png";
-import screenshot5 from "@assets/5_1768851831123.png";
-import screenshot6 from "@assets/6_1768851831124.png";
+import screenshot1 from "@assets/1_1768860806315.png";
+import screenshot2 from "@assets/2_1768860806316.png";
+import screenshot3 from "@assets/3_1768860806317.png";
+import screenshot4 from "@assets/4_1768860806317.png";
+import screenshot5 from "@assets/5_1768860806318.png";
+import screenshot6 from "@assets/6_1768860806318.png";
 
 export default function MarketingLanding() {
   const [, setLocation] = useLocation();

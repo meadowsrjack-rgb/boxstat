@@ -175,20 +175,18 @@ export default function MarketingLanding() {
             </div>
 
             {/* App Download */}
-            <div className="flex flex-col items-center gap-3">
+            <div className="flex flex-col items-center gap-2">
               <a 
                 href="https://apps.apple.com/us/app/boxstat/id6754899159"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-white/10 border border-white/20 hover:bg-white/15 transition-all duration-300"
+                className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/10 border border-white/20 hover:bg-white/15 hover:border-white/30 transition-all duration-300"
               >
-                <SiApple className="w-6 h-6" />
-                <div className="text-left">
-                  <div className="text-xs text-gray-400">Download on the</div>
-                  <div className="text-sm font-semibold">App Store</div>
-                </div>
+                <SiApple className="w-4 h-4" />
+                <span className="text-sm font-medium">Download for iOS</span>
+                <ChevronRight className="w-3 h-3 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
               </a>
-              <span className="text-sm text-gray-500">Android coming soon</span>
+              <span className="text-xs text-gray-500">Android coming soon</span>
             </div>
 
           </div>
@@ -253,47 +251,42 @@ export default function MarketingLanding() {
             </p>
           </div>
 
-          {/* App Screenshots Carousel */}
-          <div className="relative">
-            <div className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory scrollbar-hide">
-              {[
-                { img: screenshot1, label: "Player Profile" },
-                { img: screenshot2, label: "Skills Assessment" },
-                { img: screenshot3, label: "Family Management" },
-                { img: screenshot4, label: "Event Details" },
-                { img: screenshot5, label: "Team Communication" },
-                { img: screenshot6, label: "Calendar & Events" }
-              ].map((item, i) => (
-                <div key={i} className="flex-shrink-0 snap-center">
-                  <div className="relative group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-red-400/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <img 
-                      src={item.img} 
-                      alt={item.label}
-                      className="relative h-[500px] w-auto rounded-3xl shadow-2xl shadow-black/50 border border-white/10"
-                    />
-                    <p className="text-center text-sm text-gray-400 mt-4 font-medium">{item.label}</p>
-                  </div>
+          {/* App Screenshots Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
+            {[
+              { img: screenshot1, label: "Player Profile" },
+              { img: screenshot2, label: "Skills Assessment" },
+              { img: screenshot3, label: "Family Management" },
+              { img: screenshot4, label: "Event Details" },
+              { img: screenshot5, label: "Team Communication" },
+              { img: screenshot6, label: "Calendar & Events" }
+            ].map((item, i) => (
+              <div key={i} className="group">
+                <div className="relative overflow-hidden rounded-2xl">
+                  <img 
+                    src={item.img} 
+                    alt={item.label}
+                    className="w-full h-auto rounded-2xl shadow-lg group-hover:scale-105 transition-transform duration-300"
+                  />
                 </div>
-              ))}
-            </div>
+                <p className="text-center text-xs text-gray-500 mt-2">{item.label}</p>
+              </div>
+            ))}
           </div>
 
           {/* Download CTA */}
-          <div className="text-center mt-12">
+          <div className="flex flex-col items-center gap-4 mt-16">
             <a 
               href="https://apps.apple.com/us/app/boxstat/id6754899159"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-3 px-8 py-4 rounded-xl bg-white text-black hover:bg-gray-100 transition-all duration-300 shadow-xl"
+              className="group inline-flex items-center gap-3 px-6 py-3 rounded-full bg-gradient-to-r from-gray-900 to-black border border-white/20 hover:border-white/40 transition-all duration-300"
             >
-              <SiApple className="w-8 h-8" />
-              <div className="text-left">
-                <div className="text-xs text-gray-600">Download on the</div>
-                <div className="text-lg font-semibold">App Store</div>
-              </div>
+              <SiApple className="w-5 h-5 text-white" />
+              <span className="text-white font-medium">Download for iOS</span>
+              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
             </a>
-            <p className="text-sm text-gray-500 mt-4">Android coming soon</p>
+            <span className="text-xs text-gray-500">Android coming soon</span>
           </div>
         </div>
       </section>

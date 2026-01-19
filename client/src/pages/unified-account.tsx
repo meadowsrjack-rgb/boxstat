@@ -66,7 +66,6 @@ import UypTrophyRings from "@/components/UypTrophyRings";
 import { authPersistence } from "@/services/authPersistence";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
-import { useTutorial } from "@/contexts/TutorialContext";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -1194,24 +1193,6 @@ export default function UnifiedAccount() {
   const [selectedStorePlayer, setSelectedStorePlayer] = useState<string>("");
   const [selectedStoreCategory, setSelectedStoreCategory] = useState<string>("");
   
-  // Tutorial state
-  const { isActive: tutorialActive, currentStep, nextStep, setStep } = useTutorial();
-  const [activeTab, setActiveTab] = useState("home");
-  
-  // Handle tutorial step when entering parent dashboard
-  useEffect(() => {
-    if (tutorialActive && currentStep === "open-parent-dashboard") {
-      setStep("parent-dashboard-intro");
-    }
-  }, [tutorialActive, currentStep, setStep]);
-
-  // Handle tutorial step when payments tab is clicked
-  useEffect(() => {
-    if (tutorialActive && currentStep === "click-payments" && activeTab === "payments") {
-      setStep("payments-finish");
-    }
-  }, [tutorialActive, currentStep, activeTab, setStep]);
-  
   // Check if device is locked - redirect to player dashboard if so
   useEffect(() => {
     const lockedPlayerId = localStorage.getItem("deviceLockedToPlayer");
@@ -1530,14 +1511,14 @@ export default function UnifiedAccount() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Announcement Banner */}
         <AnnouncementBanner />
-        <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="home">
+        <Tabs defaultValue="home">
           <div ref={tabsRef} className="overflow-x-auto hide-scrollbar drag-scroll mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex w-auto min-w-full sm:w-auto bg-transparent border-b border-gray-200 rounded-none p-0 h-auto gap-0">
               <TabsTrigger value="home" data-testid="tab-home" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <User className="w-4 h-4 mr-2" />
                 Home
               </TabsTrigger>
-              <TabsTrigger value="payments" data-testid="tab-payments" data-tutorial="payments-tab" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+              <TabsTrigger value="payments" data-testid="tab-payments" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <DollarSign className="w-4 h-4 mr-2" />
                 Payments
               </TabsTrigger>

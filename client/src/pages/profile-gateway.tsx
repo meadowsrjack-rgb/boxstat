@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, Shield, ChevronRight, Settings, UserPlus, LogOut, Crown, Bug } from "lucide-react";
-import { useTutorial } from "@/contexts/TutorialContext";
 import { BanterLoader } from "@/components/BanterLoader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,7 +36,6 @@ export default function ProfileGateway() {
   const [bugDialogOpen, setBugDialogOpen] = useState(false);
   const [bugTitle, setBugTitle] = useState("");
   const [bugDescription, setBugDescription] = useState("");
-  const { currentStep, setStep, isActive: tutorialActive } = useTutorial();
 
   const submitBugMutation = useMutation({
     mutationFn: async (bugData: { title: string; description: string }) => {
@@ -69,12 +67,6 @@ export default function ProfileGateway() {
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
   });
-
-  useEffect(() => {
-    if (tutorialActive && currentStep === "add-player" && players.length > 0) {
-      setStep("open-parent-dashboard");
-    }
-  }, [tutorialActive, currentStep, players.length, setStep]);
 
   if (isLoading || playersLoading) {
     return (
@@ -178,7 +170,7 @@ export default function ProfileGateway() {
         }}
       >
         <div className="max-w-md mx-auto pt-4 pb-8">
-          <div className="text-center mb-6">
+          <div className="text-center mb-10">
             <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-who-is-watching">Whose ball?</h1>
           </div>
 

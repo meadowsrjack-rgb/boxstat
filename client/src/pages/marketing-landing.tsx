@@ -144,11 +144,7 @@ export default function MarketingLanding() {
               <span className="bg-gradient-to-r from-red-500 via-red-400 to-white bg-clip-text text-transparent">Repeat.</span>
             </h1>
 
-            <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed">
-              The all-in-one platform that connects coaches, parents, and players. 
-              Manage teams, track development, and streamline operations with beautiful, 
-              intuitive tools.
-            </p>
+            <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed">Welcome to the world’s first unified ecosystem where elite athletic growth meets professional business scale. We’ve reimagined sports management by building a single, intuitive home for everyone involved.</p>
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">

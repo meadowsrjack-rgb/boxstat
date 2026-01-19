@@ -18,7 +18,7 @@ import {
   Check
 } from "lucide-react";
 import { SiApple } from "react-icons/si";
-import logo from "@assets/dark_1768778870984.png";
+import logo from "@assets/dark_1768865985940.png";
 import logoIcon from "@assets/logo2_1768865601299.png";
 import screenshot1 from "@assets/1_1768860806315.png";
 import screenshot2 from "@assets/2_1768860806316.png";

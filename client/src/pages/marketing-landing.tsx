@@ -495,9 +495,7 @@ export default function MarketingLanding() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
             <div>
               <img src={logo} alt="BoxStat" className="h-32 w-auto mb-4" />
-              <p className="text-sm text-gray-500">
-                The all-in-one platform for basketball league management.
-              </p>
+              <p className="text-sm text-gray-500">The all-in-one platform for sports league management.</p>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Product</h4>

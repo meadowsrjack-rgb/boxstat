@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import backgroundImage from "@assets/landing-background.png";
 import logo from "@assets/dark_1768878462814.png";
 
 export default function Landing() {
@@ -15,18 +14,14 @@ export default function Landing() {
       backgroundColor: '#000000' 
     }}>
       
-      {/* LAYER 1: The Static Background */}
+      {/* LAYER 1: Dark Blue Gradient Background (matches login page) */}
+      <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-br from-gray-900 via-gray-800 to-black" />
+      
+      {/* Subtle red glow at bottom */}
       <div 
+        className="absolute bottom-0 left-0 right-0 h-64 z-0 pointer-events-none"
         style={{
-          position: 'absolute',
-          inset: 0,
-          zIndex: 0,
-          backgroundImage: `url(${backgroundImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          userSelect: 'none',
-          pointerEvents: 'none',
+          background: 'radial-gradient(ellipse at center bottom, rgba(220, 38, 38, 0.15) 0%, transparent 70%)',
         }}
       />
 

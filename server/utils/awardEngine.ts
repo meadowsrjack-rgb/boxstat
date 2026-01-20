@@ -57,10 +57,13 @@ export async function evaluateAwardsForUser(
     const notifications: AwardNotification[] = [];
 
     for (const award of activeAwards) {
-      // No duplicate restriction - awards can be earned multiple times
-      
       const category = award.triggerCategory || 'manual';
       if (category === 'manual') continue;
+      
+      // Prevent duplicate automatic awards - skip if user already has this award
+      if (existingAwardIds.has(award.id)) {
+        continue;
+      }
 
       if (triggerContext?.category && triggerContext.category !== category) {
         continue;

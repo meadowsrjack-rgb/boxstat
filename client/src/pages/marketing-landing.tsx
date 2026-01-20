@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { SiApple } from "react-icons/si";
 import logo from "@assets/dark_1768878462814.png";
-import logoIcon from "@assets/logo2_1768865601299.png";
+import logoIcon from "@assets/lighttheme_1768878672908.png";
 import screenshot1 from "@assets/1_1768860806315.png";
 import screenshot2 from "@assets/2_1768860806316.png";
 import screenshot3 from "@assets/3_1768860806317.png";

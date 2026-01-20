@@ -114,7 +114,7 @@ export default function MarketingLanding() {
               <a href="#contact" className="text-sm text-gray-400 hover:text-white transition-colors">For Clubs</a>
             </div>
 
-            <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-3">
               <Button 
                 className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white border-0 shadow-lg shadow-red-500/25"
                 onClick={() => setLocation('/registration')}
@@ -124,7 +124,6 @@ export default function MarketingLanding() {
               </Button>
               <Button 
                 variant="ghost" 
-                size="sm"
                 className="text-white hover:bg-white/10 hover:text-white hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all duration-300"
                 onClick={() => setLocation('/login')}
               >

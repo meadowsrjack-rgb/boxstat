@@ -104,7 +104,7 @@ export default function MarketingLanding() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={logo} alt="BoxStat" className="h-40 w-auto" />
+              <img src={logo} alt="BoxStat" className="h-10 w-auto" />
             </div>
             
             <div className="hidden md:flex items-center gap-8">
@@ -114,20 +114,21 @@ export default function MarketingLanding() {
               <a href="#contact" className="text-sm text-gray-400 hover:text-white transition-colors">For Clubs</a>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Button 
-                variant="ghost" 
-                className="text-white hover:bg-white/10 hover:text-white hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all duration-300"
-                onClick={() => setLocation('/login')}
-              >
-                Sign In
-              </Button>
+            <div className="flex flex-col items-end gap-2">
               <Button 
                 className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white border-0 shadow-lg shadow-red-500/25"
                 onClick={() => setLocation('/registration')}
               >
                 Get Started
                 <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="text-white hover:bg-white/10 hover:text-white hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all duration-300"
+                onClick={() => setLocation('/login')}
+              >
+                Sign In
               </Button>
             </div>
           </div>

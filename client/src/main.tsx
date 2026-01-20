@@ -7,18 +7,34 @@ import "leaflet/dist/leaflet.css";
 
 // Restore auth session from native storage before app renders (iOS persistence)
 async function restoreNativeSession() {
-  if (Capacitor.isNativePlatform()) {
-    console.log('🔄 Restoring session from native storage...');
-    const { value: token } = await Preferences.get({ key: 'authToken' });
-    if (token) {
-      localStorage.setItem('authToken', token);
-      console.log('✅ Auth token restored to localStorage');
+  const isNative = Capacitor.isNativePlatform();
+  const platform = Capacitor.getPlatform();
+  console.log(`🔄 Session restore check - Native: ${isNative}, Platform: ${platform}`);
+  
+  if (isNative) {
+    try {
+      console.log('🔄 Attempting to restore session from native Preferences...');
+      
+      const tokenResult = await Preferences.get({ key: 'authToken' });
+      console.log('🔍 Token result from Preferences:', tokenResult.value ? 'TOKEN_EXISTS' : 'NULL');
+      
+      if (tokenResult.value) {
+        localStorage.setItem('authToken', tokenResult.value);
+        console.log('✅ Auth token restored to localStorage, length:', tokenResult.value.length);
+      } else {
+        console.log('⚠️ No auth token found in native Preferences');
+      }
+      
+      const userResult = await Preferences.get({ key: 'userData' });
+      if (userResult.value) {
+        localStorage.setItem('userData', userResult.value);
+        console.log('✅ User data restored to localStorage');
+      }
+    } catch (error) {
+      console.error('❌ Error restoring native session:', error);
     }
-    const { value: userData } = await Preferences.get({ key: 'userData' });
-    if (userData) {
-      localStorage.setItem('userData', userData);
-      console.log('✅ User data restored to localStorage');
-    }
+  } else {
+    console.log('ℹ️ Not native platform, skipping Preferences restore');
   }
 }
 

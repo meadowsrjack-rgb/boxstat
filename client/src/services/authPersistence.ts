@@ -6,23 +6,45 @@ const USER_DATA_KEY = 'userData';
 
 export const authPersistence = {
   async setToken(token: string): Promise<void> {
-    if (Capacitor.isNativePlatform()) {
-      await Preferences.set({ key: AUTH_TOKEN_KEY, value: token });
-      console.log('🔐 AuthPersistence: Token saved to native storage');
+    const isNative = Capacitor.isNativePlatform();
+    console.log(`🔐 AuthPersistence.setToken called - Native: ${isNative}, Token length: ${token?.length}`);
+    
+    if (isNative) {
+      try {
+        await Preferences.set({ key: AUTH_TOKEN_KEY, value: token });
+        console.log('✅ AuthPersistence: Token saved to native Preferences');
+        
+        // Verify the save worked
+        const verify = await Preferences.get({ key: AUTH_TOKEN_KEY });
+        console.log('🔍 AuthPersistence: Verification - Token saved?', verify.value ? 'YES' : 'NO');
+      } catch (error) {
+        console.error('❌ AuthPersistence: Failed to save to native Preferences:', error);
+      }
     }
     localStorage.setItem(AUTH_TOKEN_KEY, token);
+    console.log('✅ AuthPersistence: Token saved to localStorage');
   },
 
   async getToken(): Promise<string | null> {
-    if (Capacitor.isNativePlatform()) {
-      const { value } = await Preferences.get({ key: AUTH_TOKEN_KEY });
-      if (value) {
-        console.log('🔐 AuthPersistence: Token retrieved from native storage');
-        localStorage.setItem(AUTH_TOKEN_KEY, value);
-        return value;
+    const isNative = Capacitor.isNativePlatform();
+    console.log(`🔐 AuthPersistence.getToken called - Native: ${isNative}`);
+    
+    if (isNative) {
+      try {
+        const { value } = await Preferences.get({ key: AUTH_TOKEN_KEY });
+        console.log('🔍 AuthPersistence: Native token exists?', value ? 'YES' : 'NO');
+        if (value) {
+          localStorage.setItem(AUTH_TOKEN_KEY, value);
+          return value;
+        }
+      } catch (error) {
+        console.error('❌ AuthPersistence: Failed to get from native Preferences:', error);
       }
     }
-    return localStorage.getItem(AUTH_TOKEN_KEY);
+    
+    const localToken = localStorage.getItem(AUTH_TOKEN_KEY);
+    console.log('🔍 AuthPersistence: localStorage token exists?', localToken ? 'YES' : 'NO');
+    return localToken;
   },
 
   async removeToken(): Promise<void> {

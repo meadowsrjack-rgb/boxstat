@@ -104,7 +104,7 @@ export default function MarketingLanding() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={logo} alt="BoxStat" className="h-30 w-auto" />
+              <img src={logo} alt="BoxStat" className="h-24 w-auto" />
             </div>
             
             <div className="hidden md:flex items-center gap-8">

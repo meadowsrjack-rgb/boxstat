@@ -60,9 +60,14 @@ export async function evaluateAwardsForUser(
       const category = award.triggerCategory || 'manual';
       if (category === 'manual') continue;
       
-      // Prevent duplicate automatic awards - skip if user already has this award
+      // Check if user already has this award
+      // Only allow earning again if allowMultiple is true
       if (existingAwardIds.has(award.id)) {
-        continue;
+        if (!award.allowMultiple) {
+          // Award can only be achieved once - skip
+          continue;
+        }
+        // allowMultiple is true - continue to check if they qualify again
       }
 
       if (triggerContext?.category && triggerContext.category !== category) {

@@ -4,36 +4,56 @@ import { Preferences } from '@capacitor/preferences';
 const AUTH_TOKEN_KEY = 'authToken';
 const USER_DATA_KEY = 'userData';
 
+// Helper to check if native storage is available
+function isNativeStorageAvailable(): boolean {
+  try {
+    const isNative = Capacitor.isNativePlatform();
+    const hasPreferences = typeof Preferences !== 'undefined' && typeof Preferences.set === 'function';
+    return isNative && hasPreferences;
+  } catch {
+    return false;
+  }
+}
+
 export const authPersistence = {
   async setToken(token: string): Promise<void> {
-    const isNative = Capacitor.isNativePlatform();
-    console.log(`🔐 AuthPersistence.setToken called - Native: ${isNative}, Token length: ${token?.length}`);
+    const useNative = isNativeStorageAvailable();
+    console.log(`🔐 AuthPersistence.setToken - Native storage available: ${useNative}, Token length: ${token?.length}`);
     
-    if (isNative) {
+    // Always save to localStorage first (immediate, synchronous)
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    console.log('✅ AuthPersistence: Token saved to localStorage');
+    
+    // Then save to native Preferences (async, for persistence across app restarts)
+    if (useNative) {
       try {
         await Preferences.set({ key: AUTH_TOKEN_KEY, value: token });
         console.log('✅ AuthPersistence: Token saved to native Preferences');
         
         // Verify the save worked
         const verify = await Preferences.get({ key: AUTH_TOKEN_KEY });
-        console.log('🔍 AuthPersistence: Verification - Token saved?', verify.value ? 'YES' : 'NO');
+        if (verify.value) {
+          console.log('🔍 AuthPersistence: Verification PASSED - Token persisted to native storage');
+        } else {
+          console.error('❌ AuthPersistence: Verification FAILED - Token not in native storage after save!');
+        }
       } catch (error) {
         console.error('❌ AuthPersistence: Failed to save to native Preferences:', error);
       }
     }
-    localStorage.setItem(AUTH_TOKEN_KEY, token);
-    console.log('✅ AuthPersistence: Token saved to localStorage');
   },
 
   async getToken(): Promise<string | null> {
-    const isNative = Capacitor.isNativePlatform();
-    console.log(`🔐 AuthPersistence.getToken called - Native: ${isNative}`);
+    const useNative = isNativeStorageAvailable();
+    console.log(`🔐 AuthPersistence.getToken - Native storage available: ${useNative}`);
     
-    if (isNative) {
+    // First, check native Preferences (most reliable for iOS app restarts)
+    if (useNative) {
       try {
         const { value } = await Preferences.get({ key: AUTH_TOKEN_KEY });
         console.log('🔍 AuthPersistence: Native token exists?', value ? 'YES' : 'NO');
         if (value) {
+          // Sync to localStorage for consistency
           localStorage.setItem(AUTH_TOKEN_KEY, value);
           return value;
         }
@@ -42,8 +62,20 @@ export const authPersistence = {
       }
     }
     
+    // Fallback to localStorage (works for web and as cache)
     const localToken = localStorage.getItem(AUTH_TOKEN_KEY);
     console.log('🔍 AuthPersistence: localStorage token exists?', localToken ? 'YES' : 'NO');
+    
+    // If we found a token in localStorage but not in native storage, sync it back
+    if (localToken && useNative) {
+      try {
+        console.log('🔄 AuthPersistence: Syncing localStorage token to native Preferences');
+        await Preferences.set({ key: AUTH_TOKEN_KEY, value: localToken });
+      } catch (error) {
+        console.error('❌ AuthPersistence: Failed to sync to native:', error);
+      }
+    }
+    
     return localToken;
   },
 

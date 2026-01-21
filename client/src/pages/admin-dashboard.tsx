@@ -11851,6 +11851,8 @@ function MigrationsTab({ organization, users }: any) {
     paymentDate?: string;
     expiryDate?: string;
     amountPaid?: number;
+    stripePriceId?: string;
+    nextDueDate?: string;
   }>>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [selectedItemType, setSelectedItemType] = useState<'program' | 'store'>('program');
@@ -12740,6 +12742,10 @@ function MigrationsTab({ organization, users }: any) {
                   const subscriptionCount = migration.subscriptions?.length || (migration.stripeSubscriptionId ? 1 : 0);
                   const paymentCount = (migration.items || []).filter((i: any) => i.paymentType === 'payment').length;
                   const paymentStatus = getPaymentStatus(migration.items);
+                  // Count unmatched subscriptions (subs that don't have matching items)
+                  const unmatchedCount = (migration.subscriptions || []).filter((sub: any) => 
+                    !(migration.items || []).some((item: any) => item.stripePriceId === sub.plan)
+                  ).length;
                   return (
                   <TableRow key={migration.id} data-testid={`row-migration-${migration.id}`}>
                     <TableCell>
@@ -12768,6 +12774,11 @@ function MigrationsTab({ organization, users }: any) {
                         {paymentCount > 0 && (
                           <Badge variant="outline" className="bg-purple-50 text-purple-700 text-xs">
                             {paymentCount} payment{paymentCount !== 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                        {unmatchedCount > 0 && (
+                          <Badge variant="destructive" className="text-xs">
+                            {unmatchedCount} unmatched
                           </Badge>
                         )}
                         {subscriptionCount === 0 && paymentCount === 0 && (
@@ -13075,6 +13086,72 @@ function MigrationsTab({ organization, users }: any) {
                   <p className="text-xs text-red-500">At least one item is required</p>
                 )}
               </div>
+              
+              {/* Unmatched Subscriptions Section - Only show when editing */}
+              {editingMigration?.subscriptions && editingMigration.subscriptions.length > 0 && (() => {
+                // Find subscriptions that aren't matched to items yet
+                const unmatchedSubs = (editingMigration.subscriptions || []).filter((sub: any) => {
+                  // Check if this subscription's price ID is already in migrationItems
+                  return !migrationItems.some((item: any) => item.stripePriceId === sub.plan);
+                });
+                
+                if (unmatchedSubs.length === 0) return null;
+                
+                return (
+                  <div className="space-y-3 mt-4">
+                    <div className="flex items-center gap-2">
+                      <FormLabel>Unmatched Subscriptions</FormLabel>
+                      <Badge variant="destructive" className="text-xs">{unmatchedSubs.length}</Badge>
+                    </div>
+                    <p className="text-xs text-gray-500">These subscriptions were imported but couldn't be auto-matched to programs. Select a program to link them.</p>
+                    <div className="border rounded-md p-3 space-y-3 bg-amber-50">
+                      {unmatchedSubs.map((sub: any, index: number) => (
+                        <div key={sub.subscriptionId || index} className="bg-white p-3 rounded border border-amber-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="text-sm">
+                              <span className="font-mono text-xs text-gray-500">{sub.plan}</span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs">${parseFloat(sub.amount || 0).toFixed(2)}</Badge>
+                                <Badge variant="outline" className="text-xs">{sub.interval || 'one-time'}</Badge>
+                                <span className="text-xs text-gray-500">
+                                  Due: {sub.currentPeriodEndUtc ? new Date(sub.currentPeriodEndUtc).toLocaleDateString() : 'N/A'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Select
+                              onValueChange={(programId: string) => {
+                                const program = programs.find((p: any) => String(p.id) === programId);
+                                if (program) {
+                                  setMigrationItems(prev => [...prev, {
+                                    itemId: programId,
+                                    itemType: 'program',
+                                    itemName: program.name,
+                                    paymentType: 'subscription',
+                                    stripePriceId: sub.plan,
+                                    nextDueDate: sub.currentPeriodEndUtc || '',
+                                  }]);
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="Select program to match..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {programProducts.map((p: any) => (
+                                  <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+              
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                   Cancel

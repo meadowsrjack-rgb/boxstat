@@ -11759,6 +11759,7 @@ function MigrationsTab({ organization, users }: any) {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadType, setUploadType] = useState<'subscriptions' | 'payments'>('subscriptions');
+  const [selectedMigrationIds, setSelectedMigrationIds] = useState<Set<number>>(new Set());
 
   const { data: migrations = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/migrations'],
@@ -11808,6 +11809,38 @@ function MigrationsTab({ organization, users }: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
+
+  const bulkDeleteMigrations = useMutation({
+    mutationFn: async (ids: number[]) => {
+      await Promise.all(ids.map(id => apiRequest(`/api/admin/migrations/${id}`, { method: 'DELETE' })));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/migrations'] });
+      toast({ title: `${selectedMigrationIds.size} migration record(s) deleted` });
+      setSelectedMigrationIds(new Set());
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const toggleMigrationSelection = (id: number) => {
+    setSelectedMigrationIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllMigrations = (migrations: any[]) => {
+    const ids = migrations.map((m: any) => m.id);
+    if (selectedMigrationIds.size === ids.length) {
+      setSelectedMigrationIds(new Set());
+    } else {
+      setSelectedMigrationIds(new Set(ids));
+    }
+  };
 
   // Items for this migration (itemId, itemType) - each item is added individually
   const [migrationItems, setMigrationItems] = useState<Array<{
@@ -12649,6 +12682,34 @@ function MigrationsTab({ organization, users }: any) {
           />
         </div>
 
+        {selectedMigrationIds.size > 0 && (
+          <div className="flex items-center gap-4 mb-4 p-3 bg-muted rounded-lg">
+            <span className="text-sm font-medium">
+              {selectedMigrationIds.size} record{selectedMigrationIds.size > 1 ? 's' : ''} selected
+            </span>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (confirm(`Are you sure you want to delete ${selectedMigrationIds.size} migration record(s)?`)) {
+                  bulkDeleteMigrations.mutate(Array.from(selectedMigrationIds));
+                }
+              }}
+              disabled={bulkDeleteMigrations.isPending}
+            >
+              <Trash2 className="w-4 h-4 mr-1" />
+              {bulkDeleteMigrations.isPending ? "Deleting..." : "Delete Selected"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedMigrationIds(new Set())}
+            >
+              Clear Selection
+            </Button>
+          </div>
+        )}
+
         {filteredMigrations.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             {searchTerm ? "No matching migration records found" : "No migration records yet. Add legacy parent data to get started."}
@@ -12658,6 +12719,13 @@ function MigrationsTab({ organization, users }: any) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={paginatedMigrations.length > 0 && selectedMigrationIds.size === paginatedMigrations.length}
+                      onCheckedChange={() => toggleAllMigrations(paginatedMigrations)}
+                      aria-label="Select all"
+                    />
+                  </TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Type</TableHead>
@@ -12674,6 +12742,13 @@ function MigrationsTab({ organization, users }: any) {
                   const paymentStatus = getPaymentStatus(migration.items);
                   return (
                   <TableRow key={migration.id} data-testid={`row-migration-${migration.id}`}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedMigrationIds.has(migration.id)}
+                        onCheckedChange={() => toggleMigrationSelection(migration.id)}
+                        aria-label={`Select ${migration.email}`}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       <div>{migration.email}</div>
                       {migration.customerName && (

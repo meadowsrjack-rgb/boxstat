@@ -12201,16 +12201,61 @@ function MigrationsTab({ organization, users }: any) {
       }
     }
     
-    // Create migration entries
+    // Create migration entries with program matching
     let successCount = 0;
+    let matchedCount = 0;
+    let unmatchedCount = 0;
     const emailGroups = Object.values(groupedByEmail);
     console.log('CSV headers parsed:', headers);
     console.log('Grouped by email count:', emailGroups.length);
     if (emailGroups.length > 0) {
       console.log('First group sample:', emailGroups[0]);
     }
+    
     for (const emailData of emailGroups) {
       try {
+        // Match subscriptions to programs by price ID or product ID
+        const items: any[] = [];
+        
+        for (const sub of emailData.subscriptions) {
+          const priceId = sub.plan; // This is the Stripe price ID
+          
+          // Find program that has this price ID in stripePriceIds or matches stripeProductId
+          const matchedProgram = programs.find((p: any) => {
+            // Check if price ID is in the program's price list
+            if (p.stripePriceIds && Array.isArray(p.stripePriceIds)) {
+              if (p.stripePriceIds.includes(priceId)) return true;
+            }
+            // Also check stripeProductId (in case price ID was stored there)
+            if (p.stripeProductId === priceId) return true;
+            // Check if pricing options contain this price ID
+            if (p.pricingOptions && Array.isArray(p.pricingOptions)) {
+              if (p.pricingOptions.some((opt: any) => opt.stripePriceId === priceId)) return true;
+            }
+            return false;
+          });
+          
+          if (matchedProgram) {
+            matchedCount++;
+            // Add as an item if not already present
+            const existingItem = items.find((item: any) => item.itemId === String(matchedProgram.id));
+            if (!existingItem) {
+              items.push({
+                itemId: String(matchedProgram.id),
+                itemType: 'program',
+                itemName: matchedProgram.name,
+                quantity: sub.quantity || 1,
+                paymentType: 'subscription',
+                stripePriceId: priceId,
+                nextDueDate: sub.currentPeriodEndUtc || '',
+              });
+            }
+          } else {
+            unmatchedCount++;
+            console.log(`No program match for price ID: ${priceId}`);
+          }
+        }
+        
         await apiRequest('/api/admin/migrations', { 
           method: 'POST', 
           data: { 
@@ -12220,7 +12265,7 @@ function MigrationsTab({ organization, users }: any) {
             customerDescription: emailData.customerDescription,
             stripeSubscriptionIds: emailData.subscriptions.map(s => s.subscriptionId),
             subscriptions: emailData.subscriptions,
-            items: []
+            items
           } 
         });
         successCount++;
@@ -12232,7 +12277,13 @@ function MigrationsTab({ organization, users }: any) {
     queryClient.invalidateQueries({ queryKey: ['/api/admin/migrations'] });
     setCsvFile(null);
     setIsUploading(false);
-    toast({ title: "Import complete", description: `Created ${successCount} migration entries from ${emailGroups.length} unique emails (${lines.length - 1} subscription rows)` });
+    
+    let description = `Created ${successCount} migration entries. Matched ${matchedCount} subscriptions to programs.`;
+    if (unmatchedCount > 0) {
+      description += ` ${unmatchedCount} subscriptions could not be matched (check browser console for price IDs).`;
+    }
+    
+    toast({ title: "Subscriptions import complete", description });
   };
 
   const handlePaymentsCsvUpload = async () => {

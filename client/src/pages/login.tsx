@@ -42,15 +42,19 @@ export default function LoginPage() {
           await authPersistence.setToken(response.token);
           console.log("✅ Token stored with native persistence!");
           
-          // Immediate verification
+          // Immediate verification - check BOTH localStorage AND native Preferences
           const verifyLocal = localStorage.getItem('authToken');
           console.log("🔍 VERIFY: localStorage has token?", verifyLocal ? 'YES' : 'NO');
           
           // Show verification alert for debugging (will be removed after fix)
           const isNative = (window as any).Capacitor?.isNativePlatform?.() === true;
           if (isNative) {
-            // Using alert so we can see it in iOS
-            alert(`Token saved! LocalStorage: ${verifyLocal ? 'YES' : 'NO'}, Length: ${response.token.length}`);
+            // Also verify native Preferences
+            const { Preferences } = await import('@capacitor/preferences');
+            const nativeResult = await Preferences.get({ key: 'authToken' });
+            const nativeHasToken = nativeResult.value ? 'YES' : 'NO';
+            
+            alert(`Token saved!\nLocal: ${verifyLocal ? 'YES' : 'NO'}\nNative: ${nativeHasToken}\nLength: ${response.token.length}`);
           }
         } else {
           console.warn("⚠️ No token in response!");

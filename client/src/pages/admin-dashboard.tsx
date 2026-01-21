@@ -12244,18 +12244,25 @@ function MigrationsTab({ organization, users }: any) {
     const lines = text.replace(/\r\n/g, '\n').split('\n').filter(line => line.trim());
     const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
     
+    // Support both Stripe's native export format AND our template format
     const headerMap: Record<string, string> = {
+      // Stripe's native Payments export format
+      'customer email': 'email',
+      'customer id': 'customerId',
+      'created date (utc)': 'date',
       'amount': 'amount',
       'status': 'status',
       'description': 'description',
-      'customer': 'customer',
+      'id': 'paymentId',
+      // Our template format (fallback)
+      'customer': 'email',
       'date': 'date',
       'payment method': 'paymentMethod',
-      'id': 'paymentId',
     };
     
     const groupedByEmail: Record<string, {
       email: string;
+      customerId: string;
       payments: Array<{
         amount: number;
         description: string;
@@ -12296,14 +12303,25 @@ function MigrationsTab({ organization, users }: any) {
         row[fieldName] = values[idx] || '';
       });
       
-      const email = row.customer?.toLowerCase();
+      // Skip failed payments (only import 'Paid' status)
+      const status = row.status?.trim().toLowerCase();
+      if (status && status !== 'paid') {
+        continue;
+      }
+      
+      // Get email from 'email' field (mapped from 'Customer Email' or 'customer')
+      const email = row.email?.toLowerCase();
       if (!email || !email.includes('@')) continue;
       
       const amountStr = row.amount?.replace(/[^0-9.-]/g, '') || '0';
       const amount = parseFloat(amountStr);
       
       if (!groupedByEmail[email]) {
-        groupedByEmail[email] = { email, payments: [] };
+        groupedByEmail[email] = { 
+          email, 
+          customerId: row.customerId || `legacy_${Date.now()}`,
+          payments: [] 
+        };
       }
       
       // Parse date - require year in the data for historical accuracy
@@ -12421,9 +12439,9 @@ function MigrationsTab({ organization, users }: any) {
           method: 'POST', 
           data: { 
             email: emailData.email, 
-            stripeCustomerId: `legacy_${Date.now()}`,
+            stripeCustomerId: emailData.customerId,
             customerName: '',
-            customerDescription: 'Imported from payments CSV',
+            customerDescription: 'Imported from Stripe payments',
             stripeSubscriptionIds: subscriptions.map(s => s.subscriptionId),
             subscriptions,
             items,

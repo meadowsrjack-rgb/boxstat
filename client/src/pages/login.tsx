@@ -38,9 +38,20 @@ export default function LoginPage() {
 
         // Store JWT token for mobile authentication (using persistent native storage)
         if (response.token) {
-          console.log("💾 About to store JWT token...");
+          console.log("💾 About to store JWT token, length:", response.token.length);
           await authPersistence.setToken(response.token);
           console.log("✅ Token stored with native persistence!");
+          
+          // Immediate verification
+          const verifyLocal = localStorage.getItem('authToken');
+          console.log("🔍 VERIFY: localStorage has token?", verifyLocal ? 'YES' : 'NO');
+          
+          // Show verification alert for debugging (will be removed after fix)
+          const isNative = (window as any).Capacitor?.isNativePlatform?.() === true;
+          if (isNative) {
+            // Using alert so we can see it in iOS
+            alert(`Token saved! LocalStorage: ${verifyLocal ? 'YES' : 'NO'}, Length: ${response.token.length}`);
+          }
         } else {
           console.warn("⚠️ No token in response!");
         }

@@ -38,37 +38,23 @@ export default function LoginPage() {
 
         // Store JWT token for mobile authentication (using persistent native storage)
         if (response.token) {
-          console.log("💾 About to store JWT token, length:", response.token.length);
+          console.log("💾 Storing JWT token, length:", response.token.length);
           
+          // For iOS: Save DIRECTLY to Capacitor Preferences for persistence across app restarts
           const isNative = (window as any).Capacitor?.isNativePlatform?.() === true;
-          
-          // For iOS: Save DIRECTLY to Preferences first (before authPersistence)
-          let nativeSaveResult = 'SKIPPED';
           if (isNative) {
             try {
               const { Preferences } = await import('@capacitor/preferences');
               await Preferences.set({ key: 'authToken', value: response.token });
-              console.log("✅ Direct native Preferences save completed");
-              
-              // Verify it saved
-              const verify = await Preferences.get({ key: 'authToken' });
-              nativeSaveResult = verify.value ? `OK (${verify.value.length})` : 'FAILED-NULL';
-            } catch (e: any) {
-              nativeSaveResult = `ERROR: ${e.message}`;
+              console.log("✅ Token saved to native Preferences");
+            } catch (e) {
               console.error("❌ Native Preferences error:", e);
             }
           }
           
-          // Also save via authPersistence (which saves to localStorage)
+          // Also save to localStorage via authPersistence
           await authPersistence.setToken(response.token);
-          console.log("✅ authPersistence.setToken completed");
-          
-          const verifyLocal = localStorage.getItem('authToken');
-          
-          // Show verification alert (V2 - distinct format)
-          if (isNative) {
-            alert(`[V2] Save Result:\nNative: ${nativeSaveResult}\nLocal: ${verifyLocal ? 'YES' : 'NO'}`);
-          }
+          console.log("✅ Token saved to localStorage");
         } else {
           console.warn("⚠️ No token in response!");
         }

@@ -1,39 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { useState, useEffect } from "react";
-import { Capacitor } from "@capacitor/core";
-import { Preferences } from "@capacitor/preferences";
 import logo from "@assets/dark_1768878462814.png";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
-  const [debugInfo, setDebugInfo] = useState<string>("Checking...");
-  
-  useEffect(() => {
-    async function checkSession() {
-      try {
-        const isNative = Capacitor.isNativePlatform();
-        const platform = Capacitor.getPlatform();
-        const hasCapacitorWindow = typeof (window as any).Capacitor !== 'undefined';
-        const localToken = localStorage.getItem('authToken');
-        
-        let nativeToken = 'N/A';
-        if (isNative) {
-          try {
-            const result = await Preferences.get({ key: 'authToken' });
-            nativeToken = result.value ? `YES (${result.value.length} chars)` : 'NULL';
-          } catch (e: any) {
-            nativeToken = `ERROR: ${e.message}`;
-          }
-        }
-        
-        setDebugInfo(`Platform: ${platform} | Native: ${isNative} | Window.Cap: ${hasCapacitorWindow} | LocalToken: ${localToken ? 'YES' : 'NO'} | NativeToken: ${nativeToken}`);
-      } catch (e: any) {
-        setDebugInfo(`Error: ${e.message}`);
-      }
-    }
-    checkSession();
-  }, []);
 
   return (
     // The "Canvas": Completely fixed and unmovable
@@ -140,18 +110,6 @@ export default function Landing() {
             >
               SIGN IN
             </button>
-          </p>
-          
-          {/* DEBUG: Temporary session diagnostic */}
-          <p style={{ 
-            color: 'rgba(255,255,255,0.5)', 
-            fontSize: '9px', 
-            margin: '20px 0 0 0',
-            maxWidth: '300px',
-            textAlign: 'center',
-            wordBreak: 'break-all'
-          }}>
-            {debugInfo}
           </p>
         </div>
       </div>

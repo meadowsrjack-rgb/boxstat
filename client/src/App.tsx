@@ -198,21 +198,33 @@ const ProtectedTrophiesBadges = () => <ProtectedRoute component={TrophiesBadges}
 const ProtectedSkills = () => <ProtectedRoute component={Skills} />;
 
 // Platform-aware landing that shows marketing page for web, app landing for iOS
+// Also auto-redirects logged-in users to their dashboard
 function PlatformAwareLanding() {
-  // Check if running in Capacitor native app (iOS/Android)
-  // Only consider it native if isNativePlatform() explicitly returns true
-  // This prevents false positives when Capacitor is bundled in web builds
-  const capacitor = (window as any).Capacitor;
+  const { user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
   
-  // isNativePlatform() is the definitive check - it returns true ONLY on actual native apps
-  // getPlatform() returns 'web' for browsers, 'ios' or 'android' for native
+  // Check if running in Capacitor native app (iOS/Android)
+  const capacitor = (window as any).Capacitor;
   const isNativePlatform = capacitor?.isNativePlatform?.() === true;
   const platform = capacitor?.getPlatform?.();
   const isNativeByPlatform = platform === 'ios' || platform === 'android';
-  
-  // Both checks must agree, OR we trust isNativePlatform alone
-  // Default to marketing page for web (platform === 'web' or undefined)
   const isNativeApp = isNativePlatform || (isNativeByPlatform && platform !== 'web');
+  
+  // If user is logged in, redirect to dashboard
+  if (!isLoading && user) {
+    // Redirect to the dashboard dispatcher which handles role-based routing
+    setLocation("/home");
+    return null;
+  }
+  
+  // Show loading state while checking auth
+  if (isLoading && isNativeApp) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <BanterLoader />
+      </div>
+    );
+  }
   
   // For iOS/Android app users, show the original app landing page
   if (isNativeApp) {

@@ -39,22 +39,35 @@ export default function LoginPage() {
         // Store JWT token for mobile authentication (using persistent native storage)
         if (response.token) {
           console.log("💾 About to store JWT token, length:", response.token.length);
-          await authPersistence.setToken(response.token);
-          console.log("✅ Token stored with native persistence!");
           
-          // Immediate verification - check BOTH localStorage AND native Preferences
-          const verifyLocal = localStorage.getItem('authToken');
-          console.log("🔍 VERIFY: localStorage has token?", verifyLocal ? 'YES' : 'NO');
-          
-          // Show verification alert for debugging (will be removed after fix)
           const isNative = (window as any).Capacitor?.isNativePlatform?.() === true;
+          
+          // For iOS: Save DIRECTLY to Preferences first (before authPersistence)
+          let nativeSaveResult = 'SKIPPED';
           if (isNative) {
-            // Also verify native Preferences
-            const { Preferences } = await import('@capacitor/preferences');
-            const nativeResult = await Preferences.get({ key: 'authToken' });
-            const nativeHasToken = nativeResult.value ? 'YES' : 'NO';
-            
-            alert(`Token saved!\nLocal: ${verifyLocal ? 'YES' : 'NO'}\nNative: ${nativeHasToken}\nLength: ${response.token.length}`);
+            try {
+              const { Preferences } = await import('@capacitor/preferences');
+              await Preferences.set({ key: 'authToken', value: response.token });
+              console.log("✅ Direct native Preferences save completed");
+              
+              // Verify it saved
+              const verify = await Preferences.get({ key: 'authToken' });
+              nativeSaveResult = verify.value ? `OK (${verify.value.length})` : 'FAILED-NULL';
+            } catch (e: any) {
+              nativeSaveResult = `ERROR: ${e.message}`;
+              console.error("❌ Native Preferences error:", e);
+            }
+          }
+          
+          // Also save via authPersistence (which saves to localStorage)
+          await authPersistence.setToken(response.token);
+          console.log("✅ authPersistence.setToken completed");
+          
+          const verifyLocal = localStorage.getItem('authToken');
+          
+          // Show verification alert (V2 - distinct format)
+          if (isNative) {
+            alert(`[V2] Save Result:\nNative: ${nativeSaveResult}\nLocal: ${verifyLocal ? 'YES' : 'NO'}`);
           }
         } else {
           console.warn("⚠️ No token in response!");

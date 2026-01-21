@@ -11746,9 +11746,12 @@ function WaiversTab({ organization }: any) {
 }
 
 // Migrations Tab - Legacy Parent Stripe Data Management
+const MIGRATIONS_PAGE_SIZE = 50;
+
 function MigrationsTab({ organization, users }: any) {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingMigration, setEditingMigration] = useState<any>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
@@ -11807,9 +11810,21 @@ function MigrationsTab({ organization, users }: any) {
   });
 
   // Items for this migration (itemId, itemType) - each item is added individually
-  const [migrationItems, setMigrationItems] = useState<Array<{itemId: string; itemType: 'program' | 'store'; itemName: string}>>([]);
+  const [migrationItems, setMigrationItems] = useState<Array<{
+    itemId: string; 
+    itemType: 'program' | 'store'; 
+    itemName: string;
+    paymentType?: 'subscription' | 'payment';
+    paymentDate?: string;
+    expiryDate?: string;
+    amountPaid?: number;
+  }>>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [selectedItemType, setSelectedItemType] = useState<'program' | 'store'>('program');
+  const [selectedPaymentType, setSelectedPaymentType] = useState<'subscription' | 'payment'>('subscription');
+  const [paymentDate, setPaymentDate] = useState<string>("");
+  const [expiryDate, setExpiryDate] = useState<string>("");
+  const [amountPaid, setAmountPaid] = useState<string>("");
 
   const form = useForm({
     resolver: zodResolver(z.object({
@@ -11831,9 +11846,104 @@ function MigrationsTab({ organization, users }: any) {
       itemNames?.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
+  // Pagination calculations
+  const totalPages = Math.max(1, Math.ceil(filteredMigrations.length / MIGRATIONS_PAGE_SIZE));
+  // Guard against currentPage exceeding totalPages (e.g., after deletion or data refresh)
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * MIGRATIONS_PAGE_SIZE;
+  const endIndex = startIndex + MIGRATIONS_PAGE_SIZE;
+  const paginatedMigrations = filteredMigrations.slice(startIndex, endIndex);
+  
+  // Auto-correct currentPage if it exceeds totalPages (using useEffect to avoid render loop)
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  // Reset page when search changes
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
   const getItemsSummary = (items: any[] | null) => {
     if (!items || items.length === 0) return 'No items';
     return items.map(item => item.itemName || 'Unknown').join(', ');
+  };
+
+  // Calculate payment status for display
+  // Shows the most critical status (expired > due soon > active)
+  const getPaymentStatus = (items: any[] | null) => {
+    if (!items || items.length === 0) return { status: 'none', label: 'No items', color: 'gray' };
+    
+    const now = new Date();
+    const warningDays = 14; // Show warning 14 days before expiry
+    
+    let hasSubscription = false;
+    let hasActivePayment = false;
+    let nearestActiveExpiry: Date | null = null;
+    let hasExpiredPayment = false;
+    let expiredCount = 0;
+    let dueSoonCount = 0;
+    let nearestDueSoon: Date | null = null;
+    
+    for (const item of items) {
+      if (item.paymentType === 'subscription' || !item.paymentType) {
+        hasSubscription = true;
+      } else if (item.paymentType === 'payment') {
+        if (item.expiryDate) {
+          const expiry = new Date(item.expiryDate);
+          if (expiry < now) {
+            hasExpiredPayment = true;
+            expiredCount++;
+          } else if (expiry.getTime() - now.getTime() < warningDays * 24 * 60 * 60 * 1000) {
+            dueSoonCount++;
+            if (!nearestDueSoon || expiry < nearestDueSoon) {
+              nearestDueSoon = expiry;
+            }
+          } else {
+            hasActivePayment = true;
+            if (!nearestActiveExpiry || expiry < nearestActiveExpiry) {
+              nearestActiveExpiry = expiry;
+            }
+          }
+        } else {
+          hasActivePayment = true; // Payment without expiry treated as active
+        }
+      }
+    }
+    
+    // Priority: expired > due soon > active
+    if (hasExpiredPayment) {
+      return { 
+        status: 'expired', 
+        label: `${expiredCount} expired`, 
+        color: 'red' 
+      };
+    }
+    if (dueSoonCount > 0 && nearestDueSoon) {
+      const daysLeft = Math.ceil((nearestDueSoon.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+      return { 
+        status: 'due_soon', 
+        label: `Due in ${daysLeft}d`, 
+        color: 'amber' 
+      };
+    }
+    if (hasActivePayment && nearestActiveExpiry) {
+      return { 
+        status: 'active', 
+        label: `Until ${nearestActiveExpiry.toLocaleDateString()}`, 
+        color: 'green' 
+      };
+    }
+    if (hasSubscription) {
+      return { status: 'subscription', label: 'Recurring', color: 'blue' };
+    }
+    if (hasActivePayment) {
+      return { status: 'payment', label: 'Paid', color: 'green' };
+    }
+    return { status: 'unknown', label: '-', color: 'gray' };
   };
 
   const addItem = () => {
@@ -11844,12 +11954,39 @@ function MigrationsTab({ organization, users }: any) {
     const product = programs.find((p: any) => p.id === selectedProductId);
     if (!product) return;
     
-    setMigrationItems(prev => [...prev, {
+    // Validate one-time payment fields
+    if (selectedPaymentType === 'payment') {
+      if (!paymentDate) {
+        toast({ title: "Error", description: "Payment date is required for one-time payments", variant: "destructive" });
+        return;
+      }
+      if (!expiryDate) {
+        toast({ title: "Error", description: "Expiry date is required for one-time payments", variant: "destructive" });
+        return;
+      }
+    }
+    
+    const newItem: any = {
       itemId: selectedProductId,
       itemType: selectedItemType,
       itemName: product.name,
-    }]);
+      paymentType: selectedPaymentType,
+    };
+    
+    if (selectedPaymentType === 'payment') {
+      newItem.paymentDate = paymentDate;
+      newItem.expiryDate = expiryDate;
+      if (amountPaid) {
+        newItem.amountPaid = Math.round(parseFloat(amountPaid) * 100); // Convert to cents
+      }
+    }
+    
+    setMigrationItems(prev => [...prev, newItem]);
+    // Reset form fields
     setSelectedProductId("");
+    setPaymentDate("");
+    setExpiryDate("");
+    setAmountPaid("");
   };
 
   const removeItem = (index: number) => {
@@ -11906,6 +12043,10 @@ function MigrationsTab({ organization, users }: any) {
     setMigrationItems([]);
     setSelectedProductId("");
     setSelectedItemType('program');
+    setSelectedPaymentType('subscription');
+    setPaymentDate("");
+    setExpiryDate("");
+    setAmountPaid("");
     form.reset({
       email: "",
       stripeCustomerId: "",
@@ -12265,6 +12406,10 @@ function MigrationsTab({ organization, users }: any) {
                 itemType: 'program',
                 itemName: matchedProgram.name,
                 quantity: 1,
+                paymentType: 'payment', // One-time payment from CSV
+                paymentDate: payment.date || '',
+                expiryDate: periodEndUtc || '',
+                amountPaid: Math.round(payment.amount * 100),
               });
             }
           } else {
@@ -12429,7 +12574,7 @@ function MigrationsTab({ organization, users }: any) {
           <Input
             placeholder="Search by email, Stripe ID, or product..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="max-w-sm"
             data-testid="input-search-migrations"
           />
@@ -12446,16 +12591,18 @@ function MigrationsTab({ organization, users }: any) {
                 <TableRow>
                   <TableHead>Email</TableHead>
                   <TableHead>Customer</TableHead>
-                  <TableHead>Subscriptions</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Items</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Payment Status</TableHead>
+                  <TableHead>Claimed</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredMigrations.map((migration: any) => {
+                {paginatedMigrations.map((migration: any) => {
                   const subscriptionCount = migration.subscriptions?.length || (migration.stripeSubscriptionId ? 1 : 0);
-                  const subscriptionIds = migration.stripeSubscriptionIds?.join(', ') || migration.stripeSubscriptionId || 'N/A';
+                  const paymentCount = (migration.items || []).filter((i: any) => i.paymentType === 'payment').length;
+                  const paymentStatus = getPaymentStatus(migration.items);
                   return (
                   <TableRow key={migration.id} data-testid={`row-migration-${migration.id}`}>
                     <TableCell className="font-medium">
@@ -12464,27 +12611,54 @@ function MigrationsTab({ organization, users }: any) {
                         <div className="text-xs text-gray-500">{migration.customerName}</div>
                       )}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">{migration.stripeCustomerId}</TableCell>
+                    <TableCell className="font-mono text-xs max-w-[100px] truncate" title={migration.stripeCustomerId}>
+                      {migration.stripeCustomerId}
+                    </TableCell>
                     <TableCell>
-                      <div className="font-mono text-xs truncate max-w-[150px]" title={subscriptionIds}>
-                        {subscriptionCount > 0 ? (
-                          <Badge variant="outline">{subscriptionCount} sub{subscriptionCount !== 1 ? 's' : ''}</Badge>
-                        ) : 'None'}
+                      <div className="flex flex-col gap-1">
+                        {subscriptionCount > 0 && (
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs">
+                            {subscriptionCount} sub{subscriptionCount !== 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                        {paymentCount > 0 && (
+                          <Badge variant="outline" className="bg-purple-50 text-purple-700 text-xs">
+                            {paymentCount} payment{paymentCount !== 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                        {subscriptionCount === 0 && paymentCount === 0 && (
+                          <span className="text-xs text-gray-400">None</span>
+                        )}
                       </div>
                     </TableCell>
-                    <TableCell className="max-w-xs truncate" title={getItemsSummary(migration.items)}>
+                    <TableCell className="max-w-[150px] truncate" title={getItemsSummary(migration.items)}>
                       {getItemsSummary(migration.items)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant="outline" 
+                        className={
+                          paymentStatus.color === 'red' ? 'bg-red-100 text-red-800 border-red-300' :
+                          paymentStatus.color === 'amber' ? 'bg-amber-100 text-amber-800 border-amber-300' :
+                          paymentStatus.color === 'green' ? 'bg-green-100 text-green-800 border-green-300' :
+                          paymentStatus.color === 'blue' ? 'bg-blue-100 text-blue-800 border-blue-300' :
+                          paymentStatus.color === 'purple' ? 'bg-purple-100 text-purple-800 border-purple-300' :
+                          'bg-gray-100 text-gray-800'
+                        }
+                      >
+                        {paymentStatus.label}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       {migration.isClaimed ? (
                         <Badge className="bg-green-100 text-green-800">
                           <CheckCircle2 className="w-3 h-3 mr-1" />
-                          Claimed
+                          Yes
                         </Badge>
                       ) : (
                         <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
                           <Circle className="w-3 h-3 mr-1" />
-                          Pending
+                          No
                         </Badge>
                       )}
                     </TableCell>
@@ -12514,6 +12688,52 @@ function MigrationsTab({ organization, users }: any) {
                 })}
               </TableBody>
             </Table>
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4 pt-4 border-t">
+            <div className="text-sm text-gray-500">
+              Showing {startIndex + 1}-{Math.min(endIndex, filteredMigrations.length)} of {filteredMigrations.length} records
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+              >
+                First
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm px-2">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+              >
+                Last
+              </Button>
+            </div>
           </div>
         )}
 
@@ -12590,11 +12810,22 @@ function MigrationsTab({ organization, users }: any) {
                   <div className="border rounded-md p-3 space-y-2 bg-gray-50">
                     {migrationItems.map((item, index) => (
                       <div key={index} className="flex items-center justify-between bg-white p-2 rounded border">
-                        <div className="flex items-center gap-2">
-                          <Badge variant={item.itemType === 'program' ? 'default' : 'secondary'} className="text-xs">
-                            {item.itemType}
-                          </Badge>
-                          <span className="text-sm">{item.itemName}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={item.itemType === 'program' ? 'default' : 'secondary'} className="text-xs">
+                              {item.itemType}
+                            </Badge>
+                            <Badge variant={item.paymentType === 'payment' ? 'outline' : 'default'} className="text-xs">
+                              {item.paymentType === 'payment' ? 'One-Time' : 'Subscription'}
+                            </Badge>
+                            <span className="text-sm">{item.itemName}</span>
+                          </div>
+                          {item.paymentType === 'payment' && item.expiryDate && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              Expires: {new Date(item.expiryDate).toLocaleDateString()}
+                              {item.amountPaid && ` • $${(item.amountPaid / 100).toFixed(2)}`}
+                            </div>
+                          )}
                         </div>
                         <Button 
                           type="button" 
@@ -12613,17 +12844,31 @@ function MigrationsTab({ organization, users }: any) {
                 {/* Add New Item */}
                 <div className="border rounded-md p-3 space-y-3">
                   <p className="text-sm font-medium text-gray-700">Add Item (add each item individually)</p>
-                  <div>
-                    <Label className="text-xs">Type</Label>
-                    <Select value={selectedItemType} onValueChange={(v: 'program' | 'store') => setSelectedItemType(v)}>
-                      <SelectTrigger data-testid="select-item-type">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="program">Program</SelectItem>
-                        <SelectItem value="store">Store Product</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs">Item Type</Label>
+                      <Select value={selectedItemType} onValueChange={(v: 'program' | 'store') => setSelectedItemType(v)}>
+                        <SelectTrigger data-testid="select-item-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="program">Program</SelectItem>
+                          <SelectItem value="store">Store Product</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Payment Type</Label>
+                      <Select value={selectedPaymentType} onValueChange={(v: 'subscription' | 'payment') => setSelectedPaymentType(v)}>
+                        <SelectTrigger data-testid="select-payment-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="subscription">Subscription (Recurring)</SelectItem>
+                          <SelectItem value="payment">One-Time Payment</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div>
                     <Label className="text-xs">{selectedItemType === 'program' ? 'Program' : 'Store Product'}</Label>
@@ -12638,6 +12883,45 @@ function MigrationsTab({ organization, users }: any) {
                       </SelectContent>
                     </Select>
                   </div>
+                  
+                  {/* One-time payment fields */}
+                  {selectedPaymentType === 'payment' && (
+                    <div className="space-y-2 p-2 bg-amber-50 rounded border border-amber-200">
+                      <p className="text-xs text-amber-700 font-medium">One-Time Payment Details</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs">Payment Date</Label>
+                          <Input 
+                            type="date" 
+                            value={paymentDate} 
+                            onChange={(e) => setPaymentDate(e.target.value)}
+                            data-testid="input-payment-date"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Expiry Date</Label>
+                          <Input 
+                            type="date" 
+                            value={expiryDate} 
+                            onChange={(e) => setExpiryDate(e.target.value)}
+                            data-testid="input-expiry-date"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Amount Paid ($)</Label>
+                        <Input 
+                          type="number" 
+                          step="0.01"
+                          placeholder="0.00" 
+                          value={amountPaid} 
+                          onChange={(e) => setAmountPaid(e.target.value)}
+                          data-testid="input-amount-paid"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
                   <Button type="button" variant="outline" size="sm" onClick={addItem} className="w-full" data-testid="button-add-item">
                     <Plus className="w-3 h-3 mr-1" /> Add Item
                   </Button>

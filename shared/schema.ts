@@ -2099,11 +2099,19 @@ export type InsertRsvpResponse = z.infer<typeof insertRsvpResponseSchema>;
 // =============================================
 
 // Item structure for migration lookup - supports multiple items with quantities
+// Also tracks payment type (subscription vs one-time payment) and expiry for one-time payments
 export const migrationItemSchema = z.object({
   itemId: z.string(),
   itemType: z.enum(['program', 'store']),
   itemName: z.string().optional(),
   quantity: z.number().min(1).default(1),
+  // Payment tracking fields
+  paymentType: z.enum(['subscription', 'payment']).default('subscription'), // subscription = recurring, payment = one-time
+  stripePriceId: z.string().optional(), // The Stripe price ID used for this purchase
+  paymentDate: z.string().optional(), // When the payment was made (ISO date string)
+  expiryDate: z.string().optional(), // When the payment expires (calculated from price ID billing interval)
+  nextDueDate: z.string().optional(), // When the next payment is due
+  amountPaid: z.number().optional(), // Amount paid in cents
 });
 
 export type MigrationItem = z.infer<typeof migrationItemSchema>;

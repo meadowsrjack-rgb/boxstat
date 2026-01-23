@@ -3768,7 +3768,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
 
   const createEventSchema = z.object({
     title: z.string().min(1, "Event title is required"),
-    type: z.enum(["practice", "game", "tournament", "meeting"]),
+    type: z.enum(["game", "tournament", "camp", "exhibition", "practice", "skills", "workshop", "talk", "combine", "training", "meeting", "course", "tryout", "skills-assessment", "team-building", "parent-meeting", "equipment-pickup", "photo-day", "award-ceremony", "fnh"]),
     startTime: z.string().min(1, "Start time is required"),
     endTime: z.string().min(1, "End time is required"),
     location: z.string().optional(),

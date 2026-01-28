@@ -3937,7 +3937,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 });
               
               // Also add parent to team_memberships so they receive team notifications
-              const parentId = user.linkedParentId || user.parentId || user.accountHolderId;
+              // Use parentId (schema field) - the linked parent account for child players
+              const parentId = user.parentId;
               if (parentId && parentId !== userId) {
                 await db.insert(teamMemberships)
                   .values({
@@ -5068,7 +5069,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       
       // Also add parent to team_memberships so they receive team notifications
-      const parentId = player.linkedParentId || player.parentId || player.accountHolderId;
+      // Use parentId (schema field) - the linked parent account for child players
+      const parentId = player.parentId;
       if (parentId && parentId !== playerId) {
         await db.insert(teamMemberships)
           .values({
@@ -5181,6 +5183,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(teamMemberships.profileId, playerId)
           )
         );
+      
+      // Check if parent has other children on this team before removing parent membership
+      if (player.parentId) {
+        // Get all children of this parent in the same organization
+        const parentChildren = await db.select({ id: users.id })
+          .from(users)
+          .where(
+            and(
+              eq(users.parentId, player.parentId),
+              eq(users.organizationId, organizationId)
+            )
+          );
+        
+        const childIds = parentChildren.map(c => c.id).filter(id => id !== playerId);
+        
+        // Check if any other children are still on this team (only if there are other children)
+        let hasOtherChildrenOnTeam = false;
+        if (childIds.length > 0) {
+          const otherChildrenOnTeam = await db.select({ id: teamMemberships.id })
+            .from(teamMemberships)
+            .where(
+              and(
+                eq(teamMemberships.teamId, teamIdNum),
+                inArray(teamMemberships.profileId, childIds)
+              )
+            )
+            .limit(1);
+          hasOtherChildrenOnTeam = otherChildrenOnTeam.length > 0;
+        }
+        
+        // If no other children on this team, mark parent membership as inactive
+        // Only update memberships with role='parent' to preserve any coach/admin roles
+        if (!hasOtherChildrenOnTeam) {
+          await db.update(teamMemberships)
+            .set({ status: 'inactive' })
+            .where(
+              and(
+                eq(teamMemberships.teamId, teamIdNum),
+                eq(teamMemberships.profileId, player.parentId),
+                eq(teamMemberships.role, 'parent')
+              )
+            );
+          console.log(`Marked parent ${player.parentId} membership as inactive on team ${teamId}`);
+        }
+      }
       
       // Cancel enrollment for this player if team has a programId
       if (team && team.programId) {

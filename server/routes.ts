@@ -3936,6 +3936,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   set: { status: 'active', role: 'player' },
                 });
               
+              // Also add parent to team_memberships so they receive team notifications
+              const parentId = user.linkedParentId || user.parentId || user.accountHolderId;
+              if (parentId && parentId !== userId) {
+                await db.insert(teamMemberships)
+                  .values({
+                    teamId: newTeamId,
+                    profileId: parentId,
+                    role: 'parent',
+                    status: 'active',
+                  })
+                  .onConflictDoUpdate({
+                    target: [teamMemberships.teamId, teamMemberships.profileId],
+                    set: { status: 'active' },
+                  });
+                console.log(`[PATCH] Added parent ${parentId} to team ${newTeamId} memberships`);
+              }
+              
               // Auto-create product enrollment if team has a programId
               if (team.programId) {
                 const accountHolderId = user.accountHolderId || userId;
@@ -5049,6 +5066,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           target: [teamMemberships.teamId, teamMemberships.profileId],
           set: { status: 'active', role: memberRole },
         });
+      
+      // Also add parent to team_memberships so they receive team notifications
+      const parentId = player.linkedParentId || player.parentId || player.accountHolderId;
+      if (parentId && parentId !== playerId) {
+        await db.insert(teamMemberships)
+          .values({
+            teamId: teamIdNum,
+            profileId: parentId,
+            role: 'parent',
+            status: 'active',
+          })
+          .onConflictDoUpdate({
+            target: [teamMemberships.teamId, teamMemberships.profileId],
+            set: { status: 'active' },
+          });
+        console.log(`Added parent ${parentId} to team ${teamId} memberships`);
+      }
       
       // Auto-enroll player if team has a programId
       if (team.programId) {

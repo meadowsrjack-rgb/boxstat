@@ -9811,18 +9811,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subscriptions,
         customerName,
         customerDescription,
-        items 
+        items,
+        // New manual entry fields
+        migrationMode,
+        paymentMethod,
+        referenceNumber,
+        sourceSystem,
+        notes
       } = req.body;
       
-      // Validate required fields - accept either single subscription ID or array
-      if (!email || !stripeCustomerId) {
-        return res.status(400).json({ error: 'Missing required fields: email and stripeCustomerId are required' });
+      // Validate required fields
+      if (!email) {
+        return res.status(400).json({ error: 'Missing required field: email' });
       }
       
-      // At least one subscription ID must be provided (either single or array)
-      const hasSubscriptionId = stripeSubscriptionId || (Array.isArray(stripeSubscriptionIds) && stripeSubscriptionIds.length > 0);
-      if (!hasSubscriptionId) {
-        return res.status(400).json({ error: 'At least one subscription ID is required (stripeSubscriptionId or stripeSubscriptionIds)' });
+      // For manual mode, Stripe fields are optional
+      const isManualMode = migrationMode === 'manual';
+      
+      if (!isManualMode) {
+        // Stripe mode validation
+        if (!stripeCustomerId) {
+          return res.status(400).json({ error: 'Missing required field: stripeCustomerId' });
+        }
+        
+        // At least one subscription ID must be provided (either single or array)
+        const hasSubscriptionId = stripeSubscriptionId || (Array.isArray(stripeSubscriptionIds) && stripeSubscriptionIds.length > 0);
+        if (!hasSubscriptionId) {
+          return res.status(400).json({ error: 'At least one subscription ID is required (stripeSubscriptionId or stripeSubscriptionIds)' });
+        }
       }
       
       // Items are optional for bulk upload - default to empty array
@@ -9833,7 +9849,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const migration = await storage.createMigrationLookup({
         email,
-        stripeCustomerId,
+        stripeCustomerId: stripeCustomerId || `manual_${Date.now()}`,
         stripeSubscriptionId: stripeSubscriptionId || subscriptionIdsArray[0] || null,
         stripeSubscriptionIds: subscriptionIdsArray,
         subscriptions: subscriptionsArray,
@@ -9841,6 +9857,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerDescription: customerDescription || null,
         items: itemsArray,
         isClaimed: false,
+        // New fields for manual entry mode
+        migrationMode: migrationMode || 'stripe',
+        paymentMethod: paymentMethod || null,
+        referenceNumber: referenceNumber || null,
+        sourceSystem: sourceSystem || null,
+        notes: notes || null,
       });
       
       res.status(201).json(migration);
@@ -9863,7 +9885,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid migration ID' });
       }
       
-      const { email, stripeCustomerId, stripeSubscriptionId, items } = req.body;
+      const { 
+        email, 
+        stripeCustomerId, 
+        stripeSubscriptionId,
+        stripeSubscriptionIds,
+        items,
+        // Manual entry fields
+        migrationMode,
+        paymentMethod,
+        referenceNumber,
+        sourceSystem,
+        notes
+      } = req.body;
       
       if (items !== undefined && (!Array.isArray(items) || items.length === 0)) {
         return res.status(400).json({ error: 'At least one item must be added' });
@@ -9873,7 +9907,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email,
         stripeCustomerId,
         stripeSubscriptionId,
+        stripeSubscriptionIds,
         items,
+        // Include manual entry fields
+        migrationMode,
+        paymentMethod,
+        referenceNumber,
+        sourceSystem,
+        notes,
       });
       
       if (!migration) {

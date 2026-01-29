@@ -11872,6 +11872,9 @@ function MigrationsTab({ organization, users }: any) {
     }
   };
 
+  // Migration entry mode: 'stripe' for clubs with Stripe history, 'manual' for clubs without
+  const [migrationMode, setMigrationMode] = useState<'stripe' | 'manual'>('manual');
+  
   // Items for this migration (itemId, itemType) - each item is added individually
   const [migrationItems, setMigrationItems] = useState<Array<{
     itemId: string; 
@@ -11890,13 +11893,28 @@ function MigrationsTab({ organization, users }: any) {
   const [paymentDate, setPaymentDate] = useState<string>("");
   const [expiryDate, setExpiryDate] = useState<string>("");
   const [amountPaid, setAmountPaid] = useState<string>("");
+  
+  // Manual entry additional fields
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
+  const [referenceNumber, setReferenceNumber] = useState<string>("");
+  const [sourceSystem, setSourceSystem] = useState<string>("");
+  const [migrationNotes, setMigrationNotes] = useState<string>("");
 
+  // Dynamic schema based on migration mode
+  const stripeSchema = z.object({
+    email: z.string().email("Valid email required"),
+    stripeCustomerId: z.string().min(1, "Stripe Customer ID required"),
+    stripeSubscriptionIds: z.string().min(1, "At least one Stripe Subscription ID required"),
+  });
+  
+  const manualSchema = z.object({
+    email: z.string().email("Valid email required"),
+    stripeCustomerId: z.string().optional(),
+    stripeSubscriptionIds: z.string().optional(),
+  });
+  
   const form = useForm({
-    resolver: zodResolver(z.object({
-      email: z.string().email("Valid email required"),
-      stripeCustomerId: z.string().min(1, "Stripe Customer ID required"),
-      stripeSubscriptionIds: z.string().min(1, "At least one Stripe Subscription ID required"),
-    })),
+    resolver: zodResolver(migrationMode === 'stripe' ? stripeSchema : manualSchema),
     defaultValues: {
       email: "",
       stripeCustomerId: "",
@@ -12065,6 +12083,14 @@ function MigrationsTab({ organization, users }: any) {
     const subscriptionIds = migration.stripeSubscriptionIds?.length > 0 
       ? migration.stripeSubscriptionIds.join(', ')
       : migration.stripeSubscriptionId || '';
+    // Set migration mode from existing record (default to 'stripe' for legacy records)
+    const mode = migration.migrationMode || 'stripe';
+    setMigrationMode(mode);
+    // Set manual entry fields from existing record
+    setPaymentMethod(migration.paymentMethod || '');
+    setReferenceNumber(migration.referenceNumber || '');
+    setSourceSystem(migration.sourceSystem || '');
+    setMigrationNotes(migration.notes || '');
     form.reset({
       email: migration.email,
       stripeCustomerId: migration.stripeCustomerId,
@@ -12082,20 +12108,41 @@ function MigrationsTab({ organization, users }: any) {
       });
       return;
     }
-    // Parse subscription IDs from comma/newline separated string into array
-    const subscriptionIdsArray = data.stripeSubscriptionIds
-      .split(/[,\n]/)
-      .map((id: string) => id.trim())
-      .filter((id: string) => id.length > 0);
     
-    const submitData = { 
+    let submitData: any = { 
       email: data.email,
-      stripeCustomerId: data.stripeCustomerId,
-      stripeSubscriptionIds: subscriptionIdsArray,
-      // Keep legacy field for backward compatibility (first ID)
-      stripeSubscriptionId: subscriptionIdsArray[0] || '',
-      items: migrationItems 
+      items: migrationItems,
+      migrationMode: migrationMode,
     };
+    
+    if (migrationMode === 'stripe') {
+      // Parse subscription IDs from comma/newline separated string into array
+      const subscriptionIdsArray = (data.stripeSubscriptionIds || '')
+        .split(/[,\n]/)
+        .map((id: string) => id.trim())
+        .filter((id: string) => id.length > 0);
+      
+      submitData = {
+        ...submitData,
+        stripeCustomerId: data.stripeCustomerId,
+        stripeSubscriptionIds: subscriptionIdsArray,
+        // Keep legacy field for backward compatibility (first ID)
+        stripeSubscriptionId: subscriptionIdsArray[0] || '',
+      };
+    } else {
+      // Manual entry mode - include additional fields
+      submitData = {
+        ...submitData,
+        stripeCustomerId: `manual_${Date.now()}`, // Generate placeholder ID
+        stripeSubscriptionIds: [],
+        stripeSubscriptionId: '',
+        paymentMethod: paymentMethod,
+        referenceNumber: referenceNumber,
+        sourceSystem: sourceSystem,
+        notes: migrationNotes,
+      };
+    }
+    
     if (editingMigration) {
       updateMigration.mutate({ id: editingMigration.id, data: submitData });
     } else {
@@ -12112,6 +12159,12 @@ function MigrationsTab({ organization, users }: any) {
     setPaymentDate("");
     setExpiryDate("");
     setAmountPaid("");
+    // Reset manual entry fields
+    setPaymentMethod("");
+    setReferenceNumber("");
+    setSourceSystem("");
+    setMigrationNotes("");
+    setMigrationMode('manual'); // Default to manual mode for new entries
     form.reset({
       email: "",
       stripeCustomerId: "",
@@ -12931,13 +12984,42 @@ function MigrationsTab({ organization, users }: any) {
 
       {/* Add/Edit Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingMigration ? "Edit Migration Record" : "Add Migration Record"}</DialogTitle>
             <DialogDescription>
-              Enter the legacy parent Stripe data from the club payment system. When the parent signs up with this email, they will be prompted to claim their subscription.
+              {migrationMode === 'stripe' 
+                ? "Enter the legacy parent Stripe data from the club payment system. When the parent signs up with this email, they will be prompted to claim their subscription."
+                : "Add legacy enrollment records for members from your previous system. This works for clubs that weren't using Stripe before."
+              }
             </DialogDescription>
           </DialogHeader>
+          
+          {/* Mode Toggle */}
+          <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border">
+            <Label className="text-sm font-medium">Entry Mode:</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={migrationMode === 'manual' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setMigrationMode('manual')}
+                data-testid="btn-mode-manual"
+              >
+                Manual Entry
+              </Button>
+              <Button
+                type="button"
+                variant={migrationMode === 'stripe' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setMigrationMode('stripe')}
+                data-testid="btn-mode-stripe"
+              >
+                Stripe Import
+              </Button>
+            </div>
+          </div>
+          
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
               <FormField
@@ -12953,39 +13035,112 @@ function MigrationsTab({ organization, users }: any) {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="stripeCustomerId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Stripe Customer ID</FormLabel>
-                    <FormControl>
-                      <Input placeholder="cus_xxxxxxxxxxxxx" {...field} data-testid="input-migration-stripe-customer" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="stripeSubscriptionIds"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Stripe Subscription IDs</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="sub_xxxxxxxxxxxxx&#10;sub_yyyyyyyyyyyyy&#10;(one per line or comma-separated)" 
-                        {...field} 
-                        data-testid="input-migration-stripe-subs"
-                        rows={3}
-                        className="font-mono text-sm"
+              
+              {/* Stripe Mode Fields */}
+              {migrationMode === 'stripe' && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="stripeCustomerId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stripe Customer ID</FormLabel>
+                        <FormControl>
+                          <Input placeholder="cus_xxxxxxxxxxxxx" {...field} data-testid="input-migration-stripe-customer" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="stripeSubscriptionIds"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stripe Subscription IDs</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="sub_xxxxxxxxxxxxx&#10;sub_yyyyyyyyyyyyy&#10;(one per line or comma-separated)" 
+                            {...field} 
+                            data-testid="input-migration-stripe-subs"
+                            rows={3}
+                            className="font-mono text-sm"
+                          />
+                        </FormControl>
+                        <p className="text-xs text-gray-500">Enter multiple subscription IDs separated by commas or new lines</p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
+              
+              {/* Manual Entry Mode Fields */}
+              {migrationMode === 'manual' && (
+                <div className="space-y-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm font-medium text-blue-700">Payment Details</p>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-sm">Payment Method</Label>
+                      <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                        <SelectTrigger data-testid="select-payment-method">
+                          <SelectValue placeholder="Select method..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cash">Cash</SelectItem>
+                          <SelectItem value="check">Check</SelectItem>
+                          <SelectItem value="credit_card">Credit Card</SelectItem>
+                          <SelectItem value="paypal">PayPal</SelectItem>
+                          <SelectItem value="venmo">Venmo</SelectItem>
+                          <SelectItem value="zelle">Zelle</SelectItem>
+                          <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm">Reference # (optional)</Label>
+                      <Input 
+                        placeholder="Check #, receipt ID, etc." 
+                        value={referenceNumber}
+                        onChange={(e) => setReferenceNumber(e.target.value)}
+                        data-testid="input-reference-number"
                       />
-                    </FormControl>
-                    <p className="text-xs text-gray-500">Enter multiple subscription IDs separated by commas or new lines</p>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm">Source System (optional)</Label>
+                    <Select value={sourceSystem} onValueChange={setSourceSystem}>
+                      <SelectTrigger data-testid="select-source-system">
+                        <SelectValue placeholder="Where did this data come from?" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="paper_records">Paper Records</SelectItem>
+                        <SelectItem value="spreadsheet">Spreadsheet / Excel</SelectItem>
+                        <SelectItem value="square">Square</SelectItem>
+                        <SelectItem value="paypal">PayPal</SelectItem>
+                        <SelectItem value="venmo">Venmo</SelectItem>
+                        <SelectItem value="quickbooks">QuickBooks</SelectItem>
+                        <SelectItem value="other_software">Other Software</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm">Notes (optional)</Label>
+                    <Textarea 
+                      placeholder="Any additional notes about this enrollment..." 
+                      value={migrationNotes}
+                      onChange={(e) => setMigrationNotes(e.target.value)}
+                      rows={2}
+                      data-testid="input-migration-notes"
+                    />
+                  </div>
+                </div>
+              )}
               {/* Items List */}
               <div className="space-y-3">
                 <FormLabel>Subscription Items</FormLabel>

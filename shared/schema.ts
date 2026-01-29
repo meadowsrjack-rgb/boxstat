@@ -2146,6 +2146,12 @@ export const migrationLookup = pgTable("migration_lookup", {
   items: jsonb("items").$type<MigrationItem[]>().default([]), // Array of items with type and quantity
   isClaimed: boolean("is_claimed").default(false).notNull(),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  // New fields for manual entry mode (non-Stripe clubs)
+  migrationMode: varchar("migration_mode").default('stripe'), // 'stripe' or 'manual'
+  paymentMethod: varchar("payment_method"), // cash, check, credit_card, paypal, venmo, zelle, bank_transfer, other
+  referenceNumber: varchar("reference_number"), // Check number, receipt ID, old system ID
+  sourceSystem: varchar("source_system"), // paper_records, spreadsheet, square, paypal, venmo, quickbooks, other_software, other
+  notes: text(), // Additional notes about the migration
 });
 
 export interface MigrationLookup {
@@ -2160,6 +2166,12 @@ export interface MigrationLookup {
   items: MigrationItem[];
   isClaimed: boolean;
   createdAt: Date;
+  // Manual entry fields
+  migrationMode: string | null;
+  paymentMethod: string | null;
+  referenceNumber: string | null;
+  sourceSystem: string | null;
+  notes: string | null;
 }
 
 export const insertMigrationLookupSchema = z.object({
@@ -2172,6 +2184,12 @@ export const insertMigrationLookupSchema = z.object({
   subscriptions: z.array(stripeSubscriptionDataSchema).default([]),
   items: z.array(migrationItemSchema).default([]),
   isClaimed: z.boolean().default(false),
+  // Manual entry fields
+  migrationMode: z.string().optional(),
+  paymentMethod: z.string().optional(),
+  referenceNumber: z.string().optional(),
+  sourceSystem: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 export type InsertMigrationLookup = z.infer<typeof insertMigrationLookupSchema>;

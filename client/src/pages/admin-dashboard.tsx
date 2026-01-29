@@ -4050,25 +4050,28 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
   });
 
   const updateEvent = useMutation({
-    mutationFn: async ({ id, targetType, targetId, ...data }: any) => {
-      // Convert legacy targetType/targetId to assignTo/visibility
+    mutationFn: async ({ id, targetType, targetId, targetIds, ...data }: any) => {
+      // Convert legacy targetType/targetId/targetIds to assignTo/visibility
       const payload: any = { ...data };
       
-      if (targetType === 'team' && targetId) {
-        payload.assignTo = { teams: [String(targetId)] };
-        payload.visibility = { teams: [String(targetId)] };
-      } else if (targetType === 'program' && targetId) {
-        payload.assignTo = { programs: [String(targetId)] };
-        payload.visibility = { programs: [String(targetId)] };
-      } else if (targetType === 'division' && targetId) {
-        payload.assignTo = { divisions: [String(targetId)] };
-        payload.visibility = { divisions: [String(targetId)] };
-      } else if (targetType === 'user' && targetId) {
-        payload.assignTo = { users: [String(targetId)] };
-        payload.visibility = { users: [String(targetId)] };
-      } else if (targetType === 'role' && targetId) {
-        payload.assignTo = { roles: [String(targetId)] };
-        payload.visibility = { roles: [String(targetId)] };
+      // Support both single targetId and array targetIds
+      const ids = targetIds?.length > 0 ? targetIds : (targetId ? [String(targetId)] : []);
+      
+      if (targetType === 'team' && ids.length > 0) {
+        payload.assignTo = { teams: ids };
+        payload.visibility = { teams: ids };
+      } else if (targetType === 'program' && ids.length > 0) {
+        payload.assignTo = { programs: ids };
+        payload.visibility = { programs: ids };
+      } else if (targetType === 'division' && ids.length > 0) {
+        payload.assignTo = { divisions: ids };
+        payload.visibility = { divisions: ids };
+      } else if (targetType === 'user' && ids.length > 0) {
+        payload.assignTo = { users: ids };
+        payload.visibility = { users: ids };
+      } else if (targetType === 'role' && ids.length > 0) {
+        payload.assignTo = { roles: ids };
+        payload.visibility = { roles: ids };
       } else if (targetType === 'all') {
         payload.assignTo = { roles: ['player', 'coach', 'parent', 'admin'] };
         payload.visibility = { roles: ['player', 'coach', 'parent', 'admin'] };
@@ -4871,106 +4874,133 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                   </div>
                   {editingEvent.targetType === "team" && (
                     <div className="space-y-2">
-                      <Label htmlFor="edit-event-targetId">Select Team</Label>
-                      <Select
-                        value={editingEvent.targetId ? String(editingEvent.targetId) : ""}
-                        onValueChange={(value) => setEditingEvent({...editingEvent, targetId: value})}
-                      >
-                        <SelectTrigger id="edit-event-targetId" data-testid="select-edit-event-targetId">
-                          <SelectValue placeholder="Choose a team" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {teams.map((team: any) => (
-                            <SelectItem key={team.id} value={String(team.id)}>
+                      <Label>Select Teams</Label>
+                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                        {teams.filter((t: any) => t.active).map((team: any) => (
+                          <div key={team.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={(editingEvent.targetIds || []).includes(String(team.id))}
+                              onCheckedChange={(checked) => {
+                                const currentIds = editingEvent.targetIds || [];
+                                if (checked) {
+                                  setEditingEvent({...editingEvent, targetIds: [...currentIds, String(team.id)]});
+                                } else {
+                                  setEditingEvent({...editingEvent, targetIds: currentIds.filter((id: string) => id !== String(team.id))});
+                                }
+                              }}
+                              data-testid={`checkbox-edit-team-${team.id}`}
+                            />
+                            <label className="text-sm cursor-pointer">
                               {team.name}{team.programType ? ` (${team.programType})` : ''}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-gray-500">Choose which team this event is for</p>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500">{(editingEvent.targetIds || []).length} team(s) selected</p>
                     </div>
                   )}
                   {editingEvent.targetType === "program" && (
                     <div className="space-y-2">
-                      <Label htmlFor="edit-event-programId">Select Program</Label>
-                      <Select
-                        value={editingEvent.targetId ? String(editingEvent.targetId) : ""}
-                        onValueChange={(value) => setEditingEvent({...editingEvent, targetId: value})}
-                      >
-                        <SelectTrigger id="edit-event-programId" data-testid="select-edit-event-programId">
-                          <SelectValue placeholder="Choose a program" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {programs.filter((p: any) => p.isActive && p.productCategory === 'service').map((program: any) => (
-                            <SelectItem key={program.id} value={String(program.id)}>
-                              {program.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-gray-500">Choose which program this event is for</p>
+                      <Label>Select Programs</Label>
+                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                        {programs.filter((p: any) => p.isActive && p.productCategory === 'service').map((program: any) => (
+                          <div key={program.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={(editingEvent.targetIds || []).includes(String(program.id))}
+                              onCheckedChange={(checked) => {
+                                const currentIds = editingEvent.targetIds || [];
+                                if (checked) {
+                                  setEditingEvent({...editingEvent, targetIds: [...currentIds, String(program.id)]});
+                                } else {
+                                  setEditingEvent({...editingEvent, targetIds: currentIds.filter((id: string) => id !== String(program.id))});
+                                }
+                              }}
+                              data-testid={`checkbox-edit-program-${program.id}`}
+                            />
+                            <label className="text-sm cursor-pointer">{program.name}</label>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500">{(editingEvent.targetIds || []).length} program(s) selected</p>
                     </div>
                   )}
                   {editingEvent.targetType === "role" && (
                     <div className="space-y-2">
-                      <Label htmlFor="edit-event-roleId">Select Role</Label>
-                      <Select
-                        value={editingEvent.targetId ? String(editingEvent.targetId) : ""}
-                        onValueChange={(value) => setEditingEvent({...editingEvent, targetId: value})}
-                      >
-                        <SelectTrigger id="edit-event-roleId" data-testid="select-edit-event-roleId">
-                          <SelectValue placeholder="Choose a role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="player">Player</SelectItem>
-                          <SelectItem value="parent">Parent</SelectItem>
-                          <SelectItem value="coach">Coach</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-gray-500">Choose which role this event is for</p>
+                      <Label>Select Roles</Label>
+                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                        {[{id: 'player', name: 'Player'}, {id: 'parent', name: 'Parent'}, {id: 'coach', name: 'Coach'}, {id: 'admin', name: 'Admin'}].map((role) => (
+                          <div key={role.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={(editingEvent.targetIds || []).includes(role.id)}
+                              onCheckedChange={(checked) => {
+                                const currentIds = editingEvent.targetIds || [];
+                                if (checked) {
+                                  setEditingEvent({...editingEvent, targetIds: [...currentIds, role.id]});
+                                } else {
+                                  setEditingEvent({...editingEvent, targetIds: currentIds.filter((id: string) => id !== role.id)});
+                                }
+                              }}
+                              data-testid={`checkbox-edit-role-${role.id}`}
+                            />
+                            <label className="text-sm cursor-pointer">{role.name}</label>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500">{(editingEvent.targetIds || []).length} role(s) selected</p>
                     </div>
                   )}
                   {editingEvent.targetType === "user" && (
                     <div className="space-y-2">
-                      <Label htmlFor="edit-event-userId">Select User</Label>
-                      <Select
-                        value={editingEvent.targetId ? String(editingEvent.targetId) : ""}
-                        onValueChange={(value) => setEditingEvent({...editingEvent, targetId: value})}
-                      >
-                        <SelectTrigger id="edit-event-userId" data-testid="select-edit-event-userId">
-                          <SelectValue placeholder="Choose a user" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {allUsers.filter((u: any) => u.isActive).map((user: any) => (
-                            <SelectItem key={user.id} value={String(user.id)}>
+                      <Label>Select Users</Label>
+                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                        {allUsers.filter((u: any) => u.isActive).map((user: any) => (
+                          <div key={user.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={(editingEvent.targetIds || []).includes(String(user.id))}
+                              onCheckedChange={(checked) => {
+                                const currentIds = editingEvent.targetIds || [];
+                                if (checked) {
+                                  setEditingEvent({...editingEvent, targetIds: [...currentIds, String(user.id)]});
+                                } else {
+                                  setEditingEvent({...editingEvent, targetIds: currentIds.filter((id: string) => id !== String(user.id))});
+                                }
+                              }}
+                              data-testid={`checkbox-edit-user-${user.id}`}
+                            />
+                            <label className="text-sm cursor-pointer">
                               {user.firstName} {user.lastName} ({user.email})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-gray-500">Choose which user this event is for</p>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500">{(editingEvent.targetIds || []).length} user(s) selected</p>
                     </div>
                   )}
                   {editingEvent.targetType === "division" && (
                     <div className="space-y-2">
-                      <Label htmlFor="edit-event-divisionId">Select Division</Label>
-                      <Select
-                        value={editingEvent.targetId ? String(editingEvent.targetId) : ""}
-                        onValueChange={(value) => setEditingEvent({...editingEvent, targetId: value})}
-                      >
-                        <SelectTrigger id="edit-event-divisionId" data-testid="select-edit-event-divisionId">
-                          <SelectValue placeholder="Choose a division" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {divisions.filter((d: any) => d.isActive).map((division: any) => (
-                            <SelectItem key={division.id} value={String(division.id)}>
+                      <Label>Select Divisions</Label>
+                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                        {divisions.filter((d: any) => d.isActive).map((division: any) => (
+                          <div key={division.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={(editingEvent.targetIds || []).includes(String(division.id))}
+                              onCheckedChange={(checked) => {
+                                const currentIds = editingEvent.targetIds || [];
+                                if (checked) {
+                                  setEditingEvent({...editingEvent, targetIds: [...currentIds, String(division.id)]});
+                                } else {
+                                  setEditingEvent({...editingEvent, targetIds: currentIds.filter((id: string) => id !== String(division.id))});
+                                }
+                              }}
+                              data-testid={`checkbox-edit-division-${division.id}`}
+                            />
+                            <label className="text-sm cursor-pointer">
                               {division.name} {division.ageRange ? `(${division.ageRange})` : ''}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-gray-500">Choose which division this event is for</p>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500">{(editingEvent.targetIds || []).length} division(s) selected</p>
                     </div>
                   )}
                   <div className="space-y-2">
@@ -5292,19 +5322,19 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                             eventToEdit.targetId = '';
                           } else if (event.assignTo?.teams && event.assignTo.teams.length > 0) {
                             eventToEdit.targetType = 'team';
-                            eventToEdit.targetId = String(event.assignTo.teams[0]);
+                            eventToEdit.targetIds = event.assignTo.teams.map(String);
                           } else if (event.assignTo?.programs && event.assignTo.programs.length > 0) {
                             eventToEdit.targetType = 'program';
-                            eventToEdit.targetId = String(event.assignTo.programs[0]);
+                            eventToEdit.targetIds = event.assignTo.programs.map(String);
                           } else if (event.assignTo?.divisions && event.assignTo.divisions.length > 0) {
                             eventToEdit.targetType = 'division';
-                            eventToEdit.targetId = String(event.assignTo.divisions[0]);
+                            eventToEdit.targetIds = event.assignTo.divisions.map(String);
                           } else if (event.assignTo?.users && event.assignTo.users.length > 0) {
                             eventToEdit.targetType = 'user';
-                            eventToEdit.targetId = String(event.assignTo.users[0]);
+                            eventToEdit.targetIds = event.assignTo.users.map(String);
                           } else if (event.assignTo?.roles && event.assignTo.roles.length > 0) {
                             eventToEdit.targetType = 'role';
-                            eventToEdit.targetId = String(event.assignTo.roles[0]);
+                            eventToEdit.targetIds = event.assignTo.roles.map(String);
                           } else if (event.targetType) {
                             // Already has targetType, keep it
                             if (event.targetId) eventToEdit.targetId = String(event.targetId);

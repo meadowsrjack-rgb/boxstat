@@ -11628,9 +11628,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Filter quotes for any matching user ID
+      // Get all leads with the user's email to find quotes linked to those leads
+      const allLeads = await storage.getCrmLeadsByOrganization(req.user.organizationId);
+      const matchingLeadIds = new Set<number>();
+      if (currentUser?.email) {
+        allLeads.forEach((lead: any) => {
+          if (lead.email && lead.email.toLowerCase() === currentUser.email.toLowerCase()) {
+            matchingLeadIds.add(lead.id);
+          }
+        });
+      }
+      
+      // Filter quotes that match by userId OR by leadId (for quotes created for leads before they registered)
       const userQuotes = allQuotes.filter((q: any) => 
-        matchingUserIds.has(q.userId) && q.status === 'pending'
+        q.status === 'pending' && (
+          matchingUserIds.has(q.userId) || 
+          (q.leadId && matchingLeadIds.has(q.leadId))
+        )
       );
       res.json(userQuotes);
     } catch (error: any) {

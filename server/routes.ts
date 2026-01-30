@@ -2783,6 +2783,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get all profiles associated with this account (for profile gateway role detection)
+  app.get('/api/account/profiles', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.user;
+      const profiles = await storage.getAccountProfiles(id);
+      res.json(profiles || []);
+    } catch (error: any) {
+      console.error('Error fetching account profiles:', error);
+      res.status(500).json({ message: 'Failed to fetch profiles' });
+    }
+  });
+  
   // Get users by account holder (for unified account page)
   app.get('/api/account/players', requireAuth, async (req: any, res) => {
     const { id } = req.user;

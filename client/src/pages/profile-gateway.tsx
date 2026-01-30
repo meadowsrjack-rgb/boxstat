@@ -68,7 +68,14 @@ export default function ProfileGateway() {
     staleTime: 5 * 60 * 1000,
   });
 
-  if (isLoading || playersLoading) {
+  // Fetch all account profiles to detect admin/coach roles across the account
+  const { data: accountProfiles = [], isLoading: profilesLoading } = useQuery<any[]>({
+    queryKey: ["/api/account/profiles"],
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (isLoading || playersLoading || profilesLoading) {
     return (
       <>
         <div className="fixed inset-0 w-full h-full z-0 pointer-events-none bg-white" />
@@ -85,8 +92,11 @@ export default function ProfileGateway() {
   }
 
   const userRole = (user as any)?.role;
-  const isCoach = userRole === "coach" || userRole === "admin";
-  const isAdmin = userRole === "admin";
+  // Check if any profile in the account has coach or admin role
+  const hasAdminProfile = accountProfiles.some((p: any) => p.role === "admin");
+  const hasCoachProfile = accountProfiles.some((p: any) => p.role === "coach");
+  const isCoach = userRole === "coach" || userRole === "admin" || hasCoachProfile || hasAdminProfile;
+  const isAdmin = userRole === "admin" || hasAdminProfile;
 
   const handleSelectProfile = (type: string, playerId?: string) => {
     localStorage.setItem("lastViewedProfileType", type);

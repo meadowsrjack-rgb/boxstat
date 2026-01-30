@@ -33,10 +33,22 @@ export default function QuoteCheckout() {
     playerLastName: '',
     playerBirthDate: '',
   });
+  
+  const [playerMode, setPlayerMode] = useState<'existing' | 'new'>('existing');
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
 
   const { data: quote, isLoading, error } = useQuery<any>({
     queryKey: ['/api/quote-checkouts', params.checkoutId],
     enabled: !!params.checkoutId,
+  });
+
+  // Check if this is a quote for an existing user (no account creation needed)
+  const isExistingUserQuote = !!quote?.userId && !!quote?.user;
+
+  // Fetch existing players for logged-in users
+  const { data: existingPlayers = [] } = useQuery<any[]>({
+    queryKey: ['/api/account/players'],
+    enabled: isExistingUserQuote,
   });
 
   useEffect(() => {
@@ -50,6 +62,16 @@ export default function QuoteCheckout() {
       }));
     }
   }, [quote]);
+  
+  // Auto-select first player if user has existing players
+  useEffect(() => {
+    if (existingPlayers.length > 0 && !selectedPlayerId) {
+      setSelectedPlayerId(existingPlayers[0].id);
+      setPlayerMode('existing');
+    } else if (existingPlayers.length === 0) {
+      setPlayerMode('new');
+    }
+  }, [existingPlayers, selectedPlayerId]);
 
   const completeCheckoutMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -139,9 +161,6 @@ export default function QuoteCheckout() {
   const suggestedAddOns = quote?.suggestedAddOns || [];
   const hasWaivers = waivers.length > 0;
   const allWaiversSigned = waivers.every((w: any) => signedWaivers[w.id]);
-  
-  // Check if this is a quote for an existing user (no account creation needed)
-  const isExistingUserQuote = !!quote?.userId && !!quote?.user;
 
   const handleAddOn = (addOn: any) => {
     if (selectedAddOns.find(a => a.id === addOn.id)) {
@@ -177,8 +196,19 @@ export default function QuoteCheckout() {
       }
       setStep('payment');
     } else if (step === 'payment') {
+      // For existing users selecting an existing player, send playerId
+      // For new player creation, send player details
+      const playerData = isExistingUserQuote && playerMode === 'existing' && selectedPlayerId
+        ? { playerId: selectedPlayerId }
+        : {
+            playerFirstName: formData.playerFirstName,
+            playerLastName: formData.playerLastName,
+            playerBirthDate: formData.playerBirthDate,
+          };
+      
       completeCheckoutMutation.mutate({
         ...formData,
+        ...playerData,
         isExistingUser: isExistingUserQuote,
         signedWaivers: Object.keys(signedWaivers).filter(k => signedWaivers[k]),
         addOns: selectedAddOns.map(a => ({ productId: a.id, price: a.price })),
@@ -490,33 +520,84 @@ export default function QuoteCheckout() {
 
                       <div>
                         <h3 className="font-medium mb-3">Player Information</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label>Player First Name</Label>
-                            <Input
-                              value={formData.playerFirstName}
-                              onChange={(e) => setFormData({...formData, playerFirstName: e.target.value})}
-                              data-testid="input-player-first-name"
-                            />
+                        
+                        {/* For existing users, show player selection */}
+                        {isExistingUserQuote && existingPlayers.length > 0 && (
+                          <div className="mb-4">
+                            <div className="flex gap-2 mb-3">
+                              <Button
+                                type="button"
+                                variant={playerMode === 'existing' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setPlayerMode('existing')}
+                              >
+                                Select Existing Player
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={playerMode === 'new' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setPlayerMode('new')}
+                              >
+                                <Plus className="w-4 h-4 mr-1" /> Add New Player
+                              </Button>
+                            </div>
+                            
+                            {playerMode === 'existing' && (
+                              <div className="space-y-2">
+                                {existingPlayers.map((player: any) => (
+                                  <div
+                                    key={player.id}
+                                    className={`p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                                      selectedPlayerId === player.id 
+                                        ? 'border-red-500 bg-red-50' 
+                                        : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                    onClick={() => setSelectedPlayerId(player.id)}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <User className="w-5 h-5 text-gray-500" />
+                                      <span className="font-medium">{player.firstName} {player.lastName}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                          <div>
-                            <Label>Player Last Name</Label>
-                            <Input
-                              value={formData.playerLastName}
-                              onChange={(e) => setFormData({...formData, playerLastName: e.target.value})}
-                              data-testid="input-player-last-name"
-                            />
-                          </div>
-                        </div>
-                        <div className="mt-3">
-                          <Label>Date of Birth</Label>
-                          <Input
-                            type="date"
-                            value={formData.playerBirthDate}
-                            onChange={(e) => setFormData({...formData, playerBirthDate: e.target.value})}
-                            data-testid="input-player-birthdate"
-                          />
-                        </div>
+                        )}
+                        
+                        {/* Show new player form if: new user, or existing user chose "new", or existing user has no players */}
+                        {(!isExistingUserQuote || playerMode === 'new' || existingPlayers.length === 0) && (
+                          <>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <Label>Player First Name</Label>
+                                <Input
+                                  value={formData.playerFirstName}
+                                  onChange={(e) => setFormData({...formData, playerFirstName: e.target.value})}
+                                  data-testid="input-player-first-name"
+                                />
+                              </div>
+                              <div>
+                                <Label>Player Last Name</Label>
+                                <Input
+                                  value={formData.playerLastName}
+                                  onChange={(e) => setFormData({...formData, playerLastName: e.target.value})}
+                                  data-testid="input-player-last-name"
+                                />
+                              </div>
+                            </div>
+                            <div className="mt-3">
+                              <Label>Date of Birth</Label>
+                              <Input
+                                type="date"
+                                value={formData.playerBirthDate}
+                                onChange={(e) => setFormData({...formData, playerBirthDate: e.target.value})}
+                                data-testid="input-player-birthdate"
+                              />
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}

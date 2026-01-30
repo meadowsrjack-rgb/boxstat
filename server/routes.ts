@@ -11708,7 +11708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Quote has expired" });
       }
 
-      const { firstName, lastName, email, password, phone, playerFirstName, playerLastName, playerBirthDate } = req.body;
+      const { firstName, lastName, email, password, phone, playerFirstName, playerLastName, playerBirthDate, playerId } = req.body;
       const { nanoid } = await import('nanoid');
       
       let accountUser: any;
@@ -11716,6 +11716,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Determine if this is an existing user checkout based on quote data (server-side, not client)
       const isExistingUserCheckout = !!quote.userId;
+
+      // Security: For existing user checkouts, verify the authenticated user matches the quote's userId
+      if (isExistingUserCheckout) {
+        const authenticatedUserId = req.user?.id;
+        if (!authenticatedUserId || authenticatedUserId !== quote.userId) {
+          return res.status(403).json({ error: "You are not authorized to complete this checkout. Please log in with the correct account." });
+        }
+      }
 
       // Validate required fields based on checkout type
       if (!isExistingUserCheckout) {
@@ -11736,12 +11744,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: "User associated with this quote not found" });
         }
         
-        // Get the first player linked to this account for enrollment
-        const linkedPlayers = await storage.getPlayersByParent(accountUser.id);
-        player = linkedPlayers[0]; // Use first player if available
+        // Check if a specific player was selected
+        if (playerId) {
+          player = await storage.getUser(playerId);
+          // Verify this player belongs to the account
+          if (!player || (player.parentId !== accountUser.id && player.linkedParentId !== accountUser.id && player.accountHolderId !== accountUser.id)) {
+            return res.status(400).json({ error: "Selected player not found or doesn't belong to this account" });
+          }
+        } else {
+          // Get the first player linked to this account for enrollment
+          const linkedPlayers = await storage.getPlayersByParent(accountUser.id);
+          player = linkedPlayers[0]; // Use first player if available
+        }
         
         if (!player) {
-          // If no player exists, create one using account holder's name
+          // If no player exists, create one using provided or account holder's name
           const pFirstName = playerFirstName || accountUser.firstName || 'Player';
           const pLastName = playerLastName || accountUser.lastName || 'Profile';
           player = await storage.createUser({

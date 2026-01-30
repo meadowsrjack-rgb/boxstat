@@ -47,9 +47,9 @@ export function useAuth() {
       return userData;
     },
     retry: false,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true, // Refetch user data when window regains focus to detect role changes
     refetchOnMount: true,
-    staleTime: 0,
+    staleTime: 30000, // Consider data fresh for 30 seconds to avoid excessive refetches
   });
 
   const logout = async () => {

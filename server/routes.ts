@@ -4157,6 +4157,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     delete updateData.pendingEnrollments;
     delete updateData.activeTeams;
     
+    // Sync userType with role to ensure consistency
+    if (updateData.role) {
+      updateData.userType = updateData.role;
+    }
+    
     const updated = await storage.updateUser(userId, updateData);
     console.log(`[PATCH] User ${userId} updated successfully`);
     res.json(updated);
@@ -4220,6 +4225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         organizationId: accountHolder.organizationId,
         email: accountHolder.email,
         role: newRole,
+        userType: newRole, // Ensure userType is synced with role
         firstName: firstName || accountHolder.firstName,
         lastName: lastName || accountHolder.lastName,
         accountHolderId: accountHolderId,

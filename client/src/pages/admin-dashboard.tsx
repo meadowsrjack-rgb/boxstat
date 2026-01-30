@@ -153,12 +153,21 @@ export default function AdminDashboard() {
     queryKey: ["/api/auth/user"],
   });
 
-  // Redirect non-admin users
+  // Fetch all account profiles to check for admin access
+  const { data: accountProfiles = [], isLoading: profilesLoading } = useQuery<any[]>({
+    queryKey: ["/api/account/profiles"],
+    enabled: !!currentUser,
+  });
+
+  // Check if user has any admin profile in their account
+  const hasAdminProfile = accountProfiles.some((p: any) => p.role === "admin");
+
+  // Redirect non-admin users (only if they don't have any admin profile in their account)
   useEffect(() => {
-    if (!userLoading && currentUser && currentUser.role !== "admin") {
+    if (!userLoading && !profilesLoading && currentUser && currentUser.role !== "admin" && !hasAdminProfile) {
       setLocation("/unified-account");
     }
-  }, [currentUser, userLoading, setLocation]);
+  }, [currentUser, userLoading, profilesLoading, hasAdminProfile, setLocation]);
 
   // Fetch organization data
   const { data: organization, isLoading: orgLoading } = useQuery<any>({

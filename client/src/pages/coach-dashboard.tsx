@@ -99,6 +99,16 @@ export default function CoachDashboard() {
   const { user } = useAuth();
   const currentUser = user as UserType | null;
   
+  // Fetch all account profiles to check for coach access
+  const { data: accountProfiles = [], isLoading: profilesLoading } = useQuery<any[]>({
+    queryKey: ["/api/account/profiles"],
+    enabled: !!currentUser,
+  });
+
+  // Check if user has any coach or admin profile in their account
+  const hasCoachProfile = accountProfiles.some((p: any) => p.role === "coach");
+  const hasAdminProfile = accountProfiles.some((p: any) => p.role === "admin");
+  
   // For multi-role accounts (e.g., admin viewing coach dashboard), find the coach profile
   const { data: linkedProfiles = [] } = useQuery<Array<{id: string; role: string; firstName: string; lastName: string}>>({
     queryKey: [`/api/users/${currentUser?.id}/linked-profiles`],
@@ -117,7 +127,7 @@ export default function CoachDashboard() {
   });
   
   // Use the coach profile if user is admin/parent with a coach profile, otherwise use current user
-  const coachProfile = linkedProfiles.find(p => p.role === 'coach');
+  const coachProfile = linkedProfiles.find(p => p.role === 'coach') || accountProfiles.find((p: any) => p.role === 'coach');
   const coachProfileId = currentUser?.role === 'coach' 
     ? currentUser?.id 
     : (coachProfile?.id || (user as any)?.activeProfileId || currentUser?.id);
@@ -134,12 +144,12 @@ export default function CoachDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Redirect non-coach and non-admin users
+  // Redirect users who don't have coach or admin access
   useEffect(() => {
-    if (currentUser && currentUser.role !== "coach" && currentUser.role !== "admin") {
+    if (!profilesLoading && currentUser && currentUser.role !== "coach" && currentUser.role !== "admin" && !hasCoachProfile && !hasAdminProfile) {
       setLocation("/unified-account");
     }
-  }, [currentUser, setLocation]);
+  }, [currentUser, profilesLoading, hasCoachProfile, hasAdminProfile, setLocation]);
   
   // Enhanced calendar state
   const [selectedDate, setSelectedDate] = useState(new Date());

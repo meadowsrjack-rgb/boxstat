@@ -271,13 +271,13 @@ export default function QuoteCheckout() {
                   <CardTitle className="flex items-center gap-2">
                     {step === 'details' && <><ShoppingCart className="w-5 h-5" /> Review Your Quote</>}
                     {step === 'waivers' && <><FileText className="w-5 h-5" /> Sign Required Waivers</>}
-                    {step === 'account' && <><User className="w-5 h-5" /> Create Your Account</>}
+                    {step === 'account' && <><User className="w-5 h-5" /> {isExistingUserQuote ? 'Confirm Your Details' : 'Create Your Account'}</>}
                     {step === 'payment' && <><CreditCard className="w-5 h-5" /> Complete Payment</>}
                   </CardTitle>
                   <CardDescription>
                     {step === 'details' && 'Review the items in your personalized quote'}
                     {step === 'waivers' && 'Please review and sign the required waivers to continue'}
-                    {step === 'account' && 'Set up your parent account and add player information'}
+                    {step === 'account' && (isExistingUserQuote ? 'Confirm your details and add player information' : 'Set up your parent account and add player information')}
                     {step === 'payment' && 'Securely complete your payment'}
                   </CardDescription>
                 </CardHeader>
@@ -463,26 +463,29 @@ export default function QuoteCheckout() {
                             data-testid="input-phone"
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-3 mt-3">
-                          <div>
-                            <Label>Password</Label>
-                            <Input
-                              type="password"
-                              value={formData.password}
-                              onChange={(e) => setFormData({...formData, password: e.target.value})}
-                              data-testid="input-password"
-                            />
+                        {/* Only show password fields for new users */}
+                        {!isExistingUserQuote && (
+                          <div className="grid grid-cols-2 gap-3 mt-3">
+                            <div>
+                              <Label>Password</Label>
+                              <Input
+                                type="password"
+                                value={formData.password}
+                                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                                data-testid="input-password"
+                              />
+                            </div>
+                            <div>
+                              <Label>Confirm Password</Label>
+                              <Input
+                                type="password"
+                                value={formData.confirmPassword}
+                                onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                                data-testid="input-confirm-password"
+                              />
+                            </div>
                           </div>
-                          <div>
-                            <Label>Confirm Password</Label>
-                            <Input
-                              type="password"
-                              value={formData.confirmPassword}
-                              onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-                              data-testid="input-confirm-password"
-                            />
-                          </div>
-                        </div>
+                        )}
                       </div>
 
                       <div>

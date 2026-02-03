@@ -10975,10 +10975,18 @@ function SettingsTab({ organization }: any) {
   const handleSignOut = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+      // Clear auth token from storage
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userData');
       queryClient.clear();
-      setLocation("/");
+      // Use window.location for full page reload to clear all state
+      window.location.href = "/";
     } catch (error) {
       console.error("Logout error:", error);
+      // Still try to logout even if API fails
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userData');
+      window.location.href = "/";
     }
   };
 

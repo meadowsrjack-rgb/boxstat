@@ -6,10 +6,16 @@ export default function Logout() {
   useEffect(() => {
     fetch('/api/auth/logout', { method: 'POST' })
       .then(() => {
+        // Clear auth tokens from storage
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
         queryClient.clear();
         window.location.href = '/';
       })
       .catch(() => {
+        // Clear auth tokens even if API fails
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
         window.location.href = '/';
       });
   }, []);

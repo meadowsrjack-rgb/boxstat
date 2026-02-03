@@ -1944,7 +1944,13 @@ export default function UnifiedAccount() {
                             return (
                               <div key={enrollment.id} className="flex items-center justify-between py-3 px-4 border rounded-lg">
                                 <div className="flex items-center gap-3">
-                                  {isPack ? (
+                                  {program?.imageUrl ? (
+                                    <img 
+                                      src={program.imageUrl} 
+                                      alt={program.name || "Program"} 
+                                      className="w-10 h-10 rounded-full object-cover"
+                                    />
+                                  ) : isPack ? (
                                     <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
                                       <Target className="w-5 h-5 text-blue-600" />
                                     </div>

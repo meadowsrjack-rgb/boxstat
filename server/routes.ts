@@ -11628,19 +11628,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 program.requiredWaivers.forEach((wid: string) => requiredWaiverIds.add(wid));
               }
               
-              // Fetch add-ons for this program (other products in same organization)
-              const allProducts = await storage.getProgramsByOrganization(quote.organizationId);
+              // Fetch configured add-ons for this program (from admin Store tab settings)
               const quoteItems = Array.isArray(quote.items) ? quote.items : [];
-              const programAddOns = allProducts.filter((p: any) => 
-                p.id !== program.id && 
-                p.isActive && 
-                p.productType !== 'membership' &&
-                !quoteItems.some((qi: any) => qi.productId === p.id)
-              ).slice(0, 3);
+              const suggestedAddOnsWithProducts = await storage.getSuggestedAddOnsWithProducts(program.id);
               
-              programAddOns.forEach((ao: any) => {
-                if (!addOns.some(a => a.id === ao.id)) {
-                  addOns.push(ao);
+              suggestedAddOnsWithProducts.forEach(({ product }: any) => {
+                // Only include active products not already in the quote
+                if (product && product.isActive && !quoteItems.some((qi: any) => qi.productId === product.id)) {
+                  if (!addOns.some(a => a.id === product.id)) {
+                    addOns.push(product);
+                  }
                 }
               });
             }

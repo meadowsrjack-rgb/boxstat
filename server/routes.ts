@@ -3920,8 +3920,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.patch('/api/organization', requireAuth, async (req: any, res) => {
-    const { role, organizationId } = req.user;
-    if (role !== 'admin') {
+    const { organizationId } = req.user;
+    // Check all profiles with same email for admin access (multi-profile support)
+    const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+    if (!isAdminUser) {
       return res.status(403).json({ message: 'Only admins can update organization settings' });
     }
     
@@ -4019,8 +4021,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.post('/api/users', requireAuth, async (req: any, res) => {
-    const { role } = req.user;
-    if (role !== 'admin') {
+    // Check all profiles with same email for admin access (multi-profile support)
+    const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+    if (!isAdminUser) {
       return res.status(403).json({ message: 'Only admins can create users' });
     }
     
@@ -4475,8 +4478,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.delete('/api/users/:id', requireAuth, async (req: any, res) => {
-    const { role, organizationId } = req.user;
-    if (role !== 'admin') {
+    const { organizationId } = req.user;
+    // Check all profiles with same email for admin access (multi-profile support)
+    const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+    if (!isAdminUser) {
       return res.status(403).json({ message: 'Only admins can delete users' });
     }
     
@@ -4794,8 +4799,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Coordinator endpoint: Create team with player assignments and auto-enrollment
   app.post('/api/teams/with-assignments', requireAuth, async (req: any, res) => {
-    const { role, organizationId } = req.user;
-    if (role !== 'admin') {
+    const { organizationId } = req.user;
+    // Check all profiles with same email for admin access (multi-profile support)
+    const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+    if (!isAdminUser) {
       return res.status(403).json({ message: 'Only admins can use this endpoint' });
     }
     
@@ -4983,8 +4990,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.delete('/api/teams/:id', requireAuth, async (req: any, res) => {
-    const { role } = req.user;
-    if (role !== 'admin') {
+    // Check all profiles with same email for admin access (multi-profile support)
+    const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+    if (!isAdminUser) {
       return res.status(403).json({ message: 'Only admins can delete teams' });
     }
     
@@ -8431,8 +8439,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.patch('/api/programs/:id', requireAuth, async (req: any, res) => {
-    const { role } = req.user;
-    if (role !== 'admin') {
+    // Check all profiles with same email for admin access (multi-profile support)
+    const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+    if (!isAdminUser) {
       return res.status(403).json({ message: 'Only admins can update programs' });
     }
     
@@ -11395,8 +11404,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get("/api/contact-management", requireAuth, async (req: any, res) => {
     try {
-      const { organizationId, role } = req.user;
-      if (role !== 'admin') {
+      const { organizationId } = req.user;
+      // Check all profiles with same email for admin access (multi-profile support)
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const messages = await storage.getContactManagementMessages(organizationId);
@@ -11464,7 +11475,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.patch("/api/contact-management/:id", requireAuth, async (req: any, res) => {
     try {
-      if (req.user.role !== 'admin') {
+      // Check all profiles with same email for admin access (multi-profile support)
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const id = parseInt(req.params.id);
@@ -11588,7 +11601,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get("/api/crm/notes/lead/:leadId", requireAuth, async (req: any, res) => {
     try {
-      if (req.user.role !== 'admin') {
+      // Check all profiles with same email for admin access (multi-profile support)
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const notes = await storage.getCrmNotesByLead(parseInt(req.params.leadId));
@@ -11601,7 +11616,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get("/api/crm/notes/user/:userId", requireAuth, async (req: any, res) => {
     try {
-      if (req.user.role !== 'admin') {
+      // Check all profiles with same email for admin access (multi-profile support)
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const notes = await storage.getCrmNotesByUser(req.params.userId);
@@ -11614,7 +11631,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/crm/notes", requireAuth, async (req: any, res) => {
     try {
-      if (req.user.role !== 'admin') {
+      // Check all profiles with same email for admin access (multi-profile support)
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const note = await storage.createCrmNote({
@@ -11631,7 +11650,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.delete("/api/crm/notes/:id", requireAuth, async (req: any, res) => {
     try {
-      if (req.user.role !== 'admin') {
+      // Check all profiles with same email for admin access (multi-profile support)
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
       await storage.deleteCrmNote(parseInt(req.params.id));
@@ -11718,7 +11739,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Alias for frontend consistency
   app.get("/api/quote-checkouts", requireAuth, async (req: any, res) => {
     try {
-      if (req.user.role !== 'admin') {
+      // Check all profiles with same email for admin access (multi-profile support)
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const quotes = await storage.getQuoteCheckoutsByOrganization(req.user.organizationId);
@@ -11739,7 +11762,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/quote-checkouts", requireAuth, async (req: any, res) => {
     try {
-      if (req.user.role !== 'admin') {
+      // Check all profiles with same email for admin access (multi-profile support)
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const { nanoid } = await import('nanoid');
@@ -12097,7 +12122,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Reply to contact management message
   app.post("/api/contact-management/:id/reply", requireAuth, async (req: any, res) => {
     try {
-      if (req.user.role !== 'admin') {
+      // Check all profiles with same email for admin access (multi-profile support)
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const parentMessageId = parseInt(req.params.id);

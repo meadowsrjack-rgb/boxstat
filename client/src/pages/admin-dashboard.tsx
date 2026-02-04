@@ -8396,7 +8396,73 @@ function ProgramsTab({ programs, teams, organization }: any) {
     if (!open) {
       setEditingProgram(null);
       setSelectedAddOns([]);
-      form.reset();
+      form.reset({
+        organizationId: organization?.id || "",
+        name: "",
+        description: "",
+        type: "Subscription",
+        price: 0,
+        billingCycle: "Monthly",
+        billingModel: "Per Player",
+        durationDays: 90,
+        durationValue: 90,
+        durationUnit: "days",
+        allowInstallments: false,
+        installments: 3,
+        installmentPrice: 0,
+        payInFullDiscount: 0,
+        accessTag: "club_member",
+        sessionCount: undefined,
+        subscriptionDisclosure: "",
+        requiredWaivers: [],
+        hasSubgroups: true,
+        subgroupLabel: "Team",
+        rosterVisibility: "members",
+        chatMode: "two_way",
+        isActive: true,
+        productCategory: "service",
+        displayCategory: "general",
+        iconName: "",
+        comparePrice: undefined,
+        savingsNote: "",
+        coverImageUrl: "",
+        pricingOptions: [],
+      });
+    } else if (!editingProgram) {
+      // Opening dialog for NEW program - reset to clean defaults
+      setSelectedAddOns([]);
+      form.reset({
+        organizationId: organization?.id || "",
+        name: "",
+        description: "",
+        type: "Subscription",
+        price: 0,
+        billingCycle: "Monthly",
+        billingModel: "Per Player",
+        durationDays: 90,
+        durationValue: 90,
+        durationUnit: "days",
+        allowInstallments: false,
+        installments: 3,
+        installmentPrice: 0,
+        payInFullDiscount: 0,
+        accessTag: "club_member",
+        sessionCount: undefined,
+        subscriptionDisclosure: "",
+        requiredWaivers: [],
+        hasSubgroups: true,
+        subgroupLabel: "Team",
+        rosterVisibility: "members",
+        chatMode: "two_way",
+        isActive: true,
+        productCategory: "service",
+        displayCategory: "general",
+        iconName: "",
+        comparePrice: undefined,
+        savingsNote: "",
+        coverImageUrl: "",
+        pricingOptions: [],
+      });
     }
   };
 

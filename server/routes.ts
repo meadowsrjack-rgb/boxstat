@@ -8439,19 +8439,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.patch('/api/programs/:id', requireAuth, async (req: any, res) => {
-    // Check all profiles with same email for admin access (multi-profile support)
-    const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
-    if (!isAdminUser) {
-      return res.status(403).json({ message: 'Only admins can update programs' });
-    }
-    
-    // Get existing program for Stripe sync
-    const existingProgram = await storage.getProgram(req.params.id);
-    if (!existingProgram) {
-      return res.status(404).json({ message: 'Program not found' });
-    }
-    
-    let updateData = { ...req.body };
+    try {
+      // Check all profiles with same email for admin access (multi-profile support)
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ message: 'Only admins can update programs' });
+      }
+      
+      // Get existing program for Stripe sync
+      const existingProgram = await storage.getProgram(req.params.id);
+      if (!existingProgram) {
+        return res.status(404).json({ message: 'Program not found' });
+      }
+      
+      let updateData = { ...req.body };
     
     // Handle pricing options with stable IDs and deep-merge
     if (req.body.pricingOptions && req.body.pricingOptions.length > 0) {
@@ -8525,6 +8526,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     const updated = await storage.updateProgram(req.params.id, updateData);
     res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating program:', error);
+      res.status(500).json({ message: 'Failed to update program', error: error.message });
+    }
   });
   
   app.delete('/api/programs/:id', requireAuth, async (req: any, res) => {

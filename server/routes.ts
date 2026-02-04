@@ -48,6 +48,40 @@ import { eq, and, or, sql, desc, inArray } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;
 
+// Helper function to check if user has any admin profile with the same email
+// This handles multi-profile accounts where a user might have both parent and admin profiles
+async function hasAdminProfile(userId: string, organizationId: string): Promise<boolean> {
+  try {
+    const currentUser = await storage.getUser(userId);
+    if (!currentUser?.email) return false;
+    
+    // Check if any profile with the same email has admin role
+    const allUsers = await storage.getUsersByOrganization(organizationId);
+    return allUsers.some((u: any) => 
+      u.email === currentUser.email && u.role === 'admin'
+    );
+  } catch (error) {
+    console.error('Error checking admin profile:', error);
+    return false;
+  }
+}
+
+// Helper function to check if user has any coach or admin profile with the same email
+async function hasCoachOrAdminProfile(userId: string, organizationId: string): Promise<boolean> {
+  try {
+    const currentUser = await storage.getUser(userId);
+    if (!currentUser?.email) return false;
+    
+    const allUsers = await storage.getUsersByOrganization(organizationId);
+    return allUsers.some((u: any) => 
+      u.email === currentUser.email && (u.role === 'admin' || u.role === 'coach')
+    );
+  } catch (error) {
+    console.error('Error checking coach/admin profile:', error);
+    return false;
+  }
+}
+
 // Helper function to create a legacy subscription notification for a user
 async function createLegacySubscriptionNotification(userId: string, subscriptionCount: number, organizationId: string = "default-org"): Promise<void> {
   try {
@@ -3741,8 +3775,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'No file uploaded' });
       }
       
-      // Only admins can upload award images
-      if (req.user.role !== 'admin') {
+      // Only admins can upload award images - check all profiles with same email
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         // Delete uploaded file on authorization failure
         if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
           fs.unlinkSync(uploadedFilePath);
@@ -3781,8 +3816,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'No file uploaded' });
       }
       
-      // Only admins can upload product images
-      if (req.user.role !== 'admin') {
+      // Only admins can upload product images - check all profiles with same email
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
           fs.unlinkSync(uploadedFilePath);
         }
@@ -11414,7 +11450,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/crm/leads", requireAuth, async (req: any, res) => {
     try {
       // Allow both admins and coaches to view leads (coaches need it for evaluation form)
-      if (req.user.role !== 'admin' && req.user.role !== 'coach') {
+      // Check all profiles with same email for multi-profile accounts
+      const isCoachOrAdminUser = req.user.role === 'admin' || req.user.role === 'coach' || 
+        await hasCoachOrAdminProfile(req.user.id, req.user.organizationId);
+      if (!isCoachOrAdminUser) {
         return res.status(403).json({ error: "Admin or coach access required" });
       }
       const leads = await storage.getCrmLeadsByOrganization(req.user.organizationId);
@@ -11427,7 +11466,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get("/api/crm/leads/:id", requireAuth, async (req: any, res) => {
     try {
-      if (req.user.role !== 'admin') {
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const lead = await storage.getCrmLead(parseInt(req.params.id));
@@ -11443,7 +11483,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/crm/leads", requireAuth, async (req: any, res) => {
     try {
-      if (req.user.role !== 'admin') {
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const lead = await storage.createCrmLead({
@@ -11459,7 +11500,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.patch("/api/crm/leads/:id", requireAuth, async (req: any, res) => {
     try {
-      if (req.user.role !== 'admin') {
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const updated = await storage.updateCrmLead(parseInt(req.params.id), req.body);
@@ -11472,7 +11514,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.delete("/api/crm/leads/:id", requireAuth, async (req: any, res) => {
     try {
-      if (req.user.role !== 'admin') {
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
       await storage.deleteCrmLead(parseInt(req.params.id));
@@ -11486,7 +11529,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Save lead evaluation (coaches and admins can save)
   app.patch("/api/crm/leads/:id/evaluation", requireAuth, async (req: any, res) => {
     try {
-      if (req.user.role !== 'admin' && req.user.role !== 'coach') {
+      const isCoachOrAdminUser = req.user.role === 'admin' || req.user.role === 'coach' || 
+        await hasCoachOrAdminProfile(req.user.id, req.user.organizationId);
+      if (!isCoachOrAdminUser) {
         return res.status(403).json({ error: "Coach or admin access required" });
       }
       const leadId = parseInt(req.params.id);
@@ -11570,7 +11615,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get("/api/quotes", requireAuth, async (req: any, res) => {
     try {
-      if (req.user.role !== 'admin') {
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const quotes = await storage.getQuoteCheckoutsByOrganization(req.user.organizationId);
@@ -11603,7 +11649,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/quotes", requireAuth, async (req: any, res) => {
     try {
-      if (req.user.role !== 'admin') {
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const { nanoid } = await import('nanoid');
@@ -11623,7 +11670,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.patch("/api/quotes/:id", requireAuth, async (req: any, res) => {
     try {
-      if (req.user.role !== 'admin') {
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const updated = await storage.updateQuoteCheckout(req.params.id, req.body);

@@ -43,6 +43,7 @@ import { pushNotifications } from "./services/pushNotificationHelper";
 import { notificationScheduler } from "./services/notificationScheduler";
 import { notificationService } from "./services/notificationService";
 import { db } from "./db";
+import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards } from "@shared/schema";
 import { eq, and, or, sql, desc, inArray } from "drizzle-orm";
 
@@ -395,6 +396,10 @@ function hashPassword(password: string): string {
 const isAuthenticated = requireAuth;
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // Register object storage routes for persistent file uploads
+  registerObjectStorageRoutes(app);
+  const objectStorageService = new ObjectStorageService();
   
   // Initialize test users and facilities in development
   if (process.env.NODE_ENV === 'development') {
@@ -3807,7 +3812,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Upload product image
+  // Upload product image - uses Object Storage for persistence across deployments
   app.post('/api/upload/product-image', requireAuth, upload.single('image'), async (req: any, res) => {
     const uploadedFilePath = req.file ? path.join(uploadDir, req.file.filename) : null;
     
@@ -3825,12 +3830,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Only admins can upload product images' });
       }
       
-      const filename = req.file.filename;
-      const imageUrl = `/uploads/${filename}`;
+      // Get a presigned URL for object storage upload
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
       
+      // Read the file and upload to object storage
+      const fileBuffer = fs.readFileSync(uploadedFilePath!);
+      const uploadResponse = await fetch(uploadURL, {
+        method: 'PUT',
+        body: fileBuffer,
+        headers: {
+          'Content-Type': req.file.mimetype || 'image/jpeg',
+        },
+      });
+      
+      if (!uploadResponse.ok) {
+        throw new Error(`Failed to upload to object storage: ${uploadResponse.status}`);
+      }
+      
+      // Set the ACL policy to make it public
+      await objectStorageService.trySetObjectEntityAclPolicy(objectPath, {
+        owner: req.user.id,
+        visibility: 'public',
+      });
+      
+      // Clean up local file
+      if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+        fs.unlinkSync(uploadedFilePath);
+      }
+      
+      // Return the object path that can be served via /objects/* route
       res.json({ 
         success: true, 
-        imageUrl,
+        imageUrl: objectPath,
         message: 'Product image uploaded successfully' 
       });
     } catch (error: any) {

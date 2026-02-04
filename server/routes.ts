@@ -8598,8 +8598,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update which programs suggest a product as an add-on (admin only)
   app.put('/api/products/:productId/suggested-for-programs', requireAuth, async (req: any, res) => {
     try {
-      const { role } = req.user;
-      if (role !== 'admin') {
+      // Check all profiles with same email for admin access (multi-profile support)
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ message: 'Only admins can manage suggested add-ons' });
       }
       

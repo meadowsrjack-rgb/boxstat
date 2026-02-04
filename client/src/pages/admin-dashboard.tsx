@@ -7655,7 +7655,15 @@ function StoreTab({ organization }: any) {
             </DialogTitle>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit((data) => createProduct.mutate(data), (errors) => console.error("Form validation errors:", errors))} className="space-y-4">
+            <form onSubmit={form.handleSubmit((data) => createProduct.mutate(data), (errors) => {
+                console.error("Form validation errors:", errors);
+                const firstError = Object.values(errors)[0] as { message?: string };
+                toast({ 
+                  title: "Please fix form errors", 
+                  description: firstError?.message || "Check required fields",
+                  variant: "destructive" 
+                });
+              })} className="space-y-4">
               <FormField
                 control={form.control}
                 name="name"

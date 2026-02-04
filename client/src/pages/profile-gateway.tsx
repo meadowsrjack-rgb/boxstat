@@ -127,7 +127,8 @@ export default function ProfileGateway() {
     localStorage.removeItem('selectedPlayerId');
     localStorage.removeItem('viewingAsParent');
     localStorage.removeItem('lastViewedProfileType');
-    setLocation('/');
+    // Use full page reload to clear all React state
+    window.location.href = '/';
   };
 
   return (

@@ -1183,6 +1183,7 @@ export default function UnifiedAccount() {
   const [selectedPackage, setSelectedPackage] = useState<string>("");
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [selectedPricingOptionId, setSelectedPricingOptionId] = useState<string>("");
+  const [selectedQuoteId, setSelectedQuoteId] = useState<string>("");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isStoreItemPurchase, setIsStoreItemPurchase] = useState(false);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
@@ -1622,50 +1623,6 @@ export default function UnifiedAccount() {
 
           {/* Payments Tab - Redesigned with Category-Based Storefront */}
           <TabsContent value="payments" className="space-y-6">
-            {/* Pending Quotes Section */}
-            {pendingQuotes.length > 0 && (
-              <Card className="border-red-200 bg-red-50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2 text-red-700">
-                    <FileText className="w-5 h-5" />
-                    Personalized Offers for You
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {pendingQuotes.map((quote: any) => (
-                      <div 
-                        key={quote.id} 
-                        className="flex items-center justify-between p-4 bg-white rounded-lg border border-red-100"
-                        data-testid={`quote-${quote.id}`}
-                      >
-                        <div>
-                          <p className="font-medium">
-                            {quote.items?.map((i: any) => i.productName).join(', ') || 'Custom Package'}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            Created {quote.createdAt ? new Date(quote.createdAt).toLocaleDateString() : 'Recently'}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="font-bold text-lg text-red-600">
-                            ${((quote.totalAmount || 0) / 100).toFixed(2)}
-                          </span>
-                          <Button
-                            className="bg-red-600 hover:bg-red-700"
-                            onClick={() => window.location.href = `/checkout/${quote.id}`}
-                            data-testid={`button-checkout-quote-${quote.id}`}
-                          >
-                            Complete Checkout
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
@@ -2011,6 +1968,7 @@ export default function UnifiedAccount() {
                 setSelectedPackage("");
                 setSelectedPlayer("");
                 setSelectedPricingOptionId("");
+                setSelectedQuoteId("");
                 setSelectedAddOns([]);
                 setSignedWaivers({});
                 setWaiverScrollStatus({});
@@ -2031,6 +1989,7 @@ export default function UnifiedAccount() {
                             <Select value={selectedPackage} onValueChange={(val) => {
                               setSelectedPackage(val);
                               setSelectedPricingOptionId(""); // Reset pricing option when program changes
+                              setSelectedQuoteId(""); // Reset quote selection when program changes
                             }}>
                               <SelectTrigger data-testid="select-package">
                                 <SelectValue placeholder="Select a program" />
@@ -2149,6 +2108,45 @@ export default function UnifiedAccount() {
                                     </div>
                                   </div>
                                 ))}
+                                
+                                {/* Personalized Quote Options - show quotes for this program */}
+                                {pendingQuotes
+                                  .filter((quote: any) => quote.items?.some((item: any) => item.productId === selectedPackage))
+                                  .map((quote: any) => {
+                                    const quoteItem = quote.items?.find((item: any) => item.productId === selectedPackage);
+                                    const quotePrice = quoteItem?.quotedPrice || quoteItem?.price || 0;
+                                    return (
+                                      <div
+                                        key={quote.id}
+                                        onClick={() => {
+                                          setSelectedQuoteId(quote.id);
+                                          setSelectedPricingOptionId(`quote_${quote.id}`);
+                                        }}
+                                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                                          selectedQuoteId === quote.id
+                                            ? 'border-red-500 bg-red-50'
+                                            : 'border-amber-200 bg-amber-50 hover:border-amber-300'
+                                        }`}
+                                        data-testid={`pricing-option-quote-${quote.id}`}
+                                      >
+                                        <div className="flex items-center justify-between">
+                                          <div>
+                                            <p className="font-medium text-sm flex items-center gap-1">
+                                              <FileText className="w-3 h-3" />
+                                              Personalized Quote
+                                            </p>
+                                            <p className="text-xs text-amber-700">
+                                              Special pricing for you
+                                            </p>
+                                          </div>
+                                          <div className="text-right">
+                                            <p className="font-semibold text-red-600">${(quotePrice / 100).toFixed(2)}</p>
+                                            <p className="text-xs text-green-600">Custom offer</p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
                               </div>
                             </div>
                           );

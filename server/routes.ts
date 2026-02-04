@@ -1348,11 +1348,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Find selected pricing option if provided
       let selectedPricingOption: any = null;
+      let quoteCheckout: any = null;
+      
       if (selectedPricingOptionId) {
-        const pricingOptions = (program as any).pricingOptions;
-        if (pricingOptions && Array.isArray(pricingOptions)) {
-          selectedPricingOption = pricingOptions.find((opt: any) => opt.id === selectedPricingOptionId);
+        // Check if this is a quote selection
+        if (selectedPricingOptionId.startsWith('quote_')) {
+          const quoteId = selectedPricingOptionId.replace('quote_', '');
+          quoteCheckout = await storage.getQuoteCheckout(quoteId);
+          
+          if (!quoteCheckout) {
+            return res.status(400).json({ error: "Quote not found" });
+          }
+          
+          if (quoteCheckout.status !== 'pending') {
+            return res.status(400).json({ error: "Quote has already been used or expired" });
+          }
+          
+          // Security: Validate organization - quote must be from the same org
+          if (quoteCheckout.organizationId && quoteCheckout.organizationId !== req.user.organizationId) {
+            return res.status(403).json({ error: "You are not authorized to use this quote" });
+          }
+          
+          // Security: Validate quote ownership - quote must belong to the authenticated user
+          // Check by userId, or by leadId matching user's email
+          let isAuthorizedQuote = quoteCheckout.userId === req.user.id;
+          
+          if (!isAuthorizedQuote && quoteCheckout.leadId) {
+            // Check if lead email matches user email
+            const lead = await storage.getCrmLeadById(quoteCheckout.leadId);
+            const currentUser = await storage.getUser(req.user.id);
+            if (lead && currentUser && lead.email?.toLowerCase() === currentUser.email?.toLowerCase()) {
+              isAuthorizedQuote = true;
+            }
+          }
+          
+          // Also check if the quote was created for any user with the same email
+          if (!isAuthorizedQuote) {
+            const currentUser = await storage.getUser(req.user.id);
+            const allUsers = await storage.getUsersByOrganization(req.user.organizationId);
+            const matchingUserIds = new Set<string>();
+            if (currentUser?.email) {
+              allUsers.forEach((u: any) => {
+                if (u.email === currentUser.email) {
+                  matchingUserIds.add(u.id);
+                }
+              });
+            }
+            if (quoteCheckout.userId && matchingUserIds.has(quoteCheckout.userId)) {
+              isAuthorizedQuote = true;
+            }
+          }
+          
+          if (!isAuthorizedQuote) {
+            return res.status(403).json({ error: "You are not authorized to use this quote" });
+          }
+          
+          // Find the quote item for this program
+          const quoteItem = quoteCheckout.items?.find((item: any) => item.productId === packageId);
+          if (!quoteItem) {
+            return res.status(400).json({ error: "Quote does not include this program" });
+          }
+          
+          // Create a synthetic pricing option from the quote
+          selectedPricingOption = {
+            id: selectedPricingOptionId,
+            name: 'Personalized Quote',
+            price: quoteItem.quotedPrice || quoteItem.price,
+            isQuote: true,
+            quoteId: quoteId
+          };
+        } else if (selectedPricingOptionId.startsWith('installment_')) {
+          // Handle installment plans (existing logic)
+          const installmentId = selectedPricingOptionId.replace('installment_', '');
+          const installmentPlans = await storage.getInstallmentPlansByProgram(packageId);
+          const installmentPlan = installmentPlans.find((p: any) => p.id === installmentId);
+          if (installmentPlan) {
+            selectedPricingOption = {
+              id: selectedPricingOptionId,
+              name: installmentPlan.name || `${installmentPlan.numberOfPayments} Payment Plan`,
+              price: installmentPlan.paymentAmount,
+              isInstallment: true,
+              installmentPlanId: installmentId,
+              numberOfPayments: installmentPlan.numberOfPayments
+            };
+          }
+        } else {
+          // Standard pricing option from program
+          const pricingOptions = (program as any).pricingOptions;
+          if (pricingOptions && Array.isArray(pricingOptions)) {
+            selectedPricingOption = pricingOptions.find((opt: any) => opt.id === selectedPricingOptionId);
+          }
         }
+        
         // Validate: if pricing option ID is provided but not found, return error
         if (!selectedPricingOption) {
           return res.status(400).json({ error: "Invalid pricing option ID - option not found for this program" });
@@ -1562,6 +1649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           convertsToMonthly: isBundleWithMonthlyConversion ? 'true' : '',
           monthlyPrice: selectedPricingOption?.monthlyPrice ? String(selectedPricingOption.monthlyPrice) : '',
           durationDays: selectedPricingOption?.durationDays ? String(selectedPricingOption.durationDays) : '',
+          quoteId: selectedPricingOption?.quoteId || '',
         },
       });
       
@@ -1766,6 +1854,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           
+          // Mark the quote as completed
+          try {
+            await storage.updateQuoteCheckout(quoteId, { status: 'completed' });
+            console.log(`✅ Quote ${quoteId} marked as completed`);
+          } catch (quoteError: any) {
+            console.error("Error updating quote status:", quoteError);
+          }
+          
           return res.json({ received: true });
         }
         
@@ -1855,6 +1951,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           } else {
             console.log(`ℹ️ No valid playerId provided in session metadata, skipping player status update`);
+          }
+          
+          // Mark quote as completed if this was a quote-based payment
+          if (session.metadata?.quoteId) {
+            try {
+              await storage.updateQuoteCheckout(session.metadata.quoteId, { status: 'completed' });
+              console.log(`✅ Quote ${session.metadata.quoteId} marked as completed`);
+            } catch (quoteError: any) {
+              console.error("Error updating quote status:", quoteError);
+            }
           }
           
           // For subscription mode checkouts, create a subscription record

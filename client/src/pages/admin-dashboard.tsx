@@ -8322,8 +8322,9 @@ function ProgramsTab({ programs, teams, organization }: any) {
       setSelectedAddOns([]);
       form.reset();
     },
-    onError: () => {
-      toast({ title: "Failed to save program", variant: "destructive" });
+    onError: (error: any) => {
+      console.error('Program save error:', error);
+      toast({ title: "Failed to save program", description: error?.message || "Unknown error", variant: "destructive" });
     },
   });
 

@@ -3496,7 +3496,10 @@ class DatabaseStorage implements IStorage {
 
     const results = await db.select().from(schema.events);
     return results
-      .filter(event => !event.teamId || orgTeamIds.has(event.teamId))
+      .filter(event => {
+        if (event.teamId) return orgTeamIds.has(event.teamId);
+        return organizationId === this.defaultOrgId;
+      })
       .map(event => this.mapDbEventToEvent(event));
   }
 

@@ -11,7 +11,7 @@ import searchRoutes from "./routes/search";
 import privacyRoutes from "./routes/privacy";
 import { setupNotificationRoutes } from "./routes/notifications";
 import { setupAdminNotificationRoutes } from "./routes/adminNotifications";
-import { requireAuth, isAdmin, isCoachOrAdmin, setAuthStorage } from "./auth";
+import { requireAuth, optionalAuth, isAdmin, isCoachOrAdmin, setAuthStorage } from "./auth";
 import multer from "multer";
 import jwt from "jsonwebtoken";
 import path from "path";
@@ -8137,7 +8137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // WAIVER ROUTES
   // =============================================
   
-  app.get('/api/waivers', async (req: any, res) => {
+  app.get('/api/waivers', optionalAuth, async (req: any, res) => {
     const organizationId = req.user?.organizationId || 'default-org';
     const waivers = await storage.getWaiversByOrganization(organizationId);
     res.json(waivers);
@@ -8450,15 +8450,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PROGRAM ROUTES
   // =============================================
   
-  app.get('/api/programs', async (req: any, res) => {
-    // Allow unauthenticated access during registration
+  app.get('/api/programs', optionalAuth, async (req: any, res) => {
     const organizationId = req.user?.organizationId || 'default-org';
     const programs = await storage.getProgramsByOrganization(organizationId);
     res.json(programs);
   });
   
   // Store products endpoint - returns products with productCategory = 'goods'
-  app.get('/api/store-products', async (req: any, res) => {
+  app.get('/api/store-products', optionalAuth, async (req: any, res) => {
     try {
       const organizationId = req.user?.organizationId || 'default-org';
       const allProducts = await storage.getProgramsByOrganization(organizationId);
@@ -10069,12 +10068,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all migration records
   app.get('/api/admin/migrations', requireAuth, async (req: any, res) => {
     try {
-      const { role } = req.user;
+      const { role, organizationId } = req.user;
       if (role !== 'admin') {
         return res.status(403).json({ message: 'Only admins can view migrations' });
       }
       
-      const migrations = await storage.getAllMigrationLookups();
+      const allMigrations = await storage.getAllMigrationLookups();
+      const orgUsers = await storage.getUsersByOrganization(organizationId);
+      const orgEmails = new Set(orgUsers.map((u: any) => u.email?.toLowerCase()).filter(Boolean));
+      const migrations = allMigrations.filter((m: any) => orgEmails.has(m.email?.toLowerCase()));
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.json(migrations);
     } catch (error: any) {

@@ -3489,9 +3489,15 @@ class DatabaseStorage implements IStorage {
   }
 
   async getEventsByOrganization(organizationId: string): Promise<Event[]> {
-    const results = await db.select().from(schema.events)
-      .where(eq(schema.events.organizationId, organizationId));
-    return results.map(event => this.mapDbEventToEvent(event));
+    const orgTeams = await db.select({ id: schema.teams.id })
+      .from(schema.teams)
+      .where(eq(schema.teams.organizationId, organizationId));
+    const orgTeamIds = new Set(orgTeams.map(t => t.id));
+
+    const results = await db.select().from(schema.events);
+    return results
+      .filter(event => !event.teamId || orgTeamIds.has(event.teamId))
+      .map(event => this.mapDbEventToEvent(event));
   }
 
   async getEventsByTeam(teamId: string): Promise<Event[]> {
@@ -3708,8 +3714,7 @@ class DatabaseStorage implements IStorage {
 
   // Award Definition operations (new awards system)
   async getAwardDefinitions(organizationId: string): Promise<SelectAwardDefinition[]> {
-    const results = await db.select().from(schema.awardDefinitions)
-      .where(eq(schema.awardDefinitions.organizationId, organizationId));
+    const results = await db.select().from(schema.awardDefinitions);
     return results;
   }
   

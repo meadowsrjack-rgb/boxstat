@@ -57,7 +57,9 @@ import {
   Medal,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Calendar as ShadcnCalendar } from "@/components/ui/calendar";
 import { useEffect, useState, useRef } from "react";
+import { Loader2 } from "lucide-react";
 import { PINDialog } from "@/components/PINDialog";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
@@ -1167,6 +1169,171 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
   );
 }
 
+function InlineSchedulePanel({
+  programId,
+  programName,
+  sessionLength,
+  playerId,
+  selectedDate,
+  onDateChange,
+  selectedSlot,
+  onSlotSelect,
+  booked,
+  onBooked,
+  onBookAnother,
+  onClose,
+}: {
+  programId: number | string;
+  programName: string;
+  sessionLength?: number;
+  playerId?: string;
+  selectedDate: Date;
+  onDateChange: (d: Date) => void;
+  selectedSlot: any;
+  onSlotSelect: (slot: any) => void;
+  booked: boolean;
+  onBooked: () => void;
+  onBookAnother: () => void;
+  onClose: () => void;
+}) {
+  const { toast } = useToast();
+  const dateStr = selectedDate.toISOString().split("T")[0];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const { data: availability, isLoading } = useQuery<any>({
+    queryKey: ["/api/programs", programId, "schedule-availability", dateStr],
+    queryFn: async () => {
+      const res = await fetch(`/api/programs/${programId}/schedule-availability?date=${dateStr}`, {
+        credentials: "include",
+        headers: { Authorization: `Bearer ${localStorage.getItem("authToken") || ""}` },
+      });
+      if (!res.ok) throw new Error("Failed to load availability");
+      return res.json();
+    },
+  });
+
+  const bookMutation = useMutation({
+    mutationFn: async (slot: any) => {
+      return await apiRequest("POST", `/api/programs/${programId}/schedule-request`, {
+        startTime: slot.startTime,
+        playerId: playerId || undefined,
+      });
+    },
+    onSuccess: () => {
+      onBooked();
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey;
+        return Array.isArray(key) && key[0] === "/api/programs" && key[1] === programId && key[2] === "schedule-availability";
+      }});
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      toast({ title: "Session booked!", description: "Your session has been added to the calendar." });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Booking failed",
+        description: error?.message || "This time slot may no longer be available.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const availableSlots = availability?.slots?.filter((s: any) => s.available) || [];
+  const formatTime = (isoStr: string) => new Date(isoStr).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
+  if (booked) {
+    return (
+      <div className="border-t bg-green-50 p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+            <Check className="w-5 h-5 text-green-600" />
+          </div>
+          <div>
+            <p className="font-medium text-green-800">Session Booked!</p>
+            {selectedSlot && (
+              <p className="text-sm text-green-600">
+                {new Date(selectedSlot.startTime).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} at {formatTime(selectedSlot.startTime)}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={onBookAnother}>Book Another</Button>
+          <Button size="sm" variant="ghost" onClick={onClose}>Done</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-t bg-gray-50 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-medium text-gray-700">
+          Book a {sessionLength || 60}-min session
+        </p>
+      </div>
+      
+      <div className="flex justify-center mb-4">
+        <ShadcnCalendar
+          mode="single"
+          selected={selectedDate}
+          onSelect={(date) => { if (date) onDateChange(date); }}
+          disabled={(date) => { const d = new Date(date); d.setHours(0, 0, 0, 0); return d < today; }}
+          className="rounded-md border bg-white"
+        />
+      </div>
+
+      <div>
+        <p className="text-xs font-medium text-gray-500 mb-2">
+          {selectedDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+        </p>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+          </div>
+        ) : availableSlots.length === 0 ? (
+          <p className="text-sm text-gray-500 text-center py-4">No available times for this date. Try another day.</p>
+        ) : (
+          <div className="grid grid-cols-3 gap-1.5">
+            {availableSlots.map((slot: any, idx: number) => {
+              const isSelected = selectedSlot?.startTime === slot.startTime;
+              return (
+                <Button
+                  key={idx}
+                  variant={isSelected ? "default" : "outline"}
+                  size="sm"
+                  className={`text-xs ${isSelected ? "bg-red-600 hover:bg-red-700" : ""}`}
+                  onClick={() => onSlotSelect(slot)}
+                >
+                  {formatTime(slot.startTime)}
+                </Button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {selectedSlot && (
+        <div className="mt-3 flex items-center justify-between bg-white border border-red-200 rounded-lg p-3">
+          <div className="text-sm">
+            <span className="font-medium">{formatTime(selectedSlot.startTime)}</span>
+            <span className="text-gray-500"> – {formatTime(selectedSlot.endTime)}</span>
+          </div>
+          <Button
+            size="sm"
+            className="bg-red-600 hover:bg-red-700"
+            onClick={() => bookMutation.mutate(selectedSlot)}
+            disabled={bookMutation.isPending}
+          >
+            {bookMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Check className="w-3.5 h-3.5 mr-1" />}
+            Confirm
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function UnifiedAccount() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -1193,6 +1360,12 @@ export default function UnifiedAccount() {
   // Store tab state
   const [selectedStorePlayer, setSelectedStorePlayer] = useState<string>("");
   const [selectedStoreCategory, setSelectedStoreCategory] = useState<string>("");
+  
+  // Schedule request state - inline booking within active programs
+  const [schedulingEnrollment, setSchedulingEnrollment] = useState<string | null>(null);
+  const [scheduleDate, setScheduleDate] = useState<Date>(new Date());
+  const [scheduleSelectedSlot, setScheduleSelectedSlot] = useState<any>(null);
+  const [scheduleBooked, setScheduleBooked] = useState(false);
   
   // Check if device is locked - redirect to player dashboard if so
   useEffect(() => {
@@ -1898,56 +2071,102 @@ export default function UnifiedAccount() {
                             const isExpired = endDate && endDate < now;
                             const isExpiringSoon = endDate && !isExpired && (endDate.getTime() - now.getTime()) < 14 * 24 * 60 * 60 * 1000;
                             
+                            const hasScheduling = (program as any)?.scheduleRequestEnabled && !isExpired;
+                            const isSchedulingOpen = schedulingEnrollment === enrollment.id;
+                            
                             return (
-                              <div key={enrollment.id} className="flex items-center justify-between py-3 px-4 border rounded-lg">
-                                <div className="flex items-center gap-3">
-                                  {program?.imageUrl ? (
-                                    <img 
-                                      src={program.imageUrl} 
-                                      alt={program.name || "Program"} 
-                                      className="w-10 h-10 rounded-full object-cover"
-                                    />
-                                  ) : isPack ? (
-                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                      <Target className="w-5 h-5 text-blue-600" />
-                                    </div>
-                                  ) : (
-                                    <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                                      <Crown className="w-5 h-5 text-amber-600" />
-                                    </div>
-                                  )}
-                                  <div>
-                                    <div className="flex items-center gap-2">
-                                      <p className="font-medium text-sm">{program?.name || "Unknown Program"}</p>
-                                      <span className="text-xs text-gray-500">• {enrolleeName}</span>
-                                    </div>
-                                    {isPack && totalCredits > 0 && (
-                                      <div className="flex items-center gap-2 mt-1">
-                                        <Progress value={(remainingCredits / totalCredits) * 100} className="w-24 h-2" />
-                                        <span className="text-xs text-gray-500">{remainingCredits}/{totalCredits} sessions</span>
+                              <div key={enrollment.id} className="border rounded-lg overflow-hidden">
+                                <div className="flex items-center justify-between py-3 px-4">
+                                  <div className="flex items-center gap-3">
+                                    {program?.imageUrl ? (
+                                      <img 
+                                        src={program.imageUrl} 
+                                        alt={program.name || "Program"} 
+                                        className="w-10 h-10 rounded-full object-cover"
+                                      />
+                                    ) : isPack ? (
+                                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                        <Target className="w-5 h-5 text-blue-600" />
+                                      </div>
+                                    ) : (
+                                      <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                                        <Crown className="w-5 h-5 text-amber-600" />
                                       </div>
                                     )}
-                                    {endDate && !isPack && (
-                                      <p className={`text-xs mt-1 ${isExpired ? 'text-red-600' : isExpiringSoon ? 'text-amber-600' : 'text-gray-500'}`}>
-                                        {isExpired 
-                                          ? `Expired ${endDate.toLocaleDateString()}` 
-                                          : `Expires ${endDate.toLocaleDateString()}`}
-                                      </p>
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <p className="font-medium text-sm">{program?.name || "Unknown Program"}</p>
+                                        <span className="text-xs text-gray-500">• {enrolleeName}</span>
+                                      </div>
+                                      {isPack && totalCredits > 0 && (
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <Progress value={(remainingCredits / totalCredits) * 100} className="w-24 h-2" />
+                                          <span className="text-xs text-gray-500">{remainingCredits}/{totalCredits} sessions</span>
+                                        </div>
+                                      )}
+                                      {endDate && !isPack && (
+                                        <p className={`text-xs mt-1 ${isExpired ? 'text-red-600' : isExpiringSoon ? 'text-amber-600' : 'text-gray-500'}`}>
+                                          {isExpired 
+                                            ? `Expired ${endDate.toLocaleDateString()}` 
+                                            : `Expires ${endDate.toLocaleDateString()}`}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {hasScheduling && (
+                                      <Button
+                                        size="sm"
+                                        variant={isSchedulingOpen ? "default" : "outline"}
+                                        className={isSchedulingOpen ? "bg-red-600 hover:bg-red-700" : "border-red-300 text-red-600 hover:bg-red-50"}
+                                        onClick={() => {
+                                          if (isSchedulingOpen) {
+                                            setSchedulingEnrollment(null);
+                                            setScheduleSelectedSlot(null);
+                                            setScheduleBooked(false);
+                                          } else {
+                                            setSchedulingEnrollment(enrollment.id);
+                                            setScheduleDate(new Date());
+                                            setScheduleSelectedSlot(null);
+                                            setScheduleBooked(false);
+                                          }
+                                        }}
+                                      >
+                                        <Calendar className="w-3.5 h-3.5 mr-1" />
+                                        {isSchedulingOpen ? "Close" : "Book Session"}
+                                      </Button>
+                                    )}
+                                    {isExpired ? (
+                                      <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                                        Expired
+                                      </Badge>
+                                    ) : isExpiringSoon ? (
+                                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                                        Expiring Soon
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                        Active
+                                      </Badge>
                                     )}
                                   </div>
                                 </div>
-                                {isExpired ? (
-                                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                                    Expired
-                                  </Badge>
-                                ) : isExpiringSoon ? (
-                                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                                    Expiring Soon
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                    Active
-                                  </Badge>
+                                
+                                {isSchedulingOpen && program && (
+                                  <InlineSchedulePanel
+                                    programId={program.id}
+                                    programName={program.name}
+                                    sessionLength={(program as any).sessionLengthMinutes}
+                                    playerId={enrollment.profileId}
+                                    selectedDate={scheduleDate}
+                                    onDateChange={(d) => { setScheduleDate(d); setScheduleSelectedSlot(null); }}
+                                    selectedSlot={scheduleSelectedSlot}
+                                    onSlotSelect={setScheduleSelectedSlot}
+                                    booked={scheduleBooked}
+                                    onBooked={() => setScheduleBooked(true)}
+                                    onBookAnother={() => { setScheduleBooked(false); setScheduleSelectedSlot(null); }}
+                                    onClose={() => { setSchedulingEnrollment(null); setScheduleSelectedSlot(null); setScheduleBooked(false); }}
+                                  />
                                 )}
                               </div>
                             );

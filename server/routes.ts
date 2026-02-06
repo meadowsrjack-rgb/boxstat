@@ -448,6 +448,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const logoPath = new URL('../attached_assets/light_1770352137773.png', import.meta.url).pathname;
     res.sendFile(logoPath);
   });
+
+  app.get('/assets/org-logo/uyp', (req, res) => {
+    const logoPath = new URL('../attached_assets/image_1770353179552.png', import.meta.url).pathname;
+    res.sendFile(logoPath);
+  });
   
   // =============================================
   // SEARCH ROUTES

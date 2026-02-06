@@ -464,8 +464,12 @@ function OrganizationSelectionStep({
             className="w-full p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-red-500/50 transition-all text-left flex items-center gap-4"
             data-testid={`org-select-${org.id}`}
           >
-            <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-red-500 font-bold text-lg">{org.name.charAt(0)}</span>
+            <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {org.logoUrl ? (
+                <img src={org.logoUrl} alt={org.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-red-500 font-bold text-lg">{org.name.charAt(0)}</span>
+              )}
             </div>
             <div>
               <h3 className="text-white font-semibold text-lg">{org.name}</h3>

@@ -16,10 +16,28 @@ export const requireAuth: RequestHandler = async (req: any, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
       
       if (decoded.userId && decoded.organizationId && decoded.role) {
+        let orgId = decoded.organizationId;
+        let role = decoded.role;
+
+        if (storageRef) {
+          try {
+            const dbUser = await storageRef.getUser(decoded.userId);
+            if (dbUser) {
+              if (dbUser.organizationId) {
+                orgId = dbUser.organizationId;
+              }
+              if (dbUser.role) {
+                role = dbUser.role;
+              }
+            }
+          } catch (e) {
+          }
+        }
+
         req.user = {
           id: decoded.userId,
-          organizationId: decoded.organizationId,
-          role: decoded.role,
+          organizationId: orgId,
+          role: role,
           claims: {
             sub: decoded.userId
           }

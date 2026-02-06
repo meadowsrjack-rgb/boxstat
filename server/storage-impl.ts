@@ -2900,7 +2900,7 @@ class DatabaseStorage implements IStorage {
 
   async getAllOrganizations(): Promise<Organization[]> {
     try {
-      const results = await db.select().from(schema.organizations);
+      const results = await db.select().from(schema.organizations).orderBy(schema.organizations.createdAt);
       return results.map(org => ({
         id: org.id,
         name: org.name,

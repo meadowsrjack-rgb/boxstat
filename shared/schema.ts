@@ -740,7 +740,7 @@ export const awardDefinitions = pgTable("award_definitions", {
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 }, (table) => [
-  unique("award_definitions_name_key").on(table.name),
+  unique("award_definitions_name_org_key").on(table.name, table.organizationId),
 ]);
 
 // User Awards table (awarded awards tracking)

@@ -1273,7 +1273,7 @@ class MemStorage implements IStorage {
   // Award Definition operations (new awards system)
   async getAwardDefinitions(organizationId: string): Promise<SelectAwardDefinition[]> {
     return Array.from(this.awardDefinitions.values())
-      .filter(def => !def.organizationId || def.organizationId === organizationId);
+      .filter(def => def.organizationId === organizationId);
   }
   
   async getAwardDefinition(id: number): Promise<SelectAwardDefinition | undefined> {
@@ -1324,7 +1324,7 @@ class MemStorage implements IStorage {
   
   async getActiveAwardDefinitions(organizationId: string): Promise<SelectAwardDefinition[]> {
     return Array.from(this.awardDefinitions.values())
-      .filter(def => def.active && (!def.organizationId || def.organizationId === organizationId));
+      .filter(def => def.active && def.organizationId === organizationId);
   }
   
   // User Award Record operations (new awards system)
@@ -3717,7 +3717,8 @@ class DatabaseStorage implements IStorage {
 
   // Award Definition operations (new awards system)
   async getAwardDefinitions(organizationId: string): Promise<SelectAwardDefinition[]> {
-    const results = await db.select().from(schema.awardDefinitions);
+    const results = await db.select().from(schema.awardDefinitions)
+      .where(eq(schema.awardDefinitions.organizationId, organizationId));
     return results;
   }
   
@@ -3812,8 +3813,11 @@ class DatabaseStorage implements IStorage {
   
   async getActiveAwardDefinitions(organizationId: string): Promise<SelectAwardDefinition[]> {
     const results = await db.select().from(schema.awardDefinitions)
-      .where(eq(schema.awardDefinitions.active, true));
-    return results.filter(def => !def.organizationId || def.organizationId === organizationId);
+      .where(and(
+        eq(schema.awardDefinitions.active, true),
+        eq(schema.awardDefinitions.organizationId, organizationId)
+      ));
+    return results;
   }
   
   // User Award Record operations (new awards system)
@@ -3824,11 +3828,15 @@ class DatabaseStorage implements IStorage {
   }
   
   async getUserAwardsByOrganization(organizationId: string): Promise<SelectUserAwardRecord[]> {
-    const orgUsers = await db.select().from(schema.users);
+    const orgUsers = await db.select({ id: schema.users.id }).from(schema.users)
+      .where(eq(schema.users.organizationId, organizationId));
     const userIds = orgUsers.map(u => u.id);
     
-    const results = await db.select().from(schema.userAwards);
-    return results.filter(record => userIds.includes(record.userId));
+    if (userIds.length === 0) return [];
+    
+    const results = await db.select().from(schema.userAwards)
+      .where(inArray(schema.userAwards.userId, userIds));
+    return results;
   }
   
   async createUserAward(data: InsertUserAwardRecord): Promise<SelectUserAwardRecord> {

@@ -3305,7 +3305,8 @@ class DatabaseStorage implements IStorage {
   }
 
   async getTeamsByOrganization(organizationId: string): Promise<Team[]> {
-    const results = await db.select().from(schema.teams);
+    const results = await db.select().from(schema.teams)
+      .where(eq(schema.teams.organizationId, organizationId));
     return results.map(team => this.mapDbTeamToTeam(team));
   }
 
@@ -3488,7 +3489,8 @@ class DatabaseStorage implements IStorage {
   }
 
   async getEventsByOrganization(organizationId: string): Promise<Event[]> {
-    const results = await db.select().from(schema.events);
+    const results = await db.select().from(schema.events)
+      .where(eq(schema.events.organizationId, organizationId));
     return results.map(event => this.mapDbEventToEvent(event));
   }
 
@@ -3706,8 +3708,9 @@ class DatabaseStorage implements IStorage {
 
   // Award Definition operations (new awards system)
   async getAwardDefinitions(organizationId: string): Promise<SelectAwardDefinition[]> {
-    const results = await db.select().from(schema.awardDefinitions);
-    return results.filter(def => !def.organizationId || def.organizationId === organizationId);
+    const results = await db.select().from(schema.awardDefinitions)
+      .where(eq(schema.awardDefinitions.organizationId, organizationId));
+    return results;
   }
   
   async getAwardDefinition(id: number): Promise<SelectAwardDefinition | undefined> {
@@ -5413,7 +5416,7 @@ class DatabaseStorage implements IStorage {
   private mapDbEventToEvent(dbEvent: any): Event {
     return {
       id: dbEvent.id.toString(),
-      organizationId: this.defaultOrgId,
+      organizationId: dbEvent.organizationId || this.defaultOrgId,
       title: dbEvent.title,
       description: dbEvent.description,
       eventType: dbEvent.eventType,
@@ -5452,7 +5455,7 @@ class DatabaseStorage implements IStorage {
   private mapDbBadgeToAward(dbBadge: any): Award {
     return {
       id: dbBadge.id.toString(),
-      organizationId: this.defaultOrgId,
+      organizationId: dbBadge.organizationId || this.defaultOrgId,
       name: dbBadge.name,
       description: dbBadge.description,
       icon: dbBadge.icon,
@@ -5476,7 +5479,7 @@ class DatabaseStorage implements IStorage {
   private mapDbAnnouncementToAnnouncement(dbAnnouncement: any): Announcement {
     return {
       id: dbAnnouncement.id.toString(),
-      organizationId: this.defaultOrgId,
+      organizationId: dbAnnouncement.organizationId || this.defaultOrgId,
       title: dbAnnouncement.title,
       content: dbAnnouncement.content,
       authorId: dbAnnouncement.authorId,
@@ -5527,7 +5530,7 @@ class DatabaseStorage implements IStorage {
   private mapDbPaymentToPayment(dbPayment: any): Payment {
     return {
       id: dbPayment.id.toString(),
-      organizationId: this.defaultOrgId,
+      organizationId: dbPayment.organizationId || this.defaultOrgId,
       userId: dbPayment.userId,
       playerId: dbPayment.playerId, // For per-player billing: which specific player this payment covers
       amount: dbPayment.amount,

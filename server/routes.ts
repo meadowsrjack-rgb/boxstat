@@ -445,7 +445,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Serve BoxStat logo for emails
   app.get('/assets/logo', (req, res) => {
-    const logoPath = new URL('../attached_assets/logo2_1768865601299.png', import.meta.url).pathname;
+    const logoPath = new URL('../attached_assets/light_1770352137773.png', import.meta.url).pathname;
     res.sendFile(logoPath);
   });
   

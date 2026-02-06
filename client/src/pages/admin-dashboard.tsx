@@ -68,6 +68,9 @@ import {
   Search,
   Flag,
   Check,
+  CreditCard,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -10983,6 +10986,287 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
   );
 }
 
+function StripeSettingsSection() {
+  const { toast } = useToast();
+  const [showSecret, setShowSecret] = useState(false);
+  const [showWebhook, setShowWebhook] = useState(false);
+  const [stripeSecretKey, setStripeSecretKey] = useState("");
+  const [stripePublishableKey, setStripePublishableKey] = useState("");
+  const [stripeWebhookSecret, setStripeWebhookSecret] = useState("");
+  const [loaded, setLoaded] = useState(false);
+
+  const { data: settings, isLoading } = useQuery<any>({
+    queryKey: ["/api/organization/stripe-settings"],
+  });
+
+  useEffect(() => {
+    if (settings && !loaded) {
+      setStripePublishableKey(settings.stripePublishableKey || "");
+      setLoaded(true);
+    }
+  }, [settings, loaded]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("PATCH", "/api/organization/stripe-settings", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/organization/stripe-settings"] });
+      toast({ title: "Stripe settings saved" });
+      setStripeSecretKey("");
+      setStripeWebhookSecret("");
+    },
+    onError: () => {
+      toast({ title: "Failed to save Stripe settings", variant: "destructive" });
+    },
+  });
+
+  const handleSave = () => {
+    const data: any = {};
+    if (stripePublishableKey) data.stripePublishableKey = stripePublishableKey;
+    if (stripeSecretKey) data.stripeSecretKey = stripeSecretKey;
+    if (stripeWebhookSecret) data.stripeWebhookSecret = stripeWebhookSecret;
+    saveMutation.mutate(data);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <CreditCard className="w-5 h-5" />
+          Stripe Integration
+        </CardTitle>
+        <CardDescription>Connect your Stripe account to receive payments from your organization</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {settings?.hasStripeKeys && (
+          <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-3 rounded-lg">
+            <Check className="w-4 h-4" />
+            Stripe is connected
+          </div>
+        )}
+
+        <div>
+          <Label htmlFor="stripe-pk">Publishable Key</Label>
+          <Input
+            id="stripe-pk"
+            value={stripePublishableKey}
+            onChange={(e) => setStripePublishableKey(e.target.value)}
+            placeholder="pk_live_..."
+            className="font-mono text-sm"
+          />
+          {settings?.stripePublishableKey && !stripePublishableKey && (
+            <p className="text-xs text-gray-500 mt-1">Current: {settings.stripePublishableKey}</p>
+          )}
+        </div>
+
+        <div>
+          <Label htmlFor="stripe-sk">Secret Key</Label>
+          <div className="relative">
+            <Input
+              id="stripe-sk"
+              type={showSecret ? "text" : "password"}
+              value={stripeSecretKey}
+              onChange={(e) => setStripeSecretKey(e.target.value)}
+              placeholder="sk_live_..."
+              className="font-mono text-sm pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowSecret(!showSecret)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          {settings?.stripeSecretKey && (
+            <p className="text-xs text-gray-500 mt-1">Current: {settings.stripeSecretKey}</p>
+          )}
+        </div>
+
+        <div>
+          <Label htmlFor="stripe-wh">Webhook Secret (optional)</Label>
+          <div className="relative">
+            <Input
+              id="stripe-wh"
+              type={showWebhook ? "text" : "password"}
+              value={stripeWebhookSecret}
+              onChange={(e) => setStripeWebhookSecret(e.target.value)}
+              placeholder="whsec_..."
+              className="font-mono text-sm pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowWebhook(!showWebhook)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              {showWebhook ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          {settings?.stripeWebhookSecret && (
+            <p className="text-xs text-gray-500 mt-1">Current: {settings.stripeWebhookSecret}</p>
+          )}
+        </div>
+
+        <Button onClick={handleSave} disabled={saveMutation.isPending}>
+          {saveMutation.isPending ? "Saving..." : "Save Stripe Settings"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function BoxStatPlatformStripeSection() {
+  const { toast } = useToast();
+  const [showSecret, setShowSecret] = useState(false);
+  const [showWebhook, setShowWebhook] = useState(false);
+  const [stripeSecretKey, setStripeSecretKey] = useState("");
+  const [stripePublishableKey, setStripePublishableKey] = useState("");
+  const [stripeWebhookSecret, setStripeWebhookSecret] = useState("");
+  const [technologyFeePercent, setTechnologyFeePercent] = useState("");
+  const [loaded, setLoaded] = useState(false);
+
+  const { data: settings, isLoading } = useQuery<any>({
+    queryKey: ["/api/platform-settings/stripe"],
+  });
+
+  useEffect(() => {
+    if (settings && !loaded) {
+      setStripePublishableKey(settings.stripePublishableKey || "");
+      if (settings.technologyFeePercent !== null && settings.technologyFeePercent !== undefined) {
+        setTechnologyFeePercent(settings.technologyFeePercent.toString());
+      }
+      setLoaded(true);
+    }
+  }, [settings, loaded]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("PATCH", "/api/platform-settings/stripe", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/platform-settings/stripe"] });
+      toast({ title: "BoxStat platform Stripe settings saved" });
+      setStripeSecretKey("");
+      setStripeWebhookSecret("");
+    },
+    onError: () => {
+      toast({ title: "Failed to save platform settings", variant: "destructive" });
+    },
+  });
+
+  const handleSave = () => {
+    const data: any = {};
+    if (stripePublishableKey) data.stripePublishableKey = stripePublishableKey;
+    if (stripeSecretKey) data.stripeSecretKey = stripeSecretKey;
+    if (stripeWebhookSecret) data.stripeWebhookSecret = stripeWebhookSecret;
+    if (technologyFeePercent !== "") data.technologyFeePercent = parseFloat(technologyFeePercent);
+    saveMutation.mutate(data);
+  };
+
+  return (
+    <Card className="border-blue-200">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-blue-700">
+          <CreditCard className="w-5 h-5" />
+          BoxStat Technology Fee
+        </CardTitle>
+        <CardDescription>Configure the BoxStat technology fee charged across all organizations and purchases</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {settings?.hasStripeKeys && (
+          <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-3 rounded-lg">
+            <Check className="w-4 h-4" />
+            Platform Stripe is connected
+          </div>
+        )}
+
+        <div>
+          <Label htmlFor="platform-pk">Publishable Key</Label>
+          <Input
+            id="platform-pk"
+            value={stripePublishableKey}
+            onChange={(e) => setStripePublishableKey(e.target.value)}
+            placeholder="pk_live_..."
+            className="font-mono text-sm"
+          />
+          {settings?.stripePublishableKey && !stripePublishableKey && (
+            <p className="text-xs text-gray-500 mt-1">Current: {settings.stripePublishableKey}</p>
+          )}
+        </div>
+
+        <div>
+          <Label htmlFor="platform-sk">Secret Key</Label>
+          <div className="relative">
+            <Input
+              id="platform-sk"
+              type={showSecret ? "text" : "password"}
+              value={stripeSecretKey}
+              onChange={(e) => setStripeSecretKey(e.target.value)}
+              placeholder="sk_live_..."
+              className="font-mono text-sm pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowSecret(!showSecret)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          {settings?.stripeSecretKey && (
+            <p className="text-xs text-gray-500 mt-1">Current: {settings.stripeSecretKey}</p>
+          )}
+        </div>
+
+        <div>
+          <Label htmlFor="platform-wh">Webhook Secret (optional)</Label>
+          <div className="relative">
+            <Input
+              id="platform-wh"
+              type={showWebhook ? "text" : "password"}
+              value={stripeWebhookSecret}
+              onChange={(e) => setStripeWebhookSecret(e.target.value)}
+              placeholder="whsec_..."
+              className="font-mono text-sm pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowWebhook(!showWebhook)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              {showWebhook ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          {settings?.stripeWebhookSecret && (
+            <p className="text-xs text-gray-500 mt-1">Current: {settings.stripeWebhookSecret}</p>
+          )}
+        </div>
+
+        <div>
+          <Label htmlFor="tech-fee">Technology Fee (%)</Label>
+          <Input
+            id="tech-fee"
+            type="number"
+            step="0.1"
+            min="0"
+            max="100"
+            value={technologyFeePercent}
+            onChange={(e) => setTechnologyFeePercent(e.target.value)}
+            placeholder="e.g. 2.5"
+            className="w-32"
+          />
+          <p className="text-xs text-gray-500 mt-1">Percentage applied to all purchases across all organizations</p>
+        </div>
+
+        <Button onClick={handleSave} disabled={saveMutation.isPending} className="bg-blue-600 hover:bg-blue-700">
+          {saveMutation.isPending ? "Saving..." : "Save Platform Settings"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 // Settings Tab Component
 function SettingsTab({ organization }: any) {
   const { toast } = useToast();
@@ -11166,6 +11450,12 @@ function SettingsTab({ organization }: any) {
         </CardContent>
       </Card>
       
+      <StripeSettingsSection />
+
+      {userEmail === "jack@upyourperformance.org" && (
+        <BoxStatPlatformStripeSection />
+      )}
+
       {/* Account Actions */}
       <Card>
         <CardHeader>

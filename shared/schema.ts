@@ -34,6 +34,10 @@ export interface Organization {
     events: boolean;
     training: boolean;
   };
+
+  stripeSecretKey?: string | null;
+  stripePublishableKey?: string | null;
+  stripeWebhookSecret?: string | null;
   
   createdAt: Date;
   updatedAt: Date;
@@ -63,7 +67,17 @@ export const organizations = pgTable("organizations", {
     events: true,
     training: true,
   }),
+  stripeSecretKey: text("stripe_secret_key"),
+  stripePublishableKey: text("stripe_publishable_key"),
+  stripeWebhookSecret: text("stripe_webhook_secret"),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+});
+
+export const platformSettings = pgTable("platform_settings", {
+  id: serial().primaryKey().notNull(),
+  key: varchar().notNull().unique(),
+  value: text(),
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 });
 

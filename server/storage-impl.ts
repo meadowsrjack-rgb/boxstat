@@ -2889,6 +2889,9 @@ class DatabaseStorage implements IStorage {
         logoUrl: org.logoUrl || undefined,
         terminology: org.terminology as Organization['terminology'],
         features: org.features as Organization['features'],
+        stripeSecretKey: org.stripeSecretKey,
+        stripePublishableKey: org.stripePublishableKey,
+        stripeWebhookSecret: org.stripeWebhookSecret,
         createdAt: org.createdAt ? new Date(org.createdAt) : new Date(),
         updatedAt: org.updatedAt ? new Date(org.updatedAt) : new Date(),
       };
@@ -2911,6 +2914,9 @@ class DatabaseStorage implements IStorage {
         logoUrl: org.logoUrl || undefined,
         terminology: org.terminology as Organization['terminology'],
         features: org.features as Organization['features'],
+        stripeSecretKey: org.stripeSecretKey,
+        stripePublishableKey: org.stripePublishableKey,
+        stripeWebhookSecret: org.stripeWebhookSecret,
         createdAt: org.createdAt ? new Date(org.createdAt) : new Date(),
         updatedAt: org.updatedAt ? new Date(org.updatedAt) : new Date(),
       }));
@@ -2966,6 +2972,9 @@ class DatabaseStorage implements IStorage {
       if (updates.logoUrl !== undefined) updateData.logoUrl = updates.logoUrl;
       if (updates.terminology !== undefined) updateData.terminology = updates.terminology;
       if (updates.features !== undefined) updateData.features = updates.features;
+      if (updates.stripeSecretKey !== undefined) updateData.stripeSecretKey = updates.stripeSecretKey;
+      if (updates.stripePublishableKey !== undefined) updateData.stripePublishableKey = updates.stripePublishableKey;
+      if (updates.stripeWebhookSecret !== undefined) updateData.stripeWebhookSecret = updates.stripeWebhookSecret;
       
       await db.update(schema.organizations)
         .set(updateData)

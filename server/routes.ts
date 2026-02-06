@@ -44,7 +44,7 @@ import { notificationScheduler } from "./services/notificationScheduler";
 import { notificationService } from "./services/notificationService";
 import { db } from "./db";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
-import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards } from "@shared/schema";
+import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards, platformSettings } from "@shared/schema";
 import { eq, and, or, sql, desc, inArray } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;
@@ -163,10 +163,40 @@ async function clearLegacySubscriptionNotification(userId: string): Promise<void
   }
 }
 
-// Initialize Stripe
+// Initialize Stripe (global fallback)
 const stripe = process.env.STRIPE_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-06-30.basil" })
   : null;
+
+const stripeOrgCache = new Map<string, { instance: Stripe; key: string; createdAt: number }>();
+const STRIPE_CACHE_TTL = 5 * 60 * 1000;
+
+async function getStripeForOrg(organizationId: string): Promise<Stripe | null> {
+  try {
+    const cached = stripeOrgCache.get(organizationId);
+    if (cached && Date.now() - cached.createdAt < STRIPE_CACHE_TTL) {
+      return cached.instance;
+    }
+    const org = await storage.getOrganization(organizationId);
+    if (org?.stripeSecretKey) {
+      const instance = new Stripe(org.stripeSecretKey, { apiVersion: "2025-06-30.basil" });
+      stripeOrgCache.set(organizationId, { instance, key: org.stripeSecretKey, createdAt: Date.now() });
+      return instance;
+    }
+  } catch (e) {}
+  return stripe;
+}
+
+async function getPlatformFeePercent(): Promise<number> {
+  try {
+    const results = await db.select().from(platformSettings)
+      .where(eq(platformSettings.key, 'boxstat_technology_fee_percent'));
+    if (results.length > 0 && results[0].value) {
+      return parseFloat(results[0].value);
+    }
+  } catch (e) {}
+  return 0;
+}
 
 // Helper function to generate stable UUID for pricing options
 function generateStablePricingOptionId(): string {
@@ -1249,8 +1279,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.post("/api/payments/checkout-session", requireAuth, async (req: any, res) => {
-    if (!stripe) {
-      return res.status(500).json({ error: "Stripe is not configured" });
+    const orgStripe = await getStripeForOrg(req.user.organizationId);
+    if (!orgStripe) {
+      return res.status(500).json({ error: "Stripe is not configured for this organization" });
     }
     
     try {
@@ -1346,7 +1377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create or retrieve Stripe customer
       let stripeCustomerId = user.stripeCustomerId;
       if (!stripeCustomerId) {
-        const customer = await stripe.customers.create({
+        const customer = await orgStripe.customers.create({
           email: user.email,
           metadata: {
             userId: user.id,
@@ -1362,7 +1393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const origin = `${req.protocol}://${req.get('host')}`;
       
       // Create Stripe Checkout Session
-      const session = await stripe.checkout.sessions.create({
+      const session = await orgStripe.checkout.sessions.create({
         customer: stripeCustomerId,
         line_items: lineItems,
         mode,
@@ -1386,8 +1417,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Create checkout session for a specific package and player
   app.post("/api/payments/create-checkout", requireAuth, async (req: any, res) => {
-    if (!stripe) {
-      return res.status(500).json({ error: "Stripe is not configured" });
+    const orgStripe2 = await getStripeForOrg(req.user.organizationId);
+    if (!orgStripe2) {
+      return res.status(500).json({ error: "Stripe is not configured for this organization" });
     }
     
     try {
@@ -1530,7 +1562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create or retrieve Stripe customer
       let stripeCustomerId = user.stripeCustomerId;
       if (!stripeCustomerId) {
-        const customer = await stripe.customers.create({
+        const customer = await orgStripe2.customers.create({
           email: user.email,
           metadata: {
             userId: user.id,
@@ -1635,15 +1667,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Add 1% BoxStat platform fee as a separate line item
-      const platformFee = Math.round(subtotal * 0.01); // 1% of subtotal
+      // Add BoxStat platform technology fee as a separate line item
+      const feePercent = await getPlatformFeePercent();
+      const platformFee = feePercent > 0 ? Math.round(subtotal * (feePercent / 100)) : 0;
       if (platformFee > 0) {
         const platformFeeItem: any = {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: 'BoxStat Platform Fee',
-              description: '1% service fee',
+              name: 'BoxStat Technology Fee',
+              description: `${feePercent}% technology fee`,
             },
             unit_amount: platformFee,
           },
@@ -1694,7 +1727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? `boxstat://payment-canceled`
         : `${origin}/unified-account?payment=canceled`;
         
-      const session = await stripe.checkout.sessions.create({
+      const session = await orgStripe2.checkout.sessions.create({
         customer: stripeCustomerId,
         line_items: lineItems,
         mode: isSubscription ? 'subscription' : 'payment',
@@ -3217,17 +3250,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Create or retrieve Stripe customer
-      if (!stripe) {
+      // Create or retrieve Stripe customer using org-specific keys
+      const playerOrgStripe = await getStripeForOrg(req.user.organizationId);
+      if (!playerOrgStripe) {
         return res.status(500).json({ 
           success: false, 
-          message: "Payment processing is not configured" 
+          message: "Payment processing is not configured for this organization" 
         });
       }
       
       let stripeCustomerId = user.stripeCustomerId;
       if (!stripeCustomerId) {
-        const customer = await stripe.customers.create({
+        const customer = await playerOrgStripe.customers.create({
           email: user.email,
           metadata: {
             userId: user.id,
@@ -3346,17 +3380,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Add platform fee (1% of bundle + add-ons)
-        const platformFee = Math.round(bundleSubtotal * 0.01);
+        // Add BoxStat platform technology fee
+        const bundleFeePercent = await getPlatformFeePercent();
+        const platformFee = bundleFeePercent > 0 ? Math.round(bundleSubtotal * (bundleFeePercent / 100)) : 0;
         if (platformFee > 0) {
           addInvoiceItems.push({
             price_data: {
               currency: 'usd',
-              product_data: { name: 'BoxStat Platform Fee' },
+              product_data: { name: 'BoxStat Technology Fee' },
               unit_amount: platformFee,
             },
             quantity: 1,
-            description: 'BoxStat Platform Fee (1%)',
+            description: `BoxStat Technology Fee (${bundleFeePercent}%)`,
           });
         }
         
@@ -3376,7 +3411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               quantity: 1,
             }];
         
-        session = await stripe.checkout.sessions.create({
+        session = await playerOrgStripe.checkout.sessions.create({
           customer: stripeCustomerId,
           line_items: subscriptionLineItems,
           mode: 'subscription',
@@ -3452,15 +3487,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Add 1% BoxStat platform fee
-        const platformFee = Math.round(subtotal * 0.01);
+        // Add BoxStat platform technology fee
+        const addPlayerFeePercent = await getPlatformFeePercent();
+        const platformFee = addPlayerFeePercent > 0 ? Math.round(subtotal * (addPlayerFeePercent / 100)) : 0;
         if (platformFee > 0) {
           lineItems.push({
             price_data: {
               currency: 'usd',
               product_data: {
-                name: 'BoxStat Platform Fee',
-                description: '1% service fee',
+                name: 'BoxStat Technology Fee',
+                description: `${addPlayerFeePercent}% technology fee`,
               },
               unit_amount: platformFee,
             },
@@ -3468,7 +3504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        session = await stripe.checkout.sessions.create({
+        session = await playerOrgStripe.checkout.sessions.create({
           customer: stripeCustomerId,
           line_items: lineItems,
           mode: 'payment',
@@ -4011,7 +4047,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const updated = await storage.updateOrganization(organizationId, req.body);
     res.json(updated);
   });
-  
+
+  app.get('/api/organization/stripe-settings', requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(req.user.id, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ error: 'Only admins can view Stripe settings' });
+      }
+      
+      const org = await storage.getOrganization(organizationId);
+      if (!org) return res.status(404).json({ error: 'Organization not found' });
+      
+      res.json({
+        stripeSecretKey: org.stripeSecretKey ? '••••' + org.stripeSecretKey.slice(-4) : null,
+        stripePublishableKey: org.stripePublishableKey || null,
+        stripeWebhookSecret: org.stripeWebhookSecret ? '••••' + org.stripeWebhookSecret.slice(-4) : null,
+        hasStripeKeys: !!(org.stripeSecretKey && org.stripePublishableKey),
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: 'Failed to fetch Stripe settings' });
+    }
+  });
+
+  app.patch('/api/organization/stripe-settings', requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(req.user.id, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ error: 'Only admins can update Stripe settings' });
+      }
+
+      const { stripeSecretKey, stripePublishableKey, stripeWebhookSecret } = req.body;
+      
+      const updates: any = {};
+      if (stripeSecretKey !== undefined) updates.stripeSecretKey = stripeSecretKey || null;
+      if (stripePublishableKey !== undefined) updates.stripePublishableKey = stripePublishableKey || null;
+      if (stripeWebhookSecret !== undefined) updates.stripeWebhookSecret = stripeWebhookSecret || null;
+      
+      await storage.updateOrganization(organizationId, updates);
+      stripeOrgCache.delete(organizationId);
+      
+      res.json({ success: true, message: 'Stripe settings updated' });
+    } catch (error: any) {
+      res.status(500).json({ error: 'Failed to update Stripe settings' });
+    }
+  });
+
+  app.get('/api/platform-settings/stripe', requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (user?.email !== 'jack@upyourperformance.org') {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      
+      const results = await db.select().from(platformSettings);
+      const settings: any = {};
+      for (const row of results) {
+        if (row.key === 'boxstat_stripe_secret_key') {
+          settings.stripeSecretKey = row.value ? '••••' + row.value.slice(-4) : null;
+        } else if (row.key === 'boxstat_stripe_publishable_key') {
+          settings.stripePublishableKey = row.value || null;
+        } else if (row.key === 'boxstat_stripe_webhook_secret') {
+          settings.stripeWebhookSecret = row.value ? '••••' + row.value.slice(-4) : null;
+        } else if (row.key === 'boxstat_technology_fee_percent') {
+          settings.technologyFeePercent = row.value ? parseFloat(row.value) : null;
+        }
+      }
+      settings.hasStripeKeys = !!(settings.stripeSecretKey && settings.stripePublishableKey);
+      
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ error: 'Failed to fetch platform settings' });
+    }
+  });
+
+  app.patch('/api/platform-settings/stripe', requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (user?.email !== 'jack@upyourperformance.org') {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const { stripeSecretKey, stripePublishableKey, stripeWebhookSecret, technologyFeePercent } = req.body;
+      
+      const upsertSetting = async (key: string, value: string | null) => {
+        const existing = await db.select().from(platformSettings)
+          .where(eq(platformSettings.key, key));
+        if (existing.length > 0) {
+          await db.update(platformSettings)
+            .set({ value, updatedAt: new Date().toISOString() })
+            .where(eq(platformSettings.key, key));
+        } else {
+          await db.insert(platformSettings).values({
+            key,
+            value,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      };
+      
+      if (stripeSecretKey !== undefined) await upsertSetting('boxstat_stripe_secret_key', stripeSecretKey || null);
+      if (stripePublishableKey !== undefined) await upsertSetting('boxstat_stripe_publishable_key', stripePublishableKey || null);
+      if (stripeWebhookSecret !== undefined) await upsertSetting('boxstat_stripe_webhook_secret', stripeWebhookSecret || null);
+      if (technologyFeePercent !== undefined) await upsertSetting('boxstat_technology_fee_percent', technologyFeePercent?.toString() || null);
+      
+      res.json({ success: true, message: 'Platform Stripe settings updated' });
+    } catch (error: any) {
+      res.status(500).json({ error: 'Failed to update platform settings' });
+    }
+  });
+
   // =============================================
   // USER MANAGEMENT ROUTES (Admin only)
   // =============================================
@@ -10405,7 +10551,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     price: newPriceId,
                   }],
                   proration_behavior: 'none', // No immediate charge, applies at next billing
-                  application_fee_percent: 1, // 1% BoxStat service fee
+                  application_fee_percent: await getPlatformFeePercent() || undefined,
                   metadata: {
                     migrated: 'true',
                     migratedAt: new Date().toISOString(),
@@ -12178,7 +12324,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? `${baseUrl}/account?tab=payments&checkout=success`
           : `${baseUrl}/login?checkout=success`;
         
-        const session = await stripe.checkout.sessions.create({
+        const quoteOrgStripe = await getStripeForOrg(quote.organizationId);
+        if (!quoteOrgStripe) {
+          return res.status(500).json({ error: "Payment processing is not configured for this organization" });
+        }
+        const session = await quoteOrgStripe.checkout.sessions.create({
           payment_method_types: ['card'],
           line_items: lineItems,
           mode: 'payment',

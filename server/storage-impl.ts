@@ -5330,7 +5330,7 @@ class DatabaseStorage implements IStorage {
   private mapDbUserToUser(dbUser: any): User {
     return {
       id: dbUser.id,
-      organizationId: this.defaultOrgId,
+      organizationId: dbUser.organizationId || this.defaultOrgId,
       email: dbUser.email || '',
       role: (dbUser.role || 'parent') as any,
       firstName: dbUser.firstName || '',

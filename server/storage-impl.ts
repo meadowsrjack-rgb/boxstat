@@ -86,6 +86,7 @@ import {
 export interface IStorage {
   // Organization operations
   getOrganization(id: string): Promise<Organization | undefined>;
+  getAllOrganizations(): Promise<Organization[]>;
   getOrganizationBySubdomain(subdomain: string): Promise<Organization | undefined>;
   createOrganization(org: Omit<Organization, "id" | "createdAt" | "updatedAt">): Promise<Organization>;
   updateOrganization(id: string, updates: Partial<Organization>): Promise<Organization | undefined>;
@@ -408,15 +409,7 @@ class MemStorage implements IStorage {
   }
   
   constructor() {
-    // Create a default organization
-    const defaultOrg: Organization = {
-      id: "default-org",
-      name: "My Sports Organization",
-      subdomain: "default",
-      sportType: "basketball",
-      primaryColor: "#1E40AF",
-      secondaryColor: "#DC2626",
-      logoUrl: undefined,
+    const orgDefaults = {
       terminology: {
         athlete: "Player",
         coach: "Coach",
@@ -432,10 +425,35 @@ class MemStorage implements IStorage {
         events: true,
         training: true,
       },
+    };
+
+    const uypOrg: Organization = {
+      id: "default-org",
+      name: "UYP Basketball",
+      subdomain: "default",
+      sportType: "basketball",
+      primaryColor: "#1E40AF",
+      secondaryColor: "#DC2626",
+      logoUrl: undefined,
+      ...orgDefaults,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    this.organizations.set(defaultOrg.id, defaultOrg);
+    this.organizations.set(uypOrg.id, uypOrg);
+
+    const flowstateOrg: Organization = {
+      id: "flowstate-org",
+      name: "Flowstate Performance",
+      subdomain: "flowstate",
+      sportType: "basketball",
+      primaryColor: "#1E40AF",
+      secondaryColor: "#DC2626",
+      logoUrl: undefined,
+      ...orgDefaults,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.organizations.set(flowstateOrg.id, flowstateOrg);
     
     // Create a default admin user
     const adminUser: User = {
@@ -887,6 +905,10 @@ class MemStorage implements IStorage {
   // Organization operations
   async getOrganization(id: string): Promise<Organization | undefined> {
     return this.organizations.get(id);
+  }
+
+  async getAllOrganizations(): Promise<Organization[]> {
+    return Array.from(this.organizations.values());
   }
   
   async getOrganizationBySubdomain(subdomain: string): Promise<Organization | undefined> {
@@ -2800,6 +2822,39 @@ class DatabaseStorage implements IStorage {
     }
   }
 
+  async initializeOrganizations(): Promise<void> {
+    const orgs = [
+      { id: 'default-org', name: 'UYP Basketball', subdomain: 'default', sportType: 'basketball' },
+      { id: 'flowstate-org', name: 'Flowstate Performance', subdomain: 'flowstate', sportType: 'basketball' },
+    ];
+    for (const org of orgs) {
+      const existing = await this.getOrganization(org.id);
+      if (!existing) {
+        try {
+          const now = new Date().toISOString();
+          await db.insert(schema.organizations).values({
+            id: org.id,
+            name: org.name,
+            subdomain: org.subdomain,
+            sportType: org.sportType,
+            primaryColor: '#1E40AF',
+            secondaryColor: '#DC2626',
+            terminology: { athlete: "Player", coach: "Coach", parent: "Parent", team: "Team", practice: "Practice", game: "Game" },
+            features: { payments: true, awards: true, messaging: true, events: true, training: true },
+          });
+          console.log(`✅ Created organization: ${org.name}`);
+        } catch (error: any) {
+          if (error?.code !== '23505') {
+            console.error(`Error creating organization ${org.name}:`, error);
+          }
+        }
+      } else if (existing.name !== org.name) {
+        await this.updateOrganization(org.id, { name: org.name });
+        console.log(`✅ Updated organization name: ${org.name}`);
+      }
+    }
+  }
+
   // Organization operations
   async getOrganization(id: string): Promise<Organization | undefined> {
     try {
@@ -2823,6 +2878,28 @@ class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error fetching organization:', error);
       return undefined;
+    }
+  }
+
+  async getAllOrganizations(): Promise<Organization[]> {
+    try {
+      const results = await db.select().from(schema.organizations);
+      return results.map(org => ({
+        id: org.id,
+        name: org.name,
+        subdomain: org.subdomain,
+        sportType: org.sportType,
+        primaryColor: org.primaryColor,
+        secondaryColor: org.secondaryColor,
+        logoUrl: org.logoUrl || undefined,
+        terminology: org.terminology as Organization['terminology'],
+        features: org.features as Organization['features'],
+        createdAt: org.createdAt ? new Date(org.createdAt) : new Date(),
+        updatedAt: org.updatedAt ? new Date(org.updatedAt) : new Date(),
+      }));
+    } catch (error) {
+      console.error('Error fetching organizations:', error);
+      return [];
     }
   }
 

@@ -175,7 +175,7 @@ app.use((req, res, next) => {
     console.log('✅ Sports Management Platform ready!');
     console.log('📝 Database storage initialized');
     console.log('👤 Default admin user: admin@example.com');
-    console.log('🏢 Default organization: My Sports Organization');
+    console.log('🏢 Organizations: UYP Basketball, Flowstate Performance');
     console.log('\n🧪 Test Account Credentials:');
     console.log('   Email: test@example.com');
     console.log('   Password: test123');

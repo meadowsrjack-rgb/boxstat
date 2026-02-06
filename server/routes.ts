@@ -401,14 +401,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerObjectStorageRoutes(app);
   const objectStorageService = new ObjectStorageService();
   
+  // Initialize organizations (always, not just dev)
+  await (storage as any).initializeOrganizations?.();
+
   // Initialize test users and facilities in development
   if (process.env.NODE_ENV === 'development') {
-    // Type assertion to access the method
     await (storage as any).initializeTestUsers?.();
     await (storage as any).initializeFacilities?.();
-    
-    // Award population disabled - awards are now managed manually through admin panel
-    // await populateAwards(storage, "default-org");
   }
   
   // =============================================
@@ -539,6 +538,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.get('/api/organizations/public', async (req: any, res) => {
+    try {
+      const orgs = await storage.getAllOrganizations();
+      res.json(orgs.map(org => ({
+        id: org.id,
+        name: org.name,
+        subdomain: org.subdomain,
+        sportType: org.sportType,
+        logoUrl: org.logoUrl,
+        primaryColor: org.primaryColor,
+        secondaryColor: org.secondaryColor,
+      })));
+    } catch (error: any) {
+      console.error('Error fetching organizations:', error);
+      res.status(500).json({ error: 'Failed to fetch organizations' });
+    }
+  });
+
   app.post('/api/auth/login', async (req: any, res) => {
     try {
       const { email, password } = req.body;
@@ -550,8 +567,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Find user by email
-      const user = await storage.getUserByEmail(email, "default-org");
+      const { organizationId } = req.body;
+      if (!organizationId) {
+        return res.status(400).json({ success: false, message: "Organization selection is required" });
+      }
+      const user = await storage.getUserByEmail(email, organizationId);
       
       if (!user) {
         return res.status(401).json({ 
@@ -711,7 +731,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: "Verification token is required" });
       }
       
-      const organizationId = "default-org";
+      const organizationId = (req.query.organizationId as string) || "default-org";
       const allUsers = await storage.getUsersByOrganization(organizationId);
       
       // First check if there's already a verified user with this token (shouldn't happen but safe check)
@@ -821,7 +841,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ success: false, message: "Email is required" });
         }
         
-        const organizationId = "default-org";
+        const organizationId = req.body.organizationId || "default-org";
         
         // Check for pending registration first (new flow)
         const pendingReg = await storage.getPendingRegistration(email, organizationId);
@@ -880,11 +900,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: "Email is required" });
       }
       
-      // Find user by email
-      const user = await storage.getUserByEmail(email, "default-org");
+      const user = await storage.getUserByEmail(email, req.body.organizationId || "default-org");
       
       if (!user) {
-        // Don't reveal if user exists or not for security
         return res.json({ success: true, message: "If an account exists with that email, a magic link has been sent." });
       }
       
@@ -940,8 +958,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: "Magic link token is required" });
       }
       
-      // Find user by magic link token
-      const allUsers = await storage.getUsersByOrganization("default-org");
+      const allUsers = await storage.getUsersByOrganization((req.query.organizationId as string) || "default-org");
       const user = allUsers.find(u => u.magicLinkToken === token && u.isActive !== false);
       
       if (!user) {
@@ -1073,7 +1090,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: "Email is required" });
       }
       
-      const user = await storage.getUserByEmail(email, "default-org");
+      const user = await storage.getUserByEmail(email, req.body.organizationId || "default-org");
       
       if (!user) {
         console.log(`[Password Reset] No user found for email: ${email}`);
@@ -1127,7 +1144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: "Password must be at least 8 characters long" });
       }
       
-      const allUsers = await storage.getUsersByOrganization("default-org");
+      const allUsers = await storage.getUsersByOrganization(req.body.organizationId || req.query.organizationId || "default-org");
       const user = allUsers.find(u => u.passwordResetToken === token && u.isActive !== false);
       
       if (!user) {
@@ -1161,7 +1178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: "Token is required" });
       }
       
-      const allUsers = await storage.getUsersByOrganization("default-org");
+      const allUsers = await storage.getUsersByOrganization(req.body.organizationId || (req.query.organizationId as string) || "default-org");
       const user = allUsers.find(u => u.passwordResetToken === token && u.isActive !== false);
       
       if (!user) {
@@ -1877,7 +1894,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (session.amount_total && userId) {
             try {
               await storage.createPayment({
-                organizationId: "default-org",
+                organizationId: session.metadata?.organizationId || "default-org",
                 userId: userId,
                 playerId: playerId || undefined,
                 amount: session.amount_total,
@@ -1924,7 +1941,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (session.amount_total) {
             try {
               await storage.createPayment({
-                organizationId: "default-org",
+                organizationId: session.metadata?.organizationId || "default-org",
                 userId: userId,
                 playerId: playerId || undefined,
                 amount: session.amount_total, // Store in cents (Stripe convention)
@@ -1961,7 +1978,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 
                 if (!hasEnrollment && program) {
                   await storage.createEnrollment({
-                    organizationId: "default-org",
+                    organizationId: session.metadata?.organizationId || "default-org",
                     accountHolderId: userId,
                     profileId: playerId,
                     programId: packageId,
@@ -2064,7 +2081,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (session.amount_total) {
           try {
             await storage.createPayment({
-              organizationId: "default-org",
+              organizationId: session.metadata?.organizationId || "default-org",
               userId,
               amount: session.amount_total,
               currency: 'usd',
@@ -2208,7 +2225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!alreadyProcessed && session.amount_total) {
           const program = await storage.getProgram(packageId);
           const payment = await storage.createPayment({
-            organizationId: "default-org",
+            organizationId: session.metadata?.organizationId || "default-org",
             userId: userId,
             playerId: playerId || undefined,
             amount: session.amount_total,
@@ -2234,7 +2251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const now = new Date().toISOString();
               
               const enrollment = await storage.createEnrollment({
-                organizationId: "default-org",
+                organizationId: session.metadata?.organizationId || "default-org",
                 programId: packageId,
                 accountHolderId: userId,
                 profileId: enrollmentProfileId,
@@ -2307,7 +2324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Create one consolidated payment record (matching webhook logic)
           if (session.amount_total) {
             await storage.createPayment({
-              organizationId: "default-org",
+              organizationId: session.metadata?.organizationId || "default-org",
               userId,
               amount: session.amount_total,
               currency: 'usd',
@@ -2473,7 +2490,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         playersCount: players?.length,
       });
       
-      const organizationId = "default-org";
+      const organizationId = req.body.organizationId || req.user?.organizationId || "default-org";
       
       // Helper function to sanitize date strings (convert empty strings to null)
       const sanitizeDate = (date: any) => {

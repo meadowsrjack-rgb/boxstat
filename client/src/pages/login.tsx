@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogIn, ChevronLeft, Mail } from "lucide-react";
+import { LogIn, ChevronLeft, Mail, ChevronRight } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { Separator } from "@/components/ui/separator";
 import { authPersistence } from "@/services/authPersistence";
@@ -12,12 +13,17 @@ import { authPersistence } from "@/services/authPersistence";
 export default function LoginPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [magicLinkEmail, setMagicLinkEmail] = useState("");
   const [isSendingMagicLink, setIsSendingMagicLink] = useState(false);
   const [showMagicLink, setShowMagicLink] = useState(false);
+
+  const { data: organizations = [] } = useQuery<Array<{ id: string; name: string; logoUrl?: string; sportType: string }>>({
+    queryKey: ['/api/organizations/public'],
+  });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +37,7 @@ export default function LoginPage() {
       const response = await apiRequest("POST", "/api/auth/login", {
         email,
         password,
+        organizationId: selectedOrgId,
       });
 
       if (response.success) {
@@ -117,6 +124,7 @@ export default function LoginPage() {
     try {
       const response = await apiRequest("POST", "/api/auth/request-magic-link", {
         email: magicLinkEmail,
+        organizationId: selectedOrgId,
       });
 
       if (response.success) {
@@ -170,13 +178,62 @@ export default function LoginPage() {
         }}
       >
         <div className="w-full max-w-sm mx-auto space-y-8">
-          {/* Header */}
+          {!selectedOrgId ? (
+            <>
+              <div className="space-y-3">
+                <h1 className="text-4xl font-bold text-white tracking-tight">
+                  Welcome Back
+                </h1>
+                <p className="text-gray-400 text-lg">
+                  Select your organization to continue
+                </p>
+              </div>
+              <div className="space-y-3">
+                {organizations.map((org) => (
+                  <button
+                    key={org.id}
+                    onClick={() => setSelectedOrgId(org.id)}
+                    className="w-full p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-red-500/50 transition-all text-left flex items-center gap-4"
+                    data-testid={`org-select-${org.id}`}
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-red-500 font-bold text-lg">{org.name.charAt(0)}</span>
+                    </div>
+                    <div>
+                      <h3 className="text-white font-semibold text-lg">{org.name}</h3>
+                      <p className="text-gray-400 text-sm capitalize">{org.sportType}</p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-500 ml-auto" />
+                  </button>
+                ))}
+              </div>
+              <p className="text-center text-gray-400">
+                Don't have an account?{" "}
+                <Button
+                  variant="link"
+                  className="p-0 h-auto text-red-500 hover:text-red-400"
+                  onClick={() => setLocation("/register")}
+                  data-testid="link-register-org"
+                >
+                  Register here
+                </Button>
+              </p>
+            </>
+          ) : (
+          <>
           <div className="space-y-3">
+            <button
+              onClick={() => setSelectedOrgId(null)}
+              className="text-sm text-gray-400 hover:text-white flex items-center gap-1 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Change organization
+            </button>
             <h1 className="text-4xl font-bold text-white tracking-tight">
               Welcome Back
             </h1>
             <p className="text-gray-400 text-lg">
-              Login to access your account
+              Login to {organizations.find(o => o.id === selectedOrgId)?.name}
             </p>
           </div>
 
@@ -319,6 +376,8 @@ export default function LoginPage() {
               </button>
             </div>
           </div>
+          </>
+          )}
         </div>
       </div>
       </div>

@@ -66,17 +66,21 @@ interface Player extends PlayerInfo {
 export default function RegistrationFlow() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  const { data: organizations = [] } = useQuery<Array<{ id: string; name: string; logoUrl?: string; sportType: string; primaryColor: string; secondaryColor: string }>>({
+    queryKey: ['/api/organizations/public'],
+  });
   
-  // Check if user is coming back from email verification
   const urlParams = new URLSearchParams(window.location.search);
   const verifiedEmail = urlParams.get('email');
   const isVerified = urlParams.get('verified') === 'true';
   
-  const [currentStep, setCurrentStep] = useState(verifiedEmail && isVerified ? 2 : 1);
+  const [currentStep, setCurrentStep] = useState(verifiedEmail && isVerified ? 3 : 1);
   const [emailSent, setEmailSent] = useState(false);
   const [isPollingVerification, setIsPollingVerification] = useState(false);
   const [verificationSessionId, setVerificationSessionId] = useState<string | null>(null);
   const [registrationData, setRegistrationData] = useState<{
+    organizationId?: string;
     email?: string;
     emailCheckData?: any;
     registrationType?: "myself" | "my_child";
@@ -90,7 +94,7 @@ export default function RegistrationFlow() {
   
   // Poll for email verification status when waiting for user to verify
   useEffect(() => {
-    if (!emailSent || !registrationData.email || currentStep !== 1) return;
+    if (!emailSent || !registrationData.email || currentStep !== 2) return;
     
     setIsPollingVerification(true);
     
@@ -115,12 +119,12 @@ export default function RegistrationFlow() {
             description: "Continuing with registration...",
           });
           // Move to next step
-          setCurrentStep(2);
+          setCurrentStep(3);
         }
       } catch (error) {
         console.error("Error checking verification status:", error);
       }
-    }, 3000); // Poll every 3 seconds
+    }, 3000);
     
     // Cleanup interval on unmount or when conditions change
     return () => {
@@ -129,7 +133,7 @@ export default function RegistrationFlow() {
     };
   }, [emailSent, registrationData.email, currentStep, verificationSessionId, toast]);
 
-  const totalSteps = registrationData.registrationType === "my_child" ? 5 : 4;
+  const totalSteps = registrationData.registrationType === "my_child" ? 6 : 5;
 
   const registrationMutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -221,13 +225,14 @@ export default function RegistrationFlow() {
   };
 
   const getStepTitle = () => {
-    if (currentStep === 1) return "Enter Your Email";
-    if (currentStep === 2) return "Who are you registering for?";
-    if (currentStep === 3 && registrationData.registrationType === "myself") return "Your Information";
-    if (currentStep === 3 && registrationData.registrationType === "my_child") return "Parent/Guardian Information";
-    if (currentStep === 4 && registrationData.registrationType === "my_child") return "Player Information";
-    if ((currentStep === 4 && registrationData.registrationType === "myself") ||
-        (currentStep === 5 && registrationData.registrationType === "my_child")) return "Create Account";
+    if (currentStep === 1) return "Select Your Organization";
+    if (currentStep === 2) return "Enter Your Email";
+    if (currentStep === 3) return "Who are you registering for?";
+    if (currentStep === 4 && registrationData.registrationType === "myself") return "Your Information";
+    if (currentStep === 4 && registrationData.registrationType === "my_child") return "Parent/Guardian Information";
+    if (currentStep === 5 && registrationData.registrationType === "my_child") return "Player Information";
+    if ((currentStep === 5 && registrationData.registrationType === "myself") ||
+        (currentStep === 6 && registrationData.registrationType === "my_child")) return "Create Account";
     return "Email Verification";
   };
 
@@ -288,9 +293,19 @@ export default function RegistrationFlow() {
 
           {/* Step Content */}
           <div className="flex-1">
-            {/* Step 1: Email Entry */}
-            {currentStep === 1 && !emailSent && (
+            {currentStep === 1 && (
+              <OrganizationSelectionStep
+                organizations={organizations}
+                onSelect={(orgId) => {
+                  setRegistrationData({ ...registrationData, organizationId: orgId });
+                  handleNext();
+                }}
+              />
+            )}
+
+            {currentStep === 2 && !emailSent && (
               <EmailEntryStep
+                organizationId={registrationData.organizationId || "default-org"}
                 onSubmit={(data, emailCheckData, sessionId) => {
                   setRegistrationData({ 
                     ...registrationData, 
@@ -305,8 +320,7 @@ export default function RegistrationFlow() {
               />
             )}
             
-            {/* Step 1: Email Verification Pending */}
-            {currentStep === 1 && emailSent && (
+            {currentStep === 2 && emailSent && (
               <div className="text-center py-8">
                 <div className="mx-auto w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mb-6">
                   <Mail className="w-10 h-10 text-red-500" />
@@ -331,8 +345,7 @@ export default function RegistrationFlow() {
               </div>
             )}
 
-            {/* Step 2: Registration Intent */}
-            {currentStep === 2 && (
+            {currentStep === 3 && (
               <RegistrationIntentStep
                 email={registrationData.email}
                 emailCheckData={registrationData.emailCheckData}
@@ -343,8 +356,7 @@ export default function RegistrationFlow() {
               />
             )}
 
-            {/* Step 3: User Information */}
-            {currentStep === 3 && registrationData.registrationType === "myself" && (
+            {currentStep === 4 && registrationData.registrationType === "myself" && (
               <PlayerInfoStep
                 email={registrationData.email}
                 emailCheckData={registrationData.emailCheckData}
@@ -359,7 +371,7 @@ export default function RegistrationFlow() {
               />
             )}
 
-            {currentStep === 3 && registrationData.registrationType === "my_child" && (
+            {currentStep === 4 && registrationData.registrationType === "my_child" && (
               <ParentInfoStep
                 email={registrationData.email}
                 emailCheckData={registrationData.emailCheckData}
@@ -370,8 +382,7 @@ export default function RegistrationFlow() {
               />
             )}
 
-            {/* Step 4: Player Information (for "my_child" flow) */}
-            {currentStep === 4 && registrationData.registrationType === "my_child" && (
+            {currentStep === 5 && registrationData.registrationType === "my_child" && (
               <PlayerListStep
                 players={registrationData.players}
                 onUpdate={(players) => {
@@ -381,9 +392,8 @@ export default function RegistrationFlow() {
               />
             )}
 
-            {/* Account Creation */}
-            {((currentStep === 4 && registrationData.registrationType === "myself") ||
-              (currentStep === 5 && registrationData.registrationType === "my_child")) && (
+            {((currentStep === 5 && registrationData.registrationType === "myself") ||
+              (currentStep === 6 && registrationData.registrationType === "my_child")) && (
               <AccountCreationStep
                 onSubmit={handleSubmitRegistration}
                 isLoading={registrationMutation.isPending}
@@ -432,10 +442,47 @@ export default function RegistrationFlow() {
 
 // Step Components
 
+function OrganizationSelectionStep({
+  organizations,
+  onSelect,
+}: {
+  organizations: Array<{ id: string; name: string; logoUrl?: string; sportType: string }>;
+  onSelect: (orgId: string) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <p className="text-gray-400 text-lg leading-relaxed">
+        Which organization are you joining?
+      </p>
+      <div className="space-y-3">
+        {organizations.map((org) => (
+          <button
+            key={org.id}
+            onClick={() => onSelect(org.id)}
+            className="w-full p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-red-500/50 transition-all text-left flex items-center gap-4"
+            data-testid={`org-select-${org.id}`}
+          >
+            <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-red-500 font-bold text-lg">{org.name.charAt(0)}</span>
+            </div>
+            <div>
+              <h3 className="text-white font-semibold text-lg">{org.name}</h3>
+              <p className="text-gray-400 text-sm capitalize">{org.sportType}</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-500 ml-auto" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function EmailEntryStep({ 
-  onSubmit 
+  onSubmit,
+  organizationId,
 }: { 
-  onSubmit: (data: { email: string }, emailCheckData: any, sessionId?: string) => void 
+  onSubmit: (data: { email: string }, emailCheckData: any, sessionId?: string) => void;
+  organizationId: string;
 }) {
   const { toast } = useToast();
   const [emailCheckData, setEmailCheckData] = useState<any>(null);
@@ -457,7 +504,7 @@ function EmailEntryStep({
         method: "POST",
         data: {
           email,
-          organizationId: "default-org",
+          organizationId,
         },
       });
       
@@ -500,8 +547,8 @@ function EmailEntryStep({
         method: "POST",
         data: {
           email: data.email,
-          organizationId: "default-org",
-          sourcePlatform, // Track where the request came from
+          organizationId,
+          sourcePlatform,
         },
       });
       

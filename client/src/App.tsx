@@ -315,19 +315,18 @@ function AppRouter() {
   useEffect(() => {
     if (!isLoading) {
       const performHandoff = async () => {
-        // Hide the HTML Bridge (Fade it out using CSS class)
         const loader = document.getElementById('startup-loader');
         if (loader) {
-          loader.classList.add('loader-hidden');
-          // Remove it from DOM after transition for better performance
-          setTimeout(() => {
+          const isNativeApp = !!(window as any).Capacitor?.isNativePlatform?.();
+          if (isNativeApp) {
+            loader.classList.add('loader-hidden');
+            setTimeout(() => loader.remove(), 500);
+          } else {
             loader.remove();
-          }, 500);
+          }
         }
 
-        // Hide the Native Splash Screen (The OS layer)
         try {
-          // Use window.Capacitor if available (global API)
           if ((window as any).Capacitor?.Plugins?.SplashScreen) {
             await (window as any).Capacitor.Plugins.SplashScreen.hide();
           }

@@ -94,6 +94,7 @@ export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string, organizationId: string): Promise<User | undefined>;
+  getUserByEmailAnyOrg(email: string): Promise<User | undefined>;
   getUsersByOrganization(organizationId: string): Promise<User[]>;
   getUsersByTeam(teamId: string): Promise<User[]>;
   getUsersByRole(organizationId: string, role: string): Promise<User[]>;
@@ -943,6 +944,12 @@ class MemStorage implements IStorage {
   async getUserByEmail(email: string, organizationId: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
       user => user.email === email && user.organizationId === organizationId
+    );
+  }
+
+  async getUserByEmailAnyOrg(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      user => user.email === email && !user.accountHolderId
     );
   }
   
@@ -2974,15 +2981,29 @@ class DatabaseStorage implements IStorage {
   }
 
   async getUserByEmail(email: string, organizationId: string): Promise<User | undefined> {
-    // Only return parent/account holder accounts (account_holder_id IS NULL or empty)
-    // Child player profiles share the parent's email but shouldn't be returned for auth
-    // Strict organizationId filter for tenant isolation - coalesce to default-org
     const effectiveOrgId = organizationId || 'default-org';
     const results = await db.select().from(schema.users).where(
       and(
         eq(schema.users.email, email),
         eq(schema.users.isActive, true),
         eq(schema.users.organizationId, effectiveOrgId),
+        or(
+          isNull(schema.users.accountHolderId),
+          eq(schema.users.accountHolderId, '')
+        )
+      )
+    );
+    if (results.length === 0) return undefined;
+    
+    const user = results[0];
+    return this.mapDbUserToUser(user);
+  }
+
+  async getUserByEmailAnyOrg(email: string): Promise<User | undefined> {
+    const results = await db.select().from(schema.users).where(
+      and(
+        eq(schema.users.email, email),
+        eq(schema.users.isActive, true),
         or(
           isNull(schema.users.accountHolderId),
           eq(schema.users.accountHolderId, '')

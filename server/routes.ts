@@ -567,11 +567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const { organizationId } = req.body;
-      if (!organizationId) {
-        return res.status(400).json({ success: false, message: "Organization selection is required" });
-      }
-      const user = await storage.getUserByEmail(email, organizationId);
+      const user = await storage.getUserByEmailAnyOrg(email);
       
       if (!user) {
         return res.status(401).json({ 
@@ -900,7 +896,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: "Email is required" });
       }
       
-      const user = await storage.getUserByEmail(email, req.body.organizationId || "default-org");
+      const user = await storage.getUserByEmailAnyOrg(email);
       
       if (!user) {
         return res.json({ success: true, message: "If an account exists with that email, a magic link has been sent." });
@@ -1090,7 +1086,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: "Email is required" });
       }
       
-      const user = await storage.getUserByEmail(email, req.body.organizationId || "default-org");
+      const user = await storage.getUserByEmailAnyOrg(email);
       
       if (!user) {
         console.log(`[Password Reset] No user found for email: ${email}`);

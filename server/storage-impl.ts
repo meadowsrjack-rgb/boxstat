@@ -107,6 +107,7 @@ export interface IStorage {
   // Pending Registration operations
   getPendingRegistration(email: string, organizationId: string): Promise<{id: number; email: string; organizationId: string; verificationToken: string; verificationExpiry: string; verified: boolean; sourcePlatform?: string | null; sessionId?: string | null; createdAt: string | null} | undefined>;
   getPendingRegistrationByToken(token: string, organizationId: string): Promise<{id: number; email: string; organizationId: string; verificationToken: string; verificationExpiry: string; verified: boolean; sourcePlatform?: string | null; sessionId?: string | null; createdAt: string | null} | undefined>;
+  getPendingRegistrationByTokenAnyOrg(token: string): Promise<{id: number; email: string; organizationId: string; verificationToken: string; verificationExpiry: string; verified: boolean; sourcePlatform?: string | null; sessionId?: string | null; createdAt: string | null} | undefined>;
   createPendingRegistration(email: string, organizationId: string, verificationToken: string, verificationExpiry: Date, sourcePlatform?: string, sessionId?: string): Promise<{id: number; email: string; organizationId: string; verificationToken: string; verificationExpiry: string; verified: boolean; sourcePlatform?: string | null; sessionId?: string | null; createdAt: string | null}>;
   updatePendingRegistration(email: string, organizationId: string, verified: boolean): Promise<void>;
   deletePendingRegistration(email: string, organizationId: string): Promise<void>;
@@ -1021,6 +1022,15 @@ class MemStorage implements IStorage {
   async getPendingRegistrationByToken(token: string, organizationId: string) {
     for (const pending of this.pendingRegistrations.values()) {
       if (pending.verificationToken === token && pending.organizationId === organizationId) {
+        return pending;
+      }
+    }
+    return undefined;
+  }
+
+  async getPendingRegistrationByTokenAnyOrg(token: string) {
+    for (const pending of this.pendingRegistrations.values()) {
+      if (pending.verificationToken === token) {
         return pending;
       }
     }
@@ -3239,6 +3249,13 @@ class DatabaseStorage implements IStorage {
           eq(schema.pendingRegistrations.organizationId, organizationId)
         )
       );
+    if (results.length === 0) return undefined;
+    return results[0];
+  }
+
+  async getPendingRegistrationByTokenAnyOrg(token: string) {
+    const results = await db.select().from(schema.pendingRegistrations)
+      .where(eq(schema.pendingRegistrations.verificationToken, token));
     if (results.length === 0) return undefined;
     return results[0];
   }

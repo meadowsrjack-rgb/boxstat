@@ -20,6 +20,7 @@ export interface SendVerificationEmailParams {
   email: string;
   firstName: string;
   verificationToken: string;
+  organizationId?: string;
 }
 
 export interface SendMagicLinkParams {
@@ -32,8 +33,10 @@ export async function sendVerificationEmail({
   email,
   firstName,
   verificationToken,
+  organizationId,
 }: SendVerificationEmailParams): Promise<void> {
-  const verificationUrl = `https://${DOMAIN}/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
+  const orgParam = organizationId ? `&organizationId=${encodeURIComponent(organizationId)}` : '';
+  const verificationUrl = `https://${DOMAIN}/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}${orgParam}`;
   const displayName = firstName || 'there';
 
   try {

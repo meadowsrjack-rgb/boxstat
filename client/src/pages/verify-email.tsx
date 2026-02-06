@@ -18,6 +18,7 @@ export default function VerifyEmail() {
       const params = new URLSearchParams(window.location.search);
       const token = params.get("token");
       const email = params.get("email");
+      const organizationId = params.get("organizationId");
 
       if (!token) {
         setStatus("error");
@@ -26,10 +27,12 @@ export default function VerifyEmail() {
       }
 
       try {
-        // Include both token and email in the API call
         let apiUrl = `/api/auth/verify-email?token=${encodeURIComponent(token)}`;
         if (email) {
           apiUrl += `&email=${encodeURIComponent(email)}`;
+        }
+        if (organizationId) {
+          apiUrl += `&organizationId=${encodeURIComponent(organizationId)}`;
         }
         const response = await fetch(apiUrl);
         const data = await response.json();

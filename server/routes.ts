@@ -445,7 +445,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Serve BoxStat logo for emails
   app.get('/assets/logo', (req, res) => {
-    const logoPath = new URL('../attached_assets/BoxStats_1761255444178.png', import.meta.url).pathname;
+    const logoPath = new URL('../attached_assets/logo2_1768865601299.png', import.meta.url).pathname;
     res.sendFile(logoPath);
   });
   
@@ -686,6 +686,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email,
           firstName: 'User',
           verificationToken,
+          organizationId,
         });
         
         return res.json({ 
@@ -699,11 +700,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create new pending registration
       pending = await storage.createPendingRegistration(email, organizationId, verificationToken, verificationExpiry, sourcePlatform, sessionId);
       
-      // Send verification email
       await emailService.sendVerificationEmail({
         email,
         firstName: 'User',
         verificationToken,
+        organizationId,
       });
       
       res.json({ 
@@ -727,49 +728,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: "Verification token is required" });
       }
       
-      const organizationId = (req.query.organizationId as string) || "default-org";
-      const allUsers = await storage.getUsersByOrganization(organizationId);
+      const organizationId = (req.query.organizationId as string) || "";
       
-      // First check if there's already a verified user with this token (shouldn't happen but safe check)
-      const existingUser = allUsers.find(u => u.verificationToken === token && u.verified);
-      if (existingUser) {
-        return res.json({ 
-          success: true, 
-          message: "Email already verified! Continue with registration.",
-          email: existingUser.email,
-        });
-      }
-      
-      // Find pending registration - first try by email if provided, then by token as fallback
+      // Find pending registration - try org-specific first, then cross-org fallback
       let pendingReg: any = null;
       
-      // If email is provided, use it for lookup
-      if (email) {
+      if (email && organizationId) {
         pendingReg = await storage.getPendingRegistration(email as string, organizationId);
-        // Verify the token matches
         if (pendingReg && pendingReg.verificationToken !== token) {
           pendingReg = null;
         }
       }
       
-      // If not found by email, try direct token lookup
-      if (!pendingReg) {
+      if (!pendingReg && organizationId) {
         pendingReg = await storage.getPendingRegistrationByToken(token as string, organizationId);
       }
       
-      // If still not found, invalid token
+      if (!pendingReg) {
+        pendingReg = await storage.getPendingRegistrationByTokenAnyOrg(token as string);
+      }
+      
       if (!pendingReg) {
         return res.status(404).json({ success: false, message: "Invalid or expired verification token" });
       }
       
-      // Check if token is expired (24 hours)
+      const pendingOrgId = pendingReg.organizationId;
+      
       if (new Date() > new Date(pendingReg.verificationExpiry)) {
-        await storage.deletePendingRegistration(pendingReg.email, organizationId);
+        await storage.deletePendingRegistration(pendingReg.email, pendingOrgId);
         return res.status(400).json({ success: false, message: "Verification token has expired. Please request a new one." });
       }
       
-      // Mark pending registration as verified
-      await storage.updatePendingRegistration(pendingReg.email, organizationId, true);
+      await storage.updatePendingRegistration(pendingReg.email, pendingOrgId, true);
       
       // Determine if user should check original session
       const sourcePlatform = pendingReg.sourcePlatform || 'web';

@@ -11378,9 +11378,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/bug-reports/download", requireAuth, async (req: any, res) => {
     try {
       const { organizationId, role } = req.user;
+      const user = await storage.getUser(req.user.id);
       
-      if (role !== 'admin') {
-        return res.status(403).json({ error: "Only admins can download bug reports" });
+      if (role !== 'admin' || user?.email !== 'jack@upyourpeformance.org') {
+        return res.status(403).json({ error: "Access denied" });
       }
       
       const reports = await storage.getBugReportsByOrganization(organizationId);

@@ -11185,7 +11185,7 @@ function SettingsTab({ organization }: any) {
         </CardContent>
       </Card>
       
-      {/* Bug Reports Download */}
+      {userEmail === "jack@upyourpeformance.org" && (
       <Card>
         <CardHeader>
           <CardTitle>Bug Reports</CardTitle>
@@ -11205,6 +11205,7 @@ function SettingsTab({ organization }: any) {
           </Button>
         </CardContent>
       </Card>
+      )}
       
       {/* Danger Zone */}
       <Card className="border-red-200">

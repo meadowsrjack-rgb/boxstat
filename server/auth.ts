@@ -1,16 +1,13 @@
 import type { RequestHandler } from "express";
 import jwt from "jsonwebtoken";
 
-// Hybrid authentication middleware - accepts EITHER session OR JWT token
-export const requireAuth: RequestHandler = (req: any, res, next) => {
-  // Debug logging for photo upload troubleshooting
-  if (req.path.includes('upload')) {
-    console.log('🔐 Auth Debug - Path:', req.path);
-    console.log('🔐 Auth Debug - Authorization header:', req.headers.authorization ? 'Present' : 'MISSING');
-    console.log('🔐 Auth Debug - Session userId:', req.session?.userId || 'NONE');
-  }
-  
-  // First, try JWT authentication (for mobile apps)
+let storageRef: any = null;
+
+export function setAuthStorage(storage: any) {
+  storageRef = storage;
+}
+
+export const requireAuth: RequestHandler = async (req: any, res, next) => {
   const auth = req.headers.authorization;
   if (auth && auth.startsWith("Bearer ")) {
     const token = auth.substring(7);
@@ -18,7 +15,6 @@ export const requireAuth: RequestHandler = (req: any, res, next) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
       
-      // Validate required claims
       if (decoded.userId && decoded.organizationId && decoded.role) {
         req.user = {
           id: decoded.userId,
@@ -31,19 +27,34 @@ export const requireAuth: RequestHandler = (req: any, res, next) => {
         return next();
       }
     } catch (err: any) {
-      // JWT invalid, fall through to session check
-      if (req.path.includes('upload')) {
-        console.log('🔐 Auth Debug - JWT Error:', err.message);
-      }
     }
   }
   
-  // Fall back to session authentication (for web app)
   if (req.session && req.session.userId) {
+    let orgId = req.session.organizationId || "default-org";
+    let role = req.session.role || "user";
+
+    if (storageRef) {
+      try {
+        const dbUser = await storageRef.getUser(req.session.userId);
+        if (dbUser) {
+          if (dbUser.organizationId && dbUser.organizationId !== orgId) {
+            orgId = dbUser.organizationId;
+            req.session.organizationId = orgId;
+          }
+          if (dbUser.role && dbUser.role !== role) {
+            role = dbUser.role;
+            req.session.role = role;
+          }
+        }
+      } catch (e) {
+      }
+    }
+
     req.user = { 
       id: req.session.userId, 
-      organizationId: req.session.organizationId || "default-org", 
-      role: req.session.role || "user",
+      organizationId: orgId, 
+      role: role,
       claims: {
         sub: req.session.userId
       }
@@ -51,17 +62,13 @@ export const requireAuth: RequestHandler = (req: any, res, next) => {
     return next();
   }
   
-  // Neither JWT nor session found
   return res.status(401).json({ error: "Not authenticated" });
 };
 
-// Legacy JWT-only middleware (deprecated - use requireAuth instead)
 export const requireJwt: RequestHandler = requireAuth;
 
-// Legacy session-only middleware (deprecated - use requireAuth instead)
 export const isAuthenticated: RequestHandler = requireAuth;
 
-// Middleware to check if user is admin
 export const isAdmin: RequestHandler = (req: any, res, next) => {
   if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
@@ -69,7 +76,6 @@ export const isAdmin: RequestHandler = (req: any, res, next) => {
   next();
 };
 
-// Middleware to check if user is coach or admin
 export const isCoachOrAdmin: RequestHandler = (req: any, res, next) => {
   if (!req.user || (req.user.role !== 'coach' && req.user.role !== 'admin')) {
     return res.status(403).json({ error: 'Access denied. Coach or admin privileges required.' });

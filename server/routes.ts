@@ -11,7 +11,7 @@ import searchRoutes from "./routes/search";
 import privacyRoutes from "./routes/privacy";
 import { setupNotificationRoutes } from "./routes/notifications";
 import { setupAdminNotificationRoutes } from "./routes/adminNotifications";
-import { requireAuth, isAdmin, isCoachOrAdmin } from "./auth";
+import { requireAuth, isAdmin, isCoachOrAdmin, setAuthStorage } from "./auth";
 import multer from "multer";
 import jwt from "jsonwebtoken";
 import path from "path";
@@ -396,6 +396,8 @@ function hashPassword(password: string): string {
 const isAuthenticated = requireAuth;
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  setAuthStorage(storage);
   
   // Register object storage routes for persistent file uploads
   registerObjectStorageRoutes(app);

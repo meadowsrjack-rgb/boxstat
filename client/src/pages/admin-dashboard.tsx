@@ -8266,6 +8266,8 @@ function ProgramsTab({ programs, teams, organization }: any) {
         savingsNote?: string;
         isDefault?: boolean;
       }>,
+      scheduleRequestEnabled: false,
+      sessionLengthMinutes: undefined as number | undefined,
     },
   });
 
@@ -8390,6 +8392,8 @@ function ProgramsTab({ programs, teams, organization }: any) {
       iconName: program.iconName || "",
       coverImageUrl: program.coverImageUrl || "",
       pricingOptions: program.pricingOptions || [],
+      scheduleRequestEnabled: program.scheduleRequestEnabled || false,
+      sessionLengthMinutes: program.sessionLengthMinutes,
     });
     setIsDialogOpen(true);
   };
@@ -8430,6 +8434,8 @@ function ProgramsTab({ programs, teams, organization }: any) {
         savingsNote: "",
         coverImageUrl: "",
         pricingOptions: [],
+        scheduleRequestEnabled: false,
+        sessionLengthMinutes: undefined,
       });
     } else if (!editingProgram) {
       // Opening dialog for NEW program - reset to clean defaults
@@ -8465,6 +8471,8 @@ function ProgramsTab({ programs, teams, organization }: any) {
         savingsNote: "",
         coverImageUrl: "",
         pricingOptions: [],
+        scheduleRequestEnabled: false,
+        sessionLengthMinutes: undefined,
       });
     }
   };
@@ -9596,6 +9604,61 @@ function ProgramsTab({ programs, teams, organization }: any) {
                   )}
                 </div>
                 
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="font-medium mb-3">Schedule Request</h4>
+                  
+                  <FormField
+                    control={form.control}
+                    name="scheduleRequestEnabled"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0 mb-3">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            data-testid="checkbox-schedule-request"
+                          />
+                        </FormControl>
+                        <FormLabel className="!mt-0">Enable Schedule Request</FormLabel>
+                        <FormDescription className="!mt-0 ml-2 text-xs">
+                          Allow parents to book sessions after payment
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch("scheduleRequestEnabled") && (
+                    <FormField
+                      control={form.control}
+                      name="sessionLengthMinutes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Session Length (minutes)</FormLabel>
+                          <Select 
+                            value={field.value?.toString() || ""} 
+                            onValueChange={(val) => field.onChange(parseInt(val))}
+                          >
+                            <FormControl>
+                              <SelectTrigger data-testid="select-session-length">
+                                <SelectValue placeholder="Select duration" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="30">30 minutes</SelectItem>
+                              <SelectItem value="45">45 minutes</SelectItem>
+                              <SelectItem value="60">1 hour</SelectItem>
+                              <SelectItem value="90">1.5 hours</SelectItem>
+                              <SelectItem value="120">2 hours</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>How long each booked session will last</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+
                 <div className="border-t pt-4 mt-4">
                   <h4 className="font-medium mb-3">Social Settings</h4>
                   

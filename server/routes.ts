@@ -8910,6 +8910,226 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get schedule availability for a program (time slots blocked by existing events)
+  app.get('/api/programs/:id/schedule-availability', requireAuth, async (req: any, res) => {
+    try {
+      const { id: programId } = req.params;
+      const { date } = req.query; // ISO date string like "2026-02-10"
+      
+      const program = await storage.getProgram(programId);
+      if (!program) {
+        return res.status(404).json({ error: 'Program not found' });
+      }
+      
+      if (!program.scheduleRequestEnabled) {
+        return res.status(400).json({ error: 'Schedule request is not enabled for this program' });
+      }
+      
+      const sessionLength = program.sessionLengthMinutes || 60;
+      
+      // Parse the requested date or default to today
+      const targetDate = date ? new Date(date as string) : new Date();
+      const startOfDay = new Date(targetDate);
+      startOfDay.setHours(8, 0, 0, 0); // Available from 8 AM
+      const endOfDay = new Date(targetDate);
+      endOfDay.setHours(20, 0, 0, 0); // Available until 8 PM
+      
+      // Get all events for the organization on this date
+      const orgId = program.organizationId;
+      const allEvents = await storage.getEventsByOrganization(orgId);
+      
+      // Filter events that overlap with the target date
+      const dayStart = new Date(targetDate);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(targetDate);
+      dayEnd.setHours(23, 59, 59, 999);
+      
+      const blockedEvents = allEvents.filter((event: any) => {
+        const eventStart = new Date(event.startTime);
+        const eventEnd = new Date(event.endTime);
+        return eventStart < dayEnd && eventEnd > dayStart && event.isActive !== false && event.status !== 'cancelled';
+      });
+      
+      // Generate available time slots
+      const slots: Array<{ startTime: string; endTime: string; available: boolean }> = [];
+      let currentSlot = new Date(startOfDay);
+      
+      while (currentSlot.getTime() + sessionLength * 60 * 1000 <= endOfDay.getTime()) {
+        const slotEnd = new Date(currentSlot.getTime() + sessionLength * 60 * 1000);
+        
+        // Check if this slot conflicts with any existing events
+        const isBlocked = blockedEvents.some((event: any) => {
+          const eventStart = new Date(event.startTime);
+          const eventEnd = new Date(event.endTime);
+          return currentSlot < eventEnd && slotEnd > eventStart;
+        });
+        
+        slots.push({
+          startTime: currentSlot.toISOString(),
+          endTime: slotEnd.toISOString(),
+          available: !isBlocked,
+        });
+        
+        // Move to next slot (30 minute increments)
+        currentSlot = new Date(currentSlot.getTime() + 30 * 60 * 1000);
+      }
+      
+      res.json({
+        programId,
+        programName: program.name,
+        sessionLengthMinutes: sessionLength,
+        date: targetDate.toISOString().split('T')[0],
+        slots,
+        blockedEvents: blockedEvents.map((e: any) => ({
+          id: e.id,
+          title: e.title,
+          startTime: e.startTime,
+          endTime: e.endTime,
+        })),
+      });
+    } catch (error: any) {
+      console.error('Error fetching schedule availability:', error);
+      res.status(500).json({ error: 'Failed to fetch schedule availability' });
+    }
+  });
+
+  // Create a schedule request (book a session)
+  app.post('/api/programs/:id/schedule-request', requireAuth, async (req: any, res) => {
+    try {
+      const { id: programId } = req.params;
+      const { startTime, playerId } = req.body;
+      
+      if (!startTime) {
+        return res.status(400).json({ error: 'Start time is required' });
+      }
+      
+      const program = await storage.getProgram(programId);
+      if (!program) {
+        return res.status(404).json({ error: 'Program not found' });
+      }
+      
+      if (!program.scheduleRequestEnabled) {
+        return res.status(400).json({ error: 'Schedule request is not enabled for this program' });
+      }
+      
+      const sessionLength = program.sessionLengthMinutes || 60;
+      const userId = req.user.id;
+      const orgId = program.organizationId;
+      
+      // Validate the player belongs to the authenticated user
+      const targetPlayerId = playerId || userId;
+      if (playerId && playerId !== userId) {
+        const player = await storage.getUser(playerId);
+        if (!player) {
+          return res.status(400).json({ error: 'Player not found' });
+        }
+        const isValidPlayer = (player as any).parentId === userId || 
+                              (player as any).guardianId === userId ||
+                              (player as any).accountHolderId === userId;
+        if (!isValidPlayer) {
+          return res.status(403).json({ error: 'Not authorized to schedule for this player' });
+        }
+      }
+      
+      // Check for active enrollment in this program
+      const enrollments = await storage.getActiveEnrollmentsWithCredits(targetPlayerId);
+      const hasEnrollment = enrollments.some((e: any) => e.programId === programId && e.status === 'active');
+      if (!hasEnrollment) {
+        return res.status(403).json({ error: 'Active enrollment required to schedule a session' });
+      }
+      
+      // Calculate end time
+      const sessionStart = new Date(startTime);
+      const sessionEnd = new Date(sessionStart.getTime() + sessionLength * 60 * 1000);
+      
+      // Verify no conflicts
+      const allEvents = await storage.getEventsByOrganization(orgId);
+      const hasConflict = allEvents.some((event: any) => {
+        const eventStart = new Date(event.startTime);
+        const eventEnd = new Date(event.endTime);
+        return sessionStart < eventEnd && sessionEnd > eventStart && event.isActive !== false && event.status !== 'cancelled';
+      });
+      
+      if (hasConflict) {
+        return res.status(409).json({ error: 'This time slot is no longer available. Please choose another time.' });
+      }
+      
+      // Get player name for event title
+      const player = await storage.getUser(targetPlayerId);
+      const playerName = player ? `${player.firstName || ''} ${player.lastName || ''}`.trim() : 'Player';
+      
+      // Create the event
+      const newEvent = await storage.createEvent({
+        organizationId: orgId,
+        title: `${program.name} - ${playerName}`,
+        description: `Scheduled session for ${playerName} via ${program.name}`,
+        eventType: 'training',
+        startTime: sessionStart.toISOString(),
+        endTime: sessionEnd.toISOString(),
+        location: '',
+        assignTo: {
+          users: [targetPlayerId, userId],
+          programs: [programId],
+        },
+        visibility: {
+          programs: [programId],
+        },
+        sendNotifications: true,
+        createdBy: userId,
+        status: 'active',
+        isActive: true,
+        playerRsvpEnabled: true,
+      });
+      
+      // Create RSVP response for the player (auto-attending)
+      try {
+        await storage.createRsvpResponse({
+          eventId: newEvent.id,
+          userId: targetPlayerId,
+          response: 'attending',
+        });
+      } catch (rsvpErr: any) {
+        console.error('Failed to create auto-RSVP (non-fatal):', rsvpErr.message);
+      }
+      
+      // Send notifications
+      try {
+        const dateStr = sessionStart.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        const timeStr = sessionStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        
+        // Notify the player about the scheduled session via in-app notification
+        await storage.createNotification({
+          organizationId: orgId,
+          title: '📅 Session Scheduled',
+          message: `Your ${program.name} session is booked for ${dateStr} at ${timeStr}`,
+          types: ['notification'],
+          recipientTarget: 'users',
+          recipientUserIds: [targetPlayerId],
+          status: 'sent',
+          deliveryChannels: ['in_app', 'push'],
+          sentBy: 'system',
+        });
+        
+        // Notify admins
+        await pushNotifications.notifyAllAdmins(storage,
+          '📅 New Session Booked',
+          `${playerName} booked a ${program.name} session for ${dateStr} at ${timeStr}`
+        );
+      } catch (notifErr: any) {
+        console.error('Schedule notification failed (non-fatal):', notifErr.message);
+      }
+      
+      res.json({
+        success: true,
+        event: newEvent,
+        message: 'Session scheduled successfully',
+      });
+    } catch (error: any) {
+      console.error('Error creating schedule request:', error);
+      res.status(500).json({ error: 'Failed to schedule session' });
+    }
+  });
+
   // Get player's program memberships with social settings and team info
   app.get('/api/users/:userId/program-memberships', requireAuth, async (req: any, res) => {
     try {

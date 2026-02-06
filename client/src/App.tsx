@@ -35,6 +35,7 @@ import ResetPassword from "@/pages/reset-password";
 
 import RosterManagement from "@/pages/roster-management";
 import ScheduleRequests from "@/pages/schedule-requests";
+import ScheduleRequest from "@/pages/schedule-request";
 import Training from "@/pages/training";
 import TrainingLibrary from "@/pages/training-library";
 import Profile from "@/pages/profile";
@@ -438,6 +439,9 @@ function AppRouter() {
       <Route path="/search" component={SearchPage} />
       <Route path="/teams/:slug" component={TeamDetailPage} />
       <Route path="/players/:id" component={PlayerDetailPage} />
+      
+      {/* Schedule Request - book sessions after program payment */}
+      <Route path="/schedule/:programId" component={ScheduleRequest} />
       
       {/* Routes available to all authenticated users */}
       <Route path="/profile" component={ProtectedProfile} />

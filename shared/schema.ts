@@ -433,6 +433,9 @@ export const products = pgTable("products", {
   pricingOptions: jsonb("pricing_options").default('[]'), // Array of pricing tiers for this program
   // Subscription disclosure statement shown to customers before checkout
   subscriptionDisclosure: text("subscription_disclosure"),
+  // Schedule Request fields - allows parents to book sessions after payment
+  scheduleRequestEnabled: boolean("schedule_request_enabled").default(false),
+  sessionLengthMinutes: integer("session_length_minutes"), // Duration of scheduled sessions in minutes
 });
 
 // Program Suggested Add-ons table (many-to-many relationship between programs and store products)
@@ -1737,6 +1740,9 @@ export const insertProductSchema = z.object({
   comparePrice: z.number().optional(), // For multi-month packages: equivalent monthly price (in cents)
   savingsNote: z.string().optional(), // Display text like "Save $114!"
   packageGroup: z.string().optional(), // DEPRECATED: Groups related packages together
+  // Schedule Request fields
+  scheduleRequestEnabled: z.boolean().default(false),
+  sessionLengthMinutes: z.number().nullish(),
   // Multiple pricing options within a single program
   pricingOptions: z.array(z.object({
     id: z.string(),

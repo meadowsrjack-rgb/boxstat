@@ -785,16 +785,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Poll for verification status (used by original session to detect when email is verified)
   app.get('/api/auth/check-verification-status', async (req: any, res) => {
     try {
-      const { email, organizationId = "default-org" } = req.query;
+      const { email, organizationId } = req.query;
       
       if (!email) {
         return res.status(400).json({ success: false, message: "Email is required" });
       }
       
-      const pendingReg = await storage.getPendingRegistration(email as string, organizationId);
+      let pendingReg = null;
+      
+      if (organizationId) {
+        pendingReg = await storage.getPendingRegistration(email as string, organizationId as string);
+      }
       
       if (!pendingReg) {
-        // No pending registration - either verified and completed, or never existed
+        const allOrgs = await storage.getAllOrganizations();
+        for (const org of allOrgs) {
+          const found = await storage.getPendingRegistration(email as string, org.id);
+          if (found) {
+            pendingReg = found;
+            break;
+          }
+        }
+      }
+      
+      if (!pendingReg) {
         return res.json({ 
           success: true, 
           verified: false,

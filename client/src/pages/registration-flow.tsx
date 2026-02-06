@@ -100,10 +100,12 @@ export default function RegistrationFlow() {
     
     const pollInterval = setInterval(async () => {
       try {
-        // Build query params with email and optional sessionId for correlation
         const params = new URLSearchParams({
           email: registrationData.email!,
         });
+        if (registrationData.organizationId) {
+          params.append('organizationId', registrationData.organizationId);
+        }
         if (verificationSessionId) {
           params.append('sessionId', verificationSessionId);
         }

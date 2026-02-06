@@ -3900,6 +3900,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/upload/org-logo', requireAuth, upload.single('image'), async (req: any, res) => {
+    const uploadedFilePath = req.file ? path.join(uploadDir, req.file.filename) : null;
+    
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
+        if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+          fs.unlinkSync(uploadedFilePath);
+        }
+        return res.status(403).json({ error: 'Only admins can upload organization logos' });
+      }
+      
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
+      
+      const fileBuffer = fs.readFileSync(uploadedFilePath!);
+      const uploadResponse = await fetch(uploadURL, {
+        method: 'PUT',
+        body: fileBuffer,
+        headers: {
+          'Content-Type': req.file.mimetype || 'image/png',
+        },
+      });
+      
+      if (!uploadResponse.ok) {
+        throw new Error(`Failed to upload to object storage: ${uploadResponse.status}`);
+      }
+      
+      await objectStorageService.trySetObjectEntityAclPolicy(objectPath, {
+        owner: req.user.id,
+        visibility: 'public',
+      });
+      
+      if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+        fs.unlinkSync(uploadedFilePath);
+      }
+      
+      await storage.updateOrganization(req.user.organizationId, { logoUrl: objectPath });
+      
+      res.json({ 
+        success: true, 
+        imageUrl: objectPath,
+        message: 'Organization logo uploaded successfully' 
+      });
+    } catch (error: any) {
+      console.error('Org logo upload error:', error);
+      if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+        try { fs.unlinkSync(uploadedFilePath); } catch (e) {}
+      }
+      res.status(500).json({ error: 'Failed to upload organization logo', message: error.message });
+    }
+  });
+
   // Update player profile (for parents updating child profiles or players updating self)
   app.patch('/api/profile/:id', requireAuth, async (req: any, res) => {
     try {

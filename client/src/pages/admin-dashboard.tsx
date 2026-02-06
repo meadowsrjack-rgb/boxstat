@@ -10990,6 +10990,7 @@ function SettingsTab({ organization }: any) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   
   const { data: currentUser } = useQuery<any>({
     queryKey: ["/api/auth/me"],
@@ -11004,6 +11005,7 @@ function SettingsTab({ organization }: any) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/organization"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/organizations/public"] });
       toast({ title: "Organization settings updated" });
     },
     onError: () => {
@@ -11015,7 +11017,37 @@ function SettingsTab({ organization }: any) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateOrganization.mutate(formData);
+    const { primaryColor, secondaryColor, terminology, ...cleanData } = formData;
+    updateOrganization.mutate({ name: cleanData.name, sportType: cleanData.sportType });
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsUploadingLogo(true);
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const res = await fetch('/api/upload/org-logo', {
+        method: 'POST',
+        credentials: 'include',
+        body: fd,
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setFormData({ ...formData, logoUrl: data.imageUrl });
+        queryClient.invalidateQueries({ queryKey: ["/api/organization"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/organizations/public"] });
+        toast({ title: "Logo uploaded successfully" });
+      } else {
+        toast({ title: "Failed to upload logo", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Failed to upload logo", variant: "destructive" });
+    } finally {
+      setIsUploadingLogo(false);
+    }
   };
   
   const handleDeleteAccount = async () => {
@@ -11076,6 +11108,36 @@ function SettingsTab({ organization }: any) {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
               <div>
+                <Label>Organization Logo</Label>
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center overflow-hidden border">
+                    {formData.logoUrl ? (
+                      <img src={formData.logoUrl} alt={formData.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-gray-400 font-bold text-xl">{(formData.name || "O").charAt(0)}</span>
+                    )}
+                  </div>
+                  <div>
+                    <label htmlFor="org-logo-upload" className="cursor-pointer">
+                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-md border text-sm font-medium hover:bg-gray-50 transition-colors">
+                        <Upload className="w-4 h-4" />
+                        {isUploadingLogo ? "Uploading..." : "Upload Logo"}
+                      </div>
+                    </label>
+                    <input
+                      id="org-logo-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleLogoUpload}
+                      disabled={isUploadingLogo}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">PNG or JPG, square recommended</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
                 <Label htmlFor="name">Organization Name</Label>
                 <Input
                   id="name"
@@ -11094,87 +11156,6 @@ function SettingsTab({ organization }: any) {
                   placeholder="basketball, soccer, baseball, etc."
                   data-testid="input-sport-type"
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="primaryColor">Primary Color</Label>
-                  <Input
-                    id="primaryColor"
-                    type="color"
-                    value={formData.primaryColor || "#1E40AF"}
-                    onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                    data-testid="input-primary-color"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="secondaryColor">Secondary Color</Label>
-                  <Input
-                    id="secondaryColor"
-                    type="color"
-                    value={formData.secondaryColor || "#DC2626"}
-                    onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
-                    data-testid="input-secondary-color"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-medium mb-2">Terminology Customization</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="term-athlete">Athlete Term</Label>
-                    <Input
-                      id="term-athlete"
-                      value={formData.terminology?.athlete || "Player"}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        terminology: { ...formData.terminology, athlete: e.target.value }
-                      })}
-                      placeholder="Player, Athlete, Student"
-                      data-testid="input-term-athlete"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="term-coach">Coach Term</Label>
-                    <Input
-                      id="term-coach"
-                      value={formData.terminology?.coach || "Coach"}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        terminology: { ...formData.terminology, coach: e.target.value }
-                      })}
-                      placeholder="Coach, Trainer, Instructor"
-                      data-testid="input-term-coach"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="term-team">Team Term</Label>
-                    <Input
-                      id="term-team"
-                      value={formData.terminology?.team || "Team"}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        terminology: { ...formData.terminology, team: e.target.value }
-                      })}
-                      placeholder="Team, Squad, Group"
-                      data-testid="input-term-team"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="term-practice">Practice Term</Label>
-                    <Input
-                      id="term-practice"
-                      value={formData.terminology?.practice || "Practice"}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        terminology: { ...formData.terminology, practice: e.target.value }
-                      })}
-                      placeholder="Practice, Training, Session"
-                      data-testid="input-term-practice"
-                    />
-                  </div>
-                </div>
               </div>
             </div>
 

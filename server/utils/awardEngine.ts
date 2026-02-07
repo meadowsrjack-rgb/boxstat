@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { users, awardDefinitions, userAwards, attendances, productEnrollments, rsvpResponses } from "@shared/schema";
+import { users, awardDefinitions, userAwards, attendances, productEnrollments, rsvpResponses, notificationRecipients } from "@shared/schema";
 import { eq, and, sql, desc, or } from "drizzle-orm";
 import type { IStorage } from "../storage";
 import type { TriggerCategory, SelectAwardDefinition } from "@shared/schema";
@@ -511,8 +511,22 @@ async function sendAwardNotification(
       sentBy: "system",
     });
 
-    // Send push notification only if in-app notification was created successfully
+    // Send push notification and create recipient records only if notification was created
     if (createdNotification?.id) {
+      // Create notification_recipients record so the notification appears in the in-app feed
+      try {
+        await db.insert(notificationRecipients).values({
+          notificationId: createdNotification.id,
+          userId: notification.userId,
+          isRead: false,
+          deliveryStatus: {},
+        });
+        console.log(`📬 In-app notification recipient created for user ${notification.userId}`);
+      } catch (recipientError) {
+        console.error(`Failed to create notification recipient for award:`, recipientError);
+      }
+
+      // Send push notification
       try {
         await notificationService.sendPushNotification(
           createdNotification.id,

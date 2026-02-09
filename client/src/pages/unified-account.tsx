@@ -2393,6 +2393,23 @@ export default function UnifiedAccount() {
                           );
                         })()}
 
+                        {/* Schedule Request Notice - shown prominently after pricing options */}
+                        {selectedPackage && !isStoreItemPurchase && (() => {
+                          const pkg = (programs as any[])?.find((p: any) => p.id === selectedPackage);
+                          if (!pkg?.scheduleRequestEnabled) return null;
+                          return (
+                            <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200" data-testid="schedule-request-notice">
+                              <CalendarCheck className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="text-sm font-medium text-amber-900">Session Scheduling Included</p>
+                                <p className="text-xs text-amber-700 mt-0.5">
+                                  After purchase, you can book{pkg.sessionLengthMinutes ? ` ${pkg.sessionLengthMinutes}-minute` : ''} sessions directly from your active programs.
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
                         {/* Player Selection (conditionally shown based on billing model - not for store items) */}
                         {selectedPackage && !isStoreItemPurchase && (() => {
                           const pkg = (programs as any[])?.find((p: any) => p.id === selectedPackage);
@@ -2483,14 +2500,6 @@ export default function UnifiedAccount() {
                                       Book Sessions After Purchase
                                     </span>
                                   )}
-                                </div>
-                              )}
-                              {!isStoreProduct && pkg.scheduleRequestEnabled && (
-                                <div className="flex items-start gap-2 p-2 bg-amber-50 rounded-lg border border-amber-200">
-                                  <CalendarCheck className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                                  <p className="text-xs text-amber-800">
-                                    This program includes session scheduling. After purchase, you can book {pkg.sessionLengthMinutes ? `${pkg.sessionLengthMinutes}-minute` : ''} sessions directly from your active programs.
-                                  </p>
                                 </div>
                               )}
                             </div>

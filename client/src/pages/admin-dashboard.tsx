@@ -9307,7 +9307,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
                       <div className="flex items-center justify-between mb-3">
                         <div>
                           <h4 className="font-medium text-sm">Pricing Options</h4>
-                          <p className="text-xs text-gray-500">Add pricing tiers: one-time bundles or credit packs</p>
+                          <p className="text-xs text-gray-500">Add pricing tiers: one-time bundles, credit packs, or subscriptions</p>
                         </div>
                         <Button
                           type="button"
@@ -9364,7 +9364,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
                                       current[index] = { 
                                         ...current[index], 
                                         optionType: value,
-                                        billingCycle: value === "credit_pack" ? "One-Time" : current[index].billingCycle,
+                                        billingCycle: value === "credit_pack" ? "One-Time" : value === "subscription" ? (current[index].billingInterval || "monthly") : current[index].billingCycle,
                                       };
                                       form.setValue("pricingOptions", [...current]);
                                     }}
@@ -9375,13 +9375,14 @@ function ProgramsTab({ programs, teams, organization }: any) {
                                     <SelectContent>
                                       <SelectItem value="one_time">One-Time Payment</SelectItem>
                                       <SelectItem value="credit_pack">Credit Pack</SelectItem>
+                                      <SelectItem value="subscription">Subscription</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </div>
                                 <div>
                                   <label className="text-xs font-medium">Name</label>
                                   <Input
-                                    placeholder={option.optionType === "credit_pack" ? "10 Session Pack" : "3 Months"}
+                                    placeholder={option.optionType === "credit_pack" ? "10 Session Pack" : option.optionType === "subscription" ? "Monthly Membership" : "3 Months"}
                                     value={option.name}
                                     onChange={(e) => {
                                       const current = form.getValues("pricingOptions") || [];
@@ -9422,6 +9423,44 @@ function ProgramsTab({ programs, teams, organization }: any) {
                                       data-testid={`input-option-credits-${index}`}
                                     />
                                   </div>
+                                ) : option.optionType === "subscription" ? (
+                                  <>
+                                    <div>
+                                      <label className="text-xs font-medium">Billing Interval</label>
+                                      <Select
+                                        value={option.billingInterval || "monthly"}
+                                        onValueChange={(value) => {
+                                          const current = form.getValues("pricingOptions") || [];
+                                          current[index] = { ...current[index], billingInterval: value };
+                                          form.setValue("pricingOptions", [...current]);
+                                        }}
+                                      >
+                                        <SelectTrigger data-testid={`select-billing-interval-${index}`}>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="weekly">Weekly</SelectItem>
+                                          <SelectItem value="monthly">Monthly</SelectItem>
+                                          <SelectItem value="quarterly">Quarterly</SelectItem>
+                                          <SelectItem value="yearly">Yearly</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div>
+                                      <label className="text-xs font-medium">Trial Period (days)</label>
+                                      <Input
+                                        type="number"
+                                        placeholder="0"
+                                        value={option.trialDays || ""}
+                                        onChange={(e) => {
+                                          const current = form.getValues("pricingOptions") || [];
+                                          current[index] = { ...current[index], trialDays: parseInt(e.target.value) || undefined };
+                                          form.setValue("pricingOptions", [...current]);
+                                        }}
+                                        data-testid={`input-option-trial-${index}`}
+                                      />
+                                    </div>
+                                  </>
                                 ) : (
                                   <div>
                                     <label className="text-xs font-medium">Duration (days)</label>

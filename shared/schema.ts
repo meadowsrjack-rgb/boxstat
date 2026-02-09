@@ -1679,10 +1679,12 @@ export interface PricingOption {
   id: string; // Unique ID for this pricing option (e.g., nanoid)
   name: string; // Display name (e.g., "Monthly", "3 Months", "6 Months")
   price: number; // Price in cents
-  optionType?: string; // "one_time" | "credit_pack" - defaults to "one_time"
+  optionType?: string; // "one_time" | "credit_pack" | "subscription"
   billingCycle?: string; // "Monthly", "One-Time", etc.
-  durationDays?: number; // How long this option lasts
-  creditCount?: number; // Number of credits/sessions in a credit pack
+  durationDays?: number; // How long this option lasts (one_time)
+  creditCount?: number; // Number of credits/sessions (credit_pack)
+  billingInterval?: string; // "weekly" | "monthly" | "quarterly" | "yearly" (subscription)
+  trialDays?: number; // Free trial period in days (subscription)
   comparePrice?: number; // Equivalent monthly price for comparison
   savingsNote?: string; // Savings display text (e.g., "Save $30!")
   stripePriceId?: string; // Stripe Price ID for this option (auto-created)
@@ -1754,11 +1756,12 @@ export const insertProductSchema = z.object({
     billingCycle: z.string().optional(),
     durationDays: z.number().optional(),
     creditCount: z.number().optional(),
+    billingInterval: z.string().optional(),
+    trialDays: z.number().optional(),
     comparePrice: z.number().optional(),
     savingsNote: z.string().optional(),
     stripePriceId: z.string().optional(),
     isDefault: z.boolean().optional(),
-    // Subscription schedule fields
     convertsToMonthly: z.boolean().optional(),
     monthlyPrice: z.number().optional(),
     monthlyStripePriceId: z.string().optional(),

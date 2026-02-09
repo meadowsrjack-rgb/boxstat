@@ -2291,6 +2291,11 @@ export default function UnifiedAccount() {
                                         <p className="font-medium text-sm">{option.name}</p>
                                         {option.optionType === "credit_pack" && option.creditCount ? (
                                           <p className="text-xs text-blue-600">{option.creditCount} session{option.creditCount > 1 ? 's' : ''} included</p>
+                                        ) : option.optionType === "subscription" ? (
+                                          <p className="text-xs text-purple-600">
+                                            Billed {option.billingInterval || "monthly"}
+                                            {option.trialDays ? ` · ${option.trialDays}-day free trial` : ''}
+                                          </p>
                                         ) : option.durationDays ? (
                                           <p className="text-xs text-gray-500">{option.durationDays} day prepaid</p>
                                         ) : null}
@@ -2299,7 +2304,12 @@ export default function UnifiedAccount() {
                                         )}
                                       </div>
                                       <div className="text-right">
-                                        <p className="font-semibold text-red-600">${(option.price / 100).toFixed(2)}</p>
+                                        <p className="font-semibold text-red-600">
+                                          ${(option.price / 100).toFixed(2)}
+                                          {option.optionType === "subscription" && (
+                                            <span className="text-xs font-normal text-gray-500">/{option.billingInterval === "yearly" ? "yr" : option.billingInterval === "quarterly" ? "qtr" : option.billingInterval === "weekly" ? "wk" : "mo"}</span>
+                                          )}
+                                        </p>
                                         {option.optionType === "credit_pack" && option.creditCount ? (
                                           <p className="text-xs text-gray-500">${((option.price / 100) / option.creditCount).toFixed(2)}/session</p>
                                         ) : null}

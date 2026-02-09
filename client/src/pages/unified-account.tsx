@@ -1220,12 +1220,14 @@ function InlineSchedulePanel({
     },
   });
 
+  const [bookRecurring, setBookRecurring] = useState(true);
   const [bookingResult, setBookingResult] = useState<any>(null);
   const bookMutation = useMutation({
     mutationFn: async (slot: any) => {
       const res = await apiRequest("POST", `/api/programs/${programId}/schedule-request`, {
         startTime: slot.startTime,
         playerId: playerId || undefined,
+        recurring: bookRecurring,
       });
       return res;
     },
@@ -1239,7 +1241,7 @@ function InlineSchedulePanel({
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       queryClient.invalidateQueries({ queryKey: ["/api/enrollments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/account/enrollments"] });
-      toast({ title: "Requests Submitted!", description: data?.message || "Your recurring sessions are pending admin approval." });
+      toast({ title: "Session Requested!", description: data?.message || "Your session request is pending admin approval." });
     },
     onError: (error: any) => {
       toast({
@@ -1263,11 +1265,14 @@ function InlineSchedulePanel({
           </div>
           <div>
             <p className="font-medium text-amber-800">
-              {sessionsCreated} Weekly Session{sessionsCreated > 1 ? 's' : ''} Requested!
+              {sessionsCreated} Session{sessionsCreated > 1 ? 's' : ''} Requested!
             </p>
             {selectedSlot && (
               <p className="text-sm text-amber-600">
-                Every {new Date(selectedSlot.startTime).toLocaleDateString("en-US", { weekday: "long" })} at {formatTime(selectedSlot.startTime)} — Pending approval
+                {sessionsCreated > 1
+                  ? `Every ${new Date(selectedSlot.startTime).toLocaleDateString("en-US", { weekday: "long" })} at ${formatTime(selectedSlot.startTime)} — Pending approval`
+                  : `${new Date(selectedSlot.startTime).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })} at ${formatTime(selectedSlot.startTime)} — Pending approval`
+                }
               </p>
             )}
             {bookingResult?.skippedWeeks?.length > 0 && (
@@ -1288,7 +1293,7 @@ function InlineSchedulePanel({
     <div className="border-t bg-gray-50 p-4">
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm font-medium text-gray-700">
-          Pick a weekly time slot ({sessionLength || 60} min)
+          Pick a time slot ({sessionLength || 60} min)
         </p>
         {totalCredits != null && totalCredits > 0 && (
           <span className="text-xs text-gray-500">
@@ -1296,11 +1301,6 @@ function InlineSchedulePanel({
           </span>
         )}
       </div>
-      {totalCredits != null && totalCredits > 0 && remainingCredits != null && remainingCredits > 1 && (
-        <p className="text-xs text-gray-400 mb-2">
-          Selecting a time will auto-book {remainingCredits} weekly recurring sessions
-        </p>
-      )}
       
       <div className="flex justify-center mb-4">
         <ShadcnCalendar
@@ -1343,20 +1343,35 @@ function InlineSchedulePanel({
       </div>
 
       {selectedSlot && (
-        <div className="mt-3 flex items-center justify-between bg-white border border-red-200 rounded-lg p-3">
-          <div className="text-sm">
-            <span className="font-medium">{formatTime(selectedSlot.startTime)}</span>
-            <span className="text-gray-500"> - {formatTime(selectedSlot.endTime)}</span>
+        <div className="mt-3 bg-white border border-red-200 rounded-lg p-3">
+          <div className="flex items-center justify-between">
+            <div className="text-sm">
+              <span className="font-medium">{formatTime(selectedSlot.startTime)}</span>
+              <span className="text-gray-500"> - {formatTime(selectedSlot.endTime)}</span>
+            </div>
+            <Button
+              size="sm"
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => bookMutation.mutate(selectedSlot)}
+              disabled={bookMutation.isPending}
+            >
+              {bookMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Calendar className="w-3.5 h-3.5 mr-1" />}
+              Book Now
+            </Button>
           </div>
-          <Button
-            size="sm"
-            className="bg-red-600 hover:bg-red-700"
-            onClick={() => bookMutation.mutate(selectedSlot)}
-            disabled={bookMutation.isPending}
-          >
-            {bookMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Calendar className="w-3.5 h-3.5 mr-1" />}
-            Book Weekly Sessions
-          </Button>
+          {remainingCredits != null && remainingCredits > 1 && (
+            <label className="flex items-center gap-2 mt-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={bookRecurring}
+                onChange={(e) => setBookRecurring(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+              />
+              <span className="text-xs text-gray-600">
+                Book recurring weekly ({remainingCredits} sessions)
+              </span>
+            </label>
+          )}
         </div>
       )}
     </div>

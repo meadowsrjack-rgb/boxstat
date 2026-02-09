@@ -9017,11 +9017,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create a schedule request (book recurring weekly sessions for all remaining credits)
+  // Create a schedule request (single or recurring weekly sessions)
   app.post('/api/programs/:id/schedule-request', requireAuth, async (req: any, res) => {
     try {
       const { id: programId } = req.params;
-      const { startTime, playerId } = req.body;
+      const { startTime, playerId, recurring } = req.body;
+      const isRecurring = recurring !== false;
       
       if (!startTime) {
         return res.status(400).json({ error: 'Start time is required' });
@@ -9075,7 +9076,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (effectiveRemaining <= 0) {
           return res.status(400).json({ error: 'No available credits. You have pending requests that will use your remaining credits.' });
         }
-        creditsToBook = effectiveRemaining;
+        creditsToBook = isRecurring ? effectiveRemaining : 1;
       }
       
       // Get player name for event title
@@ -9176,10 +9177,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const timeStr = firstDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
         
         const sessionWord = createdEvents.length === 1 ? 'session' : 'sessions';
+        const recurringText = createdEvents.length > 1 ? 'recurring weekly ' : '';
         await storage.createNotification({
           organizationId: orgId,
-          title: '📅 Session Requests Submitted',
-          message: `${createdEvents.length} recurring weekly ${program.name} ${sessionWord} requested starting ${dateStr} at ${timeStr}. Pending admin approval.`,
+          title: '📅 Session Request Submitted',
+          message: `${createdEvents.length} ${recurringText}${program.name} ${sessionWord} requested starting ${dateStr} at ${timeStr}. Pending admin approval.`,
           types: ['notification'],
           recipientTarget: 'users',
           recipientUserIds: [userId],
@@ -9189,8 +9191,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         await pushNotifications.notifyAllAdmins(storage,
-          '📅 New Session Requests',
-          `${playerName} requested ${createdEvents.length} recurring ${program.name} ${sessionWord} starting ${dateStr} at ${timeStr}. Needs approval.`
+          '📅 New Session Request',
+          `${playerName} requested ${createdEvents.length} ${recurringText}${program.name} ${sessionWord} starting ${dateStr} at ${timeStr}. Needs approval.`
         );
       } catch (notifErr: any) {
         console.error('Schedule notification failed (non-fatal):', notifErr.message);
@@ -9201,7 +9203,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         events: createdEvents,
         sessionsCreated: createdEvents.length,
         skippedWeeks,
-        message: `${createdEvents.length} weekly session${createdEvents.length > 1 ? 's' : ''} requested! Awaiting admin approval.`,
+        message: createdEvents.length > 1
+          ? `${createdEvents.length} weekly sessions requested! Awaiting admin approval.`
+          : `Session requested! Awaiting admin approval.`,
         status: 'pending',
       });
     } catch (error: any) {

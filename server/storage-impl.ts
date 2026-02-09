@@ -2520,7 +2520,7 @@ class MemStorage implements IStorage {
 // =============================================
 
 import { db } from "./db";
-import { eq, and, gte, lte, or, sql, isNull, inArray, desc, ilike } from "drizzle-orm";
+import { eq, and, gte, lte, or, sql, isNull, isNotNull, inArray, desc, ilike } from "drizzle-orm";
 import * as schema from "../shared/schema";
 
 class DatabaseStorage implements IStorage {
@@ -6135,7 +6135,7 @@ class DatabaseStorage implements IStorage {
     const allEvents = await db.select().from(schema.events)
       .where(and(
         eq(schema.events.organizationId, organizationId),
-        sql`${schema.events.scheduleRequestSource} IS NOT NULL`,
+        isNotNull(schema.events.scheduleRequestSource),
         eq(schema.events.status, 'pending')
       ));
     return allEvents as Event[];

@@ -1176,6 +1176,9 @@ function InlineSchedulePanel({
   programName,
   sessionLength,
   playerId,
+  enrollmentId,
+  remainingCredits,
+  totalCredits,
   selectedDate,
   onDateChange,
   selectedSlot,
@@ -1189,6 +1192,9 @@ function InlineSchedulePanel({
   programName: string;
   sessionLength?: number;
   playerId?: string;
+  enrollmentId?: number;
+  remainingCredits?: number;
+  totalCredits?: number;
   selectedDate: Date;
   onDateChange: (d: Date) => void;
   selectedSlot: any;
@@ -1229,11 +1235,12 @@ function InlineSchedulePanel({
         return Array.isArray(key) && key[0] === "/api/programs" && key[1] === programId && key[2] === "schedule-availability";
       }});
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      toast({ title: "Session booked!", description: "Your session has been added to the calendar." });
+      queryClient.invalidateQueries({ queryKey: ["/api/account/enrollments"] });
+      toast({ title: "Request Submitted!", description: "Your session request is pending admin approval." });
     },
     onError: (error: any) => {
       toast({
-        title: "Booking failed",
+        title: "Request failed",
         description: error?.message || "This time slot may no longer be available.",
         variant: "destructive",
       });
@@ -1245,22 +1252,22 @@ function InlineSchedulePanel({
 
   if (booked) {
     return (
-      <div className="border-t bg-green-50 p-4">
+      <div className="border-t bg-amber-50 p-4">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-            <Check className="w-5 h-5 text-green-600" />
+          <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+            <Clock className="w-5 h-5 text-amber-600" />
           </div>
           <div>
-            <p className="font-medium text-green-800">Session Booked!</p>
+            <p className="font-medium text-amber-800">Request Submitted!</p>
             {selectedSlot && (
-              <p className="text-sm text-green-600">
-                {new Date(selectedSlot.startTime).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} at {formatTime(selectedSlot.startTime)}
+              <p className="text-sm text-amber-600">
+                {new Date(selectedSlot.startTime).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} at {formatTime(selectedSlot.startTime)} - Pending approval
               </p>
             )}
           </div>
         </div>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={onBookAnother}>Book Another</Button>
+          <Button size="sm" variant="outline" onClick={onBookAnother}>Request Another</Button>
           <Button size="sm" variant="ghost" onClick={onClose}>Done</Button>
         </div>
       </div>
@@ -1271,8 +1278,13 @@ function InlineSchedulePanel({
     <div className="border-t bg-gray-50 p-4">
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm font-medium text-gray-700">
-          Book a {sessionLength || 60}-min session
+          Request a {sessionLength || 60}-min session
         </p>
+        {totalCredits != null && totalCredits > 0 && (
+          <span className="text-xs text-gray-500">
+            {remainingCredits}/{totalCredits} credits remaining
+          </span>
+        )}
       </div>
       
       <div className="flex justify-center mb-4">
@@ -1319,7 +1331,7 @@ function InlineSchedulePanel({
         <div className="mt-3 flex items-center justify-between bg-white border border-red-200 rounded-lg p-3">
           <div className="text-sm">
             <span className="font-medium">{formatTime(selectedSlot.startTime)}</span>
-            <span className="text-gray-500"> – {formatTime(selectedSlot.endTime)}</span>
+            <span className="text-gray-500"> - {formatTime(selectedSlot.endTime)}</span>
           </div>
           <Button
             size="sm"
@@ -1327,8 +1339,8 @@ function InlineSchedulePanel({
             onClick={() => bookMutation.mutate(selectedSlot)}
             disabled={bookMutation.isPending}
           >
-            {bookMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Check className="w-3.5 h-3.5 mr-1" />}
-            Confirm
+            {bookMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Calendar className="w-3.5 h-3.5 mr-1" />}
+            Request Session
           </Button>
         </div>
       )}
@@ -1905,6 +1917,9 @@ export default function UnifiedAccount() {
                                     programName={program.name}
                                     sessionLength={(program as any).sessionLengthMinutes}
                                     playerId={enrollment.profileId}
+                                    enrollmentId={enrollment.id}
+                                    remainingCredits={remainingCredits}
+                                    totalCredits={totalCredits}
                                     selectedDate={scheduleDate}
                                     onDateChange={(d) => { setScheduleDate(d); setScheduleSelectedSlot(null); }}
                                     selectedSlot={scheduleSelectedSlot}

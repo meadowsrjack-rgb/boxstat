@@ -636,6 +636,12 @@ export const events = pgTable("events", {
   proxyCheckinRoles: text("proxy_checkin_roles").array(), // Roles that can check in others (typically parent for player events)
   // Player RSVP control
   playerRsvpEnabled: boolean("player_rsvp_enabled").default(true), // If false, only parent/guardian can RSVP for players
+  // Schedule request fields - for events created via session booking
+  scheduleRequestSource: varchar("schedule_request_source"), // 'schedule_request' if created from booking
+  requestedByUserId: varchar("requested_by_user_id"), // Parent who requested the session
+  enrollmentId: integer("enrollment_id"), // Enrollment used for credit deduction
+  programId: varchar("program_id"), // Program this session belongs to
+  scheduleRequestNote: text("schedule_request_note"), // Optional note from parent
 });
 
 // Event Targets table (normalized targeting for events)
@@ -2479,3 +2485,33 @@ export const insertBugReportSchema = createInsertSchema(bugReports).omit({
 
 export type InsertBugReport = z.infer<typeof insertBugReportSchema>;
 export type BugReport = typeof bugReports.$inferSelect;
+
+// =============================================
+// Program Availability Slots Schema
+// =============================================
+
+export const programAvailabilitySlots = pgTable("program_availability_slots", {
+  id: serial().primaryKey().notNull(),
+  programId: varchar("program_id").notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  dayOfWeek: integer("day_of_week"), // 0=Sunday, 1=Monday, ..., 6=Saturday (for recurring)
+  specificDate: date("specific_date"), // For one-off availability
+  startTime: varchar("start_time").notNull(), // HH:mm format e.g. "09:00"
+  endTime: varchar("end_time").notNull(), // HH:mm format e.g. "17:00"
+  isRecurring: boolean("is_recurring").default(true),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+  foreignKey({
+    columns: [table.programId],
+    foreignColumns: [products.id],
+    name: "program_availability_slots_program_id_fkey"
+  }).onDelete("cascade"),
+]);
+
+export const insertProgramAvailabilitySlotSchema = createInsertSchema(programAvailabilitySlots).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertProgramAvailabilitySlot = z.infer<typeof insertProgramAvailabilitySlotSchema>;
+export type ProgramAvailabilitySlot = typeof programAvailabilitySlots.$inferSelect;

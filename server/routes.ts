@@ -8929,18 +8929,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const sessionLength = program.sessionLengthMinutes || 60;
       
-      // Parse the requested date or default to today
       const targetDate = date ? new Date(date as string) : new Date();
-      const startOfDay = new Date(targetDate);
-      startOfDay.setHours(8, 0, 0, 0); // Available from 8 AM
-      const endOfDay = new Date(targetDate);
-      endOfDay.setHours(20, 0, 0, 0); // Available until 8 PM
-      
-      // Get all events for the organization on this date
       const orgId = program.organizationId;
-      const allEvents = await storage.getEventsByOrganization(orgId);
       
-      // Filter events that overlap with the target date
+      // Get admin-defined availability windows for this program
+      const availabilitySlots = await storage.getAvailabilitySlots(programId);
+      const dayOfWeek = targetDate.getDay(); // 0=Sunday, 6=Saturday
+      
+      // Filter windows matching this day of week
+      const dayWindows = availabilitySlots.filter((s: any) => s.dayOfWeek === dayOfWeek);
+      
+      // Get all events for conflict checking
+      const allEvents = await storage.getEventsByOrganization(orgId);
       const dayStart = new Date(targetDate);
       dayStart.setHours(0, 0, 0, 0);
       const dayEnd = new Date(targetDate);
@@ -8952,28 +8952,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return eventStart < dayEnd && eventEnd > dayStart && event.isActive !== false && event.status !== 'cancelled';
       });
       
-      // Generate available time slots
+      // Generate time slots from admin-defined availability windows
       const slots: Array<{ startTime: string; endTime: string; available: boolean }> = [];
-      let currentSlot = new Date(startOfDay);
       
-      while (currentSlot.getTime() + sessionLength * 60 * 1000 <= endOfDay.getTime()) {
-        const slotEnd = new Date(currentSlot.getTime() + sessionLength * 60 * 1000);
+      if (dayWindows.length === 0) {
+        // No availability windows defined for this day - fallback to 8 AM - 8 PM
+        const startOfDay = new Date(targetDate);
+        startOfDay.setHours(8, 0, 0, 0);
+        const endOfDay = new Date(targetDate);
+        endOfDay.setHours(20, 0, 0, 0);
         
-        // Check if this slot conflicts with any existing events
-        const isBlocked = blockedEvents.some((event: any) => {
-          const eventStart = new Date(event.startTime);
-          const eventEnd = new Date(event.endTime);
-          return currentSlot < eventEnd && slotEnd > eventStart;
-        });
-        
-        slots.push({
-          startTime: currentSlot.toISOString(),
-          endTime: slotEnd.toISOString(),
-          available: !isBlocked,
-        });
-        
-        // Move to next slot (30 minute increments)
-        currentSlot = new Date(currentSlot.getTime() + 30 * 60 * 1000);
+        let currentSlot = new Date(startOfDay);
+        while (currentSlot.getTime() + sessionLength * 60 * 1000 <= endOfDay.getTime()) {
+          const slotEnd = new Date(currentSlot.getTime() + sessionLength * 60 * 1000);
+          const isBlocked = blockedEvents.some((event: any) => {
+            const eventStart = new Date(event.startTime);
+            const eventEnd = new Date(event.endTime);
+            return currentSlot < eventEnd && slotEnd > eventStart;
+          });
+          slots.push({ startTime: currentSlot.toISOString(), endTime: slotEnd.toISOString(), available: !isBlocked });
+          currentSlot = new Date(currentSlot.getTime() + 30 * 60 * 1000);
+        }
+      } else {
+        // Use admin-defined windows
+        for (const window of dayWindows) {
+          const [startH, startM] = window.startTime.split(':').map(Number);
+          const [endH, endM] = window.endTime.split(':').map(Number);
+          
+          const windowStart = new Date(targetDate);
+          windowStart.setHours(startH, startM, 0, 0);
+          const windowEnd = new Date(targetDate);
+          windowEnd.setHours(endH, endM, 0, 0);
+          
+          let currentSlot = new Date(windowStart);
+          while (currentSlot.getTime() + sessionLength * 60 * 1000 <= windowEnd.getTime()) {
+            const slotEnd = new Date(currentSlot.getTime() + sessionLength * 60 * 1000);
+            const isBlocked = blockedEvents.some((event: any) => {
+              const eventStart = new Date(event.startTime);
+              const eventEnd = new Date(event.endTime);
+              return currentSlot < eventEnd && slotEnd > eventStart;
+            });
+            slots.push({ startTime: currentSlot.toISOString(), endTime: slotEnd.toISOString(), available: !isBlocked });
+            currentSlot = new Date(currentSlot.getTime() + 30 * 60 * 1000);
+          }
+        }
       }
       
       res.json({
@@ -9033,11 +9055,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Check for active enrollment in this program
+      // Check for active enrollment with available credits
       const enrollments = await storage.getActiveEnrollmentsWithCredits(targetPlayerId);
-      const hasEnrollment = enrollments.some((e: any) => e.programId === programId && e.status === 'active');
-      if (!hasEnrollment) {
+      const enrollment = enrollments.find((e: any) => e.programId === programId && e.status === 'active');
+      if (!enrollment) {
         return res.status(403).json({ error: 'Active enrollment required to schedule a session' });
+      }
+      
+      // Check credit availability (remaining credits minus pending requests)
+      const totalCredits = enrollment.totalCredits || 0;
+      const remainingCredits = enrollment.remainingCredits || 0;
+      if (totalCredits > 0) {
+        // Count pending schedule requests for this enrollment
+        const pendingRequests = await storage.getPendingScheduleRequests(orgId);
+        const pendingForEnrollment = pendingRequests.filter((e: any) => 
+          e.enrollmentId === enrollment.id && e.status === 'pending'
+        );
+        const effectiveRemaining = remainingCredits - pendingForEnrollment.length;
+        if (effectiveRemaining <= 0) {
+          return res.status(400).json({ error: 'No available credits. You have pending requests that will use your remaining credits.' });
+        }
       }
       
       // Calculate end time
@@ -9060,7 +9097,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const player = await storage.getUser(targetPlayerId);
       const playerName = player ? `${player.firstName || ''} ${player.lastName || ''}`.trim() : 'Player';
       
-      // Create the event
+      // Create the event as pending schedule request
       const newEvent = await storage.createEvent({
         organizationId: orgId,
         title: `${program.name} - ${playerName}`,
@@ -9076,12 +9113,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         visibility: {
           programs: [programId],
         },
-        sendNotifications: true,
+        sendNotifications: false,
         createdBy: userId,
-        status: 'active',
+        status: 'pending',
         isActive: true,
         playerRsvpEnabled: true,
-      });
+        scheduleRequestSource: 'parent',
+        requestedByUserId: userId,
+        enrollmentId: enrollment.id,
+        programId: programId,
+      } as any);
       
       // Create RSVP response for the player (auto-attending)
       try {
@@ -9099,23 +9140,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const dateStr = sessionStart.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
         const timeStr = sessionStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
         
-        // Notify the player about the scheduled session via in-app notification
+        // Notify the parent about the pending request
         await storage.createNotification({
           organizationId: orgId,
-          title: '📅 Session Scheduled',
-          message: `Your ${program.name} session is booked for ${dateStr} at ${timeStr}`,
+          title: '📅 Session Request Submitted',
+          message: `Your ${program.name} session request for ${dateStr} at ${timeStr} is pending admin approval.`,
           types: ['notification'],
           recipientTarget: 'users',
-          recipientUserIds: [targetPlayerId],
+          recipientUserIds: [userId],
           status: 'sent',
-          deliveryChannels: ['in_app', 'push'],
+          deliveryChannels: ['in_app'],
           sentBy: 'system',
         });
         
-        // Notify admins
+        // Notify admins about the pending request
         await pushNotifications.notifyAllAdmins(storage,
-          '📅 New Session Booked',
-          `${playerName} booked a ${program.name} session for ${dateStr} at ${timeStr}`
+          '📅 New Session Request',
+          `${playerName} requested a ${program.name} session for ${dateStr} at ${timeStr}. Needs approval.`
         );
       } catch (notifErr: any) {
         console.error('Schedule notification failed (non-fatal):', notifErr.message);
@@ -9124,7 +9165,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         event: newEvent,
-        message: 'Session scheduled successfully',
+        message: 'Session request submitted! Awaiting admin approval.',
+        status: 'pending',
       });
     } catch (error: any) {
       console.error('Error creating schedule request:', error);
@@ -12600,6 +12642,325 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error sending reply:', error);
       res.status(500).json({ error: "Failed to send reply" });
+    }
+  });
+
+  // =============================================
+  // SCHEDULE REQUEST & AVAILABILITY ROUTES
+  // =============================================
+  
+  // Get availability slots for a program
+  app.get('/api/programs/:programId/availability', async (req, res) => {
+    try {
+      const slots = await storage.getAvailabilitySlotsByProgram(req.params.programId);
+      res.json(slots);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch availability slots" });
+    }
+  });
+  
+  // Save availability slots for a program (admin only - replaces all slots)
+  app.put('/api/programs/:programId/availability', requireAuth, async (req: any, res) => {
+    try {
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) return res.status(403).json({ error: "Admin access required" });
+      const { programId } = req.params;
+      const { slots } = req.body;
+      
+      if (!Array.isArray(slots)) {
+        return res.status(400).json({ error: "slots must be an array" });
+      }
+      
+      const program = await storage.getProgram(programId);
+      if (!program) {
+        return res.status(404).json({ error: "Program not found" });
+      }
+      
+      // Delete existing slots and create new ones
+      await storage.deleteAvailabilitySlotsByProgram(programId);
+      
+      const createdSlots = [];
+      for (const slot of slots) {
+        const created = await storage.createAvailabilitySlot({
+          programId,
+          organizationId: program.organizationId || req.user.organizationId,
+          dayOfWeek: slot.dayOfWeek,
+          specificDate: slot.specificDate || null,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          isRecurring: slot.isRecurring !== false,
+          isActive: true,
+        });
+        createdSlots.push(created);
+      }
+      
+      res.json(createdSlots);
+    } catch (error: any) {
+      console.error('Error saving availability slots:', error);
+      res.status(500).json({ error: "Failed to save availability slots" });
+    }
+  });
+  
+  // Get existing booked sessions for a program (to show unavailable times)
+  app.get('/api/programs/:programId/booked-sessions', requireAuth, async (req: any, res) => {
+    try {
+      const { programId } = req.params;
+      const requests = await storage.getScheduleRequestsByProgram(programId);
+      // Return only active/pending sessions (not cancelled) with minimal data
+      const bookedSessions = requests
+        .filter((e: any) => e.status === 'active' || e.status === 'pending')
+        .map((e: any) => ({
+          id: e.id,
+          startTime: e.startTime,
+          endTime: e.endTime,
+          status: e.status,
+        }));
+      res.json(bookedSessions);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch booked sessions" });
+    }
+  });
+  
+  // Create a schedule request (parent booking a session)
+  app.post('/api/schedule-requests', requireAuth, async (req: any, res) => {
+    try {
+      const { programId, enrollmentId, playerId, startTime, endTime, note } = req.body;
+      const userId = req.user.id;
+      
+      if (!programId || !enrollmentId || !playerId || !startTime || !endTime) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      // Verify enrollment exists and belongs to this user
+      const enrollments = await storage.getEnrollmentsByAccountHolder(userId);
+      const enrollment = enrollments.find((e: any) => e.id === enrollmentId);
+      if (!enrollment) {
+        return res.status(403).json({ error: "Enrollment not found" });
+      }
+      
+      // Check remaining credits
+      const remainingCredits = enrollment.remainingCredits || 0;
+      
+      // Count pending/active schedule requests for this enrollment
+      const existingRequests = await storage.getScheduleRequestsByEnrollment(enrollmentId);
+      const activeRequests = existingRequests.filter((e: any) => 
+        e.status === 'pending' || e.status === 'active'
+      );
+      
+      const effectiveRemaining = remainingCredits - activeRequests.length;
+      
+      if (effectiveRemaining <= 0) {
+        return res.status(400).json({ 
+          error: "No sessions available",
+          remainingCredits: 0,
+          pendingRequests: activeRequests.length,
+        });
+      }
+      
+      // Get program details for event title
+      const program = await storage.getProgram(programId);
+      const player = await storage.getUser(playerId);
+      const playerName = player ? `${player.firstName} ${player.lastName}` : 'Player';
+      
+      // Create the event as pending
+      const event = await storage.createEvent({
+        title: `${program?.name || 'Session'} - ${playerName}`,
+        description: note || `Session requested by parent`,
+        eventType: 'training',
+        startTime: new Date(startTime).toISOString(),
+        endTime: new Date(endTime).toISOString(),
+        location: '',
+        status: 'pending',
+        scheduleRequestSource: 'schedule_request',
+        requestedByUserId: userId,
+        enrollmentId,
+        programId,
+        playerId,
+        isActive: true,
+        createdBy: userId,
+        scheduleRequestNote: note || null,
+      });
+      
+      res.json({ 
+        success: true, 
+        event,
+        remainingCredits: effectiveRemaining - 1,
+      });
+    } catch (error: any) {
+      console.error('Error creating schedule request:', error);
+      res.status(500).json({ error: "Failed to create schedule request" });
+    }
+  });
+  
+  // Get pending schedule requests (admin)
+  app.get('/api/schedule-requests/pending', requireAuth, async (req: any, res) => {
+    try {
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) return res.status(403).json({ error: "Admin access required" });
+      const pendingRequests = await storage.getPendingScheduleRequests(req.user.organizationId);
+      
+      // Enrich with parent and player info
+      const enrichedRequests = await Promise.all(
+        pendingRequests.map(async (event: any) => {
+          const requestedBy = event.requestedByUserId ? await storage.getUser(event.requestedByUserId) : null;
+          let player = event.playerId ? await storage.getUser(event.playerId) : null;
+          // For 'parent' source, extract player from assignTo.users (first user that isn't the requester)
+          if (!player && event.assignTo?.users?.length > 0) {
+            const playerUserId = event.assignTo.users.find((uid: string) => uid !== event.requestedByUserId);
+            if (playerUserId) player = await storage.getUser(playerUserId);
+          }
+          const program = event.programId ? await storage.getProgram(event.programId) : null;
+          return {
+            ...event,
+            requestedByName: requestedBy ? `${requestedBy.firstName} ${requestedBy.lastName}` : 'Unknown',
+            requestedByEmail: requestedBy?.email || '',
+            playerName: player ? `${player.firstName} ${player.lastName}` : (event.title || 'Unknown'),
+            programName: program?.name || 'Unknown',
+          };
+        })
+      );
+      
+      res.json(enrichedRequests);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch pending requests" });
+    }
+  });
+  
+  // Approve a schedule request (admin)
+  app.post('/api/schedule-requests/:eventId/approve', requireAuth, async (req: any, res) => {
+    try {
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) return res.status(403).json({ error: "Admin access required" });
+      const eventId = parseInt(req.params.eventId);
+      const event = await storage.getEvent(eventId);
+      
+      if (!event) {
+        return res.status(404).json({ error: "Schedule request not found" });
+      }
+      
+      if (!event.scheduleRequestSource || event.status !== 'pending') {
+        return res.status(400).json({ error: "This event is not a pending schedule request" });
+      }
+      
+      // Approve: set status to active
+      const updated = await storage.updateEvent(eventId, { 
+        status: 'active',
+        isActive: true,
+      });
+      
+      // Deduct credit from enrollment
+      if (event.enrollmentId) {
+        const enrollments = await storage.getEnrollmentsByAccountHolder(event.requestedByUserId || '');
+        const enrollment = enrollments.find((e: any) => e.id === event.enrollmentId);
+        if (enrollment && enrollment.remainingCredits !== null && enrollment.remainingCredits > 0) {
+          await storage.updateEnrollment(enrollment.id, {
+            remainingCredits: enrollment.remainingCredits - 1,
+          });
+        }
+      }
+      
+      // Send notification to parent
+      if (event.requestedByUserId) {
+        try {
+          const dateStr = new Date(event.startTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+          await storage.createNotification({
+            organizationId: req.user.organizationId,
+            title: 'Session Approved',
+            message: `Your session request "${event.title}" has been approved for ${dateStr}`,
+            types: ['notification'],
+            recipientTarget: 'users',
+            recipientUserIds: [event.requestedByUserId],
+            status: 'sent',
+            deliveryChannels: ['in_app', 'push'],
+            sentBy: 'system',
+          });
+        } catch (e) {
+          console.error('Failed to send approval notification:', e);
+        }
+      }
+      
+      res.json({ success: true, event: updated });
+    } catch (error: any) {
+      console.error('Error approving schedule request:', error);
+      res.status(500).json({ error: "Failed to approve request" });
+    }
+  });
+  
+  // Reject a schedule request (admin)
+  app.post('/api/schedule-requests/:eventId/reject', requireAuth, async (req: any, res) => {
+    try {
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) return res.status(403).json({ error: "Admin access required" });
+      const eventId = parseInt(req.params.eventId);
+      const { reason } = req.body;
+      const event = await storage.getEvent(eventId);
+      
+      if (!event) {
+        return res.status(404).json({ error: "Schedule request not found" });
+      }
+      
+      if (!event.scheduleRequestSource || event.status !== 'pending') {
+        return res.status(400).json({ error: "This event is not a pending schedule request" });
+      }
+      
+      // Reject: set status to cancelled
+      const updated = await storage.updateEvent(eventId, { 
+        status: 'cancelled',
+        isActive: false,
+      });
+      
+      // Send notification to parent
+      if (event.requestedByUserId) {
+        try {
+          await storage.createNotification({
+            organizationId: req.user.organizationId,
+            title: 'Session Request Declined',
+            message: `Your session request "${event.title}" was not approved.${reason ? ` Reason: ${reason}` : ''}`,
+            types: ['notification'],
+            recipientTarget: 'users',
+            recipientUserIds: [event.requestedByUserId],
+            status: 'sent',
+            deliveryChannels: ['in_app'],
+            sentBy: 'system',
+          });
+        } catch (e) {
+          console.error('Failed to send rejection notification:', e);
+        }
+      }
+      
+      res.json({ success: true, event: updated });
+    } catch (error: any) {
+      console.error('Error rejecting schedule request:', error);
+      res.status(500).json({ error: "Failed to reject request" });
+    }
+  });
+  
+  // Get effective remaining credits for an enrollment (accounting for pending requests)
+  app.get('/api/enrollments/:enrollmentId/available-credits', requireAuth, async (req: any, res) => {
+    try {
+      const enrollmentId = parseInt(req.params.enrollmentId);
+      const enrollments = await storage.getEnrollmentsByAccountHolder(req.user.id);
+      const enrollment = enrollments.find((e: any) => e.id === enrollmentId);
+      
+      if (!enrollment) {
+        return res.status(404).json({ error: "Enrollment not found" });
+      }
+      
+      const existingRequests = await storage.getScheduleRequestsByEnrollment(enrollmentId);
+      const pendingCount = existingRequests.filter((e: any) => e.status === 'pending').length;
+      const approvedCount = existingRequests.filter((e: any) => e.status === 'active').length;
+      const remainingCredits = enrollment.remainingCredits || 0;
+      const effectiveRemaining = remainingCredits - pendingCount;
+      
+      res.json({
+        totalCredits: enrollment.totalCredits || 0,
+        remainingCredits,
+        pendingRequests: pendingCount,
+        approvedSessions: approvedCount,
+        effectiveRemaining: Math.max(0, effectiveRemaining),
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to check credits" });
     }
   });
 

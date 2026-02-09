@@ -3777,6 +3777,38 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
     enabled: !!selectedEventForDetails,
   });
 
+  const { data: pendingRequests = [] } = useQuery<any[]>({
+    queryKey: ["/api/schedule-requests/pending"],
+  });
+
+  const approveRequest = useMutation({
+    mutationFn: async (eventId: number) => {
+      await apiRequest("POST", `/api/schedule-requests/${eventId}/approve`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedule-requests/pending"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      toast({ title: "Session request approved" });
+    },
+    onError: () => {
+      toast({ title: "Failed to approve request", variant: "destructive" });
+    },
+  });
+
+  const rejectRequest = useMutation({
+    mutationFn: async (eventId: number) => {
+      await apiRequest("POST", `/api/schedule-requests/${eventId}/reject`, { reason: "Rejected by admin" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedule-requests/pending"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      toast({ title: "Session request rejected" });
+    },
+    onError: () => {
+      toast({ title: "Failed to reject request", variant: "destructive" });
+    },
+  });
+
   const createEventSchema = z.object({
     title: z.string().min(1, "Event title is required"),
     type: z.enum(["game", "tournament", "camp", "exhibition", "practice", "skills", "workshop", "talk", "combine", "training", "meeting", "course", "tryout", "skills-assessment", "team-building", "parent-meeting", "equipment-pickup", "photo-day", "award-ceremony", "fnh"]),
@@ -4234,6 +4266,67 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
   };
 
   return (
+    <div className="space-y-6">
+      {pendingRequests.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              Pending Session Requests
+              <Badge variant="outline" className="ml-2 bg-amber-50 text-amber-700 border-amber-300">
+                {pendingRequests.length}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {pendingRequests.map((request: any) => (
+              <div
+                key={request.id}
+                className="flex items-center justify-between p-4 border rounded-lg bg-white"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-medium text-sm truncate">{request.playerName}</span>
+                    <span className="text-gray-400">·</span>
+                    <span className="text-sm text-gray-600 truncate">{request.programName}</span>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {format(new Date(request.startTime), "MMM d, yyyy")} at{" "}
+                    {format(new Date(request.startTime), "h:mm a")} –{" "}
+                    {format(new Date(request.endTime), "h:mm a")}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 ml-4 shrink-0">
+                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">
+                    Pending
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-green-600 border-green-300 hover:bg-green-50"
+                    onClick={() => approveRequest.mutate(request.id)}
+                    disabled={approveRequest.isPending || rejectRequest.isPending}
+                  >
+                    <Check className="w-4 h-4 mr-1" />
+                    Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-red-600 border-red-300 hover:bg-red-50"
+                    onClick={() => rejectRequest.mutate(request.id)}
+                    disabled={approveRequest.isPending || rejectRequest.isPending}
+                  >
+                    <X className="w-4 h-4 mr-1" />
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
     <Card>
       <CardHeader className="flex flex-col gap-3">
         <div className="flex flex-row items-center justify-between w-full">
@@ -5551,6 +5644,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
         </AlertDialogContent>
       </AlertDialog>
     </Card>
+    </div>
   );
 }
 
@@ -8149,6 +8243,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
   const [editingProgram, setEditingProgram] = useState<any>(null);
   const [deleteConfirmProgram, setDeleteConfirmProgram] = useState<any>(null);
   const [selectedProgramIds, setSelectedProgramIds] = useState<Set<string>>(new Set());
+  const [availabilitySlots, setAvailabilitySlots] = useState<{dayOfWeek: number, startTime: string, endTime: string}[]>([]);
   const tableRef = useDragScroll();
 
   const bulkDeletePrograms = useMutation({
@@ -8219,6 +8314,23 @@ function ProgramsTab({ programs, teams, organization }: any) {
       setSelectedAddOns([]);
     }
   }, [existingAddOns, editingProgram]);
+
+  useEffect(() => {
+    if (editingProgram?.id) {
+      fetch(`/api/programs/${editingProgram.id}/availability`)
+        .then(res => res.ok ? res.json() : [])
+        .then((slots: any[]) => {
+          setAvailabilitySlots(slots.map((s: any) => ({
+            dayOfWeek: s.dayOfWeek,
+            startTime: s.startTime,
+            endTime: s.endTime,
+          })));
+        })
+        .catch(() => setAvailabilitySlots([]));
+    } else {
+      setAvailabilitySlots([]);
+    }
+  }, [editingProgram]);
 
   const handleViewProgram = (programId: string) => {
     navigate(`/admin/programs/${programId}`);
@@ -8306,12 +8418,20 @@ function ProgramsTab({ programs, teams, organization }: any) {
         if (selectedAddOns.length > 0 || existingAddOns.length > 0) {
           await apiRequest("PUT", `/api/programs/${editingProgram.id}/suggested-add-ons`, { productIds: selectedAddOns });
         }
+        const progId = editingProgram.id;
+        if (progId && data.scheduleRequestEnabled) {
+          await apiRequest("PUT", `/api/programs/${progId}/availability`, { slots: availabilitySlots.map(s => ({ ...s, isRecurring: true })) });
+        }
         return result;
       }
       const result = await apiRequest("POST", "/api/programs", payload);
       // Save suggested add-ons for new program
       if (selectedAddOns.length > 0 && result?.id) {
         await apiRequest("PUT", `/api/programs/${result.id}/suggested-add-ons`, { productIds: selectedAddOns });
+      }
+      const progId = editingProgram ? (editingProgram as any).id : result?.id;
+      if (progId && data.scheduleRequestEnabled) {
+        await apiRequest("PUT", `/api/programs/${progId}/availability`, { slots: availabilitySlots.map(s => ({ ...s, isRecurring: true })) });
       }
       return result;
     },
@@ -8324,6 +8444,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
       setIsDialogOpen(false);
       setEditingProgram(null);
       setSelectedAddOns([]);
+      setAvailabilitySlots([]);
       form.reset();
     },
     onError: (error: any) => {
@@ -9710,6 +9831,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
                   />
 
                   {form.watch("scheduleRequestEnabled") && (
+                    <>
                     <FormField
                       control={form.control}
                       name="sessionLengthMinutes"
@@ -9738,6 +9860,79 @@ function ProgramsTab({ programs, teams, organization }: any) {
                         </FormItem>
                       )}
                     />
+
+                    <div className="mt-4">
+                      <h5 className="text-sm font-medium mb-2">Available Time Windows</h5>
+                      <p className="text-xs text-gray-500 mb-3">Define recurring weekly time slots when sessions can be booked</p>
+                      {availabilitySlots.map((slot, index) => (
+                        <div key={index} className="flex items-center gap-2 mb-2">
+                          <Select
+                            value={slot.dayOfWeek.toString()}
+                            onValueChange={(val) => {
+                              const updated = [...availabilitySlots];
+                              updated[index] = { ...updated[index], dayOfWeek: parseInt(val) };
+                              setAvailabilitySlots(updated);
+                            }}
+                          >
+                            <SelectTrigger className="w-[130px]">
+                              <SelectValue placeholder="Day" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="0">Sunday</SelectItem>
+                              <SelectItem value="1">Monday</SelectItem>
+                              <SelectItem value="2">Tuesday</SelectItem>
+                              <SelectItem value="3">Wednesday</SelectItem>
+                              <SelectItem value="4">Thursday</SelectItem>
+                              <SelectItem value="5">Friday</SelectItem>
+                              <SelectItem value="6">Saturday</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            type="time"
+                            value={slot.startTime}
+                            onChange={(e) => {
+                              const updated = [...availabilitySlots];
+                              updated[index] = { ...updated[index], startTime: e.target.value };
+                              setAvailabilitySlots(updated);
+                            }}
+                            className="w-[120px]"
+                          />
+                          <span className="text-xs text-gray-400">to</span>
+                          <Input
+                            type="time"
+                            value={slot.endTime}
+                            onChange={(e) => {
+                              const updated = [...availabilitySlots];
+                              updated[index] = { ...updated[index], endTime: e.target.value };
+                              setAvailabilitySlots(updated);
+                            }}
+                            className="w-[120px]"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setAvailabilitySlots(availabilitySlots.filter((_, i) => i !== index));
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setAvailabilitySlots([...availabilitySlots, { dayOfWeek: 1, startTime: "09:00", endTime: "17:00" }]);
+                        }}
+                        className="mt-1"
+                      >
+                        <Plus className="h-4 w-4 mr-1" /> Add Time Slot
+                      </Button>
+                    </div>
+                    </>
                   )}
                 </div>
 

@@ -77,6 +77,9 @@ import {
   type InsertCrmNote,
   type QuoteCheckout,
   type InsertQuoteCheckout,
+  type ProgramAvailabilitySlot,
+  type InsertProgramAvailabilitySlot,
+  programAvailabilitySlots,
 } from "@shared/schema";
 
 // =============================================
@@ -359,6 +362,21 @@ export interface IStorage {
   getQuoteCheckoutsByOrganization(organizationId: string): Promise<QuoteCheckout[]>;
   createQuoteCheckout(data: InsertQuoteCheckout): Promise<QuoteCheckout>;
   updateQuoteCheckout(id: string, updates: Partial<QuoteCheckout>): Promise<QuoteCheckout | undefined>;
+  
+  // Enrollment update
+  updateEnrollment(id: number, updates: Partial<ProductEnrollment>): Promise<ProductEnrollment | undefined>;
+  
+  // Program Availability Slots operations
+  getAvailabilitySlotsByProgram(programId: string): Promise<ProgramAvailabilitySlot[]>;
+  createAvailabilitySlot(data: InsertProgramAvailabilitySlot): Promise<ProgramAvailabilitySlot>;
+  updateAvailabilitySlot(id: number, updates: Partial<ProgramAvailabilitySlot>): Promise<ProgramAvailabilitySlot | undefined>;
+  deleteAvailabilitySlot(id: number): Promise<void>;
+  deleteAvailabilitySlotsByProgram(programId: string): Promise<void>;
+  
+  // Schedule Request operations
+  getScheduleRequestsByProgram(programId: string): Promise<Event[]>;
+  getScheduleRequestsByEnrollment(enrollmentId: number): Promise<Event[]>;
+  getPendingScheduleRequests(organizationId: string): Promise<Event[]>;
 }
 
 // =============================================
@@ -2480,6 +2498,21 @@ class MemStorage implements IStorage {
   async getQuoteCheckoutsByOrganization(organizationId: string): Promise<QuoteCheckout[]> { return []; }
   async createQuoteCheckout(data: InsertQuoteCheckout): Promise<QuoteCheckout> { throw new Error("Not implemented"); }
   async updateQuoteCheckout(id: string, updates: Partial<QuoteCheckout>): Promise<QuoteCheckout | undefined> { return undefined; }
+  
+  // Enrollment update (MemStorage stub)
+  async updateEnrollment(id: number, updates: Partial<ProductEnrollment>): Promise<ProductEnrollment | undefined> { return undefined; }
+  
+  // Program Availability Slots (MemStorage stubs)
+  async getAvailabilitySlotsByProgram(programId: string): Promise<ProgramAvailabilitySlot[]> { return []; }
+  async createAvailabilitySlot(data: InsertProgramAvailabilitySlot): Promise<ProgramAvailabilitySlot> { throw new Error("Not implemented"); }
+  async updateAvailabilitySlot(id: number, updates: Partial<ProgramAvailabilitySlot>): Promise<ProgramAvailabilitySlot | undefined> { return undefined; }
+  async deleteAvailabilitySlot(id: number): Promise<void> {}
+  async deleteAvailabilitySlotsByProgram(programId: string): Promise<void> {}
+  
+  // Schedule Request operations (MemStorage stubs)
+  async getScheduleRequestsByProgram(programId: string): Promise<Event[]> { return []; }
+  async getScheduleRequestsByEnrollment(enrollmentId: number): Promise<Event[]> { return []; }
+  async getPendingScheduleRequests(organizationId: string): Promise<Event[]> { return []; }
 }
 
 // =============================================
@@ -6038,6 +6071,73 @@ class DatabaseStorage implements IStorage {
       .where(eq(schema.quoteCheckouts.id, id))
       .returning();
     return result as QuoteCheckout | undefined;
+  }
+  
+  // Enrollment update
+  async updateEnrollment(id: number, updates: Partial<ProductEnrollment>): Promise<ProductEnrollment | undefined> {
+    const [result] = await db.update(schema.productEnrollments)
+      .set({ ...updates, updatedAt: new Date().toISOString() })
+      .where(eq(schema.productEnrollments.id, id))
+      .returning();
+    return result as ProductEnrollment | undefined;
+  }
+  
+  // Program Availability Slots
+  async getAvailabilitySlotsByProgram(programId: string): Promise<ProgramAvailabilitySlot[]> {
+    return await db.select().from(schema.programAvailabilitySlots)
+      .where(and(
+        eq(schema.programAvailabilitySlots.programId, programId),
+        eq(schema.programAvailabilitySlots.isActive, true)
+      )) as ProgramAvailabilitySlot[];
+  }
+  
+  async createAvailabilitySlot(data: InsertProgramAvailabilitySlot): Promise<ProgramAvailabilitySlot> {
+    const [result] = await db.insert(schema.programAvailabilitySlots).values(data).returning();
+    return result as ProgramAvailabilitySlot;
+  }
+  
+  async updateAvailabilitySlot(id: number, updates: Partial<ProgramAvailabilitySlot>): Promise<ProgramAvailabilitySlot | undefined> {
+    const [result] = await db.update(schema.programAvailabilitySlots)
+      .set(updates)
+      .where(eq(schema.programAvailabilitySlots.id, id))
+      .returning();
+    return result as ProgramAvailabilitySlot | undefined;
+  }
+  
+  async deleteAvailabilitySlot(id: number): Promise<void> {
+    await db.delete(schema.programAvailabilitySlots)
+      .where(eq(schema.programAvailabilitySlots.id, id));
+  }
+  
+  async deleteAvailabilitySlotsByProgram(programId: string): Promise<void> {
+    await db.delete(schema.programAvailabilitySlots)
+      .where(eq(schema.programAvailabilitySlots.programId, programId));
+  }
+  
+  // Schedule Request operations
+  async getScheduleRequestsByProgram(programId: string): Promise<Event[]> {
+    return await db.select().from(schema.events)
+      .where(and(
+        eq(schema.events.scheduleRequestSource, 'schedule_request'),
+        eq(schema.events.programId, programId)
+      )) as Event[];
+  }
+  
+  async getScheduleRequestsByEnrollment(enrollmentId: number): Promise<Event[]> {
+    return await db.select().from(schema.events)
+      .where(and(
+        eq(schema.events.scheduleRequestSource, 'schedule_request'),
+        eq(schema.events.enrollmentId, enrollmentId)
+      )) as Event[];
+  }
+  
+  async getPendingScheduleRequests(organizationId: string): Promise<Event[]> {
+    const allEvents = await db.select().from(schema.events)
+      .where(and(
+        sql`${schema.events.scheduleRequestSource} IS NOT NULL`,
+        eq(schema.events.status, 'pending')
+      ));
+    return allEvents as Event[];
   }
 }
 

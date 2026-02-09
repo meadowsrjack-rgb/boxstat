@@ -56,7 +56,6 @@ import {
   Star,
   Medal,
   CalendarCheck,
-  Cog,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar as ShadcnCalendar } from "@/components/ui/calendar";
@@ -1723,7 +1722,7 @@ export default function UnifiedAccount() {
                 data-testid="button-settings-cog"
                 className="relative"
               >
-                <Cog className="h-5 w-5 text-gray-600" />
+                <Settings className="h-5 w-5 text-gray-600" />
               </Button>
             </div>
           </div>
@@ -2921,7 +2920,7 @@ export default function UnifiedAccount() {
         <DrawerContent className="max-h-[85vh]">
           <DrawerHeader>
             <DrawerTitle className="flex items-center gap-2">
-              <Cog className="w-5 h-5" />
+              <Settings className="w-5 h-5" />
               Profile & Settings
             </DrawerTitle>
             <DrawerDescription>Manage your account and preferences</DrawerDescription>

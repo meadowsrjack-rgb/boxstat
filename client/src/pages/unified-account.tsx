@@ -1565,16 +1565,37 @@ export default function UnifiedAccount() {
 
   // Show events that haven't ended yet (time-based)
   const now = new Date();
+
+  // Filter events by selected player (using team memberships)
+  const filterEventsByPlayer = (eventList: any[]) => {
+    if (!selectedStorePlayer) return eventList;
+    const player = players?.find((p: any) => p.id === selectedStorePlayer);
+    if (!player) return eventList;
+    const playerTeamIds = (player.allTeamIds || (player.teamId ? [player.teamId] : [])).map(String);
+    return eventList.filter((e: any) => {
+      if (e.playerId && String(e.playerId) === String(selectedStorePlayer)) return true;
+      if (e.teamId && playerTeamIds.includes(String(e.teamId))) return true;
+      const assignTo = e.assignTo;
+      if (assignTo?.teams?.length) {
+        if (assignTo.teams.some((t: any) => playerTeamIds.includes(String(t)))) return true;
+      }
+      if (assignTo?.users?.length) {
+        if (assignTo.users.includes(selectedStorePlayer)) return true;
+      }
+      if (!e.teamId && !e.playerId && (!assignTo || (!assignTo.teams?.length && !assignTo.users?.length))) return true;
+      return false;
+    });
+  };
   
-  const upcomingEvents = events
+  const upcomingEvents = filterEventsByPlayer(events)
     .filter((e: any) => {
       const endTime = new Date(e.endTime || e.startTime);
       return endTime > now;
     })
     .slice(0, 3);
 
-  // All upcoming events for Events tab - show events that haven't ended
-  const allUpcomingEvents = events
+  // All upcoming events for Home tab - show events that haven't ended
+  const allUpcomingEvents = filterEventsByPlayer(events)
     .filter((e: any) => {
       const endTime = new Date(e.endTime || e.startTime);
       return endTime > now;
@@ -1976,7 +1997,7 @@ export default function UnifiedAccount() {
 
             {/* Interactive Calendar Section */}
             <FamilyCalendar 
-              events={events} 
+              events={filterEventsByPlayer(events)} 
               onEventClick={(event) => {
                 // Create a clean copy to avoid cyclic structure issues from React Query cache
                 const cleanEvent = JSON.parse(JSON.stringify(event)) as Event;

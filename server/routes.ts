@@ -3024,17 +3024,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Get team memberships for this player
           const playerTeamMemberships = await storage.getTeamMembershipsByProfile(player.id);
-          const activeTeamMembership = playerTeamMemberships.find((tm: any) => tm.status === 'active' && tm.role === 'player');
+          const activeTeamMemberships = playerTeamMemberships.filter((tm: any) => tm.status === 'active' && tm.role === 'player');
+          const allTeamIds = activeTeamMemberships.map((tm: any) => tm.teamId);
           let teamInfo = null;
-          if (activeTeamMembership) {
-            const team = allTeams.find((t: any) => t.id === activeTeamMembership.teamId);
+          const firstActive = activeTeamMemberships[0];
+          if (firstActive) {
+            const team = allTeams.find((t: any) => t.id === firstActive.teamId);
             if (team) {
               teamInfo = {
                 teamId: team.id,
                 teamName: team.name,
                 coachId: team.coachId,
               };
-              // Get coach name if available
               if (team.coachId) {
                 const coach = await storage.getUser(team.coachId);
                 if (coach) {
@@ -3047,6 +3048,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return {
             ...player,
             ...teamInfo,
+            allTeamIds,
             activeSubscriptions: (subscriptions || []).map(s => ({
               id: s.id,
               productName: s.productName,

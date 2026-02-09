@@ -8933,7 +8933,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orgId = program.organizationId;
       
       // Get admin-defined availability windows for this program
-      const availabilitySlots = await storage.getAvailabilitySlots(programId);
+      const availabilitySlots = await storage.getAvailabilitySlotsByProgram(programId);
       const dayOfWeek = targetDate.getDay(); // 0=Sunday, 6=Saturday
       
       // Filter windows matching this day of week

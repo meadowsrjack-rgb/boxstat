@@ -9068,9 +9068,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const remainingCredits = enrollment.remainingCredits || 0;
       let creditsToBook = 1;
       if (totalCredits > 0) {
-        const pendingRequests = await storage.getPendingScheduleRequests(orgId);
-        const pendingForEnrollment = pendingRequests.filter((e: any) => 
-          e.enrollmentId === enrollment.id && e.status === 'pending'
+        const allOrgEvents = await storage.getEventsByOrganization(orgId);
+        const pendingForEnrollment = allOrgEvents.filter((e: any) => 
+          e.enrollmentId === enrollment.id && e.status === 'pending' && e.scheduleRequestSource
         );
         const effectiveRemaining = remainingCredits - pendingForEnrollment.length;
         if (effectiveRemaining <= 0) {

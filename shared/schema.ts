@@ -609,6 +609,7 @@ export const events = pgTable("events", {
   startTime: timestamp("start_time", { mode: 'string' }).notNull(),
   endTime: timestamp("end_time", { mode: 'string' }).notNull(),
   location: varchar(),
+  meetingLink: varchar("meeting_link"),
   teamId: integer("team_id"),
   opponentTeam: varchar("opponent_team"),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),

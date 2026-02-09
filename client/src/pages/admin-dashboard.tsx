@@ -3716,6 +3716,8 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
   const [recurrenceEndType, setRecurrenceEndType] = useState<'count' | 'date'>('count');
   const [recurrenceEndDate, setRecurrenceEndDate] = useState<string>('');
   const [playerRsvpEnabled, setPlayerRsvpEnabled] = useState(true);
+  const [locationType, setLocationType] = useState<'physical' | 'online'>('physical');
+  const [editLocationType, setEditLocationType] = useState<'physical' | 'online'>('physical');
   const [editEventWindows, setEditEventWindows] = useState<Partial<EventWindow>[]>([]);
   const [selectedEventIds, setSelectedEventIds] = useState<Set<number>>(new Set());
   
@@ -3783,7 +3785,8 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
     type: z.enum(["game", "tournament", "camp", "exhibition", "practice", "skills", "workshop", "talk", "combine", "training", "meeting", "course", "tryout", "skills-assessment", "team-building", "parent-meeting", "equipment-pickup", "photo-day", "award-ceremony", "fnh"]),
     startTime: z.string().min(1, "Start time is required"),
     endTime: z.string().min(1, "End time is required"),
-    location: z.string().optional(),
+    location: z.string().min(1, "Location is required"),
+    meetingLink: z.string().optional(),
     latitude: z.number().optional(),
     longitude: z.number().optional(),
     description: z.string().optional(),
@@ -3798,6 +3801,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
       startTime: "",
       endTime: "",
       location: "",
+      meetingLink: "",
       latitude: undefined,
       longitude: undefined,
       description: "",
@@ -4035,6 +4039,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
       setSelectedDivisions([]);
       setSelectedPrograms([]);
       setSelectedRoles([]);
+      setLocationType('physical');
       setIsRecurring(false);
       setRecurrenceFrequency('weekly');
       setRecurrenceCount(4);
@@ -4556,30 +4561,79 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                     </div>
                   </div>
                   
-                  <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Location</FormLabel>
-                        <FormControl>
-                          <LocationSearch
-                            value={field.value || ""}
-                            onLocationSelect={(location) => {
-                              field.onChange(location.name);
-                              form.setValue("latitude", location.lat ?? undefined as any);
-                              form.setValue("longitude", location.lng ?? undefined as any);
-                            }}
-                            placeholder="Search for a location..."
-                            className="w-full"
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Search and select a location for accurate check-in geo-fencing
-                        </FormDescription>
-                      </FormItem>
+                  <div className="space-y-3">
+                    <FormLabel>Location <span className="text-red-500">*</span></FormLabel>
+                    <div className="flex border rounded-lg overflow-hidden w-fit">
+                      <button
+                        type="button"
+                        className={`px-4 py-2 text-sm font-medium transition-colors ${locationType === 'physical' ? 'bg-primary text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                        onClick={() => {
+                          setLocationType('physical');
+                          form.setValue("location", "");
+                          form.setValue("meetingLink", "");
+                          form.setValue("latitude", undefined as any);
+                          form.setValue("longitude", undefined as any);
+                        }}
+                      >
+                        Physical
+                      </button>
+                      <button
+                        type="button"
+                        className={`px-4 py-2 text-sm font-medium transition-colors ${locationType === 'online' ? 'bg-primary text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                        onClick={() => {
+                          setLocationType('online');
+                          form.setValue("location", "Online");
+                          form.setValue("latitude", undefined as any);
+                          form.setValue("longitude", undefined as any);
+                        }}
+                      >
+                        Online
+                      </button>
+                    </div>
+
+                    {locationType === 'physical' ? (
+                      <FormField
+                        control={form.control}
+                        name="location"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <LocationSearch
+                                value={field.value || ""}
+                                onLocationSelect={(location) => {
+                                  field.onChange(location.name);
+                                  form.setValue("latitude", location.lat ?? undefined as any);
+                                  form.setValue("longitude", location.lng ?? undefined as any);
+                                }}
+                                placeholder="Search for a location..."
+                                className="w-full"
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Search and select a location for accurate check-in geo-fencing
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    ) : (
+                      <FormField
+                        control={form.control}
+                        name="meetingLink"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input {...field} placeholder="https://zoom.us/j/..." data-testid="input-event-meeting-link" />
+                            </FormControl>
+                            <FormDescription>
+                              Paste a Zoom, Google Meet, or other meeting link
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     )}
-                  />
+                  </div>
                   <FormField
                     control={form.control}
                     name="targetType"
@@ -4849,22 +4903,58 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-event-location">Location</Label>
-                    <LocationSearch
-                      value={editingEvent.location || ""}
-                      onLocationSelect={(location) => {
-                        setEditingEvent({
-                          ...editingEvent,
-                          location: location.name,
-                          latitude: location.lat ?? undefined,
-                          longitude: location.lng ?? undefined
-                        });
-                      }}
-                      placeholder="Search for a location..."
-                      className="w-full"
-                    />
-                    <p className="text-xs text-gray-500">Search and select a location for accurate check-in geo-fencing</p>
+                  <div className="space-y-3">
+                    <Label>Location <span className="text-red-500">*</span></Label>
+                    <div className="flex border rounded-lg overflow-hidden w-fit">
+                      <button
+                        type="button"
+                        className={`px-4 py-2 text-sm font-medium transition-colors ${editLocationType === 'physical' ? 'bg-primary text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                        onClick={() => {
+                          setEditLocationType('physical');
+                          setEditingEvent({...editingEvent, location: '', meetingLink: '', latitude: undefined, longitude: undefined});
+                        }}
+                      >
+                        Physical
+                      </button>
+                      <button
+                        type="button"
+                        className={`px-4 py-2 text-sm font-medium transition-colors ${editLocationType === 'online' ? 'bg-primary text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                        onClick={() => {
+                          setEditLocationType('online');
+                          setEditingEvent({...editingEvent, location: 'Online', latitude: undefined, longitude: undefined});
+                        }}
+                      >
+                        Online
+                      </button>
+                    </div>
+                    {editLocationType === 'physical' ? (
+                      <>
+                        <LocationSearch
+                          value={editingEvent.location === 'Online' ? '' : (editingEvent.location || "")}
+                          onLocationSelect={(location) => {
+                            setEditingEvent({
+                              ...editingEvent,
+                              location: location.name,
+                              latitude: location.lat ?? undefined,
+                              longitude: location.lng ?? undefined
+                            });
+                          }}
+                          placeholder="Search for a location..."
+                          className="w-full"
+                        />
+                        <p className="text-xs text-gray-500">Search and select a location for accurate check-in geo-fencing</p>
+                      </>
+                    ) : (
+                      <>
+                        <Input
+                          value={editingEvent.meetingLink || ""}
+                          onChange={(e) => setEditingEvent({...editingEvent, meetingLink: e.target.value})}
+                          placeholder="https://zoom.us/j/..."
+                          data-testid="input-edit-event-meeting-link"
+                        />
+                        <p className="text-xs text-gray-500">Paste a Zoom, Google Meet, or other meeting link</p>
+                      </>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-event-targetType">Event For</Label>
@@ -5311,7 +5401,14 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                       </Badge>
                     </TableCell>
                     <TableCell>{dateTimeDisplay}</TableCell>
-                    <TableCell>{event.location || "-"}</TableCell>
+                    <TableCell>
+                      {event.location === 'Online' && event.meetingLink ? (
+                        <a href={event.meetingLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                          Online
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      ) : event.location || "-"}
+                    </TableCell>
                     <TableCell className="max-w-[200px] truncate" title={forDisplay}>
                       {forDisplay}
                     </TableCell>
@@ -5364,6 +5461,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                             eventToEdit.targetType = 'all';
                           }
                           
+                          setEditLocationType(eventToEdit.location === 'Online' ? 'online' : 'physical');
                           setEditingEvent(eventToEdit);
                         }}
                         data-testid={`button-edit-event-${event.id}`}

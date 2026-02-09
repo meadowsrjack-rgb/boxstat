@@ -3777,37 +3777,6 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
     enabled: !!selectedEventForDetails,
   });
 
-  const { data: pendingRequests = [] } = useQuery<any[]>({
-    queryKey: ["/api/schedule-requests/pending"],
-  });
-
-  const approveRequest = useMutation({
-    mutationFn: async (eventId: number) => {
-      await apiRequest("POST", `/api/schedule-requests/${eventId}/approve`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/schedule-requests/pending"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      toast({ title: "Session request approved" });
-    },
-    onError: () => {
-      toast({ title: "Failed to approve request", variant: "destructive" });
-    },
-  });
-
-  const rejectRequest = useMutation({
-    mutationFn: async (eventId: number) => {
-      await apiRequest("POST", `/api/schedule-requests/${eventId}/reject`, { reason: "Rejected by admin" });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/schedule-requests/pending"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      toast({ title: "Session request rejected" });
-    },
-    onError: () => {
-      toast({ title: "Failed to reject request", variant: "destructive" });
-    },
-  });
 
   const createEventSchema = z.object({
     title: z.string().min(1, "Event title is required"),
@@ -4267,66 +4236,6 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
 
   return (
     <div className="space-y-6">
-      {pendingRequests.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-amber-500" />
-              Pending Session Requests
-              <Badge variant="outline" className="ml-2 bg-amber-50 text-amber-700 border-amber-300">
-                {pendingRequests.length}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {pendingRequests.map((request: any) => (
-              <div
-                key={request.id}
-                className="flex items-center justify-between p-4 border rounded-lg bg-white"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-sm truncate">{request.playerName}</span>
-                    <span className="text-gray-400">·</span>
-                    <span className="text-sm text-gray-600 truncate">{request.programName}</span>
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {format(new Date(request.startTime), "MMM d, yyyy")} at{" "}
-                    {format(new Date(request.startTime), "h:mm a")} –{" "}
-                    {format(new Date(request.endTime), "h:mm a")}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 ml-4 shrink-0">
-                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">
-                    Pending
-                  </Badge>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-green-600 border-green-300 hover:bg-green-50"
-                    onClick={() => approveRequest.mutate(request.id)}
-                    disabled={approveRequest.isPending || rejectRequest.isPending}
-                  >
-                    <Check className="w-4 h-4 mr-1" />
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-red-600 border-red-300 hover:bg-red-50"
-                    onClick={() => rejectRequest.mutate(request.id)}
-                    disabled={approveRequest.isPending || rejectRequest.isPending}
-                  >
-                    <X className="w-4 h-4 mr-1" />
-                    Reject
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
     <Card>
       <CardHeader className="flex flex-col gap-3">
         <div className="flex flex-row items-center justify-between w-full">
@@ -5380,7 +5289,16 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                         aria-label={`Select ${event.title}`}
                       />
                     </TableCell>
-                    <TableCell className="font-medium">{event.title}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {event.title}
+                        {event.scheduleRequestSource && (
+                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-xs">
+                            Requested
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Badge className={
                         (event.eventType || event.type) === 'practice' ? 'bg-blue-100 text-blue-700' :

@@ -6135,8 +6135,8 @@ class DatabaseStorage implements IStorage {
     const allEvents = await db.select().from(schema.events)
       .where(and(
         eq(schema.events.organizationId, organizationId),
-        isNotNull(schema.events.scheduleRequestSource),
-        eq(schema.events.status, 'pending')
+        eq(schema.events.status, 'pending'),
+        sql`"schedule_request_source" IS NOT NULL`
       ));
     return allEvents as Event[];
   }

@@ -55,6 +55,7 @@ import {
   CircleDot,
   Star,
   Medal,
+  CalendarCheck,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar as ShadcnCalendar } from "@/components/ui/calendar";
@@ -1976,6 +1977,12 @@ export default function UnifiedAccount() {
                               {isPack && <Badge className="bg-blue-100 text-blue-700 border-0">{item.sessionCount || ""} Pack</Badge>}
                               {isStore && <Badge className="bg-purple-100 text-purple-700 border-0">Store</Badge>}
                             </div>
+                            {item.scheduleRequestEnabled && !isStore && (
+                              <div className="flex items-center gap-1 text-xs text-amber-700 mb-2">
+                                <CalendarCheck className="w-3 h-3" />
+                                <span>Book sessions after purchase</span>
+                              </div>
+                            )}
                             <Button size="sm" className="bg-red-600 hover:bg-red-700 w-full">
                               {isStore ? "Buy" : "Enroll"}
                             </Button>
@@ -2455,6 +2462,20 @@ export default function UnifiedAccount() {
                                       {pkg.billingCycle}
                                     </span>
                                   )}
+                                  {pkg.scheduleRequestEnabled && (
+                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                                      <CalendarCheck className="w-3 h-3 mr-1" />
+                                      Book Sessions After Purchase
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                              {!isStoreProduct && pkg.scheduleRequestEnabled && (
+                                <div className="flex items-start gap-2 p-2 bg-amber-50 rounded-lg border border-amber-200">
+                                  <CalendarCheck className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                                  <p className="text-xs text-amber-800">
+                                    This program includes session scheduling. After purchase, you can book {pkg.sessionLengthMinutes ? `${pkg.sessionLengthMinutes}-minute` : ''} sessions directly from your active programs.
+                                  </p>
                                 </div>
                               )}
                             </div>

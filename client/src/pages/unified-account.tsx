@@ -1865,27 +1865,40 @@ export default function UnifiedAccount() {
                             
                             return (
                               <div key={enrollment.id} className="border rounded-lg overflow-hidden">
-                                <div className="flex items-center justify-between py-3 px-4">
-                                  <div className="flex items-center gap-3">
+                                <div className="py-3 px-4">
+                                  <div className="flex items-start gap-3">
                                     {program?.imageUrl ? (
                                       <img 
                                         src={program.imageUrl} 
                                         alt={program.name || "Program"} 
-                                        className="w-10 h-10 rounded-full object-cover"
+                                        className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                                       />
                                     ) : isPack ? (
-                                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                                         <Target className="w-5 h-5 text-blue-600" />
                                       </div>
                                     ) : (
-                                      <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                                      <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
                                         <Crown className="w-5 h-5 text-amber-600" />
                                       </div>
                                     )}
-                                    <div>
-                                      <div className="flex items-center gap-2">
-                                        <p className="font-medium text-sm">{program?.name || "Unknown Program"}</p>
-                                        <span className="text-xs text-gray-500">• {enrolleeName}</span>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <p className="font-medium text-sm truncate">{program?.name || "Unknown Program"}</p>
+                                        <span className="text-xs text-gray-500 whitespace-nowrap">• {enrolleeName}</span>
+                                        {isExpired ? (
+                                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] px-1.5 py-0">
+                                            Expired
+                                          </Badge>
+                                        ) : isExpiringSoon ? (
+                                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] px-1.5 py-0">
+                                            Expiring
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px] px-1.5 py-0">
+                                            Active
+                                          </Badge>
+                                        )}
                                       </div>
                                       {isPack && totalCredits > 0 && (
                                         <div className="flex items-center gap-2 mt-1">
@@ -1900,44 +1913,29 @@ export default function UnifiedAccount() {
                                             : `Expires ${endDate.toLocaleDateString()}`}
                                         </p>
                                       )}
+                                      {hasScheduling && (
+                                        <Button
+                                          size="sm"
+                                          variant={isSchedulingOpen ? "default" : "outline"}
+                                          className={`mt-2 ${isSchedulingOpen ? "bg-red-600 hover:bg-red-700" : "border-red-300 text-red-600 hover:bg-red-50"}`}
+                                          onClick={() => {
+                                            if (isSchedulingOpen) {
+                                              setSchedulingEnrollment(null);
+                                              setScheduleSelectedSlot(null);
+                                              setScheduleBooked(false);
+                                            } else {
+                                              setSchedulingEnrollment(enrollment.id);
+                                              setScheduleDate(new Date());
+                                              setScheduleSelectedSlot(null);
+                                              setScheduleBooked(false);
+                                            }
+                                          }}
+                                        >
+                                          <Calendar className="w-3.5 h-3.5 mr-1" />
+                                          {isSchedulingOpen ? "Close" : "Book Session"}
+                                        </Button>
+                                      )}
                                     </div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {hasScheduling && (
-                                      <Button
-                                        size="sm"
-                                        variant={isSchedulingOpen ? "default" : "outline"}
-                                        className={isSchedulingOpen ? "bg-red-600 hover:bg-red-700" : "border-red-300 text-red-600 hover:bg-red-50"}
-                                        onClick={() => {
-                                          if (isSchedulingOpen) {
-                                            setSchedulingEnrollment(null);
-                                            setScheduleSelectedSlot(null);
-                                            setScheduleBooked(false);
-                                          } else {
-                                            setSchedulingEnrollment(enrollment.id);
-                                            setScheduleDate(new Date());
-                                            setScheduleSelectedSlot(null);
-                                            setScheduleBooked(false);
-                                          }
-                                        }}
-                                      >
-                                        <Calendar className="w-3.5 h-3.5 mr-1" />
-                                        {isSchedulingOpen ? "Close" : "Book Session"}
-                                      </Button>
-                                    )}
-                                    {isExpired ? (
-                                      <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                                        Expired
-                                      </Badge>
-                                    ) : isExpiringSoon ? (
-                                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                                        Expiring Soon
-                                      </Badge>
-                                    ) : (
-                                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                        Active
-                                      </Badge>
-                                    )}
                                   </div>
                                 </div>
                                 

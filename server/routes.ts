@@ -9209,8 +9209,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'pending',
       });
     } catch (error: any) {
-      console.error('Error creating schedule request:', error);
-      res.status(500).json({ error: 'Failed to schedule session' });
+      console.error('Error creating schedule request:', error?.message || error);
+      console.error('Stack:', error?.stack);
+      res.status(500).json({ error: 'Failed to schedule session', detail: error?.message });
     }
   });
 

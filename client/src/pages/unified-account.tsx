@@ -56,6 +56,7 @@ import {
   Star,
   Medal,
   CalendarCheck,
+  Cog,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar as ShadcnCalendar } from "@/components/ui/calendar";
@@ -1362,6 +1363,9 @@ export default function UnifiedAccount() {
   const [selectedStorePlayer, setSelectedStorePlayer] = useState<string>("");
   const [selectedStoreCategory, setSelectedStoreCategory] = useState<string>("");
   
+  // Settings drawer state
+  const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
+  
   // Schedule request state - inline booking within active programs
   const [schedulingEnrollment, setSchedulingEnrollment] = useState<string | null>(null);
   const [scheduleDate, setScheduleDate] = useState<Date>(new Date());
@@ -1677,7 +1681,18 @@ export default function UnifiedAccount() {
                 <p className="text-gray-600 mt-1">Manage your account and players</p>
               </div>
             </div>
-            <NotificationBell />
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSettingsDrawerOpen(true)}
+                data-testid="button-settings-cog"
+                className="relative"
+              >
+                <Cog className="h-5 w-5 text-gray-600" />
+              </Button>
+            </div>
           </div>
 
         </div>
@@ -1701,19 +1716,195 @@ export default function UnifiedAccount() {
                 <MessageSquare className="w-4 h-4 mr-2" />
                 Messages
               </TabsTrigger>
-              <TabsTrigger value="profile" data-testid="tab-profile" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <User className="w-4 h-4 mr-2" />
-                Profile
-              </TabsTrigger>
-              <TabsTrigger value="settings" data-testid="tab-settings" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <Settings className="w-4 h-4 mr-2" />
-                Settings
-              </TabsTrigger>
             </TabsList>
           </div>
 
           {/* Home Tab */}
           <TabsContent value="home" className="space-y-6">
+            {/* Player Switcher Carousel */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide" data-testid="player-switcher">
+              <Button
+                variant={!selectedStorePlayer ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedStorePlayer("")}
+                className="flex-shrink-0 rounded-full"
+                data-testid="player-filter-all"
+              >
+                All Players
+              </Button>
+              {players?.map((player: any) => (
+                <Button
+                  key={player.id}
+                  variant={selectedStorePlayer === player.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedStorePlayer(player.id)}
+                  className="flex-shrink-0 rounded-full gap-2"
+                  data-testid={`player-filter-${player.id}`}
+                >
+                  <Avatar className="w-5 h-5">
+                    <AvatarImage src={player.profileImageUrl} />
+                    <AvatarFallback className="text-xs bg-red-100 text-red-700">
+                      {(player.firstName?.[0] || "")}{(player.lastName?.[0] || "")}
+                    </AvatarFallback>
+                  </Avatar>
+                  {player.firstName}
+                </Button>
+              ))}
+            </div>
+
+            {/* My Active Programs - Collapsible Section */}
+            <Collapsible defaultOpen={true}>
+              <Card>
+                <CollapsibleTrigger className="w-full">
+                  <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-gray-50 rounded-t-lg">
+                    <div className="flex items-center gap-2">
+                      <Check className="w-5 h-5 text-green-600" />
+                      <CardTitle className="text-lg">Your Active Programs</CardTitle>
+                    </div>
+                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0">
+                    {(() => {
+                      const relevantEnrollments = playerEnrollments?.filter((e: any) => 
+                        e.status === 'active' && 
+                        (!selectedStorePlayer || e.profileId === selectedStorePlayer || e.accountHolderId === user?.id)
+                      ) || [];
+                      
+                      if (relevantEnrollments.length === 0) {
+                        return (
+                          <div className="text-center py-6 text-gray-500">
+                            <Target className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                            <p>No active programs yet</p>
+                            <p className="text-sm">Browse programs in the Payments tab to get started!</p>
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <div className="space-y-2">
+                          {relevantEnrollments.map((enrollment: any) => {
+                            const program = programs?.find((p: any) => p.id === enrollment.programId);
+                            const isPack = program?.type === "Pack";
+                            const remainingCredits = enrollment.remainingCredits || 0;
+                            const totalCredits = enrollment.totalCredits || program?.sessionCount || 0;
+                            const player = players?.find((p: any) => p.id === enrollment.profileId);
+                            const enrolleeName = player 
+                              ? `${player.firstName} ${player.lastName}` 
+                              : user ? `${(user as any).firstName || ''} ${(user as any).lastName || ''}`.trim() || 'You' : 'You';
+                            const endDate = enrollment.endDate ? new Date(enrollment.endDate) : null;
+                            const now = new Date();
+                            const isExpired = endDate && endDate < now;
+                            const isExpiringSoon = endDate && !isExpired && (endDate.getTime() - now.getTime()) < 14 * 24 * 60 * 60 * 1000;
+                            const hasScheduling = (program as any)?.scheduleRequestEnabled && !isExpired;
+                            const isSchedulingOpen = schedulingEnrollment === enrollment.id;
+                            
+                            return (
+                              <div key={enrollment.id} className="border rounded-lg overflow-hidden">
+                                <div className="flex items-center justify-between py-3 px-4">
+                                  <div className="flex items-center gap-3">
+                                    {program?.imageUrl ? (
+                                      <img 
+                                        src={program.imageUrl} 
+                                        alt={program.name || "Program"} 
+                                        className="w-10 h-10 rounded-full object-cover"
+                                      />
+                                    ) : isPack ? (
+                                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                        <Target className="w-5 h-5 text-blue-600" />
+                                      </div>
+                                    ) : (
+                                      <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                                        <Crown className="w-5 h-5 text-amber-600" />
+                                      </div>
+                                    )}
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <p className="font-medium text-sm">{program?.name || "Unknown Program"}</p>
+                                        <span className="text-xs text-gray-500">• {enrolleeName}</span>
+                                      </div>
+                                      {isPack && totalCredits > 0 && (
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <Progress value={(remainingCredits / totalCredits) * 100} className="w-24 h-2" />
+                                          <span className="text-xs text-gray-500">{remainingCredits}/{totalCredits} sessions</span>
+                                        </div>
+                                      )}
+                                      {endDate && !isPack && (
+                                        <p className={`text-xs mt-1 ${isExpired ? 'text-red-600' : isExpiringSoon ? 'text-amber-600' : 'text-gray-500'}`}>
+                                          {isExpired 
+                                            ? `Expired ${endDate.toLocaleDateString()}` 
+                                            : `Expires ${endDate.toLocaleDateString()}`}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {hasScheduling && (
+                                      <Button
+                                        size="sm"
+                                        variant={isSchedulingOpen ? "default" : "outline"}
+                                        className={isSchedulingOpen ? "bg-red-600 hover:bg-red-700" : "border-red-300 text-red-600 hover:bg-red-50"}
+                                        onClick={() => {
+                                          if (isSchedulingOpen) {
+                                            setSchedulingEnrollment(null);
+                                            setScheduleSelectedSlot(null);
+                                            setScheduleBooked(false);
+                                          } else {
+                                            setSchedulingEnrollment(enrollment.id);
+                                            setScheduleDate(new Date());
+                                            setScheduleSelectedSlot(null);
+                                            setScheduleBooked(false);
+                                          }
+                                        }}
+                                      >
+                                        <Calendar className="w-3.5 h-3.5 mr-1" />
+                                        {isSchedulingOpen ? "Close" : "Book Session"}
+                                      </Button>
+                                    )}
+                                    {isExpired ? (
+                                      <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                                        Expired
+                                      </Badge>
+                                    ) : isExpiringSoon ? (
+                                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                                        Expiring Soon
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                        Active
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                {isSchedulingOpen && program && (
+                                  <InlineSchedulePanel
+                                    programId={program.id}
+                                    programName={program.name}
+                                    sessionLength={(program as any).sessionLengthMinutes}
+                                    playerId={enrollment.profileId}
+                                    selectedDate={scheduleDate}
+                                    onDateChange={(d) => { setScheduleDate(d); setScheduleSelectedSlot(null); }}
+                                    selectedSlot={scheduleSelectedSlot}
+                                    onSlotSelect={setScheduleSelectedSlot}
+                                    booked={scheduleBooked}
+                                    onBooked={() => setScheduleBooked(true)}
+                                    onBookAnother={() => { setScheduleBooked(false); setScheduleSelectedSlot(null); }}
+                                    onClose={() => { setSchedulingEnrollment(null); setScheduleSelectedSlot(null); setScheduleBooked(false); }}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+
             {/* Upcoming Events Section */}
             <div>
               <h2 className="text-2xl font-bold mb-4">Upcoming Events</h2>
@@ -1994,197 +2185,6 @@ export default function UnifiedAccount() {
                 </div>
               );
             })()}
-
-            {/* Player Switcher Carousel - filters Active Programs and Payment History */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide" data-testid="player-switcher">
-              <Button
-                variant={!selectedStorePlayer ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedStorePlayer("")}
-                className="flex-shrink-0 rounded-full"
-                data-testid="player-filter-all"
-              >
-                All Players
-              </Button>
-              {players?.map((player: any) => (
-                <Button
-                  key={player.id}
-                  variant={selectedStorePlayer === player.id ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedStorePlayer(player.id)}
-                  className="flex-shrink-0 rounded-full gap-2"
-                  data-testid={`player-filter-${player.id}`}
-                >
-                  <Avatar className="w-5 h-5">
-                    <AvatarImage src={player.profileImageUrl} />
-                    <AvatarFallback className="text-xs bg-red-100 text-red-700">
-                      {(player.firstName?.[0] || "")}{(player.lastName?.[0] || "")}
-                    </AvatarFallback>
-                  </Avatar>
-                  {player.firstName}
-                </Button>
-              ))}
-            </div>
-
-            {/* My Active Programs - Collapsible Section */}
-            <Collapsible defaultOpen={true}>
-              <Card>
-                <CollapsibleTrigger className="w-full">
-                  <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-gray-50 rounded-t-lg">
-                    <div className="flex items-center gap-2">
-                      <Check className="w-5 h-5 text-green-600" />
-                      <CardTitle className="text-lg">Your Active Programs</CardTitle>
-                    </div>
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
-                  </CardHeader>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <CardContent className="pt-0">
-                    {(() => {
-                      // Get enrollments for selected player or all players
-                      // Enrollments use profileId for the player
-                      const relevantEnrollments = playerEnrollments?.filter((e: any) => 
-                        e.status === 'active' && 
-                        (!selectedStorePlayer || e.profileId === selectedStorePlayer || e.accountHolderId === user?.id)
-                      ) || [];
-                      
-                      if (relevantEnrollments.length === 0) {
-                        return (
-                          <div className="text-center py-6 text-gray-500">
-                            <Target className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                            <p>No active programs yet</p>
-                            <p className="text-sm">Browse the store above to get started!</p>
-                          </div>
-                        );
-                      }
-                      
-                      // Flat list of enrollments with user/player name next to each
-                      return (
-                        <div className="space-y-2">
-                          {relevantEnrollments.map((enrollment: any) => {
-                            const program = programs?.find((p: any) => p.id === enrollment.programId);
-                            const isPack = program?.type === "Pack";
-                            const remainingCredits = enrollment.remainingCredits || 0;
-                            const totalCredits = enrollment.totalCredits || program?.sessionCount || 0;
-                            
-                            // Get player or user name - enrollments use profileId for the player
-                            const player = players?.find((p: any) => p.id === enrollment.profileId);
-                            const enrolleeName = player 
-                              ? `${player.firstName} ${player.lastName}` 
-                              : user ? `${(user as any).firstName || ''} ${(user as any).lastName || ''}`.trim() || 'You' : 'You';
-                            
-                            const endDate = enrollment.endDate ? new Date(enrollment.endDate) : null;
-                            const now = new Date();
-                            const isExpired = endDate && endDate < now;
-                            const isExpiringSoon = endDate && !isExpired && (endDate.getTime() - now.getTime()) < 14 * 24 * 60 * 60 * 1000;
-                            
-                            const hasScheduling = (program as any)?.scheduleRequestEnabled && !isExpired;
-                            const isSchedulingOpen = schedulingEnrollment === enrollment.id;
-                            
-                            return (
-                              <div key={enrollment.id} className="border rounded-lg overflow-hidden">
-                                <div className="flex items-center justify-between py-3 px-4">
-                                  <div className="flex items-center gap-3">
-                                    {program?.imageUrl ? (
-                                      <img 
-                                        src={program.imageUrl} 
-                                        alt={program.name || "Program"} 
-                                        className="w-10 h-10 rounded-full object-cover"
-                                      />
-                                    ) : isPack ? (
-                                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                        <Target className="w-5 h-5 text-blue-600" />
-                                      </div>
-                                    ) : (
-                                      <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                                        <Crown className="w-5 h-5 text-amber-600" />
-                                      </div>
-                                    )}
-                                    <div>
-                                      <div className="flex items-center gap-2">
-                                        <p className="font-medium text-sm">{program?.name || "Unknown Program"}</p>
-                                        <span className="text-xs text-gray-500">• {enrolleeName}</span>
-                                      </div>
-                                      {isPack && totalCredits > 0 && (
-                                        <div className="flex items-center gap-2 mt-1">
-                                          <Progress value={(remainingCredits / totalCredits) * 100} className="w-24 h-2" />
-                                          <span className="text-xs text-gray-500">{remainingCredits}/{totalCredits} sessions</span>
-                                        </div>
-                                      )}
-                                      {endDate && !isPack && (
-                                        <p className={`text-xs mt-1 ${isExpired ? 'text-red-600' : isExpiringSoon ? 'text-amber-600' : 'text-gray-500'}`}>
-                                          {isExpired 
-                                            ? `Expired ${endDate.toLocaleDateString()}` 
-                                            : `Expires ${endDate.toLocaleDateString()}`}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {hasScheduling && (
-                                      <Button
-                                        size="sm"
-                                        variant={isSchedulingOpen ? "default" : "outline"}
-                                        className={isSchedulingOpen ? "bg-red-600 hover:bg-red-700" : "border-red-300 text-red-600 hover:bg-red-50"}
-                                        onClick={() => {
-                                          if (isSchedulingOpen) {
-                                            setSchedulingEnrollment(null);
-                                            setScheduleSelectedSlot(null);
-                                            setScheduleBooked(false);
-                                          } else {
-                                            setSchedulingEnrollment(enrollment.id);
-                                            setScheduleDate(new Date());
-                                            setScheduleSelectedSlot(null);
-                                            setScheduleBooked(false);
-                                          }
-                                        }}
-                                      >
-                                        <Calendar className="w-3.5 h-3.5 mr-1" />
-                                        {isSchedulingOpen ? "Close" : "Book Session"}
-                                      </Button>
-                                    )}
-                                    {isExpired ? (
-                                      <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                                        Expired
-                                      </Badge>
-                                    ) : isExpiringSoon ? (
-                                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                                        Expiring Soon
-                                      </Badge>
-                                    ) : (
-                                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                        Active
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-                                
-                                {isSchedulingOpen && program && (
-                                  <InlineSchedulePanel
-                                    programId={program.id}
-                                    programName={program.name}
-                                    sessionLength={(program as any).sessionLengthMinutes}
-                                    playerId={enrollment.profileId}
-                                    selectedDate={scheduleDate}
-                                    onDateChange={(d) => { setScheduleDate(d); setScheduleSelectedSlot(null); }}
-                                    selectedSlot={scheduleSelectedSlot}
-                                    onSlotSelect={setScheduleSelectedSlot}
-                                    booked={scheduleBooked}
-                                    onBooked={() => setScheduleBooked(true)}
-                                    onBookAnother={() => { setScheduleBooked(false); setScheduleSelectedSlot(null); }}
-                                    onClose={() => { setSchedulingEnrollment(null); setScheduleSelectedSlot(null); setScheduleBooked(false); }}
-                                  />
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })()}
-                  </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
 
             {/* Payment Drawer - slides up from bottom for better mobile UX */}
             <Drawer open={paymentDialogOpen} onOpenChange={(open) => {
@@ -2885,150 +2885,139 @@ export default function UnifiedAccount() {
             <ParentMessagesSection players={players} userId={user?.id} />
           </TabsContent>
 
-          {/* Profile Tab */}
-          <TabsContent value="profile" className="space-y-6">
-            {/* Parent Profile Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="w-5 h-5" />
-                  My Profile
-                </CardTitle>
-                <CardDescription>Your account information</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <Avatar className="w-16 h-16">
-                    <AvatarImage src={user?.profileImageUrl} alt={`${user?.firstName} ${user?.lastName}`} />
-                    <AvatarFallback className="bg-gradient-to-br from-red-500 to-red-600 text-white text-xl font-bold">
-                      {user?.firstName?.[0]}{user?.lastName?.[0]}
-                    </AvatarFallback>
-                  </Avatar>
+        </Tabs>
+
+      {/* Settings & Profile Drawer */}
+      <Drawer open={settingsDrawerOpen} onOpenChange={setSettingsDrawerOpen}>
+        <DrawerContent className="max-h-[85vh]">
+          <DrawerHeader>
+            <DrawerTitle className="flex items-center gap-2">
+              <Cog className="w-5 h-5" />
+              Profile & Settings
+            </DrawerTitle>
+            <DrawerDescription>Manage your account and preferences</DrawerDescription>
+          </DrawerHeader>
+          <div className="overflow-y-auto px-4 pb-8 space-y-6">
+            {/* Profile Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Avatar className="w-16 h-16">
+                  <AvatarImage src={user?.profileImageUrl} alt={`${user?.firstName} ${user?.lastName}`} />
+                  <AvatarFallback className="bg-gradient-to-br from-red-500 to-red-600 text-white text-xl font-bold">
+                    {user?.firstName?.[0]}{user?.lastName?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="text-lg font-semibold" data-testid="profile-parent-name">
+                    {user?.firstName} {user?.lastName}
+                  </h3>
+                  <Badge variant="outline" className="text-xs capitalize">
+                    {user?.role || 'Parent'}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                <div className="space-y-3">
                   <div>
-                    <h3 className="text-lg font-semibold" data-testid="profile-parent-name">
-                      {user?.firstName} {user?.lastName}
-                    </h3>
-                    <Badge variant="outline" className="text-xs capitalize">
-                      {user?.role || 'Parent'}
-                    </Badge>
+                    <span className="text-xs text-gray-500 block">Email</span>
+                    <span className="text-sm font-medium" data-testid="profile-parent-email">{user?.email || '-'}</span>
                   </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-                  <div className="space-y-3">
+                  {user?.phoneNumber && (
                     <div>
-                      <span className="text-xs text-gray-500 block">Email</span>
-                      <span className="text-sm font-medium" data-testid="profile-parent-email">{user?.email || '-'}</span>
+                      <span className="text-xs text-gray-500 block">Phone</span>
+                      <span className="text-sm font-medium" data-testid="profile-parent-phone">{user?.phoneNumber}</span>
                     </div>
-                    {user?.phoneNumber && (
-                      <div>
-                        <span className="text-xs text-gray-500 block">Phone</span>
-                        <span className="text-sm font-medium" data-testid="profile-parent-phone">{user?.phoneNumber}</span>
-                      </div>
-                    )}
-                    {user?.address && (
-                      <div>
-                        <span className="text-xs text-gray-500 block">Address</span>
-                        <span className="text-sm font-medium">{user?.address}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-3">
-                    {user?.city && (
-                      <div>
-                        <span className="text-xs text-gray-500 block">City</span>
-                        <span className="text-sm font-medium">{user?.city}</span>
-                      </div>
-                    )}
-                    {user?.emergencyContact && (
-                      <div>
-                        <span className="text-xs text-gray-500 block">Emergency Contact</span>
-                        <span className="text-sm font-medium">{user?.emergencyContact}</span>
-                      </div>
-                    )}
-                    {user?.emergencyPhone && (
-                      <div>
-                        <span className="text-xs text-gray-500 block">Emergency Phone</span>
-                        <span className="text-sm font-medium">{user?.emergencyPhone}</span>
-                      </div>
-                    )}
-                  </div>
+                  )}
+                  {user?.address && (
+                    <div>
+                      <span className="text-xs text-gray-500 block">Address</span>
+                      <span className="text-sm font-medium">{user?.address}</span>
+                    </div>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
+                <div className="space-y-3">
+                  {user?.city && (
+                    <div>
+                      <span className="text-xs text-gray-500 block">City</span>
+                      <span className="text-sm font-medium">{user?.city}</span>
+                    </div>
+                  )}
+                  {user?.emergencyContact && (
+                    <div>
+                      <span className="text-xs text-gray-500 block">Emergency Contact</span>
+                      <span className="text-sm font-medium">{user?.emergencyContact}</span>
+                    </div>
+                  )}
+                  {user?.emergencyPhone && (
+                    <div>
+                      <span className="text-xs text-gray-500 block">Emergency Phone</span>
+                      <span className="text-sm font-medium">{user?.emergencyPhone}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
 
             {/* Linked Players Section */}
             <div>
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <Users className="w-5 h-5" />
+              <h3 className="text-base font-bold mb-3 flex items-center gap-2">
+                <Users className="w-4 h-4" />
                 Linked Players ({players.length})
-              </h2>
+              </h3>
               {players.length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <h3 className="text-lg font-semibold mb-2">No Players Linked</h3>
-                    <p className="text-gray-600">You don't have any players linked to your account yet.</p>
-                  </CardContent>
-                </Card>
+                <div className="text-center py-4 text-gray-500">
+                  <Users className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No players linked to your account yet.</p>
+                </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {players.map((player: any) => (
                     <PlayerProfileCard key={player.id} player={player} />
                   ))}
                 </div>
               )}
             </div>
-          </TabsContent>
 
-          {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Account Settings</CardTitle>
-                <CardDescription>Manage your account preferences</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Personal Information</h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Name:</span>
-                      <span>{user?.firstName} {user?.lastName}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Email:</span>
-                      <span>{user?.email}</span>
-                    </div>
-                    {user?.phoneNumber && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Phone:</span>
-                        <span>{user.phoneNumber}</span>
-                      </div>
-                    )}
+            {/* Account Settings Section */}
+            <div className="pt-4 border-t space-y-4">
+              <h3 className="text-base font-bold flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Account Settings
+              </h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Name:</span>
+                  <span>{user?.firstName} {user?.lastName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Email:</span>
+                  <span>{user?.email}</span>
+                </div>
+                {user?.phoneNumber && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Phone:</span>
+                    <span>{user.phoneNumber}</span>
                   </div>
-                </div>
+                )}
+              </div>
 
-                <div className="pt-4 border-t">
-                  <Button 
-                    variant="outline" 
-                    className="w-full" 
-                    onClick={handleSignOut}
-                    data-testid="button-logout"
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign Out
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={handleSignOut}
+                data-testid="button-logout"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
 
-            
             {/* Danger Zone */}
             <SettingsDangerZone user={user} />
-          </TabsContent>
-
-        </Tabs>
+          </div>
+        </DrawerContent>
+      </Drawer>
       </div>
       {/* PIN Dialog */}
       <PINDialog
@@ -3076,7 +3065,7 @@ export default function UnifiedAccount() {
               <Button 
                 onClick={() => {
                   setEventDetailOpen(false);
-                  setLocation('/unified-account?tab=profile');
+                  setSettingsDrawerOpen(true);
                 }}
                 className="bg-red-600 hover:bg-red-700"
               >

@@ -1359,7 +1359,7 @@ function InlineSchedulePanel({
               Book Now
             </Button>
           </div>
-          {remainingCredits != null && remainingCredits > 1 && (
+          {totalCredits != null && totalCredits > 0 && (
             <label className="flex items-center gap-2 mt-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -1368,7 +1368,7 @@ function InlineSchedulePanel({
                 className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
               />
               <span className="text-xs text-gray-600">
-                Book recurring weekly ({remainingCredits} sessions)
+                Book recurring weekly{remainingCredits != null && remainingCredits > 1 ? ` (${remainingCredits} sessions)` : ''}
               </span>
             </label>
           )}

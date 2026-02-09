@@ -9017,7 +9017,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create a schedule request (book a session)
+  // Create a schedule request (book recurring weekly sessions for all remaining credits)
   app.post('/api/programs/:id/schedule-request', requireAuth, async (req: any, res) => {
     try {
       const { id: programId } = req.params;
@@ -9065,8 +9065,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check credit availability (remaining credits minus pending requests)
       const totalCredits = enrollment.totalCredits || 0;
       const remainingCredits = enrollment.remainingCredits || 0;
+      let creditsToBook = 1;
       if (totalCredits > 0) {
-        // Count pending schedule requests for this enrollment
         const pendingRequests = await storage.getPendingScheduleRequests(orgId);
         const pendingForEnrollment = pendingRequests.filter((e: any) => 
           e.enrollmentId === enrollment.id && e.status === 'pending'
@@ -9075,76 +9075,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (effectiveRemaining <= 0) {
           return res.status(400).json({ error: 'No available credits. You have pending requests that will use your remaining credits.' });
         }
-      }
-      
-      // Calculate end time
-      const sessionStart = new Date(startTime);
-      const sessionEnd = new Date(sessionStart.getTime() + sessionLength * 60 * 1000);
-      
-      // Verify no conflicts
-      const allEvents = await storage.getEventsByOrganization(orgId);
-      const hasConflict = allEvents.some((event: any) => {
-        const eventStart = new Date(event.startTime);
-        const eventEnd = new Date(event.endTime);
-        return sessionStart < eventEnd && sessionEnd > eventStart && event.isActive !== false && event.status !== 'cancelled';
-      });
-      
-      if (hasConflict) {
-        return res.status(409).json({ error: 'This time slot is no longer available. Please choose another time.' });
+        creditsToBook = effectiveRemaining;
       }
       
       // Get player name for event title
       const player = await storage.getUser(targetPlayerId);
       const playerName = player ? `${player.firstName || ''} ${player.lastName || ''}`.trim() : 'Player';
       
-      // Create the event as pending schedule request
-      const newEvent = await storage.createEvent({
-        organizationId: orgId,
-        title: `${program.name} - ${playerName}`,
-        description: `Scheduled session for ${playerName} via ${program.name}`,
-        eventType: 'training',
-        startTime: sessionStart.toISOString(),
-        endTime: sessionEnd.toISOString(),
-        location: '',
-        assignTo: {
-          users: [targetPlayerId, userId],
-          programs: [programId],
-        },
-        visibility: {
-          programs: [programId],
-        },
-        sendNotifications: false,
-        createdBy: userId,
-        status: 'pending',
-        isActive: true,
-        playerRsvpEnabled: true,
-        scheduleRequestSource: 'parent',
-        requestedByUserId: userId,
-        enrollmentId: enrollment.id,
-        programId: programId,
-      } as any);
+      // Create recurring weekly sessions for all available credits
+      const createdEvents: any[] = [];
+      const skippedWeeks: string[] = [];
+      const allEvents = await storage.getEventsByOrganization(orgId);
+      const availabilitySlots = await storage.getAvailabilitySlotsByProgram(programId);
       
-      // Create RSVP response for the player (auto-attending)
-      try {
-        await storage.createRsvpResponse({
-          eventId: newEvent.id,
-          userId: targetPlayerId,
-          response: 'attending',
+      for (let week = 0; week < creditsToBook; week++) {
+        const sessionStart = new Date(new Date(startTime).getTime() + week * 7 * 24 * 60 * 60 * 1000);
+        const sessionEnd = new Date(sessionStart.getTime() + sessionLength * 60 * 1000);
+        
+        // Validate this week falls within admin-defined availability windows
+        const dayOfWeek = sessionStart.getDay();
+        const sessionHour = sessionStart.getHours();
+        const sessionMinute = sessionStart.getMinutes();
+        const sessionTimeStr = `${String(sessionHour).padStart(2, '0')}:${String(sessionMinute).padStart(2, '0')}`;
+        const endHour = sessionEnd.getHours();
+        const endMinute = sessionEnd.getMinutes();
+        const endTimeStr = `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`;
+        
+        if (availabilitySlots.length > 0) {
+          const dayWindows = availabilitySlots.filter((s: any) => s.dayOfWeek === dayOfWeek);
+          const fitsWindow = dayWindows.some((w: any) => sessionTimeStr >= w.startTime && endTimeStr <= w.endTime);
+          if (!fitsWindow) {
+            skippedWeeks.push(sessionStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            continue;
+          }
+        }
+        
+        // Check for conflicts with existing events AND already-created events in this batch
+        const hasConflict = allEvents.some((event: any) => {
+          const eventStart = new Date(event.startTime);
+          const eventEnd = new Date(event.endTime);
+          return sessionStart < eventEnd && sessionEnd > eventStart && event.isActive !== false && event.status !== 'cancelled';
+        }) || createdEvents.some((event: any) => {
+          const eventStart = new Date(event.startTime);
+          const eventEnd = new Date(event.endTime);
+          return sessionStart < eventEnd && sessionEnd > eventStart;
         });
-      } catch (rsvpErr: any) {
-        console.error('Failed to create auto-RSVP (non-fatal):', rsvpErr.message);
+        
+        if (hasConflict) {
+          skippedWeeks.push(sessionStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+          continue;
+        }
+        
+        const newEvent = await storage.createEvent({
+          organizationId: orgId,
+          title: `${program.name} - ${playerName}`,
+          description: `Scheduled session for ${playerName} via ${program.name}`,
+          eventType: 'training',
+          startTime: sessionStart.toISOString(),
+          endTime: sessionEnd.toISOString(),
+          location: '',
+          assignTo: {
+            users: [targetPlayerId, userId],
+            programs: [programId],
+          },
+          visibility: {
+            programs: [programId],
+          },
+          sendNotifications: false,
+          createdBy: userId,
+          status: 'pending',
+          isActive: true,
+          playerRsvpEnabled: true,
+          scheduleRequestSource: 'parent',
+          requestedByUserId: userId,
+          enrollmentId: enrollment.id,
+          programId: programId,
+        } as any);
+        
+        createdEvents.push(newEvent);
+        
+        try {
+          await storage.createRsvpResponse({
+            eventId: newEvent.id,
+            userId: targetPlayerId,
+            response: 'attending',
+          });
+        } catch (rsvpErr: any) {
+          console.error('Failed to create auto-RSVP (non-fatal):', rsvpErr.message);
+        }
+      }
+      
+      if (createdEvents.length === 0) {
+        return res.status(409).json({ error: 'All weekly time slots have conflicts. Please choose another time.' });
       }
       
       // Send notifications
       try {
-        const dateStr = sessionStart.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-        const timeStr = sessionStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        const firstDate = new Date(createdEvents[0].startTime);
+        const dateStr = firstDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        const timeStr = firstDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
         
-        // Notify the parent about the pending request
+        const sessionWord = createdEvents.length === 1 ? 'session' : 'sessions';
         await storage.createNotification({
           organizationId: orgId,
-          title: '📅 Session Request Submitted',
-          message: `Your ${program.name} session request for ${dateStr} at ${timeStr} is pending admin approval.`,
+          title: '📅 Session Requests Submitted',
+          message: `${createdEvents.length} recurring weekly ${program.name} ${sessionWord} requested starting ${dateStr} at ${timeStr}. Pending admin approval.`,
           types: ['notification'],
           recipientTarget: 'users',
           recipientUserIds: [userId],
@@ -9153,10 +9188,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sentBy: 'system',
         });
         
-        // Notify admins about the pending request
         await pushNotifications.notifyAllAdmins(storage,
-          '📅 New Session Request',
-          `${playerName} requested a ${program.name} session for ${dateStr} at ${timeStr}. Needs approval.`
+          '📅 New Session Requests',
+          `${playerName} requested ${createdEvents.length} recurring ${program.name} ${sessionWord} starting ${dateStr} at ${timeStr}. Needs approval.`
         );
       } catch (notifErr: any) {
         console.error('Schedule notification failed (non-fatal):', notifErr.message);
@@ -9164,8 +9198,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         success: true,
-        event: newEvent,
-        message: 'Session request submitted! Awaiting admin approval.',
+        events: createdEvents,
+        sessionsCreated: createdEvents.length,
+        skippedWeeks,
+        message: `${createdEvents.length} weekly session${createdEvents.length > 1 ? 's' : ''} requested! Awaiting admin approval.`,
         status: 'pending',
       });
     } catch (error: any) {

@@ -1220,22 +1220,26 @@ function InlineSchedulePanel({
     },
   });
 
+  const [bookingResult, setBookingResult] = useState<any>(null);
   const bookMutation = useMutation({
     mutationFn: async (slot: any) => {
-      return await apiRequest("POST", `/api/programs/${programId}/schedule-request`, {
+      const res = await apiRequest("POST", `/api/programs/${programId}/schedule-request`, {
         startTime: slot.startTime,
         playerId: playerId || undefined,
       });
+      return res;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      setBookingResult(data);
       onBooked();
       queryClient.invalidateQueries({ predicate: (query) => {
         const key = query.queryKey;
         return Array.isArray(key) && key[0] === "/api/programs" && key[1] === programId && key[2] === "schedule-availability";
       }});
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/enrollments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/account/enrollments"] });
-      toast({ title: "Request Submitted!", description: "Your session request is pending admin approval." });
+      toast({ title: "Requests Submitted!", description: data?.message || "Your recurring sessions are pending admin approval." });
     },
     onError: (error: any) => {
       toast({
@@ -1250,6 +1254,7 @@ function InlineSchedulePanel({
   const formatTime = (isoStr: string) => new Date(isoStr).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
   if (booked) {
+    const sessionsCreated = bookingResult?.sessionsCreated || 1;
     return (
       <div className="border-t bg-amber-50 p-4">
         <div className="flex items-center gap-3 mb-3">
@@ -1257,16 +1262,22 @@ function InlineSchedulePanel({
             <Clock className="w-5 h-5 text-amber-600" />
           </div>
           <div>
-            <p className="font-medium text-amber-800">Request Submitted!</p>
+            <p className="font-medium text-amber-800">
+              {sessionsCreated} Weekly Session{sessionsCreated > 1 ? 's' : ''} Requested!
+            </p>
             {selectedSlot && (
               <p className="text-sm text-amber-600">
-                {new Date(selectedSlot.startTime).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} at {formatTime(selectedSlot.startTime)} - Pending approval
+                Every {new Date(selectedSlot.startTime).toLocaleDateString("en-US", { weekday: "long" })} at {formatTime(selectedSlot.startTime)} — Pending approval
+              </p>
+            )}
+            {bookingResult?.skippedWeeks?.length > 0 && (
+              <p className="text-xs text-amber-500 mt-1">
+                Skipped {bookingResult.skippedWeeks.length} week(s) due to conflicts
               </p>
             )}
           </div>
         </div>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={onBookAnother}>Request Another</Button>
           <Button size="sm" variant="ghost" onClick={onClose}>Done</Button>
         </div>
       </div>
@@ -1277,7 +1288,7 @@ function InlineSchedulePanel({
     <div className="border-t bg-gray-50 p-4">
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm font-medium text-gray-700">
-          Request a {sessionLength || 60}-min session
+          Pick a weekly time slot ({sessionLength || 60} min)
         </p>
         {totalCredits != null && totalCredits > 0 && (
           <span className="text-xs text-gray-500">
@@ -1285,6 +1296,11 @@ function InlineSchedulePanel({
           </span>
         )}
       </div>
+      {totalCredits != null && totalCredits > 0 && remainingCredits != null && remainingCredits > 1 && (
+        <p className="text-xs text-gray-400 mb-2">
+          Selecting a time will auto-book {remainingCredits} weekly recurring sessions
+        </p>
+      )}
       
       <div className="flex justify-center mb-4">
         <ShadcnCalendar
@@ -1339,7 +1355,7 @@ function InlineSchedulePanel({
             disabled={bookMutation.isPending}
           >
             {bookMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Calendar className="w-3.5 h-3.5 mr-1" />}
-            Request Session
+            Book Weekly Sessions
           </Button>
         </div>
       )}

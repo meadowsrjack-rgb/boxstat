@@ -6134,6 +6134,7 @@ class DatabaseStorage implements IStorage {
   async getPendingScheduleRequests(organizationId: string): Promise<Event[]> {
     const allEvents = await db.select().from(schema.events)
       .where(and(
+        eq(schema.events.organizationId, organizationId),
         sql`${schema.events.scheduleRequestSource} IS NOT NULL`,
         eq(schema.events.status, 'pending')
       ));

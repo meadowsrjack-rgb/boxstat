@@ -12838,7 +12838,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
       if (!isAdminUser) return res.status(403).json({ error: "Admin access required" });
-      const pendingRequests = await storage.getPendingScheduleRequests(req.user.organizationId);
+      const allOrgEvents = await storage.getEventsByOrganization(req.user.organizationId);
+      const pendingRequests = allOrgEvents.filter((e: any) => 
+        e.status === 'pending' && e.scheduleRequestSource
+      );
       
       // Enrich with parent and player info
       const enrichedRequests = await Promise.all(

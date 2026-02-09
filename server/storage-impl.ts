@@ -3536,10 +3536,16 @@ class DatabaseStorage implements IStorage {
       .where(eq(schema.teams.organizationId, organizationId));
     const orgTeamIds = new Set(orgTeams.map(t => t.id));
 
+    const orgPrograms = await db.select({ id: schema.programs.id })
+      .from(schema.programs)
+      .where(eq(schema.programs.organizationId, organizationId));
+    const orgProgramIds = new Set(orgPrograms.map(p => p.id));
+
     const results = await db.select().from(schema.events);
     return results
       .filter(event => {
         if (event.teamId) return orgTeamIds.has(event.teamId);
+        if (event.programId) return orgProgramIds.has(event.programId);
         return organizationId === this.defaultOrgId;
       })
       .map(event => this.mapDbEventToEvent(event));
@@ -3597,6 +3603,10 @@ class DatabaseStorage implements IStorage {
       isActive: event.isActive ?? true,
       playerRsvpEnabled: event.playerRsvpEnabled ?? true,
       createdAt: new Date().toISOString(),
+      scheduleRequestSource: (event as any).scheduleRequestSource ?? undefined,
+      requestedByUserId: (event as any).requestedByUserId ?? undefined,
+      enrollmentId: (event as any).enrollmentId ?? undefined,
+      programId: (event as any).programId ?? undefined,
     };
 
     const results = await db.insert(schema.events).values(dbEvent).returning();
@@ -5502,6 +5512,11 @@ class DatabaseStorage implements IStorage {
       isActive: dbEvent.isActive ?? true,
       playerRsvpEnabled: dbEvent.playerRsvpEnabled ?? true,
       createdAt: new Date(dbEvent.createdAt),
+      scheduleRequestSource: dbEvent.scheduleRequestSource ?? undefined,
+      requestedByUserId: dbEvent.requestedByUserId ?? undefined,
+      enrollmentId: dbEvent.enrollmentId ?? undefined,
+      programId: dbEvent.programId ?? undefined,
+      scheduleRequestNote: dbEvent.scheduleRequestNote ?? undefined,
     };
   }
 

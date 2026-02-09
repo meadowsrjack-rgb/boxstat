@@ -4223,6 +4223,8 @@ class DatabaseStorage implements IStorage {
       savingsNote: program.savingsNote,
       packageGroup: program.packageGroup,
       pricingOptions: program.pricingOptions ?? [],
+      scheduleRequestEnabled: program.scheduleRequestEnabled ?? false,
+      sessionLengthMinutes: program.sessionLengthMinutes,
       createdAt: now,
     };
 
@@ -4283,6 +4285,9 @@ class DatabaseStorage implements IStorage {
       savingsNote: updates.savingsNote,
       packageGroup: updates.packageGroup,
       pricingOptions: updates.pricingOptions,
+      // Schedule request fields
+      scheduleRequestEnabled: updates.scheduleRequestEnabled,
+      sessionLengthMinutes: updates.sessionLengthMinutes,
     };
 
     // Remove undefined values
@@ -5724,6 +5729,9 @@ class DatabaseStorage implements IStorage {
       savingsNote: dbProgram.savingsNote,
       packageGroup: dbProgram.packageGroup,
       pricingOptions: (dbProgram.pricingOptions as any[]) || [],
+      // Schedule request fields
+      scheduleRequestEnabled: dbProgram.scheduleRequestEnabled ?? false,
+      sessionLengthMinutes: dbProgram.sessionLengthMinutes,
     };
   }
   

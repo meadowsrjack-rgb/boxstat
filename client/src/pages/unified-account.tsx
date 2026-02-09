@@ -2274,7 +2274,7 @@ export default function UnifiedAccount() {
                                   </div>
                                 )}
                                 
-                                {/* Bundle Pricing Options */}
+                                {/* Pricing Options (One-Time Bundles & Credit Packs) */}
                                 {pricingOptions.map((option: any) => (
                                   <div
                                     key={option.id}
@@ -2289,15 +2289,20 @@ export default function UnifiedAccount() {
                                     <div className="flex items-center justify-between">
                                       <div>
                                         <p className="font-medium text-sm">{option.name}</p>
-                                        {option.durationDays && (
+                                        {option.optionType === "credit_pack" && option.creditCount ? (
+                                          <p className="text-xs text-blue-600">{option.creditCount} session{option.creditCount > 1 ? 's' : ''} included</p>
+                                        ) : option.durationDays ? (
                                           <p className="text-xs text-gray-500">{option.durationDays} day prepaid</p>
-                                        )}
+                                        ) : null}
                                         {option.convertsToMonthly && (
                                           <p className="text-xs text-green-600">Then ${(option.monthlyPrice / 100).toFixed(2)}/month after</p>
                                         )}
                                       </div>
                                       <div className="text-right">
                                         <p className="font-semibold text-red-600">${(option.price / 100).toFixed(2)}</p>
+                                        {option.optionType === "credit_pack" && option.creditCount ? (
+                                          <p className="text-xs text-gray-500">${((option.price / 100) / option.creditCount).toFixed(2)}/session</p>
+                                        ) : null}
                                         {option.savingsNote && (
                                           <p className="text-xs text-green-600">{option.savingsNote}</p>
                                         )}

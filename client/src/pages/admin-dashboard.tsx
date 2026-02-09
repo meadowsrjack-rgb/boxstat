@@ -9306,8 +9306,8 @@ function ProgramsTab({ programs, teams, organization }: any) {
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <div>
-                          <h4 className="font-medium text-sm">Bundle Pricing Options</h4>
-                          <p className="text-xs text-gray-500">Add alternative pricing tiers (e.g., 3-month, 6-month bundles)</p>
+                          <h4 className="font-medium text-sm">Pricing Options</h4>
+                          <p className="text-xs text-gray-500">Add pricing tiers: one-time bundles or credit packs</p>
                         </div>
                         <Button
                           type="button"
@@ -9321,6 +9321,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
                                 id: `opt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                                 name: "",
                                 price: 0,
+                                optionType: "one_time",
                                 billingCycle: "One-Time",
                                 durationDays: 90,
                                 isDefault: current.length === 0,
@@ -9354,10 +9355,33 @@ function ProgramsTab({ programs, teams, organization }: any) {
                                 </Button>
                               </div>
                               <div className="grid grid-cols-2 gap-2">
+                                <div className="col-span-2">
+                                  <label className="text-xs font-medium">Type</label>
+                                  <Select
+                                    value={option.optionType || "one_time"}
+                                    onValueChange={(value) => {
+                                      const current = form.getValues("pricingOptions") || [];
+                                      current[index] = { 
+                                        ...current[index], 
+                                        optionType: value,
+                                        billingCycle: value === "credit_pack" ? "One-Time" : current[index].billingCycle,
+                                      };
+                                      form.setValue("pricingOptions", [...current]);
+                                    }}
+                                  >
+                                    <SelectTrigger data-testid={`select-option-type-${index}`}>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="one_time">One-Time Payment</SelectItem>
+                                      <SelectItem value="credit_pack">Credit Pack</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                                 <div>
                                   <label className="text-xs font-medium">Name</label>
                                   <Input
-                                    placeholder="3 Months"
+                                    placeholder={option.optionType === "credit_pack" ? "10 Session Pack" : "3 Months"}
                                     value={option.name}
                                     onChange={(e) => {
                                       const current = form.getValues("pricingOptions") || [];
@@ -9383,20 +9407,37 @@ function ProgramsTab({ programs, teams, organization }: any) {
                                     data-testid={`input-option-price-${index}`}
                                   />
                                 </div>
-                                <div>
-                                  <label className="text-xs font-medium">Duration (days)</label>
-                                  <Input
-                                    type="number"
-                                    placeholder="90"
-                                    value={option.durationDays || ""}
-                                    onChange={(e) => {
-                                      const current = form.getValues("pricingOptions") || [];
-                                      current[index] = { ...current[index], durationDays: parseInt(e.target.value) || undefined };
-                                      form.setValue("pricingOptions", [...current]);
-                                    }}
-                                    data-testid={`input-option-duration-${index}`}
-                                  />
-                                </div>
+                                {(option.optionType || "one_time") === "credit_pack" ? (
+                                  <div>
+                                    <label className="text-xs font-medium">Credits / Sessions</label>
+                                    <Input
+                                      type="number"
+                                      placeholder="10"
+                                      value={option.creditCount || ""}
+                                      onChange={(e) => {
+                                        const current = form.getValues("pricingOptions") || [];
+                                        current[index] = { ...current[index], creditCount: parseInt(e.target.value) || undefined };
+                                        form.setValue("pricingOptions", [...current]);
+                                      }}
+                                      data-testid={`input-option-credits-${index}`}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <label className="text-xs font-medium">Duration (days)</label>
+                                    <Input
+                                      type="number"
+                                      placeholder="90"
+                                      value={option.durationDays || ""}
+                                      onChange={(e) => {
+                                        const current = form.getValues("pricingOptions") || [];
+                                        current[index] = { ...current[index], durationDays: parseInt(e.target.value) || undefined };
+                                        form.setValue("pricingOptions", [...current]);
+                                      }}
+                                      data-testid={`input-option-duration-${index}`}
+                                    />
+                                  </div>
+                                )}
                                 <div>
                                   <label className="text-xs font-medium">Savings Note</label>
                                   <Input
@@ -9410,7 +9451,8 @@ function ProgramsTab({ programs, teams, organization }: any) {
                                     data-testid={`input-option-savings-${index}`}
                                   />
                                 </div>
-                                {/* Bundle Renewal Options */}
+                                {/* Bundle Renewal Options - only for one-time bundles, not credit packs */}
+                                {(option.optionType || "one_time") === "one_time" && (
                                 <div className="col-span-2 border-t pt-2 mt-2">
                                   <label className="text-xs font-medium mb-2 block">After Bundle Period</label>
                                   <Select
@@ -9467,6 +9509,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
                                     <p className="text-xs text-green-600 mt-2">Bundle will automatically renew at ${option.price ? (option.price / 100).toFixed(2) : "0.00"} every {option.durationDays || 0} days</p>
                                   )}
                                 </div>
+                                )}
                                 
                                 {/* Stripe Price ID - Link Existing or Auto-sync */}
                                 <div className="col-span-2 space-y-2">

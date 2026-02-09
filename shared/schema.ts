@@ -1679,8 +1679,10 @@ export interface PricingOption {
   id: string; // Unique ID for this pricing option (e.g., nanoid)
   name: string; // Display name (e.g., "Monthly", "3 Months", "6 Months")
   price: number; // Price in cents
+  optionType?: string; // "one_time" | "credit_pack" - defaults to "one_time"
   billingCycle?: string; // "Monthly", "One-Time", etc.
   durationDays?: number; // How long this option lasts
+  creditCount?: number; // Number of credits/sessions in a credit pack
   comparePrice?: number; // Equivalent monthly price for comparison
   savingsNote?: string; // Savings display text (e.g., "Save $30!")
   stripePriceId?: string; // Stripe Price ID for this option (auto-created)
@@ -1748,8 +1750,10 @@ export const insertProductSchema = z.object({
     id: z.string(),
     name: z.string(),
     price: z.number(),
+    optionType: z.string().optional(),
     billingCycle: z.string().optional(),
     durationDays: z.number().optional(),
+    creditCount: z.number().optional(),
     comparePrice: z.number().optional(),
     savingsNote: z.string().optional(),
     stripePriceId: z.string().optional(),

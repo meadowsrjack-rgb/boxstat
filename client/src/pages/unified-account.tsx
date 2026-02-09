@@ -2165,15 +2165,8 @@ export default function UnifiedAccount() {
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between mb-2">
                               <h4 className="font-semibold">{item.name}</h4>
-                              {isPack && <Badge className="bg-blue-100 text-blue-700 border-0">{item.sessionCount || ""} Pack</Badge>}
                               {isStore && <Badge className="bg-purple-100 text-purple-700 border-0">Store</Badge>}
                             </div>
-                            {item.scheduleRequestEnabled && !isStore && (
-                              <div className="flex items-center gap-1 text-xs text-amber-700 mb-2">
-                                <CalendarCheck className="w-3 h-3" />
-                                <span>Book sessions after purchase</span>
-                              </div>
-                            )}
                             <Button size="sm" className="bg-red-600 hover:bg-red-700 w-full">
                               {isStore ? "Buy" : "Enroll"}
                             </Button>

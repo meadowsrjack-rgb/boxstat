@@ -5974,6 +5974,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
   
+  app.get('/api/admin/alerts', requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role, id: userId } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(userId, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      const alerts: any[] = [];
+
+      // 1. Low credit balance (active enrollments with credits <= 2)
+      const allEnrollments = await storage.getProductEnrollmentsByOrganization(organizationId);
+      const lowCreditEnrollments = allEnrollments.filter(
+        (e: any) => e.status === 'active' && e.totalCredits != null && e.remainingCredits != null && e.remainingCredits <= 2
+      );
+      if (lowCreditEnrollments.length > 0) {
+        const details = [];
+        for (const enrollment of lowCreditEnrollments) {
+          const profile = enrollment.profileId ? await storage.getUser(enrollment.profileId) : null;
+          const program = await storage.getProduct(enrollment.programId);
+          details.push({
+            enrollmentId: enrollment.id,
+            profileName: profile ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : 'Unknown',
+            programName: program?.name || 'Unknown Program',
+            remainingCredits: enrollment.remainingCredits,
+            totalCredits: enrollment.totalCredits,
+          });
+        }
+        alerts.push({
+          type: 'low_credits',
+          count: lowCreditEnrollments.length,
+          message: `${lowCreditEnrollments.length} player${lowCreditEnrollments.length > 1 ? 's' : ''} with low credit balance`,
+          details,
+        });
+      }
+
+      // 2. Payment overdue (users with paymentStatus = 'pending')
+      const orgUsers = await storage.getUsersByOrganization(organizationId);
+      const overdueUsers = orgUsers.filter((u: any) => u.paymentStatus === 'pending');
+      if (overdueUsers.length > 0) {
+        alerts.push({
+          type: 'payment_overdue',
+          count: overdueUsers.length,
+          message: `${overdueUsers.length} user${overdueUsers.length > 1 ? 's' : ''} with payment overdue`,
+          details: overdueUsers.map((u: any) => ({
+            userId: u.id,
+            name: `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+            email: u.email,
+          })),
+        });
+      }
+
+      // 3. Pending schedule requests (events with scheduleRequestSource + status pending)
+      const orgEvents = await storage.getEventsByOrganization(organizationId);
+      const pendingRequests = orgEvents.filter(
+        (e: any) => e.scheduleRequestSource && e.status === 'pending'
+      );
+      if (pendingRequests.length > 0) {
+        const details = [];
+        for (const event of pendingRequests) {
+          const userIds = event.assignTo?.users || [];
+          const names: string[] = [];
+          for (const uid of userIds) {
+            const u = await storage.getUser(String(uid));
+            if (u) names.push(`${u.firstName || ''} ${u.lastName || ''}`.trim());
+          }
+          details.push({
+            eventId: event.id,
+            title: event.title,
+            requestedFor: names.join(', ') || 'Unknown',
+            startTime: event.startTime,
+          });
+        }
+        alerts.push({
+          type: 'pending_requests',
+          count: pendingRequests.length,
+          message: `${pendingRequests.length} session request${pendingRequests.length > 1 ? 's' : ''} awaiting confirmation`,
+          details,
+        });
+      }
+
+      // 4. Unassigned players (enrolled in program with teams but not on any team)
+      const orgTeams = await storage.getTeamsByOrganization(organizationId);
+      const programsWithTeams = new Set(orgTeams.filter((t: any) => t.active && t.programId).map((t: any) => t.programId));
+      
+      if (programsWithTeams.size > 0) {
+        const unassigned: any[] = [];
+        
+        for (const enrollment of allEnrollments) {
+          if (enrollment.status !== 'active' || !enrollment.profileId) continue;
+          if (!programsWithTeams.has(enrollment.programId)) continue;
+          
+          const programTeamIds = orgTeams
+            .filter((t: any) => t.active && t.programId === enrollment.programId)
+            .map((t: any) => t.id);
+          
+          const profileMemberships = await storage.getTeamMembershipsByProfile(enrollment.profileId);
+          const hasTeam = profileMemberships.some(
+            (m: any) => programTeamIds.includes(m.teamId) && m.status === 'active'
+          );
+          
+          if (!hasTeam) {
+            const profile = await storage.getUser(enrollment.profileId);
+            const program = await storage.getProduct(enrollment.programId);
+            unassigned.push({
+              enrollmentId: enrollment.id,
+              profileId: enrollment.profileId,
+              profileName: profile ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : 'Unknown',
+              programName: program?.name || 'Unknown Program',
+            });
+          }
+        }
+        
+        if (unassigned.length > 0) {
+          alerts.push({
+            type: 'unassigned_players',
+            count: unassigned.length,
+            message: `${unassigned.length} player${unassigned.length > 1 ? 's' : ''} not assigned to a team`,
+            details: unassigned,
+          });
+        }
+      }
+
+      res.json(alerts);
+    } catch (error: any) {
+      console.error('Error fetching admin alerts:', error);
+      res.status(500).json({ message: 'Failed to fetch alerts', error: error.message });
+    }
+  });
+
   app.get('/api/events', requireAuth, async (req: any, res) => {
     const { organizationId, id: userId, role } = req.user;
     const { childProfileId, context } = req.query;

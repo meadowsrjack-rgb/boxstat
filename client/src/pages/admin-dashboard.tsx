@@ -2285,7 +2285,10 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       {viewingUser.firstName} {viewingUser.lastName}
                     </h2>
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="text-sm text-gray-500">{viewingUser.email}</span>
+                      <span className="text-sm text-gray-500">{viewingUser.email || "—"}</span>
+                      {(viewingUser.phoneNumber || viewingUser.phone) && (
+                        <span className="text-sm text-gray-500 flex items-center gap-1"><Phone className="w-3 h-3" />{viewingUser.phoneNumber || viewingUser.phone}</span>
+                      )}
                       <Badge 
                         className={`capitalize ${
                           viewingUser.role === "admin" 
@@ -2374,6 +2377,10 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                     <div className="space-y-1">
                       <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Program</p>
                       <p className="text-sm text-gray-900" data-testid="text-user-program">{viewingUser.program || "—"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Phone</p>
+                      <p className="text-sm text-gray-900" data-testid="text-user-phone">{viewingUser.phoneNumber || viewingUser.phone || "—"}</p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Position</p>

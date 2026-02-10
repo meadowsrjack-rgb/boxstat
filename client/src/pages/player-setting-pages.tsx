@@ -53,6 +53,7 @@ export function PlayerProfilePage() {
     jerseyNumber: "",
     city: "",
     height: "",
+    phoneNumber: "",
   });
 
   // Update profile state when active profile loads
@@ -63,6 +64,7 @@ export function PlayerProfilePage() {
         jerseyNumber: activeProfile.jerseyNumber?.toString() || "",
         city: (activeProfile as any)?.city || activeProfile.address || "",
         height: (activeProfile as any)?.height || "",
+        phoneNumber: activeProfile.phoneNumber || "",
       });
     }
   }, [activeProfile, user]);
@@ -190,12 +192,12 @@ export function PlayerProfilePage() {
 
   const mutation = useMutation({
     mutationFn: async (data: typeof profile) => {
-      // Only send editable basketball fields
       const updateData = {
         position: data.position,
         jerseyNumber: data.jerseyNumber ? parseInt(data.jerseyNumber) : null,
         address: data.city,
         height: data.height,
+        phoneNumber: data.phoneNumber || null,
       };
       
       return await apiRequest(`/api/profile/${profileId}`, {
@@ -204,12 +206,12 @@ export function PlayerProfilePage() {
       });
     },
     onSuccess: (updatedProfile) => {
-      // Update local profile state with server response
       setProfile({
         position: updatedProfile.position || "",
         jerseyNumber: updatedProfile.jerseyNumber?.toString() || "",
         city: updatedProfile.address || "",
         height: updatedProfile.height || "",
+        phoneNumber: updatedProfile.phoneNumber || "",
       });
       
       // Update caches with new data for immediate UI sync
@@ -399,6 +401,17 @@ export function PlayerProfilePage() {
                     disabled
                     className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                     data-testid="input-email"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone Number</label>
+                  <Input
+                    value={profile.phoneNumber}
+                    onChange={(e) => setProfile(p => ({ ...p, phoneNumber: e.target.value }))}
+                    placeholder="Enter phone number"
+                    data-testid="input-phone"
                   />
                 </div>
               </div>

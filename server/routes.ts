@@ -2018,7 +2018,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 
                 if (!hasEnrollment && program) {
                   await storage.createEnrollment({
-                    organizationId: session.metadata?.organizationId || "default-org",
+                    organizationId: player.organizationId || session.metadata?.organizationId || "default-org",
                     accountHolderId: userId,
                     profileId: playerId,
                     programId: packageId,
@@ -2290,8 +2290,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const subscriptionId = typeof session.subscription === 'string' ? session.subscription : null;
               const now = new Date().toISOString();
               
+              const enrollmentUser = await storage.getUser(enrollmentProfileId);
               const enrollment = await storage.createEnrollment({
-                organizationId: session.metadata?.organizationId || "default-org",
+                organizationId: enrollmentUser?.organizationId || program.organizationId || session.metadata?.organizationId || "default-org",
                 programId: packageId,
                 accountHolderId: userId,
                 profileId: enrollmentProfileId,
@@ -2303,7 +2304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 endDate: null,
                 totalCredits: credits,
                 remainingCredits: credits,
-                autoRenew: isSubscription, // Only subscriptions auto-renew, packs/one-time don't
+                autoRenew: isSubscription,
                 metadata: {},
               });
               console.log(`✅ Created enrollment for profile ${enrollmentProfileId} in program ${packageId} (type: ${program.type}, credits: ${credits || 'N/A'}, autoRenew: ${isSubscription})`);
@@ -9560,9 +9561,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get ALL enrollments (admin only - for admin dashboard)
   app.get('/api/admin/enrollments', requireAuth, async (req: any, res) => {
     try {
-      const { role, organizationId } = req.user;
+      const { role, id: userId, organizationId } = req.user;
       
-      if (role !== 'admin') {
+      if (role !== 'admin' && !(await hasAdminProfile(userId, organizationId))) {
         return res.status(403).json({ message: 'Admin access required' });
       }
 

@@ -1970,7 +1970,21 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       </div>
                     </TableCell>
                     <TableCell data-testid={`text-email-${user.id}`}>
-                      <span className="text-gray-600 text-sm">{user.email || "-"}</span>
+                      {(() => {
+                        if (user.email) {
+                          return <span className="text-gray-600 text-sm">{user.email}</span>;
+                        }
+                        if (user.role === "player") {
+                          const holderId = user.accountHolderId || user.parentId;
+                          if (holderId) {
+                            const accountHolder = users.find((u: any) => u.id === holderId);
+                            if (accountHolder?.email) {
+                              return <span className="text-gray-400 text-sm italic">{accountHolder.email}</span>;
+                            }
+                          }
+                        }
+                        return <span className="text-gray-400 text-sm">-</span>;
+                      })()}
                     </TableCell>
                     <TableCell data-testid={`text-phone-${user.id}`}>
                       {(() => {

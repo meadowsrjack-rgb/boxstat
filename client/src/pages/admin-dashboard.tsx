@@ -2132,22 +2132,21 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                         );
                         
                         // Check for players without teams (Pending Assignment)
-                        const hasActiveEnrollmentWithoutTeam = (() => {
-                          // Check if user is a player with active enrollment but no team
+                        // Only show if teams actually exist in the organization
+                        const hasActiveEnrollmentWithoutTeam = teams.length > 0 ? (() => {
                           if (user.role === "player") {
                             const hasActiveEnrollment = uniqueEnrollments.some((e: any) => 
                               e.profileId === user.id && e.status === 'active'
                             );
                             if (hasActiveEnrollment && !user.teamId) return true;
                           }
-                          // Check linked players
                           return linkedPlayers.some((player: any) => {
                             const playerHasActive = uniqueEnrollments.some((e: any) => 
                               e.profileId === player.id && e.status === 'active'
                             );
                             return playerHasActive && !player.teamId;
                           });
-                        })();
+                        })() : false;
                         
                         // Check for payment failed (check status field)
                         const hasPaymentFailed = uniqueEnrollments.some((e: any) => 

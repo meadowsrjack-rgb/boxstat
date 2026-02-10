@@ -208,14 +208,23 @@ export default function AdminDashboard() {
     refetchInterval: 60000,
   });
 
-  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
+  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('dismissedAdminAlerts');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch { return new Set(); }
+  });
   const [completingAlerts, setCompletingAlerts] = useState<Set<string>>(new Set());
   const visibleAlerts = adminAlerts.filter((a: any) => !dismissedAlerts.has(a.type));
 
   const handleDismissAlert = (alertType: string) => {
     setCompletingAlerts(prev => new Set([...prev, alertType]));
     setTimeout(() => {
-      setDismissedAlerts(prev => new Set([...prev, alertType]));
+      setDismissedAlerts(prev => {
+        const next = new Set([...prev, alertType]);
+        try { localStorage.setItem('dismissedAdminAlerts', JSON.stringify([...next])); } catch {}
+        return next;
+      });
       setCompletingAlerts(prev => {
         const next = new Set(prev);
         next.delete(alertType);

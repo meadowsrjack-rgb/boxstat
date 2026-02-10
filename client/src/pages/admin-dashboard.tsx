@@ -5284,7 +5284,13 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                 return groupedEvents.map((event: any) => {
                   // Build 'For' display from assignTo
                   let forDisplay = "Everyone";
-                  if (event.assignTo) {
+                  if (event.scheduleRequestSource && event.assignTo?.users?.length > 0) {
+                    const userNames = event.assignTo.users.map((id: string) => {
+                      const user = (users || []).find((u: any) => String(u.id) === String(id));
+                      return user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : null;
+                    }).filter(Boolean);
+                    forDisplay = userNames.length > 0 ? userNames.join(", ") : "Assigned User";
+                  } else if (event.assignTo) {
                     const parts: string[] = [];
                     if (event.assignTo.teams?.length > 0) {
                       const teamNames = event.assignTo.teams.map((id: string) => {
@@ -5380,7 +5386,14 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                       />
                     </TableCell>
                     <TableCell className="font-medium">
-                      {event.title}
+                      <div className="flex items-center gap-2">
+                        {event.title}
+                        {event.scheduleRequestSource && event.status === 'pending' && (
+                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-xs">
+                            Requested
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge className={

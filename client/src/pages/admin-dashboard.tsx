@@ -5380,14 +5380,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                       />
                     </TableCell>
                     <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {event.title}
-                        {event.scheduleRequestSource && (
-                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-xs">
-                            Requested
-                          </Badge>
-                        )}
-                      </div>
+                      {event.title}
                     </TableCell>
                     <TableCell>
                       <Badge className={

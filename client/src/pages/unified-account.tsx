@@ -1178,6 +1178,7 @@ function InlineSchedulePanel({
   enrollmentId,
   remainingCredits,
   totalCredits,
+  isEditMode,
   selectedDate,
   onDateChange,
   selectedSlot,
@@ -1194,6 +1195,7 @@ function InlineSchedulePanel({
   enrollmentId?: number;
   remainingCredits?: number;
   totalCredits?: number;
+  isEditMode?: boolean;
   selectedDate: Date;
   onDateChange: (d: Date) => void;
   selectedSlot: any;
@@ -1233,7 +1235,6 @@ function InlineSchedulePanel({
     },
     onSuccess: (data: any) => {
       setBookingResult(data);
-      onBooked();
       queryClient.invalidateQueries({ predicate: (query) => {
         const key = query.queryKey;
         return Array.isArray(key) && key[0] === "/api/programs" && key[1] === programId && key[2] === "schedule-availability";
@@ -1241,7 +1242,11 @@ function InlineSchedulePanel({
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       queryClient.invalidateQueries({ queryKey: ["/api/enrollments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/account/enrollments"] });
-      toast({ title: "Session Requested!", description: data?.message || "Your session request is pending admin approval." });
+      toast({ 
+        title: isEditMode ? "Request updated" : "Session request sent", 
+        description: "An admin will confirm time and location." 
+      });
+      onClose();
     },
     onError: (error: any) => {
       toast({
@@ -1293,7 +1298,7 @@ function InlineSchedulePanel({
     <div className="border-t bg-gray-50 p-4">
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm font-medium text-gray-700">
-          Pick a time slot ({sessionLength || 60} min)
+          {isEditMode ? "Change your requested time" : `Pick a time slot (${sessionLength || 60} min)`}
         </p>
         {totalCredits != null && totalCredits > 0 && (
           <span className="text-xs text-gray-500">
@@ -1356,7 +1361,7 @@ function InlineSchedulePanel({
               disabled={bookMutation.isPending}
             >
               {bookMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Calendar className="w-3.5 h-3.5 mr-1" />}
-              Book Now
+              {isEditMode ? "Update Request" : "Request Time"}
             </Button>
           </div>
           {totalCredits != null && totalCredits > 0 && (
@@ -1629,18 +1634,19 @@ export default function UnifiedAccount() {
     });
   };
   
+  const isConfirmedEvent = (e: any) => !(e.scheduleRequestSource && e.status === 'pending');
+
   const upcomingEvents = filterEventsByPlayer(events)
     .filter((e: any) => {
       const endTime = new Date(e.endTime || e.startTime);
-      return endTime > now;
+      return endTime > now && isConfirmedEvent(e);
     })
     .slice(0, 3);
 
-  // All upcoming events for Home tab - show events that haven't ended
   const allUpcomingEvents = filterEventsByPlayer(events)
     .filter((e: any) => {
       const endTime = new Date(e.endTime || e.startTime);
-      return endTime > now;
+      return endTime > now && isConfirmedEvent(e);
     })
     .sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
@@ -1862,6 +1868,9 @@ export default function UnifiedAccount() {
                             const isExpiringSoon = endDate && !isExpired && (endDate.getTime() - now.getTime()) < 14 * 24 * 60 * 60 * 1000;
                             const hasScheduling = (program as any)?.scheduleRequestEnabled && !isExpired;
                             const isSchedulingOpen = schedulingEnrollment === enrollment.id;
+                            const hasPendingRequest = events.some((e: any) => 
+                              e.enrollmentId === enrollment.id && e.scheduleRequestSource && e.status === 'pending'
+                            );
                             
                             return (
                               <div key={enrollment.id} className="border rounded-lg overflow-hidden">
@@ -1932,7 +1941,7 @@ export default function UnifiedAccount() {
                                           }}
                                         >
                                           <Calendar className="w-3.5 h-3.5 mr-1" />
-                                          {isSchedulingOpen ? "Close" : "Book Session"}
+                                          {isSchedulingOpen ? "Close" : hasPendingRequest ? "Edit Request" : "Request Time"}
                                         </Button>
                                       )}
                                     </div>
@@ -1948,6 +1957,7 @@ export default function UnifiedAccount() {
                                     enrollmentId={enrollment.id}
                                     remainingCredits={remainingCredits}
                                     totalCredits={totalCredits}
+                                    isEditMode={hasPendingRequest}
                                     selectedDate={scheduleDate}
                                     onDateChange={(d) => { setScheduleDate(d); setScheduleSelectedSlot(null); }}
                                     selectedSlot={scheduleSelectedSlot}
@@ -2040,7 +2050,7 @@ export default function UnifiedAccount() {
 
             {/* Interactive Calendar Section */}
             <FamilyCalendar 
-              events={filterEventsByPlayer(events)} 
+              events={filterEventsByPlayer(events).filter(isConfirmedEvent)} 
               onEventClick={(event) => {
                 // Create a clean copy to avoid cyclic structure issues from React Query cache
                 const cleanEvent = JSON.parse(JSON.stringify(event)) as Event;

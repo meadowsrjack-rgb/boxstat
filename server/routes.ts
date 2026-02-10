@@ -9063,20 +9063,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Active enrollment required to schedule a session' });
       }
       
-      // Check credit availability (remaining credits minus pending requests)
+      // Cancel any existing pending schedule requests for this enrollment (edit/replace flow)
+      const allOrgEvents = await storage.getEventsByOrganization(orgId);
+      const existingPending = allOrgEvents.filter((e: any) => 
+        e.enrollmentId === enrollment.id && e.status === 'pending' && e.scheduleRequestSource
+      );
+      for (const pendingEvent of existingPending) {
+        await storage.updateEvent(pendingEvent.id, { status: 'cancelled', isActive: false } as any);
+      }
+
+      // Check credit availability
       const totalCredits = enrollment.totalCredits || 0;
       const remainingCredits = enrollment.remainingCredits || 0;
       let creditsToBook = 1;
       if (totalCredits > 0) {
-        const allOrgEvents = await storage.getEventsByOrganization(orgId);
-        const pendingForEnrollment = allOrgEvents.filter((e: any) => 
-          e.enrollmentId === enrollment.id && e.status === 'pending' && e.scheduleRequestSource
-        );
-        const effectiveRemaining = remainingCredits - pendingForEnrollment.length;
-        if (effectiveRemaining <= 0) {
-          return res.status(400).json({ error: 'No available credits. You have pending requests that will use your remaining credits.' });
+        if (remainingCredits <= 0) {
+          return res.status(400).json({ error: 'No available credits.' });
         }
-        creditsToBook = isRecurring ? effectiveRemaining : 1;
+        creditsToBook = isRecurring ? remainingCredits : 1;
       }
       
       // Get player name for event title

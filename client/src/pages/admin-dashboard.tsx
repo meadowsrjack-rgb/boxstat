@@ -4940,7 +4940,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                     />
                   </div>
                   
-                  <Button type="submit" className="w-full" disabled={createEvent.isPending} data-testid="button-submit-event">
+                  <Button type="submit" className="w-full" disabled={createEvent.isPending || !form.watch("title") || !form.watch("startTime") || !form.watch("endTime") || !form.watch("location")} data-testid="button-submit-event">
                     {createEvent.isPending ? "Creating..." : "Create Event"}
                   </Button>
                 </form>
@@ -5268,7 +5268,6 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                     type="button"
                     className="w-full"
                     onClick={() => {
-                      // Convert datetime-local strings to ISO strings with timezone
                       const updatedData = {
                         ...editingEvent,
                         startTime: editingEvent.startTime && !editingEvent.startTime.endsWith('Z') ? new Date(editingEvent.startTime).toISOString() : editingEvent.startTime,
@@ -5276,7 +5275,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                       };
                       updateEvent.mutate(updatedData);
                     }}
-                    disabled={updateEvent.isPending}
+                    disabled={updateEvent.isPending || !editingEvent.title?.trim() || !editingEvent.startTime || !editingEvent.endTime || !editingEvent.location?.trim()}
                     data-testid="button-submit-edit-event"
                   >
                     {updateEvent.isPending ? "Updating..." : "Update Event"}

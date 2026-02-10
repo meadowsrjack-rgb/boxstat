@@ -479,7 +479,7 @@ export default function AdminDashboard() {
                 title="Total Users"
                 value={stats.totalUsers}
                 icon={<Users className="w-6 h-6" />}
-                subtitle={`${stats.totalCoaches} coaches, ${stats.totalPlayers} players`}
+                subtitle={`${users.filter((u: any) => u.role === "admin").length} admin, ${stats.totalCoaches} coach, ${stats.totalParents} parent, ${stats.totalPlayers} player`}
                 testId="stat-total-users"
               />
               <StatCard

@@ -5445,6 +5445,9 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                           if (hasAllRoles) {
                             eventToEdit.targetType = 'all';
                             eventToEdit.targetId = '';
+                          } else if (event.scheduleRequestSource && event.assignTo?.users && event.assignTo.users.length > 0) {
+                            eventToEdit.targetType = 'user';
+                            eventToEdit.targetIds = event.assignTo.users.map(String);
                           } else if (event.assignTo?.teams && event.assignTo.teams.length > 0) {
                             eventToEdit.targetType = 'team';
                             eventToEdit.targetIds = event.assignTo.teams.map(String);

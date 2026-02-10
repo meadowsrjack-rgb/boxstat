@@ -6480,6 +6480,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         playerRsvpEnabled: req.body.playerRsvpEnabled
       }, null, 2));
       
+      const existingEvent = await storage.getEvent(req.params.id);
+      if (existingEvent?.scheduleRequestSource && existingEvent?.status === 'pending') {
+        req.body.scheduleRequestSource = null;
+        req.body.status = 'active';
+      }
+      
       const updated = await storage.updateEvent(req.params.id, req.body);
       console.log('📍 UPDATE EVENT - Result playerRsvpEnabled:', updated?.playerRsvpEnabled);
       res.json(updated);

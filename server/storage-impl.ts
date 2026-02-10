@@ -3632,7 +3632,12 @@ class DatabaseStorage implements IStorage {
       assignTo: updates.assignTo,
       visibility: updates.visibility,
       playerRsvpEnabled: updates.playerRsvpEnabled,
+      status: updates.status,
     };
+
+    if ('scheduleRequestSource' in updates) {
+      dbUpdates.scheduleRequestSource = updates.scheduleRequestSource;
+    }
 
     Object.keys(dbUpdates).forEach(key => {
       if (dbUpdates[key] === undefined) delete dbUpdates[key];

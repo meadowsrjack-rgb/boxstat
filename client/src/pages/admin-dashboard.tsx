@@ -208,6 +208,9 @@ export default function AdminDashboard() {
     refetchInterval: 60000,
   });
 
+  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
+  const visibleAlerts = adminAlerts.filter((a: any) => !dismissedAlerts.has(a.type));
+
   // Fetch award definitions
   const { data: awardDefinitions = [], isLoading: awardDefinitionsLoading } = useQuery<any[]>({
     queryKey: ["/api/award-definitions"],
@@ -309,9 +312,9 @@ export default function AdminDashboard() {
         {/* Announcement Banner */}
         <AnnouncementBanner />
         
-        {adminAlerts.length > 0 && (
+        {visibleAlerts.length > 0 && (
           <div className="mb-4 space-y-2">
-            {adminAlerts.map((alert: any, index: number) => {
+            {visibleAlerts.map((alert: any, index: number) => {
               const alertConfig: Record<string, { icon: any; bg: string; border: string; text: string; tab: string }> = {
                 low_credits: { icon: CreditCard, bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-800', tab: 'programs' },
                 payment_overdue: { icon: DollarSign, bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-800', tab: 'users' },
@@ -321,46 +324,57 @@ export default function AdminDashboard() {
               const config = alertConfig[alert.type] || { icon: AlertCircle, bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-800', tab: 'overview' };
               const Icon = config.icon;
               return (
-                <button
+                <div
                   key={index}
-                  onClick={() => setActiveTab(config.tab)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border ${config.bg} ${config.border} hover:opacity-90 transition-opacity text-left`}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border ${config.bg} ${config.border} text-left`}
                 >
-                  <div className={`p-1.5 rounded-full ${config.bg}`}>
-                    <Icon className={`w-4 h-4 ${config.text}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className={`text-sm font-medium ${config.text}`}>{alert.message}</span>
-                    {alert.type === 'low_credits' && alert.details?.length > 0 && (
-                      <p className="text-xs text-orange-600 mt-0.5 truncate">
-                        {alert.details.slice(0, 3).map((d: any) => `${d.profileName} (${d.remainingCredits} left)`).join(', ')}
-                        {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
-                      </p>
-                    )}
-                    {alert.type === 'pending_requests' && alert.details?.length > 0 && (
-                      <p className="text-xs text-blue-600 mt-0.5 truncate">
-                        {alert.details.slice(0, 3).map((d: any) => d.requestedFor).join(', ')}
-                        {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
-                      </p>
-                    )}
-                    {alert.type === 'unassigned_players' && alert.details?.length > 0 && (
-                      <p className="text-xs text-amber-600 mt-0.5 truncate">
-                        {alert.details.slice(0, 3).map((d: any) => `${d.profileName} (${d.programName})`).join(', ')}
-                        {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
-                      </p>
-                    )}
-                    {alert.type === 'payment_overdue' && alert.details?.length > 0 && (
-                      <p className="text-xs text-red-600 mt-0.5 truncate">
-                        {alert.details.slice(0, 3).map((d: any) => d.name).join(', ')}
-                        {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
-                      </p>
-                    )}
-                  </div>
-                  <Badge variant="outline" className={`${config.text} border-current shrink-0`}>
-                    {alert.count}
-                  </Badge>
-                  <ChevronRight className={`w-4 h-4 ${config.text} shrink-0`} />
-                </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDismissedAlerts(prev => new Set([...prev, alert.type]));
+                    }}
+                    className={`p-1.5 rounded-full border-2 border-current ${config.text} hover:bg-green-100 hover:border-green-600 hover:text-green-600 transition-colors shrink-0`}
+                    title="Mark as reviewed"
+                  >
+                    <Check className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={() => setActiveTab(config.tab)}
+                    className="flex-1 flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <span className={`text-sm font-medium ${config.text}`}>{alert.message}</span>
+                      {alert.type === 'low_credits' && alert.details?.length > 0 && (
+                        <p className="text-xs text-orange-600 mt-0.5 truncate">
+                          {alert.details.slice(0, 3).map((d: any) => `${d.profileName} (${d.remainingCredits} left)`).join(', ')}
+                          {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
+                        </p>
+                      )}
+                      {alert.type === 'pending_requests' && alert.details?.length > 0 && (
+                        <p className="text-xs text-blue-600 mt-0.5 truncate">
+                          {alert.details.slice(0, 3).map((d: any) => d.requestedFor).join(', ')}
+                          {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
+                        </p>
+                      )}
+                      {alert.type === 'unassigned_players' && alert.details?.length > 0 && (
+                        <p className="text-xs text-amber-600 mt-0.5 truncate">
+                          {alert.details.slice(0, 3).map((d: any) => `${d.profileName} (${d.programName})`).join(', ')}
+                          {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
+                        </p>
+                      )}
+                      {alert.type === 'payment_overdue' && alert.details?.length > 0 && (
+                        <p className="text-xs text-red-600 mt-0.5 truncate">
+                          {alert.details.slice(0, 3).map((d: any) => d.name).join(', ')}
+                          {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
+                        </p>
+                      )}
+                    </div>
+                    <Badge variant="outline" className={`${config.text} border-current shrink-0`}>
+                      {alert.count}
+                    </Badge>
+                    <ChevronRight className={`w-4 h-4 ${config.text} shrink-0`} />
+                  </button>
+                </div>
               );
             })}
           </div>

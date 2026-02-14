@@ -4130,39 +4130,60 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
         eventsToCreate.push(basePayload);
       }
       
-      // Check if max count was reached (potential truncation warning)
-      // For non-recurring events, no limit warning needed
-      const effectiveMaxCount = isRecurring ? (recurrenceEndType === 'count' ? recurrenceCount : 1000) : Infinity;
-      const wasLimitReached = isRecurring && eventsToCreate.length >= effectiveMaxCount;
+      // Check if events were truncated by the safety cap (only relevant for date-based end)
+      // For count-based: creating exactly the requested count is expected, not a limit issue
+      const wasTruncated = isRecurring && recurrenceEndType === 'date' && eventsToCreate.length >= 1000;
       
-      // Create all events
+      // Create all events with error tracking
       const createdEvents: any[] = [];
+      const errors: string[] = [];
       for (const eventPayload of eventsToCreate) {
-        const newEvent = await apiRequest("POST", "/api/events", eventPayload);
-        createdEvents.push(newEvent);
-        
-        // Create event windows if configured (for each event)
-        if (eventWindows.length > 0) {
-          for (const window of eventWindows) {
-            await apiRequest("POST", "/api/event-windows", {
-              ...window,
-              eventId: parseInt(newEvent.id),
-            });
+        try {
+          const newEvent = await apiRequest("POST", "/api/events", eventPayload);
+          createdEvents.push(newEvent);
+          
+          // Create event windows if configured (for each event)
+          if (eventWindows.length > 0) {
+            for (const window of eventWindows) {
+              try {
+                await apiRequest("POST", "/api/event-windows", {
+                  ...window,
+                  eventId: parseInt(newEvent.id),
+                });
+              } catch (windowErr: any) {
+                console.error('Failed to create event window:', windowErr);
+              }
+            }
           }
+        } catch (err: any) {
+          console.error('Failed to create event:', err);
+          errors.push(err.message || 'Unknown error');
         }
       }
       
-      return { events: createdEvents, wasLimitReached, count: eventsToCreate.length };
+      if (createdEvents.length === 0 && errors.length > 0) {
+        throw new Error(`Failed to create events: ${errors[0]}`);
+      }
+      
+      return { events: createdEvents, wasTruncated, count: createdEvents.length, totalAttempted: eventsToCreate.length, errors };
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       const count = data?.count || 1;
-      const wasLimitReached = data?.wasLimitReached;
+      const totalAttempted = data?.totalAttempted || count;
+      const wasTruncated = data?.wasTruncated;
+      const errors = data?.errors || [];
       
-      if (wasLimitReached) {
+      if (wasTruncated) {
         toast({ 
-          title: `${count} events created (limit reached)`, 
-          description: "Maximum event limit was reached. Some events may not have been created.",
+          title: `${count} events created (date range limit reached)`, 
+          description: "The maximum of 1000 events was reached. Consider using a shorter date range.",
+          variant: "destructive" 
+        });
+      } else if (errors.length > 0 && count > 0) {
+        toast({ 
+          title: `${count} of ${totalAttempted} events created`, 
+          description: `Some events failed to create: ${errors[0]}`,
           variant: "destructive" 
         });
       } else {
@@ -4186,8 +4207,13 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
       setRecurrenceEndDate('');
       setPlayerRsvpEnabled(true);
     },
-    onError: () => {
-      toast({ title: "Failed to create event", variant: "destructive" });
+    onError: (error: any) => {
+      console.error('Event creation error:', error);
+      toast({ 
+        title: "Failed to create event", 
+        description: error?.message || "An unexpected error occurred. Please try again.",
+        variant: "destructive" 
+      });
     },
   });
 

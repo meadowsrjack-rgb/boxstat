@@ -3531,24 +3531,9 @@ class DatabaseStorage implements IStorage {
   }
 
   async getEventsByOrganization(organizationId: string): Promise<Event[]> {
-    const orgTeams = await db.select({ id: schema.teams.id })
-      .from(schema.teams)
-      .where(eq(schema.teams.organizationId, organizationId));
-    const orgTeamIds = new Set(orgTeams.map(t => t.id));
-
-    const orgPrograms = await db.select({ id: schema.programs.id })
-      .from(schema.programs)
-      .where(eq(schema.programs.organizationId, organizationId));
-    const orgProgramIds = new Set(orgPrograms.map(p => p.id));
-
-    const results = await db.select().from(schema.events);
-    return results
-      .filter(event => {
-        if (event.teamId) return orgTeamIds.has(event.teamId);
-        if (event.programId) return orgProgramIds.has(event.programId);
-        return organizationId === this.defaultOrgId;
-      })
-      .map(event => this.mapDbEventToEvent(event));
+    const results = await db.select().from(schema.events)
+      .where(eq(schema.events.organizationId, organizationId));
+    return results.map(event => this.mapDbEventToEvent(event));
   }
 
   async getEventsByTeam(teamId: string): Promise<Event[]> {
@@ -3561,6 +3546,7 @@ class DatabaseStorage implements IStorage {
     const now = new Date().toISOString();
     const results = await db.select().from(schema.events)
       .where(and(
+        eq(schema.events.organizationId, organizationId),
         gte(schema.events.startTime, now),
         eq(schema.events.isActive, true)
       ));
@@ -3581,6 +3567,7 @@ class DatabaseStorage implements IStorage {
 
   async createEvent(event: InsertEvent): Promise<Event> {
     const dbEvent = {
+      organizationId: event.organizationId || this.defaultOrgId,
       title: event.title,
       description: event.description,
       eventType: event.eventType || 'practice',

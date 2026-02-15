@@ -6576,6 +6576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const eventData = insertEventSchema.parse({
         ...cleanData,
+        organizationId: cleanData.organizationId || req.user.organizationId,
         visibility,
         assignTo,
         createdBy: userId,

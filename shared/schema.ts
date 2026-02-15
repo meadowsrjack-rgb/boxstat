@@ -603,6 +603,7 @@ export type TeamMembership = typeof teamMemberships.$inferSelect;
 // Events table
 export const events = pgTable("events", {
   id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").default("default-org"),
   title: varchar().notNull(),
   description: text(),
   eventType: varchar("event_type").notNull(),

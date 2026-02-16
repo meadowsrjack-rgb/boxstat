@@ -1739,7 +1739,7 @@ export const insertProductSchema = z.object({
   productCategory: z.string().default('service'), // 'service' or 'goods'
   displayCategory: z.string().default('general'), // For filter buttons
   iconName: z.string().optional(), // Icon identifier
-  coverImageUrl: z.string().optional(),
+  coverImageUrl: z.string().nullish(),
   requiredGearProductIds: z.array(z.string()).default([]),
   seasonStartDate: z.string().optional(),
   seasonEndDate: z.string().optional(),

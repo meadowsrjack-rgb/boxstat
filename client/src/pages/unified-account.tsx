@@ -1836,10 +1836,13 @@ export default function UnifiedAccount() {
                 <CollapsibleContent>
                   <CardContent className="pt-0">
                     {(() => {
-                      const relevantEnrollments = playerEnrollments?.filter((e: any) => 
-                        e.status === 'active' && 
-                        (!selectedStorePlayer || e.profileId === selectedStorePlayer || e.accountHolderId === user?.id)
-                      ) || [];
+                      const relevantEnrollments = playerEnrollments?.filter((e: any) => {
+                        if (e.status !== 'active') return false;
+                        if (selectedStorePlayer && e.profileId !== selectedStorePlayer && e.accountHolderId !== user?.id) return false;
+                        const prog = programs?.find((p: any) => p.id === e.programId);
+                        if (prog?.productCategory === 'goods') return false;
+                        return true;
+                      }) || [];
                       
                       if (relevantEnrollments.length === 0) {
                         return (

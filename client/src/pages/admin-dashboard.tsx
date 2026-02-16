@@ -8424,7 +8424,8 @@ function StoreTab({ organization }: any) {
 }
 
 // Programs Tab Component - Manages programs with social settings AND pricing
-function ProgramsTab({ programs, teams, organization }: any) {
+function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
+  const programs = allPrograms.filter((p: any) => p.productCategory === 'service' || !p.productCategory);
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);

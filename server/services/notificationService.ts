@@ -715,22 +715,22 @@ export class NotificationService {
     type?: string;
     data?: Record<string, any>;
     channels?: Array<'in_app' | 'push' | 'email'>;
+    apnsEnvironment?: 'sandbox' | 'production';
   }): Promise<void> {
     const { userId, title, message, type = 'notification', data = {}, channels = ['in_app', 'push'] } = params;
     
     try {
-      // Create in-app notification if channel includes it
       if (channels.includes('in_app')) {
-        // Create the notification record
         const [notification] = await db.insert(notifications)
           .values({
             organizationId: 'default-org',
             title,
             message,
-            types: ['notification'],
+            types: [type],
             recipientTarget: 'users',
             recipientUserIds: [userId],
             deliveryChannels: channels,
+            relatedEventId: data.eventId ? Number(data.eventId) : undefined,
             status: 'sent',
             sentAt: new Date().toISOString(),
             sentBy: 'system',

@@ -187,6 +187,32 @@ async function getStripeForOrg(organizationId: string): Promise<Stripe | null> {
   return stripe;
 }
 
+async function getOrCreateStripeCustomer(stripeInstance: Stripe, user: any): Promise<string> {
+  let stripeCustomerId = user.stripeCustomerId;
+  if (stripeCustomerId) {
+    try {
+      await stripeInstance.customers.retrieve(stripeCustomerId);
+      return stripeCustomerId;
+    } catch (err: any) {
+      if (err?.statusCode === 404 || err?.code === 'resource_missing') {
+        console.log(`Stripe customer ${stripeCustomerId} not found (likely test-mode ID). Creating new customer for ${user.email}`);
+        stripeCustomerId = null;
+      } else {
+        throw err;
+      }
+    }
+  }
+  if (!stripeCustomerId) {
+    const customer = await stripeInstance.customers.create({
+      email: user.email,
+      metadata: { userId: user.id },
+    });
+    stripeCustomerId = customer.id;
+    await storage.updateUser(user.id, { stripeCustomerId });
+  }
+  return stripeCustomerId;
+}
+
 async function getPlatformFeePercent(): Promise<number> {
   try {
     const results = await db.select().from(platformSettings)
@@ -1374,20 +1400,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         metadata.packageSelectionIds = unpaidSelections.map(s => s.id).join(',');
       }
       
-      // Create or retrieve Stripe customer
-      let stripeCustomerId = user.stripeCustomerId;
-      if (!stripeCustomerId) {
-        const customer = await orgStripe.customers.create({
-          email: user.email,
-          metadata: {
-            userId: user.id,
-          },
-        });
-        stripeCustomerId = customer.id;
-        
-        // Update user with Stripe customer ID
-        await storage.updateUser(user.id, { stripeCustomerId });
-      }
+      const stripeCustomerId = await getOrCreateStripeCustomer(orgStripe, user);
       
       // Get origin for URLs
       const origin = `${req.protocol}://${req.get('host')}`;
@@ -1559,18 +1572,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Create or retrieve Stripe customer
-      let stripeCustomerId = user.stripeCustomerId;
-      if (!stripeCustomerId) {
-        const customer = await orgStripe2.customers.create({
-          email: user.email,
-          metadata: {
-            userId: user.id,
-          },
-        });
-        stripeCustomerId = customer.id;
-        await storage.updateUser(user.id, { stripeCustomerId });
-      }
+      const stripeCustomerId = await getOrCreateStripeCustomer(orgStripe2, user);
       
       // Get origin for URLs
       const origin = `${req.protocol}://${req.get('host')}`;
@@ -3262,19 +3264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      let stripeCustomerId = user.stripeCustomerId;
-      if (!stripeCustomerId) {
-        const customer = await playerOrgStripe.customers.create({
-          email: user.email,
-          metadata: {
-            userId: user.id,
-          },
-        });
-        stripeCustomerId = customer.id;
-        
-        // Update user with Stripe customer ID
-        await storage.updateUser(user.id, { stripeCustomerId });
-      }
+      const stripeCustomerId = await getOrCreateStripeCustomer(playerOrgStripe, user);
       
       // Get origin for URLs
       const origin = `${req.protocol}://${req.get('host')}`;

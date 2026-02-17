@@ -708,6 +708,26 @@ export class NotificationService {
   }
   
   // Send notification via multiple channels (in-app, push, email)
+  async hasRecentNotification(userId: string, type: string, eventId: number, withinMinutes: number): Promise<boolean> {
+    try {
+      const cutoff = new Date(Date.now() - withinMinutes * 60 * 1000).toISOString();
+      const results = await db.select({ id: notifications.id })
+        .from(notifications)
+        .innerJoin(notificationRecipients, eq(notificationRecipients.notificationId, notifications.id))
+        .where(and(
+          eq(notificationRecipients.userId, userId),
+          eq(notifications.relatedEventId, eventId),
+          sql`${notifications.types} @> ARRAY[${type}]::text[]`,
+          sql`${notifications.createdAt} >= ${cutoff}`
+        ))
+        .limit(1);
+      return results.length > 0;
+    } catch (error) {
+      console.error('Error checking recent notification:', error);
+      return false;
+    }
+  }
+
   async sendMultiChannelNotification(params: {
     userId: string;
     title: string;

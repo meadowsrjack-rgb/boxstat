@@ -149,21 +149,17 @@ export class NotificationScheduler {
               timeUntil = 'in 30 minutes';
             }
 
-            // Get all participants for the event
             const participantIds = await this.getEventParticipants(event);
             console.log(`  Found ${participantIds.length} participants for reminder ${reminderHours}h: ${participantIds.join(', ')}`);
             
+            const dedupWindowMinutes = reminderHours >= 24 ? 720 : (reminderHours >= 2 ? 120 : 60);
+            
             for (const memberId of participantIds) {
-              // Check if reminder was already sent by looking for recent notifications
-              const recentNotifications = await notificationService.getUserNotifications(memberId.toString(), {
-                limit: 10,
-                unreadOnly: false
-              });
-              
-              const alreadySent = recentNotifications.some(n => 
-                n.types?.includes('event_reminder') && 
-                n.relatedEventId === event.id &&
-                n.createdAt && n.createdAt > new Date(now.getTime() - 30 * 60 * 1000).toISOString()
+              const alreadySent = await notificationService.hasRecentNotification(
+                memberId.toString(),
+                'event_reminder',
+                event.id,
+                dedupWindowMinutes
               );
 
               if (!alreadySent) {
@@ -173,6 +169,8 @@ export class NotificationScheduler {
                   event.title,
                   timeUntil
                 );
+              } else {
+                console.log(`  Skipping duplicate reminder for user ${memberId}, event ${event.id}`);
               }
             }
           }
@@ -205,16 +203,11 @@ export class NotificationScheduler {
             const hasCheckedIn = !!existingCheckin?.checkedInAt;
             
             if (!hasCheckedIn) {
-              // Check if notification was already sent
-              const recentNotifications = await notificationService.getUserNotifications(memberId.toString(), {
-                limit: 10,
-                unreadOnly: false
-              });
-              
-              const alreadySent = recentNotifications.some(n => 
-                n.types?.includes('event_checkin_available') && 
-                n.relatedEventId === event.id &&
-                n.createdAt && n.createdAt > new Date(now.getTime() - 15 * 60 * 1000).toISOString()
+              const alreadySent = await notificationService.hasRecentNotification(
+                memberId.toString(),
+                'event_checkin_available',
+                event.id,
+                60
               );
 
               if (!alreadySent) {
@@ -268,18 +261,12 @@ export class NotificationScheduler {
             // Check if user has already responded via the RSVP responses table
             const rsvpResponse = await storage.getRsvpResponseByUserAndEvent(memberId.toString(), event.id);
             
-            // Only notify users who haven't responded yet
             if (!rsvpResponse || rsvpResponse.response === 'no_response') {
-              // Check if notification was already sent
-              const recentNotifications = await notificationService.getUserNotifications(memberId.toString(), {
-                limit: 10,
-                unreadOnly: false
-              });
-              
-              const alreadySent = recentNotifications.some(n => 
-                n.types?.includes('event_rsvp_closing') && 
-                n.relatedEventId === event.id &&
-                n.createdAt && n.createdAt > new Date(now.getTime() - 30 * 60 * 1000).toISOString()
+              const alreadySent = await notificationService.hasRecentNotification(
+                memberId.toString(),
+                'event_rsvp_closing',
+                event.id,
+                120
               );
 
               if (!alreadySent) {

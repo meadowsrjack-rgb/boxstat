@@ -148,9 +148,27 @@ function useDragScroll() {
 
 export default function AdminDashboard() {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("overview");
   const [, setLocation] = useLocation();
   const tabsRef = useDragScroll();
+
+  const getInitialTab = () => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('tab') || 'overview';
+    }
+    return 'overview';
+  };
+  const [activeTab, setActiveTabState] = useState(getInitialTab);
+  const setActiveTab = (tab: string) => {
+    setActiveTabState(tab);
+    const url = new URL(window.location.href);
+    if (tab === 'overview') {
+      url.searchParams.delete('tab');
+    } else {
+      url.searchParams.set('tab', tab);
+    }
+    window.history.replaceState({}, '', url.toString());
+  };
 
   // Fetch current user for role-based access control
   const { data: currentUser, isLoading: userLoading } = useQuery<any>({

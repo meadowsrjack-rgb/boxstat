@@ -8453,6 +8453,18 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
   const [availabilitySlots, setAvailabilitySlots] = useState<{dayOfWeek: number, startTime: string, endTime: string}[]>([]);
   const tableRef = useDragScroll();
 
+  const toggleProgramActive = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      await apiRequest("PATCH", `/api/programs/${id}`, { isActive });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to update program status", variant: "destructive" });
+    },
+  });
+
   const bulkDeletePrograms = useMutation({
     mutationFn: async (ids: string[]) => {
       await Promise.all(ids.map(id => apiRequest("DELETE", `/api/programs/${id}`, {})));
@@ -10357,10 +10369,19 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                         <span className="text-gray-400 text-sm">-</span>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={program.isActive ? "default" : "secondary"}>
-                        {program.isActive ? "Active" : "Inactive"}
-                      </Badge>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={program.isActive !== false}
+                          onCheckedChange={(checked) => {
+                            toggleProgramActive.mutate({ id: program.id, isActive: checked });
+                          }}
+                          data-testid={`switch-program-active-${program.id}`}
+                        />
+                        <span className={`text-xs ${program.isActive !== false ? 'text-green-600' : 'text-gray-400'}`}>
+                          {program.isActive !== false ? "Active" : "Inactive"}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>

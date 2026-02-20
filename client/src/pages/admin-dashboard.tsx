@@ -9398,27 +9398,49 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                         <FormField
                           control={form.control}
                           name="billingCycle"
-                          render={({ field }) => (
+                          render={({ field }) => {
+                            const presets = ["Weekly", "28-Day", "Monthly", "Quarterly", "6-Month", "Yearly"];
+                            const isCustom = field.value && !presets.includes(field.value) && field.value !== "__custom__";
+                            const [customMode, setCustomMode] = useState(isCustom);
+                            return (
                             <FormItem>
                               <FormLabel>Billing Cycle</FormLabel>
-                              <Select value={field.value} onValueChange={field.onChange}>
-                                <FormControl>
-                                  <SelectTrigger data-testid="select-billing-cycle">
-                                    <SelectValue placeholder="Select cycle" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="Weekly">Weekly</SelectItem>
-                                  <SelectItem value="28-Day">28 Days</SelectItem>
-                                  <SelectItem value="Monthly">Monthly</SelectItem>
-                                  <SelectItem value="Quarterly">Quarterly</SelectItem>
-                                  <SelectItem value="6-Month">6-Month</SelectItem>
-                                  <SelectItem value="Yearly">Yearly</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              {customMode || isCustom ? (
+                                <div className="flex gap-2">
+                                  <FormControl>
+                                    <Input
+                                      value={field.value === "__custom__" ? "" : field.value}
+                                      onChange={(e) => field.onChange(e.target.value)}
+                                      placeholder="e.g. Bi-Weekly, 2-Month"
+                                      data-testid="input-custom-billing-cycle"
+                                    />
+                                  </FormControl>
+                                  <Button type="button" variant="ghost" size="sm" onClick={() => { setCustomMode(false); field.onChange("Monthly"); }}>
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Select value={field.value} onValueChange={(val) => { if (val === "__custom__") { setCustomMode(true); field.onChange(""); } else { field.onChange(val); } }}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="select-billing-cycle">
+                                      <SelectValue placeholder="Select cycle" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="Weekly">Weekly</SelectItem>
+                                    <SelectItem value="28-Day">28 Days</SelectItem>
+                                    <SelectItem value="Monthly">Monthly</SelectItem>
+                                    <SelectItem value="Quarterly">Quarterly</SelectItem>
+                                    <SelectItem value="6-Month">6-Month</SelectItem>
+                                    <SelectItem value="Yearly">Yearly</SelectItem>
+                                    <SelectItem value="__custom__">Custom...</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              )}
                               <FormMessage />
                             </FormItem>
-                          )}
+                            );
+                          }}
                         />
 
                         <FormField

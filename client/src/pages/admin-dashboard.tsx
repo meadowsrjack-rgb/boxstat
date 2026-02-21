@@ -9862,8 +9862,8 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                     data-testid={`input-option-savings-${index}`}
                                   />
                                 </div>
-                                {/* Bundle Renewal Options - only for one-time bundles, not credit packs */}
-                                {(option.optionType || "one_time") === "one_time" && (
+                                {/* Bundle Renewal Options - only for subscriptions, not one-time or credit packs */}
+                                {(option.optionType) === "subscription" && (
                                 <div className="col-span-2 border-t pt-2 mt-2">
                                   <label className="text-xs font-medium mb-2 block">After Bundle Period</label>
                                   <Select

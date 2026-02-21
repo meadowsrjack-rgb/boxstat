@@ -9398,10 +9398,22 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                         <FormField
                           control={form.control}
                           name="billingCycle"
-                          render={({ field }) => (
+                          render={({ field }) => {
+                            const presetValues = ["Weekly", "28-Day", "Monthly", "Quarterly", "6-Month", "Yearly"];
+                            const isCustom = field.value && !presetValues.includes(field.value);
+                            return (
                             <FormItem>
                               <FormLabel>Billing Cycle</FormLabel>
-                              <Select value={field.value} onValueChange={field.onChange}>
+                              <Select 
+                                value={isCustom ? "Custom" : field.value} 
+                                onValueChange={(val) => {
+                                  if (val === "Custom") {
+                                    field.onChange("Custom");
+                                  } else {
+                                    field.onChange(val);
+                                  }
+                                }}
+                              >
                                 <FormControl>
                                   <SelectTrigger data-testid="select-billing-cycle">
                                     <SelectValue placeholder="Select cycle" />
@@ -9414,11 +9426,31 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                   <SelectItem value="Quarterly">Quarterly</SelectItem>
                                   <SelectItem value="6-Month">6-Month</SelectItem>
                                   <SelectItem value="Yearly">Yearly</SelectItem>
+                                  <SelectItem value="Custom">Custom (Days)</SelectItem>
                                 </SelectContent>
                               </Select>
+                              {(field.value === "Custom" || isCustom) && (
+                                <div className="mt-2">
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    placeholder="Number of days"
+                                    data-testid="input-custom-billing-days"
+                                    defaultValue={isCustom && field.value !== "Custom" ? field.value.replace("-Day", "") : ""}
+                                    onChange={(e) => {
+                                      const days = parseInt(e.target.value);
+                                      if (days > 0) {
+                                        field.onChange(`${days}-Day`);
+                                      }
+                                    }}
+                                  />
+                                  <p className="text-xs text-gray-500 mt-1">Enter the number of days between each billing cycle</p>
+                                </div>
+                              )}
                               <FormMessage />
                             </FormItem>
-                          )}
+                            );
+                          }}
                         />
 
                         <FormField

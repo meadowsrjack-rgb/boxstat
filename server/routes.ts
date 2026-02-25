@@ -4706,6 +4706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     const userId = req.params.id;
+    const profileOnly = req.query.profileOnly === 'true';
     
     // Get the user being deleted
     const user = await storage.getUser(userId);
@@ -4718,71 +4719,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allUsers = await storage.getUsersByOrganization(user.organizationId);
       const deletedIds = new Set<string>();
       
-      // Find ALL profiles with the same email (complete account deletion)
-      const sameEmailUsers = user.email 
-        ? allUsers.filter((u: any) => u.email?.toLowerCase() === user.email?.toLowerCase())
-        : [user];
-      
       // Helper function to cascade delete related records for a user
       const cascadeDeleteRelatedRecords = async (userIdToDelete: string) => {
         console.log(`🗑️ Cascade deleting related records for user: ${userIdToDelete}`);
         
-        // 1. Delete product_enrollments where user is profile or account holder
         await db.delete(productEnrollments).where(
           sql`${productEnrollments.profileId} = ${userIdToDelete} OR ${productEnrollments.accountHolderId} = ${userIdToDelete}`
         );
         
-        // 2. Delete waiver_signatures where user is profile or signer
         await db.delete(waiverSignatures).where(
           sql`${waiverSignatures.profileId} = ${userIdToDelete} OR ${waiverSignatures.signedBy} = ${userIdToDelete}`
         );
         
-        // 3. teams.coach_id has SET NULL rule in DB, so no action needed here
-        
-        // 4. Update user_awards to set awardedBy to null where this user awarded someone
-        // (the userId FK has cascade, but awardedBy doesn't)
         await db.update(userAwards)
           .set({ awardedBy: null })
           .where(eq(userAwards.awardedBy, userIdToDelete));
         
-        // 5. Delete team_memberships (should be handled by cascade, but explicit for safety)
         await db.delete(teamMemberships).where(eq(teamMemberships.profileId, userIdToDelete));
         
         console.log(`✅ Cascade delete completed for user: ${userIdToDelete}`);
       };
       
-      // Delete all profiles with the same email and their children
-      for (const emailUser of sameEmailUsers) {
-        if (deletedIds.has(emailUser.id)) continue;
+      if (profileOnly) {
+        // Profile-only deletion: only delete this single user record
+        await cascadeDeleteRelatedRecords(userId);
+        if (user.email) {
+          await storage.deletePendingRegistration(user.email, user.organizationId);
+        }
+        await storage.deleteUser(userId);
+        deletedIds.add(userId);
+      } else {
+        // Full account deletion: delete all profiles with the same email and their children
+        const sameEmailUsers = user.email 
+          ? allUsers.filter((u: any) => u.email?.toLowerCase() === user.email?.toLowerCase())
+          : [user];
         
-        // Get all children of this user
-        const childUsers = allUsers.filter((u: any) => u.accountHolderId === emailUser.id);
-        
-        // Delete all child profiles first
-        for (const child of childUsers) {
-          if (deletedIds.has(child.id)) continue;
+        for (const emailUser of sameEmailUsers) {
+          if (deletedIds.has(emailUser.id)) continue;
           
-          // Cascade delete related records for child
-          await cascadeDeleteRelatedRecords(child.id);
+          const childUsers = allUsers.filter((u: any) => u.accountHolderId === emailUser.id);
           
-          if (child.email) {
-            await storage.deletePendingRegistration(child.email, child.organizationId);
+          for (const child of childUsers) {
+            if (deletedIds.has(child.id)) continue;
+            await cascadeDeleteRelatedRecords(child.id);
+            if (child.email) {
+              await storage.deletePendingRegistration(child.email, child.organizationId);
+            }
+            await storage.deleteUser(child.id);
+            deletedIds.add(child.id);
           }
-          await storage.deleteUser(child.id);
-          deletedIds.add(child.id);
+          
+          await cascadeDeleteRelatedRecords(emailUser.id);
+          if (emailUser.email) {
+            await storage.deletePendingRegistration(emailUser.email, emailUser.organizationId);
+          }
+          await storage.deleteUser(emailUser.id);
+          deletedIds.add(emailUser.id);
         }
-        
-        // Cascade delete related records for this user
-        await cascadeDeleteRelatedRecords(emailUser.id);
-        
-        // Delete pending registration for this user's email
-        if (emailUser.email) {
-          await storage.deletePendingRegistration(emailUser.email, emailUser.organizationId);
-        }
-        
-        // Delete the user
-        await storage.deleteUser(emailUser.id);
-        deletedIds.add(emailUser.id);
       }
       
       res.json({ success: true, deletedCount: deletedIds.size });

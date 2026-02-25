@@ -845,12 +845,14 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   });
 
   const deleteUser = useMutation({
-    mutationFn: async (id: string) => {
-      return await apiRequest("DELETE", `/api/users/${id}`, {});
+    mutationFn: async ({ id, profileOnly }: { id: string; profileOnly?: boolean }) => {
+      const url = profileOnly ? `/api/users/${id}?profileOnly=true` : `/api/users/${id}`;
+      return await apiRequest("DELETE", url, {});
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({ title: "User deleted successfully" });
+      toast({ title: variables.profileOnly ? "Profile deleted successfully" : "Account and all profiles deleted successfully" });
+      setViewingUser(null);
     },
     onError: () => {
       toast({ title: "Failed to delete user", variant: "destructive" });
@@ -2328,16 +2330,28 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       )}
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowAddRoleDialog(true)}
-                    className="flex items-center gap-2"
-                    data-testid="button-add-role"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    Add Role
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAddRoleDialog(true)}
+                      className="flex items-center gap-2"
+                      data-testid="button-add-role"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      Add Role
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDeleteConfirmUser(viewingUser)}
+                      className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                      data-testid="button-delete-user"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -2825,9 +2839,43 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
       <AlertDialog open={!!deleteConfirmUser} onOpenChange={(open) => !open && setDeleteConfirmUser(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete User</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete {deleteConfirmUser?.firstName} {deleteConfirmUser?.lastName}? This action cannot be undone.
+            <AlertDialogTitle className="text-red-600 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              {deleteConfirmUser?.role === 'parent' ? 'Delete Parent Account' : 'Delete Profile'}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                {deleteConfirmUser?.role === 'parent' ? (
+                  <>
+                    <p className="text-sm text-gray-700 font-medium">
+                      Deleting this parent account will permanently remove the account and ALL associated profiles:
+                    </p>
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-1">
+                      <p className="text-sm font-medium text-red-800">
+                        {deleteConfirmUser?.firstName} {deleteConfirmUser?.lastName} (Parent)
+                      </p>
+                      {users
+                        .filter((u: any) => u.accountHolderId === deleteConfirmUser?.id || 
+                          (u.email?.toLowerCase() === deleteConfirmUser?.email?.toLowerCase() && u.id !== deleteConfirmUser?.id))
+                        .map((child: any) => (
+                          <p key={child.id} className="text-sm text-red-700 pl-4 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                            {child.firstName} {child.lastName} ({child.role})
+                          </p>
+                        ))
+                      }
+                    </div>
+                    <p className="text-sm text-red-600 font-medium">
+                      This will delete all enrollments, payments, waivers, team memberships, and awards for these profiles. This action cannot be undone.
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-700">
+                    Are you sure you want to delete the profile for <strong>{deleteConfirmUser?.firstName} {deleteConfirmUser?.lastName}</strong> ({deleteConfirmUser?.role})? 
+                    This will remove their enrollments, team memberships, and awards. This action cannot be undone.
+                  </p>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -2835,11 +2883,12 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
               onClick={() => {
-                deleteUser.mutate(deleteConfirmUser.id);
+                const isParent = deleteConfirmUser?.role === 'parent';
+                deleteUser.mutate({ id: deleteConfirmUser.id, profileOnly: !isParent });
                 setDeleteConfirmUser(null);
               }}
             >
-              Delete
+              {deleteConfirmUser?.role === 'parent' ? 'Delete Account & All Profiles' : 'Delete Profile'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -95,7 +95,7 @@ export default function ProfileGateway() {
   // Check if any profile in the account has coach or admin role
   const hasAdminProfile = accountProfiles.some((p: any) => p.role === "admin");
   const hasCoachProfile = accountProfiles.some((p: any) => p.role === "coach");
-  const isCoach = userRole === "coach" || userRole === "admin" || hasCoachProfile || hasAdminProfile;
+  const isCoach = userRole === "coach" || hasCoachProfile;
   const isAdmin = userRole === "admin" || hasAdminProfile;
 
   const handleSelectProfile = (type: string, playerId?: string) => {

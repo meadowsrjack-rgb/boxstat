@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Loader2, CreditCard, Smartphone, Monitor } from "lucide-react";
-
 export default function VerifyEmail() {
   const [, setLocation] = useLocation();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");

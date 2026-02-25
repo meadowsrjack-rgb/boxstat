@@ -36,9 +36,7 @@ export default function MagicLinkLogin() {
         const data = await response.json();
 
         if (response.ok && data.success) {
-          // Check if the magic link was originally requested from iOS app
-          // OR if user is currently on iOS browser
-          const shouldShowAppRedirect = data.shouldRedirectToApp || (isIOSBrowser && data.appRedirectToken);
+          const shouldShowAppRedirect = !isNativeApp && (data.shouldRedirectToApp || (isIOSBrowser && data.appRedirectToken));
           
           if (shouldShowAppRedirect && data.appRedirectToken) {
             setAppRedirectToken(data.appRedirectToken);

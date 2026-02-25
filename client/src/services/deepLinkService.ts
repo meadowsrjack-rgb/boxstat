@@ -26,6 +26,12 @@ export async function initDeepLinks(): Promise<void> {
     });
 
     console.log('[DeepLink] Deep link listener initialized');
+
+    const launchUrl = await App.getLaunchUrl();
+    if (launchUrl && launchUrl.url) {
+      console.log('[DeepLink] Cold start launch URL detected:', launchUrl.url);
+      handleDeepLink(launchUrl.url);
+    }
   } catch (error) {
     console.error('[DeepLink] Failed to initialize deep links:', error);
   }

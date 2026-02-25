@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logoPath from "@assets/UYP Logo nback_1752703900579.png";
-
 interface VerifyResponse {
   success: boolean;
   account: {

@@ -966,7 +966,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUserByEmailAnyOrg(email);
       
       if (!user) {
-        return res.json({ success: true, message: "If an account exists with that email, a magic link has been sent." });
+        return res.status(404).json({ success: false, message: "No account found with that email. Please create an account first.", noAccount: true });
       }
       
       // Check if verified
@@ -1021,8 +1021,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: "Magic link token is required" });
       }
       
-      const allUsers = await storage.getUsersByOrganization((req.query.organizationId as string) || "default-org");
-      const user = allUsers.find(u => u.magicLinkToken === token && u.isActive !== false);
+      // Search across ALL organizations for the magic link token
+      const tokenResults = await db.select().from(users).where(
+        and(
+          eq(users.magicLinkToken, token as string),
+          eq(users.isActive, true)
+        )
+      );
+      
+      if (!tokenResults || tokenResults.length === 0) {
+        return res.status(404).json({ success: false, message: "Invalid or expired magic link. Please request a new one." });
+      }
+      
+      const dbUser = tokenResults[0];
+      const user = await storage.getUser(dbUser.id);
       
       if (!user) {
         return res.status(404).json({ success: false, message: "Invalid magic link" });

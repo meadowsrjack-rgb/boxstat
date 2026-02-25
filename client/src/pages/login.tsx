@@ -121,11 +121,36 @@ export default function LoginPage() {
         throw new Error(response.message || "Failed to send magic link");
       }
     } catch (error: any) {
-      toast({
-        title: "Failed to Send Magic Link",
-        description: error.message || "Please try again later.",
-        variant: "destructive",
-      });
+      const errorMsg = error.message || "";
+      // Check if the error indicates no account exists
+      if (errorMsg.includes("noAccount") || errorMsg.includes("No account found")) {
+        toast({
+          title: "No Account Found",
+          description: "No account exists with that email. Redirecting to registration...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          setLocation("/register");
+        }, 2000);
+      } else {
+        // Try to parse the error message from the JSON response
+        let displayMessage = "Please try again later.";
+        try {
+          const jsonStart = errorMsg.indexOf('{');
+          if (jsonStart >= 0) {
+            const parsed = JSON.parse(errorMsg.substring(jsonStart));
+            displayMessage = parsed.message || displayMessage;
+          } else {
+            displayMessage = errorMsg;
+          }
+        } catch { displayMessage = errorMsg; }
+        
+        toast({
+          title: "Failed to Send Magic Link",
+          description: displayMessage,
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsSendingMagicLink(false);
     }

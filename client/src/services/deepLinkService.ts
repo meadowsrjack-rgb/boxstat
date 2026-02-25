@@ -76,6 +76,50 @@ async function exchangeAuthToken(token: string): Promise<boolean> {
   }
 }
 
+async function handleMagicLinkDirectly(magicToken: string): Promise<void> {
+  try {
+    console.log('[DeepLink] Processing magic link token directly in app...');
+    const response = await fetch(`https://boxstat.app/api/auth/magic-link-login?token=${magicToken}`, {
+      credentials: 'include',
+    });
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      console.log('[DeepLink] Magic link login successful!');
+
+      if (data.token) {
+        await authPersistence.setToken(data.token);
+        console.log('[DeepLink] JWT token saved to native storage');
+      }
+
+      if (data.needsPassword) {
+        console.log('[DeepLink] User needs to set password, redirecting...');
+        window.location.href = '/set-password';
+        return;
+      }
+
+      let redirectPath = '/profile-selection';
+      if (data.user?.defaultDashboardView) {
+        if (data.user.defaultDashboardView === 'parent') {
+          redirectPath = '/unified-account';
+        } else {
+          localStorage.setItem('selectedPlayerId', data.user.defaultDashboardView);
+          redirectPath = '/player-dashboard';
+        }
+      }
+
+      console.log('[DeepLink] Redirecting to:', redirectPath);
+      window.location.href = redirectPath;
+    } else {
+      console.error('[DeepLink] Magic link login failed:', data.message);
+      window.location.href = '/login?error=magic_link_failed';
+    }
+  } catch (error) {
+    console.error('[DeepLink] Error processing magic link:', error);
+    window.location.href = '/login?error=magic_link_failed';
+  }
+}
+
 export function handleDeepLink(url: string): void {
   try {
     const urlObj = new URL(url);
@@ -141,8 +185,8 @@ export function handleDeepLink(url: string): void {
     if (pathname === '/magic-link-login' || pathname.startsWith('/magic-link-login')) {
       const token = searchParams.get('token');
       if (token) {
-        console.log('[DeepLink] Magic link token detected, navigating...');
-        window.location.href = `/magic-link-login?token=${token}`;
+        console.log('[DeepLink] Magic link token detected, processing directly...');
+        handleMagicLinkDirectly(token);
       }
     } else if (pathname === '/claim-verify' || pathname.startsWith('/claim-verify')) {
       const token = searchParams.get('token');

@@ -1092,10 +1092,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expires: new Date(Date.now() + 60000) // 60 seconds
       });
       
+      // Generate JWT token for persistent auth on iOS
+      const jwtToken = jwt.sign(
+        {
+          userId: user.id,
+          organizationId: user.organizationId,
+          role: user.role
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: '30d' }
+      );
+      
       res.json({ 
         success: true, 
         message: "Logged in successfully!",
         needsPassword: !user.password,
+        token: jwtToken,
         user: { 
           id: user.id, 
           email: user.email, 

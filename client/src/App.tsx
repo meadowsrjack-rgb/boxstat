@@ -32,6 +32,7 @@ import VerifyEmail from "@/pages/verify-email";
 import MagicLinkLogin from "@/pages/magic-link-login";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
+import SetPassword from "@/pages/set-password";
 
 import RosterManagement from "@/pages/roster-management";
 import ScheduleRequests from "@/pages/schedule-requests";
@@ -412,6 +413,7 @@ function AppRouter() {
       <Route path="/magic-link-login" component={MagicLinkLogin} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/set-password" component={SetPassword} />
       <Route path="/logout" component={Logout} />
       <Route path="/checkout/:checkoutId" component={QuoteCheckout} />
       

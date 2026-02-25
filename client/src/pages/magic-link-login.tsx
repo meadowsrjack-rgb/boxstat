@@ -49,6 +49,12 @@ export default function MagicLinkLogin() {
             setTimeout(() => {
               window.location.href = `boxstat://auth?token=${data.appRedirectToken}`;
             }, 500);
+          } else if (data.needsPassword) {
+            setStatus("success");
+            setMessage("Login successful! Please set up a password for your account.");
+            setTimeout(() => {
+              window.location.href = "/set-password";
+            }, 1000);
           } else {
             setStatus("success");
             setMessage(data.message);

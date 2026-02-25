@@ -567,6 +567,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
     
+    if (user) {
+      (user as any).needsPassword = !user.password;
+    }
+    
     res.json(user);
   });
   
@@ -623,10 +627,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { email, password } = req.body;
       
-      if (!email || !password) {
+      if (!email) {
         return res.status(400).json({ 
           success: false, 
-          message: "Email and password are required" 
+          message: "Email is required" 
         });
       }
       
@@ -639,13 +643,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Check password (using simple base64 encoding for development)
-      const hashedPassword = hashPassword(password);
-      if (user.password !== hashedPassword) {
+      // Check if user has no password (admin-created account)
+      const userHasNoPassword = !user.password;
+      
+      if (userHasNoPassword && !password) {
+        // User has no password set — allow login but flag for password setup
+      } else if (userHasNoPassword && password) {
+        // User trying to log in with a password but none is set
         return res.status(401).json({ 
           success: false, 
-          message: "Invalid email or password" 
+          message: "This account was created by an admin. Please use Magic Link to sign in and set your password.",
+          needsPassword: true
         });
+      } else {
+        // Normal password check
+        if (!password) {
+          return res.status(400).json({ 
+            success: false, 
+            message: "Password is required" 
+          });
+        }
+        const hashedPassword = hashPassword(password);
+        if (user.password !== hashedPassword) {
+          return res.status(401).json({ 
+            success: false, 
+            message: "Invalid email or password" 
+          });
+        }
       }
       
       // Check if email is verified
@@ -682,6 +706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         success: true,
         token,
+        needsPassword: userHasNoPassword,
         user: { 
           id: user.id, 
           email: user.email, 
@@ -1070,6 +1095,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         success: true, 
         message: "Logged in successfully!",
+        needsPassword: !user.password,
         user: { 
           id: user.id, 
           email: user.email, 
@@ -1204,6 +1230,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Password reset request error:", error);
       res.status(500).json({ success: false, message: "Failed to process password reset request" });
+    }
+  });
+  
+  app.post('/api/auth/set-password', requireAuth, async (req: any, res) => {
+    try {
+      const { newPassword } = req.body;
+      
+      if (!newPassword || newPassword.length < 8) {
+        return res.status(400).json({ success: false, message: "Password must be at least 8 characters long" });
+      }
+      
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+      
+      const hashedPassword = hashPassword(newPassword);
+      await storage.updateUser(user.id, { password: hashedPassword });
+      
+      res.json({ success: true, message: "Password created successfully!" });
+    } catch (error: any) {
+      console.error("Set password error:", error);
+      res.status(500).json({ success: false, message: "Failed to set password" });
     }
   });
   

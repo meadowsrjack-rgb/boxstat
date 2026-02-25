@@ -56,6 +56,16 @@ export default function LoginPage() {
           console.warn("⚠️ No token in response!");
         }
 
+        if (response.needsPassword) {
+          toast({
+            title: "Welcome!",
+            description: "Please set up a password for your account.",
+          });
+          await new Promise(resolve => setTimeout(resolve, 100));
+          window.location.href = "/set-password";
+          return;
+        }
+        
         toast({
           title: "Login Successful",
           description: "Welcome back!",
@@ -84,16 +94,25 @@ export default function LoginPage() {
       console.error("❌ Error message:", error.message);
       console.error("❌ Error stack:", error.stack);
 
-      if (error.message && error.message.includes("verify your email")) {
+      const errMsg = error.message || "";
+      if (errMsg.includes("verify your email")) {
         toast({
           title: "Email Verification Required",
-          description: error.message,
+          description: "Please check your inbox for the verification link.",
           variant: "destructive",
         });
+      } else if (errMsg.includes("needsPassword") || errMsg.includes("Magic Link to sign in")) {
+        toast({
+          title: "No Password Set",
+          description: "This account was created by an admin. Use Magic Link below to sign in and set your password.",
+          variant: "destructive",
+        });
+        setShowMagicLink(true);
+        setMagicLinkEmail(email);
       } else {
         toast({
           title: "Login Failed",
-          description: error.message || "Invalid email or password",
+          description: errMsg || "Invalid email or password",
           variant: "destructive",
         });
       }

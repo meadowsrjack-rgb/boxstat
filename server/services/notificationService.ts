@@ -20,6 +20,19 @@ import { sendAPNsNotification, isAPNsConfigured } from "./apnsService";
 import { sendNotificationEmail } from "../email";
 import admin from 'firebase-admin';
 
+// Push dedup cache: prevents the same push content from being sent to the same
+// device endpoint within a short window. Key = endpoint+title hash, value = expiry timestamp.
+const pushDedupCache = new Map<string, number>();
+const PUSH_DEDUP_WINDOW_MS = 60_000; // 60 seconds
+
+// Clean up expired entries every 30 seconds
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, expiry] of pushDedupCache.entries()) {
+    if (expiry < now) pushDedupCache.delete(key);
+  }
+}, 30_000);
+
 // Firebase Admin SDK for Android push notifications
 const firebaseServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
@@ -374,6 +387,14 @@ export class NotificationService {
         const promises = webPushSubscriptions.map(async (subscription) => {
           const truncatedEndpoint = subscription.endpoint!.substring(0, 50) + '...';
           
+          // Dedup: skip if same endpoint already received a push with same title recently
+          const dedupKey = `web:${subscription.endpoint}:${title}`;
+          if (pushDedupCache.has(dedupKey) && pushDedupCache.get(dedupKey)! > Date.now()) {
+            console.log(`[Push Send] ⏭️  Skipping duplicate web push to ${truncatedEndpoint} (same title within ${PUSH_DEDUP_WINDOW_MS/1000}s)`);
+            return;
+          }
+          pushDedupCache.set(dedupKey, Date.now() + PUSH_DEDUP_WINDOW_MS);
+          
           try {
             await webpush.sendNotification({
               endpoint: subscription.endpoint!,
@@ -431,13 +452,21 @@ export class NotificationService {
       console.log(`[Push Send]   iOS subscriptions after filter: ${iosSubscriptions.length}`);
       if (iosSubscriptions.length > 0) {
         console.log(`[Push Send] 🍎 Processing ${iosSubscriptions.length} iOS subscription(s) via APNs...`);
-        // Extract tokens with their environment (sandbox vs production)
-        // Each device uses its registered environment - sandbox for Xcode builds, production for TestFlight/App Store
+        // Extract tokens with their environment, dedup by token+title
         const devices = iosSubscriptions
           .filter((sub: any) => sub.fcmToken)
+          .filter((sub: any) => {
+            const dedupKey = `ios:${sub.fcmToken}:${title}`;
+            if (pushDedupCache.has(dedupKey) && pushDedupCache.get(dedupKey)! > Date.now()) {
+              console.log(`[Push Send] ⏭️  Skipping duplicate iOS push to token ${sub.fcmToken.substring(0, 20)}...`);
+              return false;
+            }
+            pushDedupCache.set(dedupKey, Date.now() + PUSH_DEDUP_WINDOW_MS);
+            return true;
+          })
           .map((sub: any) => ({
             token: sub.fcmToken,
-            environment: sub.apnsEnvironment || 'production' // Use stored environment, default to production
+            environment: sub.apnsEnvironment || 'production'
           }));
         console.log(`[Push Send] Extracted ${devices.length} APNs device(s)`);
         devices.forEach((d: any) => console.log(`[Push Send]   Token: ${d.token.substring(0, 20)}... (${d.environment})`));
@@ -488,7 +517,18 @@ export class NotificationService {
       const androidSubscriptions = fcmSubscriptions.filter((sub: any) => sub.platform === 'android');
       if (androidSubscriptions.length > 0) {
         console.log(`[Push Send] 🤖 Processing ${androidSubscriptions.length} Android subscription(s) via FCM...`);
-        const fcmTokens = androidSubscriptions.map((sub: any) => sub.fcmToken).filter(Boolean);
+        const fcmTokens = androidSubscriptions
+          .map((sub: any) => sub.fcmToken)
+          .filter(Boolean)
+          .filter((token: string) => {
+            const dedupKey = `android:${token}:${title}`;
+            if (pushDedupCache.has(dedupKey) && pushDedupCache.get(dedupKey)! > Date.now()) {
+              console.log(`[Push Send] ⏭️  Skipping duplicate Android push to token ${token.substring(0, 20)}...`);
+              return false;
+            }
+            pushDedupCache.set(dedupKey, Date.now() + PUSH_DEDUP_WINDOW_MS);
+            return true;
+          });
         
         if (fcmTokens.length > 0 && firebaseServiceAccount) {
           try {

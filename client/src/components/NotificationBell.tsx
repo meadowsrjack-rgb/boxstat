@@ -54,27 +54,29 @@ export function NotificationBell() {
   const unreadCount = feed.filter(n => !n.isRead).length;
 
   const markAsRead = useMutation({
-    mutationFn: async (recipientId: number) => {
-      return await apiRequest("POST", `/api/notifications/${recipientId}/mark-read`, {});
+    mutationFn: async (notificationId: number) => {
+      return await apiRequest("POST", `/api/notifications/${notificationId}/read`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/feed", profileId] });
     },
   });
 
-  // Mark all visible notifications as read when popover closes
+  const markAllAsRead = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", `/api/notifications/read-all`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/feed", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+    },
+  });
+
   const handlePopoverChange = async (open: boolean) => {
     setPopoverOpen(open);
     
-    // When closing the popover, mark all unread notifications as read
-    if (!open && feed.length > 0) {
-      const unreadNotifications = feed.filter(n => !n.isRead);
-      if (unreadNotifications.length > 0) {
-        // Mark each unread notification as read
-        await Promise.all(
-          unreadNotifications.map(n => markAsRead.mutateAsync(n.recipientId))
-        );
-      }
+    if (open && unreadCount > 0) {
+      markAllAsRead.mutate();
     }
   };
 
@@ -96,7 +98,7 @@ export function NotificationBell() {
     setPopoverOpen(false);
     
     if (!notification.isRead) {
-      await markAsRead.mutateAsync(notification.recipientId);
+      await markAsRead.mutateAsync(notification.id);
     }
   };
 

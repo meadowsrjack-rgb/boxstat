@@ -106,6 +106,7 @@ export interface APNsNotification {
   badge?: number;
   sound?: string;
   data?: Record<string, any>;
+  collapseId?: string;
 }
 
 export interface APNsSendResult {
@@ -163,7 +164,7 @@ async function sendWithGateway(
       });
     });
 
-    const req = client.request({
+    const headers: Record<string, string | number> = {
       ':method': 'POST',
       ':path': `/3/device/${cleanToken}`,
       'authorization': `bearer ${jwtToken}`,
@@ -172,8 +173,13 @@ async function sendWithGateway(
       'apns-priority': '10',
       'apns-expiration': '0',
       'content-type': 'application/json',
-      'content-length': Buffer.byteLength(payload)
-    });
+      'content-length': Buffer.byteLength(payload),
+    };
+    if (notification.collapseId) {
+      headers['apns-collapse-id'] = notification.collapseId;
+    }
+
+    const req = client.request(headers);
 
     let responseData = '';
     let statusCode = 0;

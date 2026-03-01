@@ -23,7 +23,7 @@ import admin from 'firebase-admin';
 // Push dedup cache: prevents the same push content from being sent to the same
 // device endpoint within a short window. Key = endpoint+title hash, value = expiry timestamp.
 const pushDedupCache = new Map<string, number>();
-const PUSH_DEDUP_WINDOW_MS = 60_000; // 60 seconds
+const PUSH_DEDUP_WINDOW_MS = 1_200_000; // 20 minutes - covers the 15-min cron interval
 
 // Clean up expired entries every 30 seconds
 setInterval(() => {
@@ -196,7 +196,7 @@ export class NotificationService {
 
   // ===== Notification Creation and Delivery =====
   
-  async sendPushNotification(notificationId: number, userId: string, title: string, message: string): Promise<void> {
+  async sendPushNotification(notificationId: number, userId: string, title: string, message: string, collapseKey?: string): Promise<void> {
     const startTime = Date.now();
     console.log(`[Push Send] ========================================`);
     console.log(`[Push Send] 🚀 START push notification #${notificationId} to user ${userId}`);
@@ -362,7 +362,7 @@ export class NotificationService {
         body: message,
         icon: '/icons/icon-192x192.png',
         badge: '/icons/badge-72x72.png',
-        tag: `notification-${notificationId}`,
+        tag: collapseKey || `notification-${notificationId}`,
         data: {
           notificationId,
           url: '/notifications'
@@ -477,6 +477,7 @@ export class NotificationService {
             const apnsResult = await sendAPNsNotification(devices, {
               title: title,
               body: message,
+              collapseId: collapseKey,
             });
             
             console.log(`[Push Send] APNs Results: ${apnsResult.successCount} succeeded, ${apnsResult.failureCount} failed`);
@@ -532,13 +533,16 @@ export class NotificationService {
         
         if (fcmTokens.length > 0 && firebaseServiceAccount) {
           try {
-            const fcmMessage = {
+            const fcmMessage: any = {
               notification: {
                 title: title,
                 body: message,
               },
               tokens: fcmTokens,
             };
+            if (collapseKey) {
+              fcmMessage.android = { collapseKey };
+            }
 
             console.log(`[Push Send] 📡 Calling Firebase Admin SDK for Android...`);
             const response = await admin.messaging().sendEachForMulticast(fcmMessage);
@@ -808,7 +812,8 @@ export class NotificationService {
           
           // Send push notification if channel includes it
           if (channels.includes('push')) {
-            await this.sendPushNotification(notification.id, userId, title, message);
+            const eventCollapseKey = data.eventId ? `event-${type}-${data.eventId}` : undefined;
+            await this.sendPushNotification(notification.id, userId, title, message, eventCollapseKey);
           }
         }
       } else if (channels.includes('push')) {

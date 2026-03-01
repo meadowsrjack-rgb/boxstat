@@ -133,11 +133,11 @@ export class NotificationScheduler {
         const reminderTimes = [24, 2, 0.5];
         
         for (const reminderHours of reminderTimes) {
-          // Check if we're within the reminder window (generous tolerance)
-          // For 24h reminder: trigger between 23-24.5 hours before
+          // Check if we're within the reminder window (tight tolerance matching 15-min cron interval)
+          // For 24h reminder: trigger between 23.75-24.25 hours before
           // For 2h reminder: trigger between 1.75-2.25 hours before  
           // For 30min reminder: trigger between 25-35 minutes before
-          const tolerance = reminderHours >= 24 ? 0.75 : (reminderHours >= 2 ? 0.25 : 0.17);
+          const tolerance = reminderHours >= 24 ? 0.25 : (reminderHours >= 2 ? 0.25 : 0.17);
           if (hoursUntilEvent <= (reminderHours + tolerance) && hoursUntilEvent > (reminderHours - tolerance)) {
             
             let timeUntil = '';

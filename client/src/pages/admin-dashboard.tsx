@@ -84,6 +84,7 @@ import { insertDivisionSchema, insertNotificationSchema, insertTeamSchema } from
 import { LocationSearch } from "@/components/LocationSearch";
 import AttendanceList from "@/components/AttendanceList";
 import { format } from "date-fns";
+import { TIMEZONE_OPTIONS, getBrowserTimezone, localDatetimeToUTC, utcToLocalDatetime, getTimezoneAbbreviation } from "@/lib/time";
 import EventWindowsConfigurator from "@/components/EventWindowsConfigurator";
 import type { EventWindow } from "@shared/schema";
 import EventDetailModal from "@/components/EventDetailModal";
@@ -3921,6 +3922,11 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
   const [recurrenceEndType, setRecurrenceEndType] = useState<'count' | 'date'>('count');
   const [recurrenceEndDate, setRecurrenceEndDate] = useState<string>('');
   const [playerRsvpEnabled, setPlayerRsvpEnabled] = useState(true);
+  const [eventTimezone, setEventTimezone] = useState(() => {
+    const browserTz = getBrowserTimezone();
+    const match = TIMEZONE_OPTIONS.find(tz => tz.value === browserTz);
+    return match ? browserTz : 'America/Los_Angeles';
+  });
   const [locationType, setLocationType] = useState<'physical' | 'online'>('physical');
   const [editLocationType, setEditLocationType] = useState<'physical' | 'online'>('physical');
   const [editEventWindows, setEditEventWindows] = useState<Partial<EventWindow>[]>([]);
@@ -4064,24 +4070,41 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
       }
       
       console.log('Event form data before submission:', { type, targetType, assignTo, ...rest });
+      const utcStartTime = localDatetimeToUTC(rest.startTime, eventTimezone);
+      const utcEndTime = localDatetimeToUTC(rest.endTime, eventTimezone);
       const basePayload = {
         ...rest,
+        startTime: utcStartTime,
+        endTime: utcEndTime,
         eventType: type,
         organizationId: organization.id,
         assignTo,
         visibility,
         playerRsvpEnabled,
+        timezone: eventTimezone,
       };
       console.log('Event API payload:', basePayload);
       
-      // Calculate how many events to create based on recurrence
       const eventsToCreate: any[] = [];
-      const startDate = new Date(rest.startTime);
-      const endDate = new Date(rest.endTime);
-      const duration = endDate.getTime() - startDate.getTime();
+
+      const naiveStart = rest.startTime || '';
+      const naiveEnd = rest.endTime || '';
+      
+      if (!naiveStart.includes('T') || !naiveEnd.includes('T')) {
+        toast({ title: "Please set both start and end times", variant: "destructive" });
+        return;
+      }
+      
+      const [startDatePart, startTimePart] = naiveStart.split('T');
+      const [, endTimePart] = naiveEnd.split('T');
+      const [startHour, startMinute] = startTimePart.split(':').map(Number);
+      const [endHour, endMinute] = endTimePart.split(':').map(Number);
+      const [sYear, sMonth, sDay] = startDatePart.split('-').map(Number);
+
+      let durationMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
+      if (durationMinutes <= 0) durationMinutes += 24 * 60;
       
       if (isRecurring) {
-        // Validate: weekly/biweekly requires at least one day selected
         if ((recurrenceFrequency === 'weekly' || recurrenceFrequency === 'biweekly') && recurrenceDays.length === 0) {
           toast({
             title: "Select Days",
@@ -4091,7 +4114,6 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
           return;
         }
         
-        // Validate: end-by-date requires an end date
         if (recurrenceEndType === 'date' && !recurrenceEndDate) {
           toast({
             title: "Select End Date",
@@ -4101,96 +4123,72 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
           return;
         }
         
-        // Determine end boundary: by count or by date
-        // Parse end date as local time (not UTC) and set to end-of-day
-        let maxEndDateTime: Date | null = null;
+        let maxEndDate: Date | null = null;
         if (recurrenceEndType === 'date' && recurrenceEndDate) {
-          // Parse YYYY-MM-DD as local midnight by appending T00:00:00 (local time)
           const [year, month, day] = recurrenceEndDate.split('-').map(Number);
-          maxEndDateTime = new Date(year, month - 1, day, 23, 59, 59, 999);
+          maxEndDate = new Date(year, month - 1, day, 23, 59, 59, 999);
         }
-        // For date-based, allow up to 1000 events (covers ~10 years of weekly events)
-        // For count-based, use the user's selection
         const maxCount = recurrenceEndType === 'count' ? recurrenceCount : 1000;
+
+        const makeOccurrence = (y: number, m: number, d: number) => {
+          const pad = (n: number) => String(n).padStart(2, '0');
+          const naiveS = `${y}-${pad(m)}-${pad(d)}T${pad(startHour)}:${pad(startMinute)}`;
+          const endDateObj = new Date(y, m - 1, d, startHour, startMinute);
+          endDateObj.setMinutes(endDateObj.getMinutes() + durationMinutes);
+          const naiveE = `${endDateObj.getFullYear()}-${pad(endDateObj.getMonth() + 1)}-${pad(endDateObj.getDate())}T${pad(endDateObj.getHours())}:${pad(endDateObj.getMinutes())}`;
+          return {
+            ...basePayload,
+            startTime: localDatetimeToUTC(naiveS, eventTimezone),
+            endTime: localDatetimeToUTC(naiveE, eventTimezone),
+          };
+        };
         
-        // For weekly/biweekly with specific days selected
         if ((recurrenceFrequency === 'weekly' || recurrenceFrequency === 'biweekly') && recurrenceDays.length > 0) {
           const weekInterval = recurrenceFrequency === 'biweekly' ? 2 : 1;
-          let currentWeekStart = new Date(startDate);
-          // Move to start of week (Sunday)
-          currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay());
+          let curWeekStart = new Date(sYear, sMonth - 1, sDay);
+          curWeekStart.setDate(curWeekStart.getDate() - curWeekStart.getDay());
           
           let eventCount = 0;
-          const maxIterations = 520; // Safety limit: ~10 years of weeks
+          const maxIterations = 520;
           let iterations = 0;
           let shouldStop = false;
           
           while (eventCount < maxCount && iterations < maxIterations && !shouldStop) {
             for (const dayOfWeek of recurrenceDays.sort((a, b) => a - b)) {
-              // Check if we've reached max count
-              if (eventCount >= maxCount) {
-                shouldStop = true;
-                break;
-              }
+              if (eventCount >= maxCount) { shouldStop = true; break; }
               
-              const eventDate = new Date(currentWeekStart);
-              eventDate.setDate(currentWeekStart.getDate() + dayOfWeek);
+              const eventDate = new Date(curWeekStart);
+              eventDate.setDate(curWeekStart.getDate() + dayOfWeek);
               
-              // Skip dates before the start date (compare date portion only)
-              const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-              const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-              if (eventDateOnly < startDateOnly) continue;
+              const startDateRef = new Date(sYear, sMonth - 1, sDay);
+              if (eventDate < startDateRef) continue;
               
-              // Create event for this day with the same time as original
-              const newStartDate = new Date(eventDate);
-              newStartDate.setHours(startDate.getHours(), startDate.getMinutes(), startDate.getSeconds(), startDate.getMilliseconds());
+              if (maxEndDate && eventDate > maxEndDate) { shouldStop = true; break; }
               
-              // Check if event datetime has passed the end datetime
-              if (maxEndDateTime && newStartDate > maxEndDateTime) {
-                shouldStop = true;
-                break;
-              }
-              
-              const newEndDate = new Date(newStartDate.getTime() + duration);
-              
-              eventsToCreate.push({
-                ...basePayload,
-                startTime: newStartDate.toISOString(),
-                endTime: newEndDate.toISOString(),
-              });
+              eventsToCreate.push(makeOccurrence(eventDate.getFullYear(), eventDate.getMonth() + 1, eventDate.getDate()));
               eventCount++;
             }
             
-            // Move to next week(s)
-            currentWeekStart.setDate(currentWeekStart.getDate() + (7 * weekInterval));
+            curWeekStart.setDate(curWeekStart.getDate() + (7 * weekInterval));
             iterations++;
           }
         } else {
-          // Original logic for daily/monthly or weekly without specific days
           for (let i = 0; i < maxCount; i++) {
-            const newStartDate = new Date(startDate);
+            const d = new Date(sYear, sMonth - 1, sDay);
             
-            // Calculate offset based on frequency
             if (recurrenceFrequency === 'daily') {
-              newStartDate.setDate(startDate.getDate() + i);
+              d.setDate(d.getDate() + i);
             } else if (recurrenceFrequency === 'weekly') {
-              newStartDate.setDate(startDate.getDate() + (i * 7));
+              d.setDate(d.getDate() + (i * 7));
             } else if (recurrenceFrequency === 'biweekly') {
-              newStartDate.setDate(startDate.getDate() + (i * 14));
+              d.setDate(d.getDate() + (i * 14));
             } else if (recurrenceFrequency === 'monthly') {
-              newStartDate.setMonth(startDate.getMonth() + i);
+              d.setMonth(d.getMonth() + i);
             }
             
-            // Check if event datetime has passed the end datetime
-            if (maxEndDateTime && newStartDate > maxEndDateTime) break;
+            if (maxEndDate && d > maxEndDate) break;
             
-            const newEndDate = new Date(newStartDate.getTime() + duration);
-            
-            eventsToCreate.push({
-              ...basePayload,
-              startTime: newStartDate.toISOString(),
-              endTime: newEndDate.toISOString(),
-            });
+            eventsToCreate.push(makeOccurrence(d.getFullYear(), d.getMonth() + 1, d.getDate()));
           }
         }
       } else {
@@ -4273,6 +4271,8 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
       setRecurrenceEndType('count');
       setRecurrenceEndDate('');
       setPlayerRsvpEnabled(true);
+      const browserTz = getBrowserTimezone();
+      setEventTimezone(TIMEZONE_OPTIONS.find(tz => tz.value === browserTz) ? browserTz : 'America/Los_Angeles');
     },
     onError: (error: any) => {
       console.error('Event creation error:', error);
@@ -4299,8 +4299,14 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
 
   const updateEvent = useMutation({
     mutationFn: async ({ id, targetType, targetId, targetIds, ...data }: any) => {
-      // Convert legacy targetType/targetId/targetIds to assignTo/visibility
       const payload: any = { ...data };
+      const tz = data.timezone || 'America/Los_Angeles';
+      if (payload.startTime && !payload.startTime.includes('Z') && !payload.startTime.match(/[+-]\d{2}:/)) {
+        payload.startTime = localDatetimeToUTC(payload.startTime, tz);
+      }
+      if (payload.endTime && !payload.endTime.includes('Z') && !payload.endTime.match(/[+-]\d{2}:/)) {
+        payload.endTime = localDatetimeToUTC(payload.endTime, tz);
+      }
       
       // Support both single targetId and array targetIds
       const ids = targetIds?.length > 0 ? targetIds : (targetId ? [String(targetId)] : []);
@@ -4629,6 +4635,24 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                         </FormItem>
                       )}
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Timezone</Label>
+                    <Select value={eventTimezone} onValueChange={setEventTimezone}>
+                      <SelectTrigger data-testid="select-event-timezone">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIMEZONE_OPTIONS.map((tz) => (
+                          <SelectItem key={tz.value} value={tz.value}>
+                            {tz.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500">
+                      Times will automatically adjust for daylight saving changes
+                    </p>
                   </div>
                   
                   {/* Recurring Event Options */}
@@ -5118,7 +5142,10 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                       <Input
                         id="edit-event-startTime"
                         type="datetime-local"
-                        defaultValue={editingEvent.startTime ? format(new Date(editingEvent.startTime), "yyyy-MM-dd'T'HH:mm") : ""}
+                        defaultValue={editingEvent.startTime ? utcToLocalDatetime(
+                          typeof editingEvent.startTime === 'string' && editingEvent.startTime.includes('T') ? editingEvent.startTime : new Date(editingEvent.startTime).toISOString(),
+                          editingEvent.timezone || 'America/Los_Angeles'
+                        ) : ""}
                         onChange={(e) => setEditingEvent({...editingEvent, startTime: e.target.value})}
                         data-testid="input-edit-event-startTime"
                       />
@@ -5128,11 +5155,35 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                       <Input
                         id="edit-event-endTime"
                         type="datetime-local"
-                        defaultValue={editingEvent.endTime ? format(new Date(editingEvent.endTime), "yyyy-MM-dd'T'HH:mm") : ""}
+                        defaultValue={editingEvent.endTime ? utcToLocalDatetime(
+                          typeof editingEvent.endTime === 'string' && editingEvent.endTime.includes('T') ? editingEvent.endTime : new Date(editingEvent.endTime).toISOString(),
+                          editingEvent.timezone || 'America/Los_Angeles'
+                        ) : ""}
                         onChange={(e) => setEditingEvent({...editingEvent, endTime: e.target.value})}
                         data-testid="input-edit-event-endTime"
                       />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Timezone</Label>
+                    <Select
+                      value={editingEvent.timezone || 'America/Los_Angeles'}
+                      onValueChange={(value) => setEditingEvent({...editingEvent, timezone: value})}
+                    >
+                      <SelectTrigger data-testid="select-edit-event-timezone">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIMEZONE_OPTIONS.map((tz) => (
+                          <SelectItem key={tz.value} value={tz.value}>
+                            {tz.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500">
+                      Times will automatically adjust for daylight saving changes
+                    </p>
                   </div>
                   <div className="space-y-3">
                     <Label>Location <span className="text-red-500">*</span></Label>

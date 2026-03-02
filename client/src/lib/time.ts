@@ -1,6 +1,97 @@
 export type TimeUnit = "minutes" | "hours" | "days";
 export type Direction = "before" | "after";
 
+export const TIMEZONE_OPTIONS = [
+  { value: 'America/New_York', label: 'Eastern (ET)' },
+  { value: 'America/Chicago', label: 'Central (CT)' },
+  { value: 'America/Denver', label: 'Mountain (MT)' },
+  { value: 'America/Los_Angeles', label: 'Pacific (PT)' },
+  { value: 'America/Anchorage', label: 'Alaska (AKT)' },
+  { value: 'Pacific/Honolulu', label: 'Hawaii (HT)' },
+  { value: 'America/Phoenix', label: 'Arizona (no DST)' },
+] as const;
+
+export function getBrowserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return 'America/Los_Angeles';
+  }
+}
+
+export function localDatetimeToUTC(naiveDatetime: string, timezone: string): string {
+  if (!naiveDatetime) return '';
+  const [datePart, timePart] = naiveDatetime.split('T');
+  if (!datePart || !timePart) return naiveDatetime;
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hour, minute] = timePart.split(':').map(Number);
+
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute));
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(utcGuess);
+  const get = (type: string) => parseInt(parts.find(p => p.type === type)?.value || '0');
+  const tzDateAsUTC = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour') === 24 ? 0 : get('hour'), get('minute'), get('second'));
+  const offsetMs = tzDateAsUTC - utcGuess.getTime();
+  const correctUTC = new Date(utcGuess.getTime() - offsetMs);
+  return correctUTC.toISOString();
+}
+
+export function utcToLocalDatetime(utcString: string, timezone: string): string {
+  if (!utcString) return '';
+  const date = new Date(utcString);
+  if (isNaN(date.getTime())) return '';
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(date);
+  const get = (type: string) => parts.find(p => p.type === type)?.value || '00';
+  let h = get('hour');
+  if (h === '24') h = '00';
+  return `${get('year')}-${get('month')}-${get('day')}T${h}:${get('minute')}`;
+}
+
+export function formatDateTimeInTimezone(date: Date | string, timezone: string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleString('en-US', {
+    timeZone: timezone,
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
+export function getTimezoneAbbreviation(timezone: string, date?: Date): string {
+  const d = date || new Date();
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    timeZoneName: 'short',
+  }).formatToParts(d);
+  return parts.find(p => p.type === 'timeZoneName')?.value || timezone;
+}
+
 /**
  * Calculate a date offset from the event start time
  */

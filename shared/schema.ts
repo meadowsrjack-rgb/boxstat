@@ -638,6 +638,7 @@ export const events = pgTable("events", {
   proxyCheckinRoles: text("proxy_checkin_roles").array(), // Roles that can check in others (typically parent for player events)
   // Player RSVP control
   playerRsvpEnabled: boolean("player_rsvp_enabled").default(true), // If false, only parent/guardian can RSVP for players
+  timezone: varchar().default('America/Los_Angeles'), // IANA timezone for event times (handles DST automatically)
   // Schedule request fields - for events created via session booking
   scheduleRequestSource: varchar("schedule_request_source"), // 'schedule_request' if created from booking
   requestedByUserId: varchar("requested_by_user_id"), // Parent who requested the session
@@ -1303,6 +1304,7 @@ export interface Event {
   participationRoles?: string[];
   proxyCheckinRoles?: string[];
   playerRsvpEnabled?: boolean; // If false, only parent/guardian can RSVP for players
+  timezone?: string; // IANA timezone identifier (e.g., "America/Los_Angeles")
   createdAt: Date;
 }
 
@@ -1343,6 +1345,7 @@ export const insertEventSchema = z.object({
   status: z.string().default('active'),
   isActive: z.boolean().default(true),
   playerRsvpEnabled: z.boolean().default(true),
+  timezone: z.string().default('America/Los_Angeles'),
 });
 
 export type InsertEvent = z.infer<typeof insertEventSchema>;

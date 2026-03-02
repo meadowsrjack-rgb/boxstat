@@ -3589,6 +3589,7 @@ class DatabaseStorage implements IStorage {
       status: event.status || 'active',
       isActive: event.isActive ?? true,
       playerRsvpEnabled: event.playerRsvpEnabled ?? true,
+      timezone: (event as any).timezone ?? 'America/Los_Angeles',
       createdAt: new Date().toISOString(),
       meetingLink: (event as any).meetingLink ?? undefined,
       scheduleRequestSource: (event as any).scheduleRequestSource ?? undefined,
@@ -3619,6 +3620,7 @@ class DatabaseStorage implements IStorage {
       assignTo: updates.assignTo,
       visibility: updates.visibility,
       playerRsvpEnabled: updates.playerRsvpEnabled,
+      timezone: (updates as any).timezone,
       status: updates.status,
     };
 
@@ -5507,6 +5509,7 @@ class DatabaseStorage implements IStorage {
       isActive: dbEvent.isActive ?? true,
       playerRsvpEnabled: dbEvent.playerRsvpEnabled ?? true,
       createdAt: new Date(dbEvent.createdAt),
+      timezone: dbEvent.timezone ?? 'America/Los_Angeles',
       scheduleRequestSource: dbEvent.scheduleRequestSource ?? undefined,
       requestedByUserId: dbEvent.requestedByUserId ?? undefined,
       enrollmentId: dbEvent.enrollmentId ?? undefined,

@@ -111,6 +111,10 @@ app.get('/.well-known/apple-app-site-association', (req, res) => {
 const publicPath = path.resolve(import.meta.dirname, "..", "public");
 app.use(express.static(publicPath));
 
+// Serve award images from client/public/trophiesbadges
+const awardImagesPath = path.resolve(import.meta.dirname, "..", "client", "public", "trophiesbadges");
+app.use("/trophiesbadges", express.static(awardImagesPath));
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;

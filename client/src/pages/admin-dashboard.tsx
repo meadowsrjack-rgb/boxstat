@@ -6087,7 +6087,12 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     }
   };
 
-  // Fetch user awards for recipients view
+  // Fetch all user awards for the organization (for recipient counts)
+  const { data: allOrgAwards = [] } = useQuery<any[]>({
+    queryKey: ["/api/user-awards/organization"],
+  });
+
+  // Fetch user awards for recipients dialog view
   const { data: userAwards = [], refetch: refetchUserAwards } = useQuery<any[]>({
     queryKey: ["/api/user-awards", recipientsAward?.id],
     enabled: !!recipientsAward,
@@ -6326,7 +6331,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
 
   // Get recipient count for an award
   const getRecipientCount = (awardId: number) => {
-    return userAwards.filter((ua: any) => ua.awardId === awardId).length;
+    return allOrgAwards.filter((ua: any) => ua.awardId === awardId).length;
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {

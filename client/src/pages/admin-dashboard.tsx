@@ -5588,60 +5588,11 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
             </TableHeader>
             <TableBody>
               {(() => {
-                // Group recurring events by title+type+location+time to show as single entry
-                const groupedEvents: any[] = [];
-                const seenSeries = new Map<string, any>();
-                
                 const sortedEvents = [...events].sort((a: any, b: any) => 
-                  new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+                  new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
                 );
                 
-                // Helper to get time of day (HH:MM) from a date
-                const getTimeOfDay = (dateStr: string) => {
-                  const d = new Date(dateStr);
-                  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-                };
-                
-                for (const event of sortedEvents) {
-                  // Group by title + type + location + time of day
-                  const timeOfDay = getTimeOfDay(event.startTime);
-                  const key = `${event.title}|${event.eventType || event.type}|${event.location || ''}|${timeOfDay}`;
-                  
-                  if (!seenSeries.has(key)) {
-                    // Find all events in this series (same title, type, location, time)
-                    const seriesEvents = sortedEvents.filter((e: any) => {
-                      const eTime = getTimeOfDay(e.startTime);
-                      return e.title === event.title && 
-                        (e.eventType || e.type) === (event.eventType || event.type) &&
-                        (e.location || '') === (event.location || '') &&
-                        eTime === timeOfDay;
-                    });
-                    
-                    if (seriesEvents.length > 1) {
-                      // It's a series - show as grouped
-                      seenSeries.set(key, {
-                        ...event,
-                        seriesEvents,
-                        seriesCount: seriesEvents.length,
-                        firstDate: seriesEvents[0]?.startTime,
-                        lastDate: seriesEvents[seriesEvents.length - 1]?.startTime,
-                        isSeries: true,
-                      });
-                      groupedEvents.push(seenSeries.get(key));
-                    } else {
-                      // Single event - show as is
-                      seenSeries.set(key, event);
-                      groupedEvents.push(event);
-                    }
-                  }
-                }
-                
-                // Sort by first date descending
-                groupedEvents.sort((a: any, b: any) => 
-                  new Date(b.firstDate || b.startTime).getTime() - new Date(a.firstDate || a.startTime).getTime()
-                );
-                
-                return groupedEvents.map((event: any) => {
+                return sortedEvents.map((event: any) => {
                   // Build 'For' display from assignTo
                   let forDisplay = "Everyone";
                   if (event.scheduleRequestSource && event.assignTo?.users?.length > 0) {
@@ -5692,62 +5643,25 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                   }
                   
                   // Build date/time display
-                  let dateTimeDisplay;
-                  if (event.isSeries && event.seriesCount > 1) {
-                    const firstDate = new Date(event.firstDate);
-                    const startTime = firstDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-                    // Get end time if available
-                    const endDate = event.endTime ? new Date(event.endTime) : null;
-                    const endTime = endDate ? endDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : null;
-                    
-                    // Get unique days of week from series
-                    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                    const uniqueDays = new Set<number>();
-                    event.seriesEvents.forEach((e: any) => {
-                      const d = new Date(e.startTime);
-                      uniqueDays.add(d.getDay());
-                    });
-                    const sortedDays = Array.from(uniqueDays).sort((a, b) => a - b);
-                    const daysStr = sortedDays.map(d => dayNames[d]).join(', ');
-                    
-                    // Format: "5:30PM - 7PM Tue, Thu Recurring"
-                    const timeRange = endTime ? `${startTime} - ${endTime}` : startTime;
-                    dateTimeDisplay = `${timeRange} ${daysStr} Recurring`;
-                  } else {
-                    dateTimeDisplay = new Date(event.startTime).toLocaleString();
-                  }
+                  const dateTimeDisplay = new Date(event.startTime).toLocaleString();
                   
                   return (
                   <TableRow key={event.id} data-testid={`row-event-${event.id}`}>
                     <TableCell>
                       <Checkbox 
-                        checked={event.isSeries 
-                          ? event.seriesEvents.some((e: any) => selectedEventIds.has(e.id))
-                          : selectedEventIds.has(event.id)
-                        }
-                        onCheckedChange={() => {
-                          if (event.isSeries && event.seriesEvents) {
-                            // Toggle all events in series
-                            const allSelected = event.seriesEvents.every((e: any) => selectedEventIds.has(e.id));
-                            const newSelected = new Set(selectedEventIds);
-                            event.seriesEvents.forEach((e: any) => {
-                              if (allSelected) {
-                                newSelected.delete(e.id);
-                              } else {
-                                newSelected.add(e.id);
-                              }
-                            });
-                            setSelectedEventIds(newSelected);
-                          } else {
-                            toggleEventSelection(event.id);
-                          }
-                        }}
+                        checked={selectedEventIds.has(event.id)}
+                        onCheckedChange={() => toggleEventSelection(event.id)}
                         aria-label={`Select ${event.title}`}
                       />
                     </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         {event.title}
+                        {event.isRecurring && (
+                          <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-300 text-xs">
+                            Recurring
+                          </Badge>
+                        )}
                         {event.scheduleRequestSource && event.status === 'pending' && (
                           <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-xs">
                             Requested

@@ -141,7 +141,7 @@ export default function MarketingLanding() {
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6">
               <span className="bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent">Double your club.</span>
               <br />
-              <span className="bg-gradient-to-r from-red-500 via-red-400 to-white bg-clip-text text-transparent">Repeat.</span>
+              <span className="bg-gradient-to-r from-red-500 via-red-400 to-white bg-clip-text text-transparent">Half the effort.</span>
             </h1>
 
             <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed">Welcome to the world’s first unified ecosystem where elite athletic growth meets professional business scale. We’ve reimagined sports management by building a single, intuitive home for everyone involved.</p>

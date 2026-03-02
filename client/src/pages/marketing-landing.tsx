@@ -107,13 +107,6 @@ export default function MarketingLanding() {
               <img src={logo} alt="BoxStat" className="h-48 w-auto" />
             </div>
             
-            <div className="hidden md:flex items-center gap-8">
-              <a href="#features" className="text-sm text-gray-400 hover:text-white transition-colors">Features</a>
-              <a href="#testimonials" className="text-sm text-gray-400 hover:text-white transition-colors">Testimonials</a>
-              <a href="#pricing" className="text-sm text-gray-400 hover:text-white transition-colors">Pricing</a>
-              <a href="#contact" className="text-sm text-gray-400 hover:text-white transition-colors">For Clubs</a>
-            </div>
-
             <div className="flex items-center gap-3">
               <Button 
                 className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white border-0 shadow-lg shadow-red-500/25"

@@ -100,7 +100,7 @@ export default function MarketingLanding() {
         <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-orange-500/10 rounded-full blur-[80px] animate-pulse delay-500" />
       </div>
       {/* Navigation */}
-      <nav className="relative z-50 border-b border-white/10 backdrop-blur-xl bg-black/50 sticky top-0">
+      <nav className="fixed z-50 w-full border-b border-white/10 backdrop-blur-xl bg-black/50 top-0 left-0">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

@@ -4341,6 +4341,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(403).json({ message: 'Only admins can update users (coaches can only flag players)' });
     }
     
+    delete updateData.role;
+    delete updateData.userType;
+    delete updateData.accountHolderId;
+    delete updateData.organizationId;
+    
     console.log(`[PATCH /api/users/${userId}] Update data:`, JSON.stringify(updateData, null, 2));
     
     // If updating a player's team(s), also update team_memberships and auto-enroll in programs
@@ -4733,6 +4738,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.delete('/api/users/:userId/remove-role', requireAuth, async (req: any, res) => {
+    const { role: adminRole, organizationId } = req.user;
+    if (adminRole !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can remove roles' });
+    }
+    
+    const { userId } = req.params;
+    
+    try {
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) {
+        return res.status(404).json({ message: 'User profile not found' });
+      }
+      
+      if (targetUser.organizationId !== organizationId) {
+        return res.status(403).json({ message: 'Cannot modify profiles outside your organization' });
+      }
+      
+      if (!targetUser.accountHolderId) {
+        return res.status(400).json({ message: 'Cannot remove the primary account profile. Use "Delete" to remove the entire account.' });
+      }
+      
+      const accountHolderId = targetUser.accountHolderId;
+      const allUsers = await storage.getUsersByOrganization(organizationId);
+      const accountProfiles = allUsers.filter((u: any) => 
+        u.id === accountHolderId || u.accountHolderId === accountHolderId
+      );
+      
+      if (!accountProfiles.some((u: any) => u.id === userId)) {
+        return res.status(404).json({ message: 'Profile not found in this organization' });
+      }
+      
+      if (accountProfiles.length <= 1) {
+        return res.status(400).json({ message: 'Cannot remove the last profile on an account' });
+      }
+      
+      await db.delete(teamMemberships).where(eq(teamMemberships.profileId, userId));
+      
+      await storage.deleteUser(userId);
+      
+      res.json({ 
+        success: true, 
+        message: `${targetUser.role} profile removed successfully` 
+      });
+    } catch (error: any) {
+      console.error('Error removing role:', error);
+      res.status(500).json({ message: 'Failed to remove role', error: error.message });
+    }
+  });
+
   // Update emergency contact and medical info for a player (parent can update their children)
   app.patch('/api/users/:id/emergency-medical', requireAuth, async (req: any, res) => {
     try {

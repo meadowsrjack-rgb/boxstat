@@ -945,6 +945,22 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     },
   });
 
+  const [removeRoleConfirm, setRemoveRoleConfirm] = useState<{ userId: string; role: string } | null>(null);
+
+  const removeRole = useMutation({
+    mutationFn: async ({ userId }: { userId: string }) => {
+      return await apiRequest("DELETE", `/api/users/${userId}/remove-role`);
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({ title: data.message || "Role removed successfully" });
+      setRemoveRoleConfirm(null);
+    },
+    onError: (error: any) => {
+      toast({ title: error?.message || "Failed to remove role", variant: "destructive" });
+    },
+  });
+
   const downloadUserTemplate = () => {
     const csvContent = "First name,Last name,Email,Phone,Role,Status,Team\nJohn,Doe,player@example.com,555-0100,player,active,Thunder U12\nJane,Smith,coach@example.com,555-0101,coach,active,\nBob,Johnson,parent@example.com,555-0102,parent,active,";
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -1327,21 +1343,13 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="edit-role" data-testid="label-edit-role">Role</Label>
-                    <Select 
-                      value={editingUser.role || "player"}
-                      onValueChange={(value) => setEditingUser({...editingUser, role: value})}
-                    >
-                      <SelectTrigger id="edit-role" data-testid="select-edit-role">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="player">Player</SelectItem>
-                        <SelectItem value="coach">Coach</SelectItem>
-                        <SelectItem value="parent">Parent</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label data-testid="label-edit-role">Role</Label>
+                    <div className="flex items-center h-10 px-3 rounded-md border bg-gray-50">
+                      <Badge variant="secondary" className="capitalize" data-testid="badge-edit-role">
+                        {editingUser.role || "player"}
+                      </Badge>
+                      <span className="ml-2 text-xs text-gray-400">Use "Add Role" in user details to manage roles</span>
+                    </div>
                   </div>
                   
                   <div className="space-y-2">
@@ -2466,6 +2474,47 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       </div>
                     </div>
                   </div>
+
+                  {/* Role Profiles */}
+                  <div className="pt-4 border-t">
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Role Profiles</p>
+                    <div className="space-y-2">
+                      {(() => {
+                        const accountHolderId = viewingUser.accountHolderId || viewingUser.id;
+                        const accountProfiles = users.filter((u: any) => 
+                          u.id === accountHolderId || u.accountHolderId === accountHolderId
+                        );
+                        return accountProfiles.map((profile: any) => (
+                          <div key={profile.id} className="flex items-center justify-between p-3 rounded-lg border bg-white">
+                            <div className="flex items-center gap-3">
+                              <Badge variant={profile.id === viewingUser.id ? "default" : "secondary"} className="capitalize">
+                                {profile.role}
+                              </Badge>
+                              <span className="text-sm text-gray-600">{profile.firstName} {profile.lastName}</span>
+                              {!profile.accountHolderId && (
+                                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">Primary</span>
+                              )}
+                              {profile.id === viewingUser.id && (
+                                <span className="text-xs text-blue-500">Currently viewing</span>
+                              )}
+                            </div>
+                            {profile.accountHolderId && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setRemoveRoleConfirm({ userId: profile.id, role: profile.role })}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 px-2"
+                                data-testid={`button-remove-role-${profile.role}`}
+                              >
+                                <X className="w-4 h-4 mr-1" />
+                                Remove
+                              </Button>
+                            )}
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -2831,6 +2880,36 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+
+              {/* Remove Role Confirmation Dialog */}
+              <AlertDialog open={!!removeRoleConfirm} onOpenChange={(open) => !open && setRemoveRoleConfirm(null)}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-red-500" />
+                      Remove Role Profile
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to remove the <strong className="capitalize">{removeRoleConfirm?.role}</strong> profile? 
+                      This will revoke their {removeRoleConfirm?.role} access and delete any team memberships associated with that profile.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        if (removeRoleConfirm) {
+                          removeRole.mutate({ userId: removeRoleConfirm.userId });
+                        }
+                      }}
+                      className="bg-red-600 hover:bg-red-700"
+                      data-testid="button-confirm-remove-role"
+                    >
+                      {removeRole.isPending ? "Removing..." : "Remove Role"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </>
           )}
         </DialogContent>

@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { SiApple } from "react-icons/si";
 import logo from "@assets/logonew_1772431265698.png";
-import logoIcon from "@assets/iOS_icon_1772431476996.png";
+import logoIcon from "@assets/iOS_icon_1772431532358.png";
 import screenshot1 from "@assets/1_1768860806315.png";
 import screenshot2 from "@assets/2_1768860806316.png";
 import screenshot3 from "@assets/3_1768860806317.png";
@@ -104,7 +104,7 @@ export default function MarketingLanding() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={logo} alt="BoxStat" className="h-16 w-auto" />
+              <img src={logoIcon} alt="BoxStat" className="h-16 w-auto" />
             </div>
             
             <div className="flex items-center gap-3">

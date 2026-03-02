@@ -407,7 +407,7 @@ export default function MarketingLanding() {
       <section id="contact" className="relative z-10 py-24 px-6">
         <div className="max-w-4xl mx-auto">
           <div className="p-12 rounded-3xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 text-center">
-            <img src={logoIcon} alt="BoxStat" className="w-16 h-16 mx-auto mb-6" />
+            <img src={logo} alt="BoxStat" className="h-16 w-auto mx-auto mb-6" />
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               Ready to Transform Your Club?
             </h2>

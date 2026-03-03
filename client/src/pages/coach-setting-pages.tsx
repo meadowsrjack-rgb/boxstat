@@ -480,9 +480,14 @@ export function CoachCoachingPage() {
         languages: data.languages.split(",").map((l: string) => l.trim()).filter(Boolean),
       };
       
-      const response = await fetch(`/api/profile/${(user as any)?.activeProfileId}`, {
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      
+      const profileId = (user as any)?.activeProfileId || (user as any)?.id;
+      const response = await fetch(`/api/profile/${profileId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify(updateData),
       });
@@ -502,8 +507,11 @@ export function CoachCoachingPage() {
         languages: updatedUser.languages?.join(", ") || "",
       });
       
+      const accountId = (user as any)?.id;
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${accountId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/profiles/${accountId}`] });
       
       toast({ 
         title: "Saved", 
@@ -668,9 +676,12 @@ export function CoachPrivacyPage() {
 
   const mutation = useMutation({
     mutationFn: async (settings: typeof privacy) => {
+      const token = localStorage.getItem('authToken');
+      const hdrs: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) hdrs["Authorization"] = `Bearer ${token}`;
       const response = await fetch("/api/privacy", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: hdrs,
         credentials: "include",
         body: JSON.stringify({ settings }),
       });
@@ -825,9 +836,12 @@ export function CoachNotificationsPage() {
 
   const mutation = useMutation({
     mutationFn: async () => {
+      const token = localStorage.getItem('authToken');
+      const hdrs: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) hdrs["Authorization"] = `Bearer ${token}`;
       const response = await fetch("/api/notifications/preferences", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: hdrs,
         credentials: "include",
         body: JSON.stringify(prefs),
       });
@@ -1011,9 +1025,12 @@ export function CoachSecurityPage() {
 
   const passwordMutation = useMutation({
     mutationFn: async (data: typeof passwordForm) => {
+      const token = localStorage.getItem('authToken');
+      const hdrs: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) hdrs["Authorization"] = `Bearer ${token}`;
       const response = await fetch("/api/auth/change-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: hdrs,
         credentials: "include",
         body: JSON.stringify(data),
       });
@@ -1031,9 +1048,12 @@ export function CoachSecurityPage() {
 
   const twoFactorMutation = useMutation({
     mutationFn: async (enabled: boolean) => {
+      const token = localStorage.getItem('authToken');
+      const hdrs: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) hdrs["Authorization"] = `Bearer ${token}`;
       const response = await fetch("/api/auth/2fa", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: hdrs,
         credentials: "include",
         body: JSON.stringify({ enabled }),
       });
@@ -1491,9 +1511,12 @@ export function CoachBillingPage() {
 
   const mutation = useMutation({
     mutationFn: async (data: typeof billing) => {
+      const token = localStorage.getItem('authToken');
+      const hdrs: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) hdrs["Authorization"] = `Bearer ${token}`;
       const response = await fetch(`/api/users/${(user as any)?.id}/billing`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: hdrs,
         credentials: "include",
         body: JSON.stringify(data),
       });
@@ -1792,9 +1815,12 @@ export function CoachLegalPage() {
 
   const signDocument = async (documentId: string) => {
     try {
+      const token = localStorage.getItem('authToken');
+      const hdrs: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) hdrs["Authorization"] = `Bearer ${token}`;
       const response = await fetch(`/api/legal/sign/${documentId}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: hdrs,
         credentials: "include",
       });
       

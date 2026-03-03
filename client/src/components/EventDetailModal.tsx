@@ -897,7 +897,7 @@ export default function EventDetailModal({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0" data-testid="event-detail-modal">
-          <div className="sticky top-0 bg-white z-10 px-6 pt-6 pb-4 border-b">
+          <div className="sticky top-0 bg-white/95 backdrop-blur-sm z-[500] px-6 pt-6 pb-4 border-b">
             <div className="flex items-start gap-3">
               <Button 
                 variant="ghost" 
@@ -1256,12 +1256,7 @@ export default function EventDetailModal({
               <Card className="p-4" data-testid="card-participant-list">
                 <h4 className="font-semibold mb-3 flex items-center gap-2 text-gray-900">
                   <Users className="h-4 w-4 text-gray-500" />
-                  {userRole === 'player' 
-                    ? `Other Players (${users.filter(u => u.role === 'player').length})`
-                    : userRole === 'parent'
-                      ? `Participants (${users.length})`
-                      : `All Participants (${users.length})`
-                  }
+                  Invited ({users.length})
                 </h4>
                 
                 <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -1288,9 +1283,14 @@ export default function EventDetailModal({
                               {initials}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="text-sm font-medium text-gray-900">
-                            {user.firstName} {user.lastName}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900">
+                              {user.firstName} {user.lastName}
+                            </span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-200 text-gray-600 capitalize">
+                              {user.role === 'head_coach' ? 'Head Coach' : user.role === 'assistant_coach' ? 'Asst Coach' : user.role}
+                            </span>
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
                           {/* RSVP Status */}

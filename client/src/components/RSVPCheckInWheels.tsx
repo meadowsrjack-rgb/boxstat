@@ -204,7 +204,7 @@ export function CheckInWheel({
       return "✅ You're Checked In!";
     }
     if (status === 'before') {
-      return `⏱ ${timeUntil(openTime, 'Check-In opens in')}`;
+      return timeUntil(openTime, 'Check-In opens in');
     } else if (status === 'open') {
       return neverCloses ? `✅ Check-In is open (No close time)` : `✅ Check-In is open`;
     } else {

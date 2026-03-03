@@ -1283,14 +1283,15 @@ export default function EventDetailModal({
                               {initials}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-gray-900">
-                              {user.firstName} {user.lastName}
-                            </span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-200 text-gray-600 capitalize">
-                              {user.role === 'head_coach' ? 'Head Coach' : user.role === 'assistant_coach' ? 'Asst Coach' : user.role}
-                            </span>
-                          </div>
+                          <span className={`text-sm font-medium ${
+                            user.role === 'player' ? 'text-purple-700' :
+                            user.role === 'admin' ? 'text-red-700' :
+                            (user.role === 'coach' || user.role === 'head_coach' || user.role === 'assistant_coach') ? 'text-green-700' :
+                            user.role === 'parent' ? 'text-blue-700' :
+                            'text-gray-900'
+                          }`}>
+                            {user.firstName} {user.lastName}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
                           {/* RSVP Status */}

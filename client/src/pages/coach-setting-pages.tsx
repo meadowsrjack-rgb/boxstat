@@ -197,11 +197,9 @@ export function CoachProfilePage() {
         philosophy: updatedProfile.philosophy || "",
       });
       
-      // Update caches with new data for immediate UI sync
-      // Directly set the updated profile data in all relevant caches
       queryClient.setQueryData([`/api/profile/${profileId}`], updatedProfile);
+      queryClient.setQueryData(["/api/auth/user"], (old: any) => old ? { ...old, ...updatedProfile } : updatedProfile);
       
-      // Force refetch for PlayerCard and other views
       queryClient.invalidateQueries({ queryKey: [`/api/players/${profileId}/profile`] });
       queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'] });
       queryClient.invalidateQueries({ queryKey: [`/api/profiles/${(user as any)?.id}`] });
@@ -508,6 +506,7 @@ export function CoachCoachingPage() {
       });
       
       const accountId = (user as any)?.id;
+      queryClient.setQueryData(["/api/auth/user"], (old: any) => old ? { ...old, ...updatedUser } : updatedUser);
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${accountId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'] });

@@ -1531,7 +1531,45 @@ function ProfileTab({ currentUser }: { currentUser: UserType }) {
                 <div className="text-sm text-gray-700 whitespace-pre-wrap">{(currentUser as any).philosophy}</div>
               </div>
             )}
-            {!(currentUser as any)?.yearsExperience && !(currentUser as any)?.bio && !(currentUser as any)?.previousTeams && (
+            {(currentUser as any)?.coachingLicense && (
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">Coaching License</div>
+                <div className="text-sm text-gray-900">{(currentUser as any).coachingLicense}</div>
+              </div>
+            )}
+            {(currentUser as any)?.coachingStyle && (
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">Coaching Style</div>
+                <div className="text-sm text-gray-900">{(currentUser as any).coachingStyle}</div>
+              </div>
+            )}
+            {(currentUser as any)?.specialties?.length > 0 && (
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">Specialties</div>
+                <div className="flex flex-wrap gap-1">
+                  {(currentUser as any).specialties.map((s: string) => (
+                    <span key={s} className="text-xs bg-red-50 text-red-700 px-2 py-0.5 rounded-full">{s}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {(currentUser as any)?.ageGroups?.length > 0 && (
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">Age Groups</div>
+                <div className="flex flex-wrap gap-1">
+                  {(currentUser as any).ageGroups.map((a: string) => (
+                    <span key={a} className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">{a}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {(currentUser as any)?.availability && (
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">Availability</div>
+                <div className="text-sm text-gray-900">{(currentUser as any).availability}</div>
+              </div>
+            )}
+            {!(currentUser as any)?.yearsExperience && !(currentUser as any)?.bio && !(currentUser as any)?.previousTeams && !(currentUser as any)?.coachingLicense && !(currentUser as any)?.specialties?.length && (
               <div className="text-center py-4 text-gray-500 text-sm">
                 No coaching credentials added yet. Go to Settings to add your information.
               </div>

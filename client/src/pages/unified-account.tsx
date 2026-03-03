@@ -822,13 +822,37 @@ function PlayerProfileCard({ player, onCoachClick, onNavigateToPayments }: { pla
     return true;
   });
 
+  const { data: latestEvaluation } = useQuery<any>({
+    queryKey: [`/api/players/${player.id}/latest-evaluation`],
+    enabled: isOpen && !!player.id,
+  });
+
+  const calculateOverallScore = (skillsData: any): number => {
+    if (!skillsData || typeof skillsData !== 'object') return 0;
+    const allScores: number[] = [];
+    Object.values(skillsData).forEach((value: any) => {
+      if (typeof value === 'number') {
+        allScores.push(value);
+      } else if (typeof value === 'object' && value !== null) {
+        Object.values(value).forEach((subValue: any) => {
+          if (typeof subValue === 'number') allScores.push(subValue);
+        });
+      }
+    });
+    if (allScores.length === 0) return 0;
+    const average = allScores.reduce((sum, val) => sum + val, 0) / allScores.length;
+    return Math.round(average * 20);
+  };
+
+  const overallSkillScore = calculateOverallScore(latestEvaluation?.scores || latestEvaluation?.skillsData);
+
   const { data: awardsData } = useQuery<any>({
     queryKey: [`/api/users/${player.id}/awards`],
     enabled: !!player.id,
     staleTime: 0,
     refetchOnWindowFocus: true,
     refetchOnMount: 'always',
-    refetchInterval: 30000, // Poll every 30 seconds for cross-session updates
+    refetchInterval: 30000,
   });
 
   // Prepare rings data for trophy display (same format as coach dashboard)
@@ -970,6 +994,29 @@ function PlayerProfileCard({ player, onCoachClick, onNavigateToPayments }: { pla
                 
               </div>
               
+              {/* Skill Rating Bar */}
+              <div className="pt-3 border-t">
+                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-2">
+                  <Star className="w-4 h-4 text-red-500" />
+                  Overall Skill Rating
+                </h4>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium text-gray-600">OVR</span>
+                    <span className="text-red-600 font-semibold">{overallSkillScore}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className="bg-red-600 h-2.5 rounded-full transition-all duration-700 ease-out"
+                      style={{ width: `${overallSkillScore}%` }}
+                    />
+                  </div>
+                  {overallSkillScore === 0 && (
+                    <p className="text-xs text-gray-400 mt-1">No evaluation yet</p>
+                  )}
+                </div>
+              </div>
+
               {/* Trophy Rings - same as coach dashboard */}
               <div className="pt-3 border-t">
                 <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3">

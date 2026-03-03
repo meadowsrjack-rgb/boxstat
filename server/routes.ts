@@ -10301,8 +10301,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { playerId } = req.params;
       const { id: currentUserId, role, organizationId } = req.user;
       
-      // Authorization: users can view their own, admins/coaches can view any
-      if (playerId !== currentUserId && role !== 'admin' && role !== 'coach') {
+      let authorized = playerId === currentUserId || role === 'admin' || role === 'coach';
+      if (!authorized && role === 'parent') {
+        const player = await storage.getUser(playerId);
+        if (player && (player.accountHolderId === currentUserId || (player as any).parentId === currentUserId || (player as any).guardianId === currentUserId)) {
+          authorized = true;
+        }
+      }
+      if (!authorized) {
         return res.status(403).json({ message: 'Not authorized to view this evaluation' });
       }
       

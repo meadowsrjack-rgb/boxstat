@@ -516,22 +516,6 @@ export default function PlayerCard({
                       firstName: playerProfile.firstName || '',
                       lastName: playerProfile.lastName || '',
                     });
-                    setShowAwardDialog(true);
-                  }}
-                  className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-lg"
-                  data-testid="button-give-award"
-                >
-                  <Award className="h-4 w-4 mr-2" />
-                  Give Award
-                </Button>
-
-                <Button
-                  onClick={() => {
-                    setSelectedPlayer({
-                      id: playerId,
-                      firstName: playerProfile.firstName || '',
-                      lastName: playerProfile.lastName || '',
-                    });
                     setShowSkillEvaluation(true);
                   }}
                   className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg"

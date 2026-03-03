@@ -5403,6 +5403,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/teams/:teamId/members-detail', requireAuth, async (req: any, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ message: 'Invalid team ID' });
+      }
+
+      const team = await storage.getTeam(String(teamId));
+      if (!team) {
+        return res.status(404).json({ message: 'Team not found' });
+      }
+
+      const allMemberships = await db.select({
+        playerId: teamMemberships.profileId,
+        role: teamMemberships.role,
+      })
+        .from(teamMemberships)
+        .where(
+          and(
+            eq(teamMemberships.teamId, teamId),
+            eq(teamMemberships.status, 'active')
+          )
+        );
+
+      const players: any[] = [];
+      const coaches: any[] = [];
+
+      for (const m of allMemberships) {
+        const profile = await storage.getUser(m.playerId);
+        if (!profile) continue;
+        const entry = {
+          id: profile.id,
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          profileImageUrl: profile.profileImageUrl,
+          role: m.role,
+          position: profile.position,
+          jerseyNumber: profile.jerseyNumber,
+        };
+        if (m.role === 'coach' || m.role === 'assistant_coach' || m.role === 'head_coach') {
+          coaches.push(entry);
+        } else {
+          players.push(entry);
+        }
+      }
+
+      if (team.coachId && !coaches.find(c => c.id === team.coachId)) {
+        const headCoach = await storage.getUser(team.coachId);
+        if (headCoach) {
+          coaches.unshift({
+            id: headCoach.id,
+            firstName: headCoach.firstName,
+            lastName: headCoach.lastName,
+            profileImageUrl: headCoach.profileImageUrl,
+            role: 'coach',
+            position: null,
+            jerseyNumber: null,
+          });
+        }
+      }
+
+      res.json({ players, coaches, teamName: team.name });
+    } catch (error: any) {
+      console.error('Error fetching team members detail:', error);
+      res.status(500).json({ message: 'Failed to fetch team members' });
+    }
+  });
+
   // Update team roster (bulk update)
   app.put('/api/teams/:teamId/roster', requireAuth, async (req: any, res) => {
     try {

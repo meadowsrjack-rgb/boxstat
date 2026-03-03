@@ -41,6 +41,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronDown,
+  ChevronRight,
   ShoppingBag,
   Phone,
   Mail,
@@ -715,12 +716,110 @@ function EnhancedPlayerCard({
 }
 
 // Player Profile Card with comprehensive details for Profile tab
-function PlayerProfileCard({ player }: { player: any }) {
+function TeamDropdown({ team, onCoachClick }: { team: { id: number; name: string }; onCoachClick?: (id: string) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const { data: teamMembersDetail } = useQuery<{ players: any[]; coaches: any[]; teamName: string }>({
+    queryKey: [`/api/teams/${team.id}/members-detail`],
+    enabled: expanded,
+  });
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <button
+        className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-50 hover:bg-gray-100 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-center gap-2">
+          <Users className="w-3.5 h-3.5 text-gray-500" />
+          <span className="text-sm font-medium text-gray-800">{team.name}</span>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+      </button>
+      {expanded && (
+        <div className="px-3 py-2 border-t bg-white">
+          {!teamMembersDetail ? (
+            <div className="flex justify-center py-3">
+              <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {teamMembersDetail.coaches.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Coaches</p>
+                  <div className="space-y-1.5">
+                    {teamMembersDetail.coaches.map((coach) => (
+                      <button
+                        key={coach.id}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-red-50 transition-colors text-left"
+                        onClick={() => onCoachClick?.(coach.id)}
+                      >
+                        <Avatar className="w-8 h-8">
+                          <AvatarImage src={coach.profileImageUrl} />
+                          <AvatarFallback className="bg-gradient-to-br from-green-500 to-green-600 text-white text-xs font-bold">
+                            {coach.firstName?.[0]}{coach.lastName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900">{coach.firstName} {coach.lastName}</p>
+                          <p className="text-xs text-gray-500 capitalize">{coach.role?.replace('_', ' ') || 'Coach'}</p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-gray-400" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {teamMembersDetail.players.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Roster ({teamMembersDetail.players.length})</p>
+                  <div className="space-y-1">
+                    {teamMembersDetail.players.map((p) => (
+                      <div key={p.id} className="flex items-center gap-2.5 p-1.5 rounded-lg">
+                        <Avatar className="w-7 h-7">
+                          <AvatarImage src={p.profileImageUrl} />
+                          <AvatarFallback className="bg-gradient-to-br from-red-400 to-red-500 text-white text-[10px] font-bold">
+                            {p.firstName?.[0]}{p.lastName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm text-gray-700">{p.firstName} {p.lastName}</span>
+                        {p.jerseyNumber && <span className="text-xs text-gray-400">#{p.jerseyNumber}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {teamMembersDetail.coaches.length === 0 && teamMembersDetail.players.length === 0 && (
+                <p className="text-sm text-gray-500 text-center py-2">No members found</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlayerProfileCard({ player, onCoachClick, onNavigateToPayments }: { player: any; onCoachClick?: (coachId: string) => void; onNavigateToPayments?: () => void }) {
   const [isOpen, setIsOpen] = useState(false);
   
   const { data: teamsData = [] } = useQuery<Array<{id: number; name: string; ageGroup: string; program: string}>>({
     queryKey: [`/api/users/${player.id}/teams`],
     enabled: !!player.id,
+  });
+
+  const { data: playerEnrollments = [] } = useQuery<any[]>({
+    queryKey: ["/api/enrollments"],
+  });
+
+  const { data: programs = [] } = useQuery<any[]>({
+    queryKey: ["/api/programs"],
+  });
+
+  const hasActiveProgram = playerEnrollments.some((e: any) => {
+    if (e.status !== 'active' || e.profileId !== player.id) return false;
+    const prog = programs.find((p: any) => p.id === e.programId);
+    if (prog?.productCategory === 'goods') return false;
+    return true;
   });
 
   const { data: awardsData } = useQuery<any>({
@@ -777,14 +876,27 @@ function PlayerProfileCard({ player }: { player: any }) {
               </Badge>
             </div>
             
-            {teamsData.length > 0 && (
-              <div className="flex items-center gap-1 mt-1 text-sm text-gray-600">
-                <Users className="w-3.5 h-3.5" />
-                <span>{teamsData.map(t => t.name).join(', ')}</span>
+            {!hasActiveProgram && (
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200 text-[10px] px-1.5 py-0">No Active Program</Badge>
+                {onNavigateToPayments && (
+                  <Button size="sm" variant="outline" className="h-5 text-[10px] px-2 border-red-300 text-red-600 hover:bg-red-50" onClick={onNavigateToPayments}>
+                    Enrol Now
+                  </Button>
+                )}
               </div>
             )}
           </div>
         </div>
+
+        {/* Team / Level / Group Dropdowns */}
+        {teamsData.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {teamsData.map((team) => (
+              <TeamDropdown key={team.id} team={team} onCoachClick={onCoachClick} />
+            ))}
+          </div>
+        )}
         
         {/* Collapsible Details Dropdown */}
         <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mt-4">
@@ -1419,6 +1531,7 @@ export default function UnifiedAccount() {
   
   const [coachProfileId, setCoachProfileId] = useState<string | null>(null);
   const [coachProfileOpen, setCoachProfileOpen] = useState(false);
+  const [parentDashTab, setParentDashTab] = useState("home");
 
   // Schedule request state - inline booking within active programs
   const [schedulingEnrollment, setSchedulingEnrollment] = useState<string | null>(null);
@@ -1781,7 +1894,7 @@ export default function UnifiedAccount() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Announcement Banner */}
         <AnnouncementBanner />
-        <Tabs defaultValue="home">
+        <Tabs value={parentDashTab} onValueChange={setParentDashTab}>
           <div ref={tabsRef} className="overflow-x-auto hide-scrollbar drag-scroll mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex w-auto min-w-full sm:w-auto bg-transparent border-b border-gray-200 rounded-none p-0 h-auto gap-0">
               <TabsTrigger value="home" data-testid="tab-home" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
@@ -1832,194 +1945,101 @@ export default function UnifiedAccount() {
               ))}
             </div>
 
-            {/* My Active Programs - Collapsible Section */}
-            <Collapsible defaultOpen={true}>
-              <Card>
-                <CollapsibleTrigger className="w-full">
-                  <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-gray-50 rounded-t-lg">
-                    <div className="flex items-center gap-2">
-                      <Check className="w-5 h-5 text-green-600" />
-                      <CardTitle className="text-lg">Your Active Programs</CardTitle>
-                    </div>
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
-                  </CardHeader>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <CardContent className="pt-0">
-                    {(() => {
-                      const relevantEnrollments = playerEnrollments?.filter((e: any) => {
-                        if (e.status !== 'active') return false;
-                        if (selectedStorePlayer && e.profileId !== selectedStorePlayer && e.accountHolderId !== user?.id) return false;
-                        const prog = programs?.find((p: any) => p.id === e.programId);
-                        if (prog?.productCategory === 'goods') return false;
-                        return true;
-                      }) || [];
-                      
-                      if (relevantEnrollments.length === 0) {
-                        return (
-                          <div className="text-center py-6 text-gray-500">
-                            <Target className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                            <p>No active programs yet</p>
-                            <p className="text-sm">Browse programs in the Payments tab to get started!</p>
-                          </div>
-                        );
-                      }
-                      
-                      return (
-                        <div className="space-y-2">
-                          {relevantEnrollments.map((enrollment: any) => {
-                            const program = programs?.find((p: any) => p.id === enrollment.programId);
-                            const isPack = program?.type === "Pack";
-                            const remainingCredits = enrollment.remainingCredits || 0;
-                            const totalCredits = enrollment.totalCredits || program?.sessionCount || 0;
-                            const player = players?.find((p: any) => p.id === enrollment.profileId);
-                            const enrolleeName = player 
-                              ? `${player.firstName} ${player.lastName}` 
-                              : user ? `${(user as any).firstName || ''} ${(user as any).lastName || ''}`.trim() || 'You' : 'You';
-                            const endDate = enrollment.endDate ? new Date(enrollment.endDate) : null;
-                            const now = new Date();
-                            const isExpired = endDate && endDate < now;
-                            const isExpiringSoon = endDate && !isExpired && (endDate.getTime() - now.getTime()) < 14 * 24 * 60 * 60 * 1000;
-                            const hasScheduling = (program as any)?.scheduleRequestEnabled && !isExpired;
-                            const isSchedulingOpen = schedulingEnrollment === enrollment.id;
-                            const hasPendingRequest = events.some((e: any) => 
-                              e.enrollmentId === enrollment.id && e.scheduleRequestSource && e.status === 'pending'
-                            );
-                            
-                            return (
-                              <div key={enrollment.id} className="border rounded-lg overflow-hidden">
-                                <div className="py-3 px-4">
-                                  <div className="flex items-start gap-3">
-                                    {program?.imageUrl ? (
-                                      <img 
-                                        src={program.imageUrl} 
-                                        alt={program.name || "Program"} 
-                                        className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                                      />
-                                    ) : isPack ? (
-                                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                                        <Target className="w-5 h-5 text-blue-600" />
-                                      </div>
-                                    ) : (
-                                      <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                                        <Crown className="w-5 h-5 text-amber-600" />
-                                      </div>
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        <p className="font-medium text-sm truncate">{program?.name || "Unknown Program"}</p>
-                                        <span className="text-xs text-gray-500 whitespace-nowrap">• {enrolleeName}</span>
-                                        {isExpired ? (
-                                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] px-1.5 py-0">
-                                            Expired
-                                          </Badge>
-                                        ) : isExpiringSoon ? (
-                                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] px-1.5 py-0">
-                                            Expiring
-                                          </Badge>
-                                        ) : (
-                                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px] px-1.5 py-0">
-                                            Active
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      {isPack && totalCredits > 0 && (
-                                        <div className="flex items-center gap-2 mt-1">
-                                          <Progress value={(remainingCredits / totalCredits) * 100} className="w-24 h-2" />
-                                          <span className="text-xs text-gray-500">{remainingCredits}/{totalCredits} sessions</span>
-                                        </div>
-                                      )}
-                                      {endDate && !isPack && (
-                                        <p className={`text-xs mt-1 ${isExpired ? 'text-red-600' : isExpiringSoon ? 'text-amber-600' : 'text-gray-500'}`}>
-                                          {isExpired 
-                                            ? `Expired ${endDate.toLocaleDateString()}` 
-                                            : `Expires ${endDate.toLocaleDateString()}`}
-                                        </p>
-                                      )}
-                                      {hasScheduling && (
-                                        <Button
-                                          size="sm"
-                                          variant={isSchedulingOpen ? "default" : "outline"}
-                                          className={`mt-2 ${isSchedulingOpen ? "bg-red-600 hover:bg-red-700" : "border-red-300 text-red-600 hover:bg-red-50"}`}
-                                          onClick={() => {
-                                            if (isSchedulingOpen) {
-                                              setSchedulingEnrollment(null);
-                                              setScheduleSelectedSlot(null);
-                                              setScheduleBooked(false);
-                                            } else {
-                                              setSchedulingEnrollment(enrollment.id);
-                                              setScheduleDate(new Date());
-                                              setScheduleSelectedSlot(null);
-                                              setScheduleBooked(false);
-                                            }
-                                          }}
-                                        >
-                                          <Calendar className="w-3.5 h-3.5 mr-1" />
-                                          {isSchedulingOpen ? "Close" : hasPendingRequest ? "Edit Request" : "Request Time"}
-                                        </Button>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                                
-                                {isSchedulingOpen && program && (
-                                  <InlineSchedulePanel
-                                    programId={program.id}
-                                    programName={program.name}
-                                    sessionLength={(program as any).sessionLengthMinutes}
-                                    playerId={enrollment.profileId}
-                                    enrollmentId={enrollment.id}
-                                    remainingCredits={remainingCredits}
-                                    totalCredits={totalCredits}
-                                    isEditMode={hasPendingRequest}
-                                    selectedDate={scheduleDate}
-                                    onDateChange={(d) => { setScheduleDate(d); setScheduleSelectedSlot(null); }}
-                                    selectedSlot={scheduleSelectedSlot}
-                                    onSlotSelect={setScheduleSelectedSlot}
-                                    booked={scheduleBooked}
-                                    onBooked={() => setScheduleBooked(true)}
-                                    onBookAnother={() => { setScheduleBooked(false); setScheduleSelectedSlot(null); }}
-                                    onClose={() => { setSchedulingEnrollment(null); setScheduleSelectedSlot(null); setScheduleBooked(false); }}
-                                  />
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })()}
-                  </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
+            {/* Schedule Request Buttons (from active enrollments with scheduling enabled) */}
+            {(() => {
+              const schedulableEnrollments = playerEnrollments?.filter((e: any) => {
+                if (e.status !== 'active') return false;
+                if (selectedStorePlayer && e.profileId !== selectedStorePlayer && e.accountHolderId !== user?.id) return false;
+                const prog = programs?.find((p: any) => p.id === e.programId);
+                if (prog?.productCategory === 'goods') return false;
+                const endDate = e.endDate ? new Date(e.endDate) : null;
+                const isExpired = endDate && endDate < new Date();
+                return (prog as any)?.scheduleRequestEnabled && !isExpired;
+              }) || [];
 
-            {/* Teams & Coaches Section */}
-            {parentTeamChatrooms.length > 0 && (
-              <Collapsible defaultOpen={true}>
-                <Card>
-                  <CollapsibleTrigger className="w-full">
-                    <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-gray-50 rounded-t-lg">
-                      <div className="flex items-center gap-2">
-                        <Users className="w-5 h-5 text-red-600" />
-                        <CardTitle className="text-lg">Teams & Coaches</CardTitle>
+              if (schedulableEnrollments.length === 0) return null;
+
+              return (
+                <div className="space-y-2">
+                  {schedulableEnrollments.map((enrollment: any) => {
+                    const program = programs?.find((p: any) => p.id === enrollment.programId);
+                    const isPack = program?.type === "Pack";
+                    const remainingCredits = enrollment.remainingCredits || 0;
+                    const totalCredits = enrollment.totalCredits || program?.sessionCount || 0;
+                    const player = players?.find((p: any) => p.id === enrollment.profileId);
+                    const enrolleeName = player 
+                      ? `${player.firstName} ${player.lastName}` 
+                      : user ? `${(user as any).firstName || ''} ${(user as any).lastName || ''}`.trim() || 'You' : 'You';
+                    const isSchedulingOpen = schedulingEnrollment === enrollment.id;
+                    const hasPendingRequest = events.some((e: any) => 
+                      e.enrollmentId === enrollment.id && e.scheduleRequestSource && e.status === 'pending'
+                    );
+
+                    return (
+                      <div key={enrollment.id} className="border rounded-lg overflow-hidden">
+                        <div className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            {program?.imageUrl ? (
+                              <img src={program.imageUrl} alt={program.name || "Program"} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                                <Calendar className="w-4 h-4 text-red-600" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{program?.name || "Program"} <span className="text-xs text-gray-500">• {enrolleeName}</span></p>
+                              {isPack && totalCredits > 0 && (
+                                <span className="text-xs text-gray-500">{remainingCredits}/{totalCredits} sessions left</span>
+                              )}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant={isSchedulingOpen ? "default" : "outline"}
+                              className={`flex-shrink-0 ${isSchedulingOpen ? "bg-red-600 hover:bg-red-700" : "border-red-300 text-red-600 hover:bg-red-50"}`}
+                              onClick={() => {
+                                if (isSchedulingOpen) {
+                                  setSchedulingEnrollment(null);
+                                  setScheduleSelectedSlot(null);
+                                  setScheduleBooked(false);
+                                } else {
+                                  setSchedulingEnrollment(enrollment.id);
+                                  setScheduleDate(new Date());
+                                  setScheduleSelectedSlot(null);
+                                  setScheduleBooked(false);
+                                }
+                              }}
+                            >
+                              <Calendar className="w-3.5 h-3.5 mr-1" />
+                              {isSchedulingOpen ? "Close" : hasPendingRequest ? "Edit Request" : "Request Time"}
+                            </Button>
+                          </div>
+                        </div>
+                        {isSchedulingOpen && program && (
+                          <InlineSchedulePanel
+                            programId={program.id}
+                            programName={program.name}
+                            sessionLength={(program as any).sessionLengthMinutes}
+                            playerId={enrollment.profileId}
+                            enrollmentId={enrollment.id}
+                            remainingCredits={remainingCredits}
+                            totalCredits={totalCredits}
+                            isEditMode={hasPendingRequest}
+                            selectedDate={scheduleDate}
+                            onDateChange={(d) => { setScheduleDate(d); setScheduleSelectedSlot(null); }}
+                            selectedSlot={scheduleSelectedSlot}
+                            onSlotSelect={setScheduleSelectedSlot}
+                            booked={scheduleBooked}
+                            onBooked={() => setScheduleBooked(true)}
+                            onBookAnother={() => { setScheduleBooked(false); setScheduleSelectedSlot(null); }}
+                            onClose={() => { setSchedulingEnrollment(null); setScheduleSelectedSlot(null); setScheduleBooked(false); }}
+                          />
+                        )}
                       </div>
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
-                    </CardHeader>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <CardContent className="pt-0 space-y-3">
-                      {parentTeamChatrooms.map((chatroom: any) => (
-                        <ParentTeamCard
-                          key={chatroom.teamId}
-                          chatroom={chatroom}
-                          onCoachSelect={(id: string) => { setCoachProfileId(id); setCoachProfileOpen(true); }}
-                        />
-                      ))}
-                    </CardContent>
-                  </CollapsibleContent>
-                </Card>
-              </Collapsible>
-            )}
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {/* Upcoming Events Section */}
             <div>
@@ -3126,7 +3146,12 @@ export default function UnifiedAccount() {
               ) : (
                 <div className="space-y-3">
                   {players.map((player: any) => (
-                    <PlayerProfileCard key={player.id} player={player} />
+                    <PlayerProfileCard 
+                      key={player.id} 
+                      player={player} 
+                      onCoachClick={(id: string) => { setCoachProfileId(id); setCoachProfileOpen(true); }}
+                      onNavigateToPayments={() => { setSettingsDrawerOpen(false); setParentDashTab("payments"); }}
+                    />
                   ))}
                 </div>
               )}

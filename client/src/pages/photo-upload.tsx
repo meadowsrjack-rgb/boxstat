@@ -1,4 +1,3 @@
-// Photo upload with auth fix - v3
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,24 +8,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
-// Helper function to upload photo with auth
 async function uploadPhotoWithAuth(file: File): Promise<any> {
   const formData = new FormData();
   formData.append('photo', file);
   
-  // Get token fresh at upload time
   const token = localStorage.getItem('authToken');
-  console.log('📷 UPLOAD v3 - Token exists:', !!token);
-  
   const headers: HeadersInit = {};
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
-    console.log('📷 UPLOAD v3 - Authorization header set');
-  } else {
-    console.log('📷 UPLOAD v3 - NO TOKEN FOUND!');
   }
-  
-  console.log('📷 UPLOAD v3 - Making fetch request...');
   
   const response = await fetch('/api/upload-profile-photo', {
     method: 'POST',
@@ -35,11 +25,8 @@ async function uploadPhotoWithAuth(file: File): Promise<any> {
     credentials: 'include',
   });
   
-  console.log('📷 UPLOAD v3 - Response status:', response.status);
-  
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Upload failed' }));
-    console.log('📷 UPLOAD v3 - Error:', error);
     throw new Error(error.error || 'Upload failed');
   }
   
@@ -47,8 +34,6 @@ async function uploadPhotoWithAuth(file: File): Promise<any> {
 }
 
 export default function PhotoUploadPage() {
-  console.log('📷 PhotoUploadPage v3 RENDERING');
-  
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);

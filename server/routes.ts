@@ -6510,23 +6510,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
     
-    // If event has a specific teamId, get that team's members
+    // If event has a specific teamId, get that team's members + coaches
     let teamMemberIds = new Set<string>();
     if (event.teamId) {
       const teamUsers = await storage.getUsersByTeam(String(event.teamId));
       teamUsers.forEach((user: any) => teamMemberIds.add(user.id));
+      const eventTeam = await storage.getTeam(String(event.teamId));
+      if (eventTeam) {
+        if (eventTeam.coachId) teamMemberIds.add(eventTeam.coachId);
+        if ((eventTeam as any).assistantCoachIds?.length) {
+          (eventTeam as any).assistantCoachIds.forEach((id: string) => teamMemberIds.add(id));
+        }
+      }
     }
     
-    // Build a set of user IDs who are in targeted teams (via team_memberships)
+    // Build a set of user IDs who are in targeted teams (via team_memberships + coach assignments)
     let targetedTeamMemberIds = new Set<string>();
     const targetedTeams = [...(assignTo.teams || []), ...(visibility.teams || [])];
     
     if (targetedTeams.length > 0) {
+      const allTeams = await storage.getTeamsByOrganization(organizationId);
       for (const teamId of targetedTeams) {
         const teamUsers = await storage.getUsersByTeam(String(teamId));
         teamUsers.forEach((user: any) => {
           targetedTeamMemberIds.add(user.id);
         });
+        const teamObj = allTeams.find((t: any) => String(t.id) === String(teamId));
+        if (teamObj) {
+          if (teamObj.coachId) targetedTeamMemberIds.add(teamObj.coachId);
+          if (teamObj.assistantCoachIds?.length) {
+            teamObj.assistantCoachIds.forEach((id: string) => targetedTeamMemberIds.add(id));
+          }
+        }
       }
     }
     

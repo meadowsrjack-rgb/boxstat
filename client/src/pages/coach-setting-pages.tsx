@@ -86,11 +86,14 @@ export function CoachProfilePage() {
       
       const formData = new FormData();
       formData.append('photo', file);
-      // Pass profileId so backend updates the correct user
+      const token = localStorage.getItem('authToken');
       const url = `/api/upload-profile-photo?profileId=${targetProfileId}`;
+      const fetchHeaders: Record<string, string> = {};
+      if (token) fetchHeaders["Authorization"] = `Bearer ${token}`;
       const response = await fetch(url, {
         method: 'POST',
         credentials: 'include',
+        headers: fetchHeaders,
         body: formData,
       });
       if (!response.ok) throw new Error('Upload failed');
@@ -166,10 +169,13 @@ export function CoachProfilePage() {
       
       // Use activeProfileId if set, otherwise fall back to user's own ID
       const profileId = (user as any)?.activeProfileId || (user as any)?.id;
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
       
       const response = await fetch(`/api/profile/${profileId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify(updateData),
       });

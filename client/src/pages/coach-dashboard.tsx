@@ -929,19 +929,18 @@ function RosterTab({
   if (!selectedTeamId) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-bold text-gray-900">Your Teams</h3>
-            <p className="text-sm text-gray-500">Select a team to view roster and chat</p>
-          </div>
-          <Button 
-            onClick={() => setShowLeadEvaluation(true)}
-            className="bg-red-600 hover:bg-red-700"
-            data-testid="button-lead-evaluation"
-          >
-            <Users className="h-4 w-4 mr-2" />
-            New Lead Eval
-          </Button>
+        <Button 
+          onClick={() => setShowLeadEvaluation(true)}
+          className="bg-red-600 hover:bg-red-700 w-full"
+          data-testid="button-lead-evaluation"
+        >
+          <Users className="h-4 w-4 mr-2" />
+          New Lead Eval
+        </Button>
+
+        <div>
+          <h3 className="text-lg font-bold text-gray-900">Your Teams</h3>
+          <p className="text-sm text-gray-500">Select a team to view roster and chat</p>
         </div>
         
         {assignedTeams.length > 0 ? (

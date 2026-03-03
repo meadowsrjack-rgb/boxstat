@@ -897,7 +897,7 @@ export default function EventDetailModal({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0" data-testid="event-detail-modal">
-          <div className="sticky top-0 bg-white/95 backdrop-blur-sm z-[500] px-6 pt-6 pb-4 border-b">
+          <div className="sticky top-0 bg-white/95 backdrop-blur-sm z-[1100] px-6 pt-6 pb-4 border-b">
             <div className="flex items-start gap-3">
               <Button 
                 variant="ghost" 

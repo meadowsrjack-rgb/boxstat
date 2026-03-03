@@ -28,10 +28,16 @@ export function CoachProfilePage() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Compute the profile ID (activeProfileId or fallback to user's own ID)
-  const profileId = (user as any)?.activeProfileId || (user as any)?.id;
+  const { data: accountProfiles = [] } = useQuery<any[]>({
+    queryKey: ["/api/account/profiles"],
+    enabled: !!(user as any)?.id,
+  });
 
-  // Fetch the active profile data
+  const coachProfileFromAccounts = accountProfiles.find((p: any) => ['coach', 'head_coach', 'assistant_coach'].includes(p.role));
+  const profileId = ['coach', 'head_coach', 'assistant_coach'].includes((user as any)?.role)
+    ? (user as any)?.id
+    : (coachProfileFromAccounts?.id || (user as any)?.activeProfileId || (user as any)?.id);
+
   const { data: activeProfile } = useQuery({
     queryKey: [`/api/profile/${profileId}`],
     enabled: !!profileId,
@@ -79,10 +85,8 @@ export function CoachProfilePage() {
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
-      // Capture IDs before async operations
-      const activeProfileId = (user as any)?.activeProfileId;
+      const targetProfileId = profileId;
       const accountId = (user as any)?.id;
-      const targetProfileId = activeProfileId || accountId;
       
       const formData = new FormData();
       formData.append('photo', file);
@@ -97,7 +101,7 @@ export function CoachProfilePage() {
         body: formData,
       });
       if (!response.ok) throw new Error('Upload failed');
-      return { result: await response.json(), activeProfileId, accountId };
+      return { result: await response.json(), activeProfileId: targetProfileId, accountId };
     },
     onSuccess: async ({ activeProfileId, accountId }) => {
       toast({ title: "Success", description: "Profile photo updated successfully!" });
@@ -167,8 +171,6 @@ export function CoachProfilePage() {
         address: data.city,
       };
       
-      // Use activeProfileId if set, otherwise fall back to user's own ID
-      const profileId = (user as any)?.activeProfileId || (user as any)?.id;
       const token = localStorage.getItem('authToken');
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;

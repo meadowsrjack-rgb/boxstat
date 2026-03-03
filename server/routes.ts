@@ -3833,20 +3833,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Access denied' });
       }
       const isHeadCoach = coach.role === 'head_coach' || coach.role === 'coach';
+
+      const coachFields = ['bio', 'yearsExperience', 'previousTeams', 'playingExperience', 'philosophy', 'specialties', 'coachingLicense', 'coachingStyle'] as const;
+      let source: any = coach;
+      const hasCoachData = coachFields.some(f => !!(coach as any)[f] && (Array.isArray((coach as any)[f]) ? (coach as any)[f].length > 0 : true));
+
+      if (!hasCoachData && (coach as any).accountHolderId) {
+        const accountHolder = await storage.getUser((coach as any).accountHolderId);
+        if (accountHolder) {
+          const holderHasData = coachFields.some(f => !!(accountHolder as any)[f] && (Array.isArray((accountHolder as any)[f]) ? (accountHolder as any)[f].length > 0 : true));
+          if (holderHasData) source = accountHolder;
+        }
+        if (source === coach) {
+          const allOrgUsers = await storage.getUsersByOrganization(coach.organizationId);
+          const siblings = allOrgUsers.filter(u => u.accountHolderId === (coach as any).accountHolderId && u.id !== coachId);
+          for (const sib of siblings) {
+            const sibHasData = coachFields.some(f => !!(sib as any)[f] && (Array.isArray((sib as any)[f]) ? (sib as any)[f].length > 0 : true));
+            if (sibHasData) { source = sib; break; }
+          }
+        }
+      }
+
       res.json({
         id: coach.id,
         firstName: coach.firstName,
         lastName: coach.lastName,
-        profileImageUrl: coach.profileImageUrl,
+        profileImageUrl: coach.profileImageUrl || (source !== coach ? source.profileImageUrl : null),
         roleLabel: isHeadCoach ? 'HEAD COACH' : 'ASSISTANT COACH',
-        bio: (coach as any).bio,
-        yearsExperience: (coach as any).yearsExperience,
-        previousTeams: (coach as any).previousTeams,
-        playingExperience: (coach as any).playingExperience,
-        philosophy: (coach as any).philosophy,
-        specialties: (coach as any).specialties,
-        coachingLicense: (coach as any).coachingLicense,
-        coachingStyle: (coach as any).coachingStyle,
+        bio: (source as any).bio,
+        yearsExperience: (source as any).yearsExperience,
+        previousTeams: (source as any).previousTeams,
+        playingExperience: (source as any).playingExperience,
+        philosophy: (source as any).philosophy,
+        specialties: (source as any).specialties,
+        coachingLicense: (source as any).coachingLicense,
+        coachingStyle: (source as any).coachingStyle,
       });
     } catch (error: any) {
       res.status(500).json({ error: 'Failed to fetch coach profile' });

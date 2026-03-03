@@ -112,12 +112,12 @@ export default function CoachProfileDialog({ coachId, open, onOpenChange }: Coac
               </div>
             )}
 
-            {coach.specialties && (
+            {coach.specialties && (Array.isArray(coach.specialties) ? coach.specialties.length > 0 : !!coach.specialties) && (
               <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
                 <GraduationCap className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
                 <div>
                   <div className="text-xs font-semibold text-gray-600 mb-0.5">Specialties</div>
-                  <div className="text-sm text-gray-700">{coach.specialties}</div>
+                  <div className="text-sm text-gray-700">{Array.isArray(coach.specialties) ? coach.specialties.join(', ') : coach.specialties}</div>
                 </div>
               </div>
             )}
@@ -132,7 +132,7 @@ export default function CoachProfileDialog({ coachId, open, onOpenChange }: Coac
               </div>
             )}
 
-            {!coach.yearsExperience && !coach.bio && !coach.philosophy && !coach.previousTeams && !coach.playingExperience && (
+            {!coach.yearsExperience && !coach.bio && !coach.philosophy && !coach.previousTeams && !coach.playingExperience && !coach.coachingStyle && !(coach.specialties?.length > 0) && (
               <div className="text-center py-6 text-gray-500 text-sm">
                 This coach hasn't added their profile information yet.
               </div>

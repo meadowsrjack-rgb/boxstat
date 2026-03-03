@@ -785,6 +785,8 @@ function RosterTab({
   onReward,
   selectedPlayerId,
   setSelectedPlayerId,
+  showLeadEvaluation,
+  setShowLeadEvaluation,
 }: {
   team?: CoachTeam | null;
   roster: any[];

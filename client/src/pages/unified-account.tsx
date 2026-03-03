@@ -62,6 +62,7 @@ import { Calendar as ShadcnCalendar } from "@/components/ui/calendar";
 import { useEffect, useState, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { PINDialog } from "@/components/PINDialog";
+import CoachProfileDialog from "@/components/CoachProfileDialog";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { PaymentHistory } from "@/components/PaymentHistory";
@@ -1413,6 +1414,9 @@ export default function UnifiedAccount() {
   // Settings drawer state
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
   
+  const [coachProfileId, setCoachProfileId] = useState<string | null>(null);
+  const [coachProfileOpen, setCoachProfileOpen] = useState(false);
+
   // Schedule request state - inline booking within active programs
   const [schedulingEnrollment, setSchedulingEnrollment] = useState<string | null>(null);
   const [scheduleDate, setScheduleDate] = useState<Date>(new Date());
@@ -1577,6 +1581,10 @@ export default function UnifiedAccount() {
   // Fetch player enrollments
   const { data: playerEnrollments = [] } = useQuery<any[]>({
     queryKey: ["/api/enrollments"],
+  });
+
+  const { data: parentTeamChatrooms = [] } = useQuery<any[]>({
+    queryKey: ["/api/account/team-chatrooms"],
   });
 
   // Fetch pending quotes for current user
@@ -1981,6 +1989,34 @@ export default function UnifiedAccount() {
                 </CollapsibleContent>
               </Card>
             </Collapsible>
+
+            {/* Teams & Coaches Section */}
+            {parentTeamChatrooms.length > 0 && (
+              <Collapsible defaultOpen={true}>
+                <Card>
+                  <CollapsibleTrigger className="w-full">
+                    <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-gray-50 rounded-t-lg">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-5 h-5 text-red-600" />
+                        <CardTitle className="text-lg">Teams & Coaches</CardTitle>
+                      </div>
+                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                    </CardHeader>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="pt-0 space-y-3">
+                      {parentTeamChatrooms.map((chatroom: any) => (
+                        <ParentTeamCard
+                          key={chatroom.teamId}
+                          chatroom={chatroom}
+                          onCoachSelect={(id: string) => { setCoachProfileId(id); setCoachProfileOpen(true); }}
+                        />
+                      ))}
+                    </CardContent>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
+            )}
 
             {/* Upcoming Events Section */}
             <div>
@@ -3146,7 +3182,147 @@ export default function UnifiedAccount() {
           </DialogContent>
         </Dialog>
       )}
+
+      <CoachProfileDialog
+        coachId={coachProfileId}
+        open={coachProfileOpen}
+        onOpenChange={(open) => { setCoachProfileOpen(open); if (!open) setCoachProfileId(null); }}
+      />
       </div>
     </>
+  );
+}
+
+function ParentTeamCard({ chatroom, onCoachSelect }: { chatroom: any; onCoachSelect: (id: string) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const { data: rosterData } = useQuery<any>({
+    queryKey: ["/api/teams", chatroom.teamId, "roster-with-notion"],
+    enabled: expanded,
+    queryFn: async () => {
+      const token = localStorage.getItem("authToken");
+      const res = await fetch(`/api/teams/${chatroom.teamId}/roster-with-notion`, {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const { data: coachInfo } = useQuery<any>({
+    queryKey: ["/api/users", chatroom.coachId],
+    enabled: expanded && !!chatroom.coachId,
+  });
+
+  const roster = rosterData || [];
+  const players = roster.filter((m: any) => m.role !== 'coach' && m.role !== 'head_coach' && m.role !== 'assistant_coach');
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <div
+        className="p-3 bg-gray-50 flex items-center justify-between cursor-pointer hover:bg-gray-100"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <Shirt className="h-4 w-4 text-red-600" />
+            <span className="font-medium text-sm text-gray-900">{chatroom.teamName}</span>
+          </div>
+          {chatroom.playerNames?.length > 0 && (
+            <div className="text-xs text-gray-500 mt-0.5 ml-6">
+              {chatroom.playerNames.join(', ')}
+            </div>
+          )}
+          {chatroom.coachName && (
+            <div className="text-xs text-gray-400 mt-0.5 ml-6">
+              Coach: {chatroom.coachName}
+            </div>
+          )}
+        </div>
+        <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+      </div>
+
+      {expanded && (
+        <div className="p-3 space-y-2">
+          {coachInfo && (
+            <div
+              className="flex items-center gap-2 p-2 bg-red-50 rounded hover:bg-red-100 cursor-pointer transition-colors"
+              onClick={() => onCoachSelect(coachInfo.id)}
+            >
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={coachInfo.profileImageUrl} />
+                <AvatarFallback className="text-xs bg-red-600 text-white">
+                  {coachInfo.firstName?.[0]}{coachInfo.lastName?.[0]}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="text-sm font-medium text-gray-900">
+                  {coachInfo.firstName} {coachInfo.lastName}
+                  <span className="ml-2 px-1.5 py-0.5 text-xs bg-red-600 text-white rounded">COACH</span>
+                </div>
+              </div>
+              <ChevronLeft className="h-4 w-4 text-gray-400 rotate-180" />
+            </div>
+          )}
+
+          {chatroom.assistantCoachIds?.map((acId: string, i: number) => (
+            <ParentAssistantCoachEntry key={acId} coachId={acId} onCoachSelect={onCoachSelect} />
+          ))}
+
+          {players.length > 0 && (
+            <div className="mt-2">
+              <div className="text-xs font-semibold text-gray-500 mb-1">Roster ({players.length})</div>
+              <div className="max-h-40 overflow-y-auto space-y-1">
+                {players.map((p: any, i: number) => (
+                  <div key={p.id || i} className="flex items-center gap-2 p-1.5 rounded text-sm">
+                    <Avatar className="h-6 w-6">
+                      <AvatarFallback className="text-xs bg-gray-100 text-gray-600">
+                        {(p.firstName || p.name || '?')[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-gray-700">
+                      {p.firstName && p.lastName ? `${p.firstName} ${p.lastName}` : p.name || 'Player'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!coachInfo && players.length === 0 && (
+            <div className="text-sm text-gray-500 text-center py-2">Loading team info...</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ParentAssistantCoachEntry({ coachId, onCoachSelect }: { coachId: string; onCoachSelect: (id: string) => void }) {
+  const { data: coach } = useQuery<any>({
+    queryKey: ["/api/users", coachId],
+  });
+
+  if (!coach) return null;
+
+  return (
+    <div
+      className="flex items-center gap-2 p-2 bg-red-50 rounded hover:bg-red-100 cursor-pointer transition-colors"
+      onClick={() => onCoachSelect(coachId)}
+    >
+      <Avatar className="h-8 w-8">
+        <AvatarImage src={coach.profileImageUrl} />
+        <AvatarFallback className="text-xs bg-red-600 text-white">
+          {coach.firstName?.[0]}{coach.lastName?.[0]}
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex-1">
+        <div className="text-sm font-medium text-gray-900">
+          {coach.firstName} {coach.lastName}
+          <span className="ml-2 px-1.5 py-0.5 text-xs bg-orange-500 text-white rounded">ASST</span>
+        </div>
+      </div>
+      <ChevronLeft className="h-4 w-4 text-gray-400 rotate-180" />
+    </div>
   );
 }

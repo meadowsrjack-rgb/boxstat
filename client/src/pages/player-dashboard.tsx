@@ -65,6 +65,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PINDialog } from "@/components/PINDialog";
+import CoachProfileDialog from "@/components/CoachProfileDialog";
 
 /* ===== “Wheel” option lists ===== */
 const TEAM_OPTIONS = [
@@ -1704,10 +1705,12 @@ function ProgramCard({
   membership, 
   displayProfileId,
   onPlayerSelect,
+  onCoachSelect,
 }: { 
   membership: ProgramMembership;
   displayProfileId: string | undefined;
   onPlayerSelect: (playerId: string) => void;
+  onCoachSelect: (coachId: string) => void;
 }) {
   const [expandedTeamId, setExpandedTeamId] = useState<number | null>(null);
   
@@ -1762,6 +1765,7 @@ function ProgramCard({
                 isExpanded={expandedTeamId === team.teamId}
                 onToggle={() => setExpandedTeamId(expandedTeamId === team.teamId ? null : team.teamId)}
                 onPlayerSelect={onPlayerSelect}
+                onCoachSelect={onCoachSelect}
                 subgroupColor={getSubgroupColor()}
               />
             ))}
@@ -1806,6 +1810,7 @@ function SubgroupCard({
   isExpanded,
   onToggle,
   onPlayerSelect,
+  onCoachSelect,
   subgroupColor,
 }: {
   team: ProgramMembership['teams'][0];
@@ -1814,6 +1819,7 @@ function SubgroupCard({
   isExpanded: boolean;
   onToggle: () => void;
   onPlayerSelect: (playerId: string) => void;
+  onCoachSelect: (coachId: string) => void;
   subgroupColor: string;
 }) {
   // Visibility checks from program social settings
@@ -1873,21 +1879,46 @@ function SubgroupCard({
                 <div className="max-h-48 overflow-y-auto space-y-2">
                   {/* Coach Entry */}
                   {coachInfo && (
-                    <div className="flex items-center gap-2 p-2 bg-red-50 rounded">
+                    <div 
+                      className="flex items-center gap-2 p-2 bg-red-50 rounded hover:bg-red-100 cursor-pointer transition-colors"
+                      onClick={() => onCoachSelect(coachInfo.id)}
+                    >
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={coachInfo.profileImageUrl} />
                         <AvatarFallback className="text-xs bg-red-600 text-white">
                           {coachInfo.firstName?.[0]}{coachInfo.lastName?.[0]}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
+                      <div className="flex-1">
                         <div className="text-sm font-medium text-gray-900">
                           {coachInfo.firstName} {coachInfo.lastName}
                           <span className="ml-2 px-1.5 py-0.5 text-xs bg-red-600 text-white rounded">COACH</span>
                         </div>
                       </div>
+                      <ChevronRight className="h-4 w-4 text-gray-400" />
                     </div>
                   )}
+                  {/* Assistant Coach Entries */}
+                  {team.assistantCoaches?.map((ac: any) => (
+                    <div 
+                      key={ac.id}
+                      className="flex items-center gap-2 p-2 bg-red-50 rounded hover:bg-red-100 cursor-pointer transition-colors"
+                      onClick={() => onCoachSelect(ac.id)}
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="text-xs bg-red-600 text-white">
+                          {ac.name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900">
+                          {ac.name}
+                          <span className="ml-2 px-1.5 py-0.5 text-xs bg-orange-500 text-white rounded">ASST</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-gray-400" />
+                    </div>
+                  ))}
                   {/* Member Entries (from program-memberships response) */}
                   {teamMembers.map((member: any, index: number) => {
                     const memberKey = member.id || `member-${index}`;
@@ -1958,6 +1989,8 @@ function TeamBlock() {
   const currentUser = user as UserType;
   const { currentChildProfile } = useAppMode();
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [coachProfileId, setCoachProfileId] = useState<string | null>(null);
+  const [coachProfileOpen, setCoachProfileOpen] = useState(false);
   
   // Fetch active profile from localStorage (same as main dashboard)
   const localSelectedPlayerId = typeof window !== "undefined" ? localStorage.getItem("selectedPlayerId") : null;
@@ -2008,6 +2041,7 @@ function TeamBlock() {
                 membership={membership}
                 displayProfileId={displayProfile?.id}
                 onPlayerSelect={setSelectedPlayerId}
+                onCoachSelect={(id) => { setCoachProfileId(id); setCoachProfileOpen(true); }}
               />
             ))}
             
@@ -2047,6 +2081,12 @@ function TeamBlock() {
           isCoach={currentUser.role === 'coach'}
         />
       )}
+
+      <CoachProfileDialog
+        coachId={coachProfileId}
+        open={coachProfileOpen}
+        onOpenChange={(open) => { setCoachProfileOpen(open); if (!open) setCoachProfileId(null); }}
+      />
     </div>
   );
 }

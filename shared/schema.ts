@@ -262,7 +262,17 @@ export const users = pgTable("users", {
   defaultDashboardView: varchar("default_dashboard_view"),
   needsLegacyClaim: boolean("needs_legacy_claim").default(false), // Legacy migration flag
   flaggedForRosterChange: boolean("flagged_for_roster_change").default(false),
-  flagReason: text("flag_reason"), // Reason for flagging player for roster review
+  flagReason: text("flag_reason"),
+  yearsExperience: varchar("years_experience"),
+  previousTeams: text("previous_teams"),
+  playingExperience: text("playing_experience"),
+  philosophy: text("philosophy"),
+  specialties: text("specialties"),
+  coachingLicense: varchar("coaching_license"),
+  coachingStyle: varchar("coaching_style"),
+  ageGroups: text("age_groups"),
+  medicalCertifications: text("medical_certifications"),
+  languages: text("languages"),
 });
 // NOTE: Email uniqueness is enforced via a partial unique index in the database
 // Only parent/account holder accounts (account_holder_id IS NULL) require unique emails

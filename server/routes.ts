@@ -3210,6 +3210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               teamName: team.name,
               coachId: team.coachId,
               coachName,
+              assistantCoachIds: team.assistantCoachIds || [],
               chatMode,
               playerNames: [],
             });
@@ -3821,6 +3822,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.get('/api/coach-profile/:id', requireAuth, async (req: any, res) => {
+    try {
+      const coachId = req.params.id;
+      const coach = await storage.getUser(coachId);
+      if (!coach || (coach.role !== 'coach' && coach.role !== 'head_coach' && coach.role !== 'assistant_coach')) {
+        return res.status(404).json({ error: 'Coach not found' });
+      }
+      if (coach.organizationId !== req.user.organizationId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      const isHeadCoach = coach.role === 'head_coach' || coach.role === 'coach';
+      res.json({
+        id: coach.id,
+        firstName: coach.firstName,
+        lastName: coach.lastName,
+        profileImageUrl: coach.profileImageUrl,
+        roleLabel: isHeadCoach ? 'HEAD COACH' : 'ASSISTANT COACH',
+        bio: (coach as any).bio,
+        yearsExperience: (coach as any).yearsExperience,
+        previousTeams: (coach as any).previousTeams,
+        playingExperience: (coach as any).playingExperience,
+        philosophy: (coach as any).philosophy,
+        specialties: (coach as any).specialties,
+        coachingLicense: (coach as any).coachingLicense,
+        coachingStyle: (coach as any).coachingStyle,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: 'Failed to fetch coach profile' });
+    }
+  });
+
   // Get profile by ID
   app.get('/api/profile/:id', requireAuth, async (req: any, res) => {
     try {

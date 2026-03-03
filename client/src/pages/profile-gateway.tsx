@@ -193,9 +193,18 @@ export default function ProfileGateway() {
             data-testid="card-account-profile"
           >
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                <Crown className="w-8 h-8 text-white" />
-              </div>
+              {(user as any)?.profileImageUrl ? (
+                <Avatar className="w-16 h-16">
+                  <AvatarImage src={(user as any).profileImageUrl} alt={`${(user as any)?.firstName} ${(user as any)?.lastName}`} />
+                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xl font-bold">
+                    {(user as any)?.firstName?.[0]}{(user as any)?.lastName?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                  <Crown className="w-8 h-8 text-white" />
+                </div>
+              )}
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-white">
                   {(user as any)?.firstName} {(user as any)?.lastName}
@@ -213,9 +222,22 @@ export default function ProfileGateway() {
               data-testid="card-coach-profile"
             >
               <CardContent className="p-4 flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
-                  <User className="w-8 h-8 text-white" />
-                </div>
+                {(() => {
+                  const coachProfile = accountProfiles.find((p: any) => p.role === 'coach');
+                  const coachImg = coachProfile?.profileImageUrl || (userRole === 'coach' ? (user as any)?.profileImageUrl : null);
+                  return coachImg ? (
+                    <Avatar className="w-16 h-16">
+                      <AvatarImage src={coachImg} alt="Coach" />
+                      <AvatarFallback className="bg-gradient-to-br from-green-500 to-green-600 text-white text-xl font-bold">
+                        {(user as any)?.firstName?.[0]}{(user as any)?.lastName?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                      <User className="w-8 h-8 text-white" />
+                    </div>
+                  );
+                })()}
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-white">Coach View</h3>
                   <p className="text-sm text-gray-400">Team tools,  career development</p>
@@ -232,9 +254,22 @@ export default function ProfileGateway() {
               data-testid="card-admin-profile"
             >
               <CardContent className="p-4 flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center">
-                  <Shield className="w-8 h-8 text-white" />
-                </div>
+                {(() => {
+                  const adminProfile = accountProfiles.find((p: any) => p.role === 'admin');
+                  const adminImg = adminProfile?.profileImageUrl || (userRole === 'admin' ? (user as any)?.profileImageUrl : null);
+                  return adminImg ? (
+                    <Avatar className="w-16 h-16">
+                      <AvatarImage src={adminImg} alt="Admin" />
+                      <AvatarFallback className="bg-gradient-to-br from-red-500 to-red-600 text-white text-xl font-bold">
+                        {(user as any)?.firstName?.[0]}{(user as any)?.lastName?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center">
+                      <Shield className="w-8 h-8 text-white" />
+                    </div>
+                  );
+                })()}
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-white">Admin View</h3>
                   <p className="text-sm text-gray-400">Full system administration</p>

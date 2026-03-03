@@ -48,3 +48,11 @@ PostgreSQL, hosted on Neon serverless, is used with Drizzle ORM. The schema is o
 -   **TanStack Query**: Server state management.
 -   **Leaflet & OpenStreetMap**: Mapping, geocoding, and geo-fencing.
 -   **Capacitor**: Native iOS deployment and feature access.
+
+## Profile Image System
+-   **Upload endpoint**: `POST /api/upload-profile-photo?profileId=xxx` — stores to `public/uploads/`, returns `{ success, imageUrl, message }`.
+-   **Dashboard photo upload**: Player dashboard and coach dashboard avatars have a camera icon overlay; tapping opens a file picker to upload a new profile photo directly from the dashboard header.
+-   **Parent photo upload**: Parent settings drawer in `unified-account.tsx` has a clickable avatar with camera icon for uploading parent profile photos.
+-   **Coach settings upload**: `coach-setting-pages.tsx` Profile tab has a full photo upload area.
+-   **Instant updates**: After upload, `setQueryData` optimistically updates the relevant caches (`/api/auth/user`, `/api/profile/:id`, `/api/account/profiles`, `/api/account/players`) so the new image appears immediately without page reload.
+-   **Profile gateway**: `profile-gateway.tsx` shows actual profile images for Parent/Account, Coach, Admin, and Player cards with gradient+icon fallback when no image is set.

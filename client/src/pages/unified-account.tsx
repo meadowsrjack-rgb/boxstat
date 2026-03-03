@@ -56,6 +56,7 @@ import {
   Star,
   Medal,
   CalendarCheck,
+  Camera,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar as ShadcnCalendar } from "@/components/ui/calendar";
@@ -1413,6 +1414,8 @@ export default function UnifiedAccount() {
   
   // Settings drawer state
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
+  const parentPhotoInputRef = useRef<HTMLInputElement>(null);
+  const [parentPhotoUploading, setParentPhotoUploading] = useState(false);
   
   const [coachProfileId, setCoachProfileId] = useState<string | null>(null);
   const [coachProfileOpen, setCoachProfileOpen] = useState(false);
@@ -2993,6 +2996,45 @@ export default function UnifiedAccount() {
 
         </Tabs>
 
+      {/* Hidden file input for parent photo upload */}
+      <input
+        ref={parentPhotoInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/gif,image/webp"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          if (file.size > 5 * 1024 * 1024) {
+            toast({ title: "Error", description: "File size must be less than 5MB", variant: "destructive" });
+            return;
+          }
+          setParentPhotoUploading(true);
+          try {
+            const formData = new FormData();
+            formData.append('photo', file);
+            const token = localStorage.getItem('authToken');
+            const headers: Record<string, string> = {};
+            if (token) headers["Authorization"] = `Bearer ${token}`;
+            const res = await fetch('/api/upload-profile-photo', { method: 'POST', headers, body: formData, credentials: 'include' });
+            if (!res.ok) throw new Error('Upload failed');
+            const result = await res.json();
+            if (result?.imageUrl) {
+              queryClient.setQueryData(["/api/auth/user"], (old: any) => old ? { ...old, profileImageUrl: result.imageUrl } : old);
+            }
+            queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/account/profiles"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/profiles/me"] });
+            toast({ title: "Success", description: "Profile photo updated!" });
+          } catch {
+            toast({ title: "Error", description: "Failed to upload photo", variant: "destructive" });
+          } finally {
+            setParentPhotoUploading(false);
+            e.target.value = '';
+          }
+        }}
+      />
+
       {/* Settings & Profile Drawer */}
       <Drawer open={settingsDrawerOpen} onOpenChange={setSettingsDrawerOpen}>
         <DrawerContent className="max-h-[85vh]">
@@ -3007,12 +3049,17 @@ export default function UnifiedAccount() {
             {/* Profile Section */}
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <Avatar className="w-16 h-16">
-                  <AvatarImage src={user?.profileImageUrl} alt={`${user?.firstName} ${user?.lastName}`} />
-                  <AvatarFallback className="bg-gradient-to-br from-red-500 to-red-600 text-white text-xl font-bold">
-                    {user?.firstName?.[0]}{user?.lastName?.[0]}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative cursor-pointer" onClick={() => parentPhotoInputRef.current?.click()}>
+                  <Avatar className="w-16 h-16">
+                    <AvatarImage src={user?.profileImageUrl} alt={`${user?.firstName} ${user?.lastName}`} />
+                    <AvatarFallback className="bg-gradient-to-br from-red-500 to-red-600 text-white text-xl font-bold">
+                      {user?.firstName?.[0]}{user?.lastName?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-red-600 rounded-full flex items-center justify-center border-2 border-white">
+                    {parentPhotoUploading ? <Loader2 className="w-3 h-3 text-white animate-spin" /> : <Camera className="w-3 h-3 text-white" />}
+                  </div>
+                </div>
                 <div>
                   <h3 className="text-lg font-semibold" data-testid="profile-parent-name">
                     {user?.firstName} {user?.lastName}

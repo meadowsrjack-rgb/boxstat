@@ -124,12 +124,12 @@ export function CoachProfilePage() {
         });
       }
       
-      // Invalidate PlayerCard and other caches with forced refetch
       await queryClient.invalidateQueries({ queryKey: [`/api/players/${activeProfileId}/profile`], refetchType: 'active' });
       await queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'], refetchType: 'active' });
       await queryClient.invalidateQueries({ queryKey: [`/api/profiles/${accountId}`], refetchType: 'active' });
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"], refetchType: 'active' });
       await queryClient.invalidateQueries({ queryKey: ["/api/account/players"], refetchType: 'active' });
+      await queryClient.invalidateQueries({ queryKey: ["/api/account/profiles"], refetchType: 'active' });
       
       setSelectedFile(null);
       if (previewUrl) {

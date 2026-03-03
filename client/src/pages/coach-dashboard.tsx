@@ -46,8 +46,10 @@ import {
   X,
   UserPlus,
   Flag,
+  Camera,
+  Loader2,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { format, isSameDay, isAfter, startOfDay } from "date-fns";
 import PlayerSearch from "@/components/PlayerSearch";
 import PlayerCard from "@/components/PlayerCard";
@@ -144,6 +146,8 @@ export default function CoachDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const coachPhotoInputRef = useRef<HTMLInputElement>(null);
+  const [coachPhotoUploading, setCoachPhotoUploading] = useState(false);
 
   // Redirect users who don't have coach or admin access
   useEffect(() => {
@@ -507,10 +511,58 @@ export default function CoachDashboard() {
         <div className="px-6 pt-4">
           <PushNotificationSetup compact />
         </div>
+        {/* Hidden file input for coach photo upload */}
+        <input
+          ref={coachPhotoInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) {
+              toast({ title: "Error", description: "File size must be less than 5MB", variant: "destructive" });
+              return;
+            }
+            setCoachPhotoUploading(true);
+            try {
+              const formData = new FormData();
+              formData.append('photo', file);
+              const token = localStorage.getItem('authToken');
+              const headers: Record<string, string> = {};
+              if (token) headers["Authorization"] = `Bearer ${token}`;
+              const profileId = coachProfileId || currentUser.id;
+              const res = await fetch(`/api/upload-profile-photo?profileId=${profileId}`, { method: 'POST', headers, body: formData, credentials: 'include' });
+              if (!res.ok) throw new Error('Upload failed');
+              const result = await res.json();
+              if (result?.imageUrl) {
+                if (String(profileId) === String(currentUser.id)) {
+                  queryClient.setQueryData(["/api/auth/user"], (old: any) => old ? { ...old, profileImageUrl: result.imageUrl } : old);
+                }
+                queryClient.setQueryData(["/api/account/profiles"], (old: any) => 
+                  Array.isArray(old) ? old.map((p: any) => String(p.id) === String(profileId) ? { ...p, profileImageUrl: result.imageUrl } : p) : old
+                );
+                queryClient.setQueryData(["/api/profile", String(profileId)], (old: any) => old ? { ...old, profileImageUrl: result.imageUrl } : old);
+              }
+              queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/account/profiles"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/profiles/me"] });
+              toast({ title: "Success", description: "Profile photo updated!" });
+            } catch {
+              toast({ title: "Error", description: "Failed to upload photo", variant: "destructive" });
+            } finally {
+              setCoachPhotoUploading(false);
+              e.target.value = '';
+            }
+          }}
+        />
         {/* Avatar header */}
         <div className="px-6 py-6 text-center">
-          <div className="flex justify-center mb-2">
-            <ProfileAvatarRing src={currentUser.profileImageUrl || undefined} initials={initials} size={88} />
+          <div className="flex justify-center mb-2 relative cursor-pointer" onClick={() => coachPhotoInputRef.current?.click()}>
+            <ProfileAvatarRing src={(currentUser.role === 'coach' ? currentUser.profileImageUrl : (coachProfile as any)?.profileImageUrl || currentUser.profileImageUrl) || undefined} initials={initials} size={88} />
+            <div className="absolute bottom-0 right-1/2 translate-x-[44px] w-7 h-7 bg-red-600 rounded-full flex items-center justify-center border-2 border-white">
+              {coachPhotoUploading ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" /> : <Camera className="w-3.5 h-3.5 text-white" />}
+            </div>
           </div>
           <div className="text-sm text-gray-600">
             Coach <span className="font-semibold text-gray-900">{currentUser.firstName}</span>

@@ -47,12 +47,14 @@ import {
   Target,
   Dumbbell,
   Trophy,
+  Camera,
+  Loader2,
 } from "lucide-react";
 import NotificationCenter from "@/components/NotificationCenter";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import PushNotificationSetup from "@/components/PushNotificationSetup";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { format, isSameDay, isAfter, startOfDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isToday as isDateToday } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -204,8 +206,10 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   const [newMessage, setNewMessage] = useState("");
   const [ws, setWs] = useState<WebSocket | null>(null);
   const { toast } = useToast();
-  useAwardToast(); // Listen for new awards and show toasts
+  useAwardToast();
   const queryClient = useQueryClient();
+  const playerPhotoInputRef = useRef<HTMLInputElement>(null);
+  const [playerPhotoUploading, setPlayerPhotoUploading] = useState(false);
   const [location, setLocation] = useLocation();
   
   // Check if device is locked to this player
@@ -939,14 +943,68 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         <div className="px-6 pt-4">
           <AnnouncementBanner />
         </div>
+        {/* Hidden file input for player photo upload */}
+        <input
+          ref={playerPhotoInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) {
+              toast({ title: "Error", description: "File size must be less than 5MB", variant: "destructive" });
+              return;
+            }
+            setPlayerPhotoUploading(true);
+            try {
+              const formData = new FormData();
+              formData.append('photo', file);
+              const token = localStorage.getItem('authToken');
+              const headers: Record<string, string> = {};
+              if (token) headers["Authorization"] = `Bearer ${token}`;
+              const profileId = displayProfile.id || (user as any)?.id;
+              const res = await fetch(`/api/upload-profile-photo?profileId=${profileId}`, { method: 'POST', headers, body: formData, credentials: 'include' });
+              if (!res.ok) throw new Error('Upload failed');
+              const result = await res.json();
+              if (result?.imageUrl) {
+                if (String(profileId) === String((user as any)?.id)) {
+                  queryClient.setQueryData(["/api/auth/user"], (old: any) => old ? { ...old, profileImageUrl: result.imageUrl } : old);
+                }
+                queryClient.setQueryData(["/api/profile", String(profileId)], (old: any) => old ? { ...old, profileImageUrl: result.imageUrl } : old);
+                queryClient.setQueryData(["/api/profile", profileId], (old: any) => old ? { ...old, profileImageUrl: result.imageUrl } : old);
+                queryClient.setQueryData(["/api/account/profiles"], (old: any) => 
+                  Array.isArray(old) ? old.map((p: any) => String(p.id) === String(profileId) ? { ...p, profileImageUrl: result.imageUrl } : p) : old
+                );
+                queryClient.setQueryData(["/api/account/players"], (old: any) => 
+                  Array.isArray(old) ? old.map((p: any) => String(p.id) === String(profileId) ? { ...p, profileImageUrl: result.imageUrl } : p) : old
+                );
+              }
+              queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/account/profiles"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/profiles/me"] });
+              queryClient.invalidateQueries({ queryKey: [`/api/players/${profileId}/profile`] });
+              toast({ title: "Success", description: "Profile photo updated!" });
+            } catch {
+              toast({ title: "Error", description: "Failed to upload photo", variant: "destructive" });
+            } finally {
+              setPlayerPhotoUploading(false);
+              e.target.value = '';
+            }
+          }}
+        />
         {/* Avatar header */}
         <div className="px-6 py-6 text-center">
-          <div className="flex justify-center mb-2">
+          <div className="flex justify-center mb-2 relative cursor-pointer" onClick={() => playerPhotoInputRef.current?.click()}>
             <ProfileAvatarRing
               src={displayProfile.profileImageUrl}
               initials={initials}
               size={88}
             />
+            <div className="absolute bottom-0 right-1/2 translate-x-[44px] w-7 h-7 bg-red-600 rounded-full flex items-center justify-center border-2 border-white">
+              {playerPhotoUploading ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" /> : <Camera className="w-3.5 h-3.5 text-white" />}
+            </div>
           </div>
           <div className="text-sm text-gray-600">
             Hey, <span className="font-semibold text-gray-900">{displayProfile.firstName}</span>

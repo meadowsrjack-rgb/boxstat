@@ -82,9 +82,15 @@ export default function PhotoUploadPage() {
     if (selectedFile) {
       setIsUploading(true);
       try {
-        await uploadPhotoWithAuth(selectedFile);
+        const result = await uploadPhotoWithAuth(selectedFile);
         toast({ title: "Success", description: "Profile photo updated successfully!" });
+        if (result?.imageUrl) {
+          queryClient.setQueryData(["/api/auth/user"], (old: any) => old ? { ...old, profileImageUrl: result.imageUrl } : old);
+        }
         queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/account/profiles"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/profiles/me"] });
         setLocation("/player-dashboard");
       } catch (error: any) {
         toast({ title: "Error", description: error.message || "Failed to upload photo. Please try again." });

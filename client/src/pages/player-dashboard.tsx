@@ -1239,7 +1239,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 />
                 <div className="text-center mt-4">
                   <div className="text-lg font-bold text-gray-900">Foundation Program</div>
-                  <div className="text-sm text-gray-600">Tap to learn more</div>
+                  <div className="text-sm text-gray-600">Coming soon!</div>
                 </div>
               </div>
             </div>

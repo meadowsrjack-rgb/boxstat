@@ -930,8 +930,9 @@ function RosterTab({
     return (
       <div className="space-y-6">
         <Button 
+          variant="outline"
           onClick={() => setShowLeadEvaluation(true)}
-          className="bg-red-600 hover:bg-red-700 w-full"
+          className="border-red-200 text-red-600 hover:bg-red-50 w-full"
           data-testid="button-lead-evaluation"
         >
           <Users className="h-4 w-4 mr-2" />

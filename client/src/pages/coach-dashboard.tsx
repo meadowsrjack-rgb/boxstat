@@ -668,6 +668,8 @@ export default function CoachDashboard() {
 
               selectedPlayerId={selectedPlayerId}
               setSelectedPlayerId={setSelectedPlayerId}
+              showLeadEvaluation={showLeadEvaluation}
+              setShowLeadEvaluation={setShowLeadEvaluation}
             />
           )}
 
@@ -678,9 +680,7 @@ export default function CoachDashboard() {
           {activeTab === "hr" && (
             <HRTab 
               docs={hrDocs} 
-              announcements={hrAnnouncements} 
-              showLeadEvaluation={showLeadEvaluation}
-              setShowLeadEvaluation={setShowLeadEvaluation}
+              announcements={hrAnnouncements}
               currentUser={currentUser}
             />
           )}
@@ -795,6 +795,8 @@ function RosterTab({
   onReward: (p: PlayerLite) => void;
   selectedPlayerId: string | null;
   setSelectedPlayerId: (id: string | null) => void;
+  showLeadEvaluation: boolean;
+  setShowLeadEvaluation: (show: boolean) => void;
 }) {
   const { user } = useAuth();
   const currentUser = user as UserType;
@@ -916,13 +918,27 @@ function RosterTab({
     },
   });
 
+  if (showLeadEvaluation) {
+    return <LeadEvaluationForm onClose={() => setShowLeadEvaluation(false)} />;
+  }
+
   // Show team list if no team is selected
   if (!selectedTeamId) {
     return (
       <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-bold text-gray-900">Your Teams</h3>
-          <p className="text-sm text-gray-500">Select a team to view roster and chat</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Your Teams</h3>
+            <p className="text-sm text-gray-500">Select a team to view roster and chat</p>
+          </div>
+          <Button 
+            onClick={() => setShowLeadEvaluation(true)}
+            className="bg-red-600 hover:bg-red-700"
+            data-testid="button-lead-evaluation"
+          >
+            <Users className="h-4 w-4 mr-2" />
+            New Lead Eval
+          </Button>
         </div>
         
         {assignedTeams.length > 0 ? (
@@ -1528,34 +1544,16 @@ function ProfileTab({ currentUser }: { currentUser: UserType }) {
 function HRTab({ 
   docs, 
   announcements, 
-  showLeadEvaluation, 
-  setShowLeadEvaluation,
   currentUser 
 }: { 
   docs: Array<{ id: string | number; title: string; url: string }>; 
   announcements: Array<{ id: string | number; title: string; body: string; createdAt: string }>;
-  showLeadEvaluation: boolean;
-  setShowLeadEvaluation: (show: boolean) => void;
   currentUser: UserType;
 }) {
-  
-  // If showing lead evaluation form, render it instead of default HR content
-  if (showLeadEvaluation) {
-    return <LeadEvaluationForm onClose={() => setShowLeadEvaluation(false)} />;
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">HR & Training</h2>
-        <Button 
-          onClick={() => setShowLeadEvaluation(true)}
-          className="bg-red-600 hover:bg-red-700"
-          data-testid="button-lead-evaluation"
-        >
-          <Users className="h-4 w-4 mr-2" />
-          New Lead Evaluation
-        </Button>
       </div>
 
       {/* Coaching Card */}

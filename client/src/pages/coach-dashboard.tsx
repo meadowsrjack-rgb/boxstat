@@ -542,10 +542,14 @@ export default function CoachDashboard() {
                 queryClient.setQueryData(["/api/account/profiles"], (old: any) => 
                   Array.isArray(old) ? old.map((p: any) => String(p.id) === String(profileId) ? { ...p, profileImageUrl: result.imageUrl } : p) : old
                 );
+                queryClient.setQueryData([`/api/users/${currentUser.id}/linked-profiles`], (old: any) => 
+                  Array.isArray(old) ? old.map((p: any) => String(p.id) === String(profileId) ? { ...p, profileImageUrl: result.imageUrl } : p) : old
+                );
                 queryClient.setQueryData(["/api/profile", String(profileId)], (old: any) => old ? { ...old, profileImageUrl: result.imageUrl } : old);
               }
               queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
               queryClient.invalidateQueries({ queryKey: ["/api/account/profiles"] });
+              queryClient.invalidateQueries({ queryKey: [`/api/users/${currentUser.id}/linked-profiles`] });
               queryClient.invalidateQueries({ queryKey: ["/api/profiles/me"] });
               toast({ title: "Success", description: "Profile photo updated!" });
             } catch {

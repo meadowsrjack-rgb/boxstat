@@ -5113,6 +5113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: u.role,
         firstName: u.firstName,
         lastName: u.lastName,
+        profileImageUrl: u.profileImageUrl,
       }));
       
       res.json(linkedProfiles);

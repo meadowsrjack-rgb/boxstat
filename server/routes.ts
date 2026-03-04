@@ -6134,6 +6134,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return { teamIds, divisionIds, programIds, targetUserId };
   }
   
+  function hasTeamDivisionProgramScope(obj: any): boolean {
+    return (obj.teams?.length > 0) || (obj.divisions?.length > 0) || (obj.programs?.length > 0);
+  }
+
+  function matchesTeamDivisionProgram(
+    visibility: any,
+    assignTo: any,
+    teamIds: (string | number)[],
+    divisionIds: (string | number)[],
+    programIds: (string | number)[]
+  ): boolean {
+    for (const teamId of teamIds) {
+      if (visibility.teams?.includes(String(teamId)) || assignTo.teams?.includes(String(teamId))) return true;
+    }
+    for (const divisionId of divisionIds) {
+      if (visibility.divisions?.includes(String(divisionId)) || assignTo.divisions?.includes(String(divisionId))) return true;
+    }
+    for (const programId of programIds) {
+      if (visibility.programs?.includes(String(programId)) || assignTo.programs?.includes(String(programId))) return true;
+    }
+    return false;
+  }
+
   // Helper function to filter events based on visibility and assignment
   function filterEventsByScope(
     events: any[],
@@ -6152,53 +6175,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (debug) {
         console.log(`  📅 Event "${event.title}" (ID: ${event.id}) - assignTo: ${JSON.stringify(assignTo)}, visibility: ${JSON.stringify(visibility)}`);
       }
-      
-      // Check role-based visibility
-      if (visibility.roles?.includes(role) || assignTo.roles?.includes(role)) {
-        if (debug) console.log(`    ✅ MATCH: Role "${role}"`);
-        return true;
-      }
-      
-      // Parents with linked players should also see events targeted at 'player' role
-      // This allows parents to see their children's events
-      if (role === 'parent' && hasLinkedPlayers) {
-        if (visibility.roles?.includes('player') || assignTo.roles?.includes('player')) {
-          if (debug) console.log(`    ✅ MATCH: Parent sees player-targeted event (has linked players)`);
-          return true;
-        }
-      }
-      
-      // Check team-based visibility (check all team IDs)
-      for (const teamId of teamIds) {
-        if (visibility.teams?.includes(String(teamId)) || assignTo.teams?.includes(String(teamId))) {
-          if (debug) console.log(`    ✅ MATCH: Team ${teamId}`);
-          return true;
-        }
-      }
-      
-      // Check division-based visibility (check all division IDs)
-      for (const divisionId of divisionIds) {
-        if (visibility.divisions?.includes(String(divisionId)) || assignTo.divisions?.includes(String(divisionId))) {
-          if (debug) console.log(`    ✅ MATCH: Division ${divisionId}`);
-          return true;
-        }
-      }
-      
-      // Check program-based visibility (check all program IDs)
-      for (const programId of programIds) {
-        if (visibility.programs?.includes(String(programId)) || assignTo.programs?.includes(String(programId))) {
-          if (debug) console.log(`    ✅ MATCH: Program ${programId}`);
-          return true;
-        }
-      }
-      
-      // Check user-specific assignment (handle both string and number IDs)
+
+      // Check user-specific assignment first (most specific, always wins)
       const userIdStr = String(targetUserId);
       const assignToUsers = assignTo.users?.map((id: any) => String(id)) || [];
       const visibilityUsers = visibility.users?.map((id: any) => String(id)) || [];
       
       if (assignToUsers.includes(userIdStr) || visibilityUsers.includes(userIdStr)) {
         if (debug) console.log(`    ✅ MATCH: User ${targetUserId}`);
+        return true;
+      }
+
+      const eventHasScope = hasTeamDivisionProgramScope(visibility) || hasTeamDivisionProgramScope(assignTo);
+      const userMatchesScope = matchesTeamDivisionProgram(visibility, assignTo, teamIds, divisionIds, programIds);
+
+      // Check role-based visibility
+      const roleMatch = visibility.roles?.includes(role) || assignTo.roles?.includes(role);
+      const parentPlayerMatch = role === 'parent' && hasLinkedPlayers && 
+        (visibility.roles?.includes('player') || assignTo.roles?.includes('player'));
+
+      if (roleMatch || parentPlayerMatch) {
+        if (eventHasScope) {
+          // Event targets a role AND specific teams/divisions/programs
+          // User must also be on one of those teams/divisions/programs
+          if (userMatchesScope) {
+            if (debug) console.log(`    ✅ MATCH: Role + scope match`);
+            return true;
+          }
+          if (debug) console.log(`    ❌ Role matches but user not in event's team/division/program scope`);
+          return false;
+        }
+        // Role-only event (no team/division/program scoping) — show to everyone with that role
+        if (debug) console.log(`    ✅ MATCH: Role "${role}" (no scope restriction)`);
+        return true;
+      }
+      
+      // Check team/division/program match without role targeting
+      if (userMatchesScope) {
+        if (debug) console.log(`    ✅ MATCH: Team/division/program scope`);
         return true;
       }
       

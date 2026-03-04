@@ -6,6 +6,7 @@ import { BanterLoader } from "@/components/BanterLoader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -3990,7 +3991,9 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("calendar");
+  const [eventsPage, setEventsPage] = useState(1);
+  const EVENTS_PAGE_SIZE = 50;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [selectedEventForDetails, setSelectedEventForDetails] = useState<any>(null);
@@ -5569,6 +5572,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
           </div>
         )}
         {viewMode === "list" ? (
+          <>
           <Table>
             <TableHeader>
               <TableRow>
@@ -5592,8 +5596,12 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                 const sortedEvents = [...events].sort((a: any, b: any) => 
                   new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
                 );
+                const totalEventsPages = Math.max(1, Math.ceil(sortedEvents.length / EVENTS_PAGE_SIZE));
+                const safeEventsPage = Math.min(eventsPage, totalEventsPages);
+                const startIdx = (safeEventsPage - 1) * EVENTS_PAGE_SIZE;
+                const paginatedEvents = sortedEvents.slice(startIdx, startIdx + EVENTS_PAGE_SIZE);
                 
-                return sortedEvents.map((event: any) => {
+                return paginatedEvents.map((event: any) => {
                   // Build 'For' display from assignTo
                   let forDisplay = "Everyone";
                   if (event.scheduleRequestSource && event.assignTo?.users?.length > 0) {
@@ -5761,6 +5769,35 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
               })()}
             </TableBody>
           </Table>
+          {events.length > EVENTS_PAGE_SIZE && (
+            <div className="flex items-center justify-between mt-4 px-2">
+              <span className="text-sm text-gray-500">
+                Showing {((eventsPage - 1) * EVENTS_PAGE_SIZE) + 1}–{Math.min(eventsPage * EVENTS_PAGE_SIZE, events.length)} of {events.length} events
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={eventsPage <= 1}
+                  onClick={() => setEventsPage(p => Math.max(1, p - 1))}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="text-sm font-medium">
+                  Page {eventsPage} of {Math.ceil(events.length / EVENTS_PAGE_SIZE)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={eventsPage >= Math.ceil(events.length / EVENTS_PAGE_SIZE)}
+                  onClick={() => setEventsPage(p => p + 1)}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+          </>
         ) : (
           <div className="space-y-4">
             {/* Calendar Navigation and Legend */}
@@ -5885,22 +5922,66 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                         </div>
                         <div className="space-y-1">
                           {dayEvents.slice(0, 3).map((event: any) => (
-                            <button
-                              key={event.id}
-                              onClick={() => setSelectedEventForDetails(event)}
-                              className={`w-full text-left text-xs p-1 rounded border cursor-pointer hover:opacity-80 transition-opacity ${
-                                eventTypeColors[event.type] || 'bg-gray-100 text-gray-700 border-gray-300'
-                              }`}
-                              data-testid={`calendar-event-${event.id}`}
-                            >
-                              <div className="font-medium truncate">{event.title}</div>
-                              <div className="text-xs opacity-75">
-                                {new Date(event.startTime).toLocaleTimeString('en-US', { 
-                                  hour: 'numeric', 
-                                  minute: '2-digit' 
-                                })}
-                              </div>
-                            </button>
+                            <DropdownMenu key={event.id}>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  className={`w-full text-left text-xs p-1 rounded border cursor-pointer hover:opacity-80 transition-opacity ${
+                                    eventTypeColors[event.type] || 'bg-gray-100 text-gray-700 border-gray-300'
+                                  }`}
+                                  data-testid={`calendar-event-${event.id}`}
+                                >
+                                  <div className="font-medium truncate">{event.title}</div>
+                                  <div className="text-xs opacity-75">
+                                    {new Date(event.startTime).toLocaleTimeString('en-US', { 
+                                      hour: 'numeric', 
+                                      minute: '2-digit' 
+                                    })}
+                                  </div>
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="w-36">
+                                <DropdownMenuItem onClick={() => setSelectedEventForDetails(event)}>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  const eventToEdit = { ...event };
+                                  const allRoles = ['player', 'coach', 'parent', 'admin'];
+                                  const hasAllRoles = event.assignTo?.roles && allRoles.every((r: string) => event.assignTo.roles.includes(r));
+                                  if (hasAllRoles) {
+                                    eventToEdit.targetType = 'all';
+                                    eventToEdit.targetId = '';
+                                  } else if (event.scheduleRequestSource && event.assignTo?.users?.length > 0) {
+                                    eventToEdit.targetType = 'user';
+                                    eventToEdit.targetIds = event.assignTo.users.map(String);
+                                  } else if (event.assignTo?.teams?.length > 0) {
+                                    eventToEdit.targetType = 'team';
+                                    eventToEdit.targetIds = event.assignTo.teams.map(String);
+                                  } else if (event.assignTo?.programs?.length > 0) {
+                                    eventToEdit.targetType = 'program';
+                                    eventToEdit.targetIds = event.assignTo.programs.map(String);
+                                  } else if (event.assignTo?.divisions?.length > 0) {
+                                    eventToEdit.targetType = 'division';
+                                    eventToEdit.targetIds = event.assignTo.divisions.map(String);
+                                  } else if (event.assignTo?.users?.length > 0) {
+                                    eventToEdit.targetType = 'user';
+                                    eventToEdit.targetIds = event.assignTo.users.map(String);
+                                  } else if (event.assignTo?.roles?.length > 0) {
+                                    eventToEdit.targetType = 'role';
+                                    eventToEdit.targetIds = event.assignTo.roles.map(String);
+                                  } else if (event.targetType) {
+                                    if (event.targetId) eventToEdit.targetId = String(event.targetId);
+                                  } else {
+                                    eventToEdit.targetType = 'all';
+                                  }
+                                  setEditLocationType(eventToEdit.location === 'Online' ? 'online' : 'physical');
+                                  setEditingEvent(eventToEdit);
+                                }}>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           ))}
                           {dayEvents.length > 3 && (
                             <div className="text-xs text-gray-500 pl-1">

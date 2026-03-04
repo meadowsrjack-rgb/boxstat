@@ -58,6 +58,7 @@ import {
   Medal,
   CalendarCheck,
   Camera,
+  X,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar as ShadcnCalendar } from "@/components/ui/calendar";
@@ -1571,6 +1572,11 @@ export default function UnifiedAccount() {
   const [selectedStorePlayer, setSelectedStorePlayer] = useState<string>("");
   const [selectedStoreCategory, setSelectedStoreCategory] = useState<string>("");
   
+  // Enrollment banner dismissed state
+  const [enrollBannerDismissed, setEnrollBannerDismissed] = useState(() => {
+    try { return localStorage.getItem("dismissed_enrollment_banner") === "true"; } catch { return false; }
+  });
+
   // Settings drawer state
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
   const parentPhotoInputRef = useRef<HTMLInputElement>(null);
@@ -1742,7 +1748,7 @@ export default function UnifiedAccount() {
   });
 
   // Fetch player enrollments
-  const { data: playerEnrollments = [] } = useQuery<any[]>({
+  const { data: playerEnrollments = [], isLoading: enrollmentsLoading } = useQuery<any[]>({
     queryKey: ["/api/enrollments"],
   });
 
@@ -1941,6 +1947,57 @@ export default function UnifiedAccount() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Announcement Banner */}
         <AnnouncementBanner />
+
+        {/* Enrollment/Player Setup Banner */}
+        {!enrollBannerDismissed && !playersLoading && !enrollmentsLoading && parentDashTab === "home" && (() => {
+          const hasPlayers = players && players.length > 0;
+          const hasActiveEnrollment = hasPlayers && playerEnrollments.some((e: any) => e.status === 'active');
+          if (hasActiveEnrollment) return null;
+
+          const isNoPlayers = !hasPlayers;
+          const bannerTitle = isNoPlayers ? "Get started by adding your player" : "Enroll your player in a program";
+          const bannerDesc = isNoPlayers
+            ? "Add your child's profile so you can manage their schedule, track progress, and stay connected with their team."
+            : "Your player isn't enrolled in any programs yet. Browse available programs and get them signed up.";
+          const buttonLabel = isNoPlayers ? "Add Player" : "Browse Programs";
+
+          return (
+            <div className="mb-4 relative flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4" data-testid="enrollment-banner">
+              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-red-900 text-sm">{bannerTitle}</p>
+                <p className="text-red-700 text-xs mt-1">{bannerDesc}</p>
+                <Button
+                  size="sm"
+                  className="mt-3 bg-red-600 hover:bg-red-700 text-white"
+                  onClick={() => {
+                    if (isNoPlayers) {
+                      setSettingsDrawerOpen(true);
+                    } else {
+                      setParentDashTab("payments");
+                    }
+                  }}
+                  data-testid="enrollment-banner-action"
+                >
+                  {isNoPlayers ? <UserPlus className="w-4 h-4 mr-2" /> : <ShoppingBag className="w-4 h-4 mr-2" />}
+                  {buttonLabel}
+                </Button>
+              </div>
+              <button
+                onClick={() => {
+                  setEnrollBannerDismissed(true);
+                  try { localStorage.setItem("dismissed_enrollment_banner", "true"); } catch {}
+                }}
+                className="shrink-0 rounded-full p-1 text-red-400 hover:text-red-600 hover:bg-red-100 transition-colors"
+                aria-label="Dismiss"
+                data-testid="enrollment-banner-dismiss"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          );
+        })()}
+
         <Tabs value={parentDashTab} onValueChange={setParentDashTab}>
           <div ref={tabsRef} className="overflow-x-auto hide-scrollbar drag-scroll mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex w-auto min-w-full sm:w-auto bg-transparent border-b border-gray-200 rounded-none p-0 h-auto gap-0">

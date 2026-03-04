@@ -1587,6 +1587,16 @@ export default function UnifiedAccount() {
 
   useEffect(() => {
     if (shouldOpenPayment) {
+      try {
+        const pending = localStorage.getItem("pendingPayment");
+        if (pending) {
+          const { packageId, pricingOptionId, addOns } = JSON.parse(pending);
+          if (packageId) setSelectedPackage(packageId);
+          if (pricingOptionId) setSelectedPricingOptionId(pricingOptionId);
+          if (addOns) setSelectedAddOns(addOns);
+          localStorage.removeItem("pendingPayment");
+        }
+      } catch {}
       setPaymentDialogOpen(true);
       window.history.replaceState({}, '', window.location.pathname);
     }
@@ -2623,6 +2633,13 @@ export default function UnifiedAccount() {
                               <label className="text-sm font-medium">Player *</label>
                               <Select value={selectedPlayer} onValueChange={(val) => {
                                 if (val === "__add_new__") {
+                                  try {
+                                    localStorage.setItem("pendingPayment", JSON.stringify({
+                                      packageId: selectedPackage,
+                                      pricingOptionId: selectedPricingOptionId,
+                                      addOns: selectedAddOns,
+                                    }));
+                                  } catch {}
                                   setPaymentDialogOpen(false);
                                   setLocation("/add-player?returnTo=payments");
                                 } else {

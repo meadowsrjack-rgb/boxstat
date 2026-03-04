@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Shield, ChevronRight, Settings, LogOut, Crown, Bug } from "lucide-react";
+import { User, Shield, ChevronRight, Settings, LogOut, Crown, Bug, ArrowDown } from "lucide-react";
 import { BanterLoader } from "@/components/BanterLoader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,6 +75,13 @@ export default function ProfileGateway() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: enrollments = [] } = useQuery<any[]>({
+    queryKey: ["/api/enrollments"],
+    enabled: !!user,
+  });
+
+  const hasActiveEnrollment = enrollments.some((e: any) => e.status === 'active');
+  const needsOnboarding = !isLoading && !playersLoading && !profilesLoading && user && !hasActiveEnrollment;
 
   if (isLoading || playersLoading || profilesLoading) {
     return (
@@ -186,10 +193,20 @@ export default function ProfileGateway() {
             <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-who-is-watching">Whose ball?</h1>
           </div>
 
+        {needsOnboarding && (
+          <div className="mb-4 rounded-xl bg-gradient-to-r from-red-600/20 to-red-500/10 border border-red-500/30 px-4 py-3 flex items-center gap-3" data-testid="gateway-onboarding-banner">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white">Tap your profile below to get started</p>
+              <p className="text-xs text-gray-400 mt-0.5">Select your account, then head to the Payments tab to enroll in a program.</p>
+            </div>
+            <ArrowDown className="w-5 h-5 text-red-400 animate-bounce flex-shrink-0" />
+          </div>
+        )}
+
         <div className="space-y-4">
           {/* Account Card - styled like other profiles */}
           <Card 
-            className="bg-gray-800/50 border-gray-700 hover:bg-gray-800 transition-all cursor-pointer group"
+            className={`bg-gray-800/50 border-gray-700 hover:bg-gray-800 transition-all cursor-pointer group ${needsOnboarding ? 'shimmer-effect ring-2 ring-red-500/60' : ''}`}
             onClick={() => handleSelectProfile("account")}
             data-testid="card-account-profile"
           >

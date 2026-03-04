@@ -1572,10 +1572,6 @@ export default function UnifiedAccount() {
   const [selectedStorePlayer, setSelectedStorePlayer] = useState<string>("");
   const [selectedStoreCategory, setSelectedStoreCategory] = useState<string>("");
   
-  const [enrollmentBannerDismissed, setEnrollmentBannerDismissed] = useState(() => {
-    try { return localStorage.getItem("dismissed_enrollment_banner") === "true"; } catch { return false; }
-  });
-
   // Settings drawer state
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
   const parentPhotoInputRef = useRef<HTMLInputElement>(null);
@@ -1947,58 +1943,6 @@ export default function UnifiedAccount() {
         {/* Announcement Banner */}
         <AnnouncementBanner />
 
-        {!enrollmentBannerDismissed && !enrollmentsLoading && parentDashTab === "home" && (() => {
-          const noPlayers = !playersLoading && players.length === 0;
-          const hasPlayersNoEnrollment = players.length > 0 && !playerEnrollments.some((e: any) => e.status === 'active');
-          if (!noPlayers && !hasPlayersNoEnrollment) return null;
-          return (
-            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex items-start gap-3" data-testid="enrollment-status-banner">
-              <div className="mt-0.5 flex-shrink-0 w-9 h-9 rounded-full bg-red-100 flex items-center justify-center">
-                {noPlayers ? <UserPlus className="w-5 h-5 text-red-600" /> : <DollarSign className="w-5 h-5 text-red-600" />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900">
-                  {noPlayers ? "Get started by adding your player" : "Enroll your player in a program"}
-                </p>
-                <p className="text-xs text-gray-600 mt-0.5">
-                  {noPlayers
-                    ? "Add a player to your account so you can browse programs and get enrolled."
-                    : "Head to the Payments tab to browse available programs and complete enrollment."}
-                </p>
-                <Button
-                  size="sm"
-                  className="mt-2 bg-red-600 hover:bg-red-700 text-white h-8 text-xs"
-                  onClick={() => {
-                    if (noPlayers) {
-                      setSettingsDrawerOpen(true);
-                    } else {
-                      setParentDashTab("payments");
-                    }
-                  }}
-                  data-testid="enrollment-banner-action"
-                >
-                  {noPlayers ? (
-                    <><UserPlus className="w-3.5 h-3.5 mr-1.5" />Add Player</>
-                  ) : (
-                    <><DollarSign className="w-3.5 h-3.5 mr-1.5" />Go to Payments</>
-                  )}
-                </Button>
-              </div>
-              <button
-                onClick={() => {
-                  setEnrollmentBannerDismissed(true);
-                  try { localStorage.setItem("dismissed_enrollment_banner", "true"); } catch {}
-                }}
-                className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors mt-0.5"
-                aria-label="Dismiss"
-                data-testid="enrollment-banner-dismiss"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          );
-        })()}
-
         <Tabs value={parentDashTab} onValueChange={setParentDashTab}>
           <div ref={tabsRef} className="overflow-x-auto hide-scrollbar drag-scroll mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex w-auto min-w-full sm:w-auto bg-transparent border-b border-gray-200 rounded-none p-0 h-auto gap-0">
@@ -2006,7 +1950,7 @@ export default function UnifiedAccount() {
                 <User className="w-4 h-4 mr-2" />
                 Home
               </TabsTrigger>
-              <TabsTrigger value="payments" data-testid="tab-payments" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+              <TabsTrigger value="payments" data-testid="tab-payments" className={`rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 ${!enrollmentsLoading && !playerEnrollments.some((e: any) => e.status === 'active') ? 'shimmer-effect ring-1 ring-red-400/50 rounded-lg' : ''}`}>
                 <DollarSign className="w-4 h-4 mr-2" />
                 Payments
               </TabsTrigger>

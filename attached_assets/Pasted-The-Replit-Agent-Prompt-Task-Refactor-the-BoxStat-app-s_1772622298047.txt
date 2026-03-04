@@ -1,0 +1,34 @@
+The Replit Agent Prompt
+
+Task: Refactor the BoxStat app's payment system to use Stripe Connect (Destination Charges) instead of requiring manual API keys from club owners.
+
+Current State: Club owners manually enter their Stripe API keys into their organization settings.
+
+Target State:
+
+Central Account: Use the existing 'UYP' Stripe API keys (already in Secrets) as the main Platform Account. This account will process all transactions.
+
+Club Onboarding: Remove the "API Key" input field from the Club/Owner settings. Replace it with a "Connect with Stripe" button that initiates the Stripe Connect Express onboarding flow.
+
+Database Change: Update the Organization/Club schema to store a stripe_connected_id (the acct_xxx ID) instead of private API keys.
+
+Payment Flow: >    - When a customer buys a product, create a PaymentIntent using Destination Charges.
+
+Set the transfer_data[destination] to the specific club's stripe_connected_id.
+
+Set the application_fee_amount to exactly 2% of the total transaction amount.
+
+Webhooks: Ensure there is a webhook listener for account.updated to verify when a club has successfully completed their Stripe onboarding.
+
+Requirement: Do not delete the old API key logic until the new Connect flow is functional. Ensure the UI clearly shows whether a club is "Connected" or "Pending Setup."
+
+Why this prompt works for the Agent:
+Identifies the Role: It specifies Destination Charges, which is the exact technical term for "Platform takes payment, then sends the rest to the owner."
+
+Defines the Fee Logic: By stating the 2% fee as an application_fee_amount, the Agent knows to calculate this on the server side before hitting Stripe.
+
+Security First: It instructs the Agent to stop storing raw API keys (which is a security risk) and instead store a Connect ID, which is safe to keep in your database.
+
+Onboarding Flow: It tells the Agent to use Express Onboarding, which is the fastest way to get your club owners set up without you having to build a complex UI for them.
+
+This diagram illustrates how the funds move from the Customer to the Platform (UYP/BoxStat), how the 2% fee is stripped out, and how the remainder is sent to the Connected Account (Club Owner).

@@ -38,7 +38,7 @@ PostgreSQL, hosted on Neon serverless, is used with Drizzle ORM. The schema is o
 -   **Firebase Cloud Messaging**: For Android push notifications.
 -   **Web Push (VAPID)**: For PWA browser push notifications.
 -   **Resend**: Email service.
--   **Stripe**: Payment processing.
+-   **Stripe / Stripe Connect**: Payment processing via Destination Charges (2% platform fee). Orgs onboard through Stripe Connect Express; payments route through the platform account with `transfer_data.destination`. Legacy per-org API keys still supported as fallback.
 -   **Neon Database**: Serverless PostgreSQL hosting.
 -   **Drizzle ORM**: Database operations.
 -   **Multer**: File uploads.

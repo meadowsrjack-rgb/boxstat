@@ -3008,6 +3008,8 @@ class DatabaseStorage implements IStorage {
       if (updates.stripeSecretKey !== undefined) updateData.stripeSecretKey = updates.stripeSecretKey;
       if (updates.stripePublishableKey !== undefined) updateData.stripePublishableKey = updates.stripePublishableKey;
       if (updates.stripeWebhookSecret !== undefined) updateData.stripeWebhookSecret = updates.stripeWebhookSecret;
+      if (updates.stripeConnectedId !== undefined) updateData.stripeConnectedId = updates.stripeConnectedId;
+      if (updates.stripeConnectStatus !== undefined) updateData.stripeConnectStatus = updates.stripeConnectStatus;
       
       await db.update(schema.organizations)
         .set(updateData)

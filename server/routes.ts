@@ -44,7 +44,7 @@ import { notificationScheduler } from "./services/notificationScheduler";
 import { notificationService } from "./services/notificationService";
 import { db } from "./db";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
-import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards, platformSettings } from "@shared/schema";
+import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards, platformSettings, organizations } from "@shared/schema";
 import { eq, and, or, sql, desc, inArray } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;
@@ -171,8 +171,22 @@ const stripe = process.env.STRIPE_SECRET_KEY
 const stripeOrgCache = new Map<string, { instance: Stripe; key: string; createdAt: number }>();
 const STRIPE_CACHE_TTL = 5 * 60 * 1000;
 
+async function getOrgConnectInfo(organizationId: string): Promise<{ connectedAccountId: string | null; isConnected: boolean }> {
+  try {
+    const org = await storage.getOrganization(organizationId);
+    if (org?.stripeConnectedId && org.stripeConnectStatus === 'active') {
+      return { connectedAccountId: org.stripeConnectedId, isConnected: true };
+    }
+  } catch (e) {}
+  return { connectedAccountId: null, isConnected: false };
+}
+
 async function getStripeForOrg(organizationId: string): Promise<Stripe | null> {
   try {
+    const connectInfo = await getOrgConnectInfo(organizationId);
+    if (connectInfo.isConnected) {
+      return stripe;
+    }
     const cached = stripeOrgCache.get(organizationId);
     if (cached && Date.now() - cached.createdAt < STRIPE_CACHE_TTL) {
       return cached.instance;
@@ -1478,15 +1492,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get origin for URLs
       const origin = `${req.protocol}://${req.get('host')}`;
       
-      // Create Stripe Checkout Session
-      const session = await orgStripe.checkout.sessions.create({
+      const connectInfo1 = await getOrgConnectInfo(req.user.organizationId);
+      const totalAmount1 = lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
+
+      const sessionParams1: any = {
         customer: stripeCustomerId,
         line_items: lineItems,
         mode,
         success_url: `${origin}/payments?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/payments?canceled=true`,
         metadata,
-      });
+      };
+
+      if (connectInfo1.isConnected && connectInfo1.connectedAccountId) {
+        if (mode === 'subscription') {
+          sessionParams1.subscription_data = {
+            application_fee_percent: 2,
+            transfer_data: { destination: connectInfo1.connectedAccountId },
+          };
+        } else {
+          sessionParams1.payment_intent_data = {
+            application_fee_amount: Math.round(totalAmount1 * 0.02),
+            transfer_data: { destination: connectInfo1.connectedAccountId },
+          };
+        }
+      }
+
+      const session = await orgStripe.checkout.sessions.create(sessionParams1);
       
       res.json({
         sessionUrl: session.url,
@@ -1802,7 +1834,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? `boxstat://payment-canceled`
         : `${origin}/unified-account?payment=canceled`;
         
-      const session = await orgStripe2.checkout.sessions.create({
+      const connectInfo = await getOrgConnectInfo(req.user.organizationId);
+      const totalAmount = lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
+
+      const sessionParams: any = {
         customer: stripeCustomerId,
         line_items: lineItems,
         mode: isSubscription ? 'subscription' : 'payment',
@@ -1822,7 +1857,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           durationDays: selectedPricingOption?.durationDays ? String(selectedPricingOption.durationDays) : '',
           quoteId: selectedPricingOption?.quoteId || '',
         },
-      });
+      };
+
+      if (connectInfo.isConnected && connectInfo.connectedAccountId) {
+        if (isSubscription) {
+          sessionParams.subscription_data = {
+            application_fee_percent: 2,
+            transfer_data: {
+              destination: connectInfo.connectedAccountId,
+            },
+          };
+        } else {
+          sessionParams.payment_intent_data = {
+            application_fee_amount: Math.round(totalAmount * 0.02),
+            transfer_data: {
+              destination: connectInfo.connectedAccountId,
+            },
+          };
+        }
+        console.log(`💳 Destination charge: ${connectInfo.connectedAccountId}, fee: 2% of ${totalAmount}`);
+      }
+
+      const session = await orgStripe2.checkout.sessions.create(sessionParams);
       
       res.json({
         url: session.url,
@@ -2215,6 +2271,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ received: true });
       }
       
+      // Handle Stripe Connect account updates
+      if (event.type === 'account.updated') {
+        const account = event.data.object as Stripe.Account;
+        const connectedAccountId = account.id;
+
+        try {
+          const [org] = await db.select().from(organizations).where(eq(organizations.stripeConnectedId, connectedAccountId));
+
+          if (org) {
+            let newStatus = 'pending';
+            if (account.charges_enabled && account.details_submitted) {
+              newStatus = 'active';
+            } else if (account.details_submitted && !account.charges_enabled) {
+              newStatus = 'restricted';
+            }
+
+            if (org.stripeConnectStatus !== newStatus) {
+              await storage.updateOrganization(org.id, {
+                stripeConnectStatus: newStatus,
+              });
+              console.log(`✅ Updated Stripe Connect status for org ${org.id}: ${org.stripeConnectStatus} → ${newStatus}`);
+            }
+          } else {
+            console.log(`ℹ️ account.updated for unknown Connect account: ${connectedAccountId}`);
+          }
+        } catch (connectError: any) {
+          console.error('Error processing account.updated webhook:', connectError);
+        }
+
+        return res.json({ received: true });
+      }
+
       // Handle other event types
       console.log(`ℹ️ Unhandled event type: ${event.type}`);
       res.json({ received: true });
@@ -4210,6 +4298,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, message: 'Stripe settings updated' });
     } catch (error: any) {
       res.status(500).json({ error: 'Failed to update Stripe settings' });
+    }
+  });
+
+  // =============================================
+  // Stripe Connect Routes
+  // =============================================
+
+  app.get('/api/stripe-connect/status', requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(req.user.id, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ error: 'Only admins can view Connect status' });
+      }
+
+      const org = await storage.getOrganization(organizationId);
+      if (!org) return res.status(404).json({ error: 'Organization not found' });
+
+      res.json({
+        connectedAccountId: org.stripeConnectedId ? 'acct_••••' + org.stripeConnectedId.slice(-4) : null,
+        status: org.stripeConnectStatus || 'not_started',
+        isConnected: org.stripeConnectStatus === 'active',
+      });
+    } catch (error: any) {
+      console.error('Error fetching Connect status:', error);
+      res.status(500).json({ error: 'Failed to fetch Connect status' });
+    }
+  });
+
+  app.post('/api/stripe-connect/onboard', requireAuth, async (req: any, res) => {
+    if (!stripe) {
+      return res.status(500).json({ error: 'Platform Stripe is not configured' });
+    }
+
+    try {
+      const { organizationId, role } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(req.user.id, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ error: 'Only admins can set up Stripe Connect' });
+      }
+
+      const org = await storage.getOrganization(organizationId);
+      if (!org) return res.status(404).json({ error: 'Organization not found' });
+
+      let accountId = org.stripeConnectedId;
+
+      if (!accountId) {
+        const account = await stripe.accounts.create({
+          type: 'express',
+          metadata: {
+            organizationId: organizationId,
+            organizationName: org.name || '',
+          },
+        });
+        accountId = account.id;
+
+        await storage.updateOrganization(organizationId, {
+          stripeConnectedId: accountId,
+          stripeConnectStatus: 'pending',
+        });
+        console.log(`✅ Created Stripe Connect account ${accountId} for org ${organizationId}`);
+      }
+
+      const host = req.headers.host || 'localhost:5000';
+      const protocol = req.headers['x-forwarded-proto'] || 'https';
+      const baseUrl = `${protocol}://${host}`;
+
+      const accountLink = await stripe.accountLinks.create({
+        account: accountId,
+        refresh_url: `${baseUrl}/admin?tab=settings&stripe=refresh`,
+        return_url: `${baseUrl}/admin?tab=settings&stripe=connected`,
+        type: 'account_onboarding',
+      });
+
+      res.json({ url: accountLink.url });
+    } catch (error: any) {
+      console.error('Error creating Connect onboarding:', error);
+      res.status(500).json({ error: 'Failed to create onboarding link', message: error.message });
+    }
+  });
+
+  app.get('/api/stripe-connect/login-link', requireAuth, async (req: any, res) => {
+    if (!stripe) {
+      return res.status(500).json({ error: 'Platform Stripe is not configured' });
+    }
+
+    try {
+      const { organizationId, role } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(req.user.id, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ error: 'Only admins can access this' });
+      }
+
+      const org = await storage.getOrganization(organizationId);
+      if (!org?.stripeConnectedId) {
+        return res.status(400).json({ error: 'No connected Stripe account found' });
+      }
+
+      const loginLink = await stripe.accounts.createLoginLink(org.stripeConnectedId);
+      res.json({ url: loginLink.url });
+    } catch (error: any) {
+      console.error('Error creating login link:', error);
+      res.status(500).json({ error: 'Failed to create login link', message: error.message });
     }
   });
 

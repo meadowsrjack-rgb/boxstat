@@ -70,6 +70,8 @@ export const organizations = pgTable("organizations", {
   stripeSecretKey: text("stripe_secret_key"),
   stripePublishableKey: text("stripe_publishable_key"),
   stripeWebhookSecret: text("stripe_webhook_secret"),
+  stripeConnectedId: text("stripe_connected_id"),
+  stripeConnectStatus: text("stripe_connect_status").default("not_started"),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 });

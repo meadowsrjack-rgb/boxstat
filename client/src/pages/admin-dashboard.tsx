@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { authPersistence } from "@/services/authPersistence";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BanterLoader } from "@/components/BanterLoader";
 import { Button } from "@/components/ui/button";
@@ -5589,7 +5590,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
             <TableBody>
               {(() => {
                 const sortedEvents = [...events].sort((a: any, b: any) => 
-                  new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+                  new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
                 );
                 
                 return sortedEvents.map((event: any) => {
@@ -12063,19 +12064,14 @@ function SettingsTab({ organization }: any) {
   const handleSignOut = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-      // Clear auth token from storage
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('userData');
-      queryClient.clear();
-      // Use window.location for full page reload to clear all state
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Logout error:", error);
-      // Still try to logout even if API fails
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('userData');
-      window.location.href = "/";
+    } catch (e) {
     }
+    await authPersistence.clearAll();
+    localStorage.removeItem('selectedPlayerId');
+    localStorage.removeItem('viewingAsParent');
+    localStorage.removeItem('lastViewedProfileType');
+    queryClient.clear();
+    window.location.href = "/";
   };
 
   return (

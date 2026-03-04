@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@babel/traverse": "^7.28.5",
+    "@capacitor/android": "^7.5.0",
     "@capacitor/app": "^7.1.0",
     "@capacitor/browser": "^7.0.3",
     "@capacitor/cli": "^7.4.4",

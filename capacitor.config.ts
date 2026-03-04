@@ -15,8 +15,10 @@ const config: CapacitorConfig = {
     cleartext: false,
   },
   ios: {
-    // 'never' allows app to go full-bleed behind notch, letting CSS env() handle safe areas
     contentInset: 'never',
+  },
+  android: {
+    backgroundColor: '#ffffff',
   },
   plugins: {
     StatusBar: {

@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Shield, ChevronRight, Settings, UserPlus, LogOut, Crown, Bug } from "lucide-react";
+import { User, Shield, ChevronRight, Settings, LogOut, Crown, Bug } from "lucide-react";
 import { BanterLoader } from "@/components/BanterLoader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -74,6 +74,7 @@ export default function ProfileGateway() {
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
   });
+
 
   if (isLoading || playersLoading || profilesLoading) {
     return (
@@ -367,16 +368,6 @@ export default function ProfileGateway() {
             );
           })}
 
-          {/* Add Player Button - always visible */}
-          <div className="flex flex-col items-center gap-4 pt-4">
-            <button
-              onClick={() => setLocation("/add-player")}
-              className="relative w-20 h-20 flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-700 hover:ring-2 hover:ring-gray-600 transition-all group"
-              data-testid="button-add-player-icon"
-            >
-              <UserPlus className="w-8 h-8 text-gray-500" />
-            </button>
-          </div>
         </div>
         </div>
       </div>
@@ -434,6 +425,7 @@ export default function ProfileGateway() {
           </div>
         </DialogContent>
       </Dialog>
+
       </div>
     </>
   );

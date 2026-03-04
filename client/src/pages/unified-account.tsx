@@ -1572,8 +1572,7 @@ export default function UnifiedAccount() {
   const [selectedStorePlayer, setSelectedStorePlayer] = useState<string>("");
   const [selectedStoreCategory, setSelectedStoreCategory] = useState<string>("");
   
-  // Enrollment banner dismissed state
-  const [enrollBannerDismissed, setEnrollBannerDismissed] = useState(() => {
+  const [enrollmentBannerDismissed, setEnrollmentBannerDismissed] = useState(() => {
     try { return localStorage.getItem("dismissed_enrollment_banner") === "true"; } catch { return false; }
   });
 
@@ -1948,30 +1947,29 @@ export default function UnifiedAccount() {
         {/* Announcement Banner */}
         <AnnouncementBanner />
 
-        {/* Enrollment/Player Setup Banner */}
-        {!enrollBannerDismissed && !playersLoading && !enrollmentsLoading && parentDashTab === "home" && (() => {
-          const hasPlayers = players && players.length > 0;
-          const hasActiveEnrollment = hasPlayers && playerEnrollments.some((e: any) => e.status === 'active');
-          if (hasActiveEnrollment) return null;
-
-          const isNoPlayers = !hasPlayers;
-          const bannerTitle = isNoPlayers ? "Get started by adding your player" : "Enroll your player in a program";
-          const bannerDesc = isNoPlayers
-            ? "Add your child's profile so you can manage their schedule, track progress, and stay connected with their team."
-            : "Your player isn't enrolled in any programs yet. Browse available programs and get them signed up.";
-          const buttonLabel = isNoPlayers ? "Add Player" : "Browse Programs";
-
+        {!enrollmentBannerDismissed && !enrollmentsLoading && parentDashTab === "home" && (() => {
+          const noPlayers = !playersLoading && players.length === 0;
+          const hasPlayersNoEnrollment = players.length > 0 && !playerEnrollments.some((e: any) => e.status === 'active');
+          if (!noPlayers && !hasPlayersNoEnrollment) return null;
           return (
-            <div className="mb-4 relative flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4" data-testid="enrollment-banner">
-              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex items-start gap-3" data-testid="enrollment-status-banner">
+              <div className="mt-0.5 flex-shrink-0 w-9 h-9 rounded-full bg-red-100 flex items-center justify-center">
+                {noPlayers ? <UserPlus className="w-5 h-5 text-red-600" /> : <DollarSign className="w-5 h-5 text-red-600" />}
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-red-900 text-sm">{bannerTitle}</p>
-                <p className="text-red-700 text-xs mt-1">{bannerDesc}</p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {noPlayers ? "Get started by adding your player" : "Enroll your player in a program"}
+                </p>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  {noPlayers
+                    ? "Add a player to your account so you can browse programs and get enrolled."
+                    : "Head to the Payments tab to browse available programs and complete enrollment."}
+                </p>
                 <Button
                   size="sm"
-                  className="mt-3 bg-red-600 hover:bg-red-700 text-white"
+                  className="mt-2 bg-red-600 hover:bg-red-700 text-white h-8 text-xs"
                   onClick={() => {
-                    if (isNoPlayers) {
+                    if (noPlayers) {
                       setSettingsDrawerOpen(true);
                     } else {
                       setParentDashTab("payments");
@@ -1979,16 +1977,19 @@ export default function UnifiedAccount() {
                   }}
                   data-testid="enrollment-banner-action"
                 >
-                  {isNoPlayers ? <UserPlus className="w-4 h-4 mr-2" /> : <ShoppingBag className="w-4 h-4 mr-2" />}
-                  {buttonLabel}
+                  {noPlayers ? (
+                    <><UserPlus className="w-3.5 h-3.5 mr-1.5" />Add Player</>
+                  ) : (
+                    <><DollarSign className="w-3.5 h-3.5 mr-1.5" />Go to Payments</>
+                  )}
                 </Button>
               </div>
               <button
                 onClick={() => {
-                  setEnrollBannerDismissed(true);
+                  setEnrollmentBannerDismissed(true);
                   try { localStorage.setItem("dismissed_enrollment_banner", "true"); } catch {}
                 }}
-                className="shrink-0 rounded-full p-1 text-red-400 hover:text-red-600 hover:bg-red-100 transition-colors"
+                className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors mt-0.5"
                 aria-label="Dismiss"
                 data-testid="enrollment-banner-dismiss"
               >
@@ -2656,33 +2657,31 @@ export default function UnifiedAccount() {
                           return (
                             <div className="space-y-2">
                               <label className="text-sm font-medium">Player *</label>
-                              <div className="flex gap-2">
-                                <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
-                                  <SelectTrigger data-testid="select-player" className="flex-1">
-                                    <SelectValue placeholder="Select a player" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {players?.map((player: any) => (
-                                      <SelectItem key={player.id} value={player.id} data-testid={`player-option-${player.id}`}>
-                                        {player.firstName} {player.lastName}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => {
-                                    setPaymentDialogOpen(false);
-                                    window.location.href = "/add-player";
-                                  }}
-                                  data-testid="button-add-new-player"
-                                  title="Add new player"
-                                >
-                                  <UserPlus className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              <Select value={selectedPlayer} onValueChange={(val) => {
+                                if (val === "__add_new__") {
+                                  setPaymentDialogOpen(false);
+                                  window.location.href = "/add-player";
+                                } else {
+                                  setSelectedPlayer(val);
+                                }
+                              }}>
+                                <SelectTrigger data-testid="select-player">
+                                  <SelectValue placeholder="Select a player" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {players?.map((player: any) => (
+                                    <SelectItem key={player.id} value={player.id} data-testid={`player-option-${player.id}`}>
+                                      {player.firstName} {player.lastName}
+                                    </SelectItem>
+                                  ))}
+                                  <SelectItem value="__add_new__" data-testid="player-option-add-new">
+                                    <span className="flex items-center gap-2 text-red-600 font-medium">
+                                      <UserPlus className="w-4 h-4" />
+                                      Add New Player
+                                    </span>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
                               <p className="text-xs text-gray-600">
                                 This is a per-player program. Select which player this payment is for.
                               </p>
@@ -3364,6 +3363,7 @@ export default function UnifiedAccount() {
         open={coachProfileOpen}
         onOpenChange={(open) => { setCoachProfileOpen(open); if (!open) setCoachProfileId(null); }}
       />
+
       </div>
     </>
   );

@@ -88,6 +88,7 @@ type Waiver = {
 export default function AddPlayer() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const returnTo = new URLSearchParams(window.location.search).get("returnTo");
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [playerData, setPlayerData] = useState<{
@@ -174,10 +175,16 @@ export default function AddPlayer() {
       
       toast({
         title: "Player Added!",
-        description: "Player has been successfully added. You can enroll them in programs from the Payments section.",
+        description: returnTo === "payments"
+          ? "Player added! Returning to make a payment..."
+          : "Player has been successfully added. You can enroll them in programs from the Payments section.",
       });
       setTimeout(() => {
-        setLocation("/unified-account");
+        if (returnTo === "payments") {
+          setLocation("/unified-account?tab=payments&openPayment=true");
+        } else {
+          setLocation("/unified-account");
+        }
       }, 1000);
     },
     onError: (error: any) => {

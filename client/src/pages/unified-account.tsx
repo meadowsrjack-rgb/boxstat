@@ -1579,7 +1579,18 @@ export default function UnifiedAccount() {
   
   const [coachProfileId, setCoachProfileId] = useState<string | null>(null);
   const [coachProfileOpen, setCoachProfileOpen] = useState(false);
-  const [parentDashTab, setParentDashTab] = useState("home");
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialTab = urlParams.get("tab") || "home";
+  const shouldOpenPayment = urlParams.get("openPayment") === "true";
+  const [parentDashTab, setParentDashTab] = useState(initialTab);
+
+  useEffect(() => {
+    if (shouldOpenPayment) {
+      setPaymentDialogOpen(true);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [shouldOpenPayment]);
 
   // Schedule request state - inline booking within active programs
   const [schedulingEnrollment, setSchedulingEnrollment] = useState<string | null>(null);
@@ -1943,6 +1954,15 @@ export default function UnifiedAccount() {
         {/* Announcement Banner */}
         <AnnouncementBanner />
 
+        {!enrollmentsLoading && !playerEnrollments.some((e: any) => e.status === 'active') && parentDashTab !== "payments" && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex items-center gap-3" data-testid="payments-guide-banner">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+              <DollarSign className="w-4 h-4 text-red-600" />
+            </div>
+            <p className="text-sm text-gray-700 flex-1">Tap <button onClick={() => setParentDashTab("payments")} className="font-semibold text-red-600 underline underline-offset-2">Payments</button> to select a program and enroll your player.</p>
+          </div>
+        )}
+
         <Tabs value={parentDashTab} onValueChange={setParentDashTab}>
           <div ref={tabsRef} className="overflow-x-auto hide-scrollbar drag-scroll mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex w-auto min-w-full sm:w-auto bg-transparent border-b border-gray-200 rounded-none p-0 h-auto gap-0">
@@ -1950,9 +1970,9 @@ export default function UnifiedAccount() {
                 <User className="w-4 h-4 mr-2" />
                 Home
               </TabsTrigger>
-              <TabsTrigger value="payments" data-testid="tab-payments" className={`rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 ${!enrollmentsLoading && !playerEnrollments.some((e: any) => e.status === 'active') ? 'shimmer-effect ring-1 ring-red-400/50 rounded-lg' : ''}`}>
+              <TabsTrigger value="payments" data-testid="tab-payments" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <DollarSign className="w-4 h-4 mr-2" />
-                Payments
+                <span className={!enrollmentsLoading && !playerEnrollments.some((e: any) => e.status === 'active') ? 'shimmer-text' : ''}>Payments</span>
               </TabsTrigger>
               <TabsTrigger value="messages" data-testid="tab-messages" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <MessageSquare className="w-4 h-4 mr-2" />
@@ -2604,7 +2624,7 @@ export default function UnifiedAccount() {
                               <Select value={selectedPlayer} onValueChange={(val) => {
                                 if (val === "__add_new__") {
                                   setPaymentDialogOpen(false);
-                                  window.location.href = "/add-player";
+                                  setLocation("/add-player?returnTo=payments");
                                 } else {
                                   setSelectedPlayer(val);
                                 }

@@ -3126,7 +3126,6 @@ class DatabaseStorage implements IStorage {
   }
 
   async getAccountProfiles(accountId: string): Promise<User[]> {
-    // Get the parent account
     const parentResults = await db.select().from(schema.users).where(
       and(
         eq(schema.users.id, accountId),
@@ -3134,16 +3133,25 @@ class DatabaseStorage implements IStorage {
       )
     );
     
-    // Get all child profiles where parentId (accountHolderId) matches
     const childResults = await db.select().from(schema.users).where(
       and(
-        eq(schema.users.parentId, accountId),
+        or(
+          eq(schema.users.parentId, accountId),
+          eq(schema.users.accountHolderId, accountId)
+        ),
         eq(schema.users.isActive, true)
       )
     );
     
     const parent = parentResults.length > 0 ? this.mapDbUserToUser(parentResults[0]) : null;
-    const children = childResults.map(user => this.mapDbUserToUser(user));
+    const seen = new Set<string>();
+    const children: User[] = [];
+    for (const row of childResults) {
+      if (row.id !== accountId && !seen.has(row.id)) {
+        seen.add(row.id);
+        children.push(this.mapDbUserToUser(row));
+      }
+    }
     
     return parent ? [parent, ...children] : children;
   }

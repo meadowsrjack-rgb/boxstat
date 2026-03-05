@@ -1069,12 +1069,43 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     }
   };
 
-  // Sort users based on current sort field and direction
+  const getDisplayEmail = (user: any) => {
+    if (user.email) return user.email;
+    if (user.role === 'player') {
+      const holderId = user.accountHolderId || user.parentId;
+      if (holderId) {
+        const holder = users.find((u: any) => u.id === holderId);
+        if (holder?.email) return holder.email;
+      }
+    }
+    return '';
+  };
+
+  const getDisplayPhone = (user: any) => {
+    if (user.role === 'player') {
+      const holderId = user.accountHolderId || user.parentId;
+      if (holderId) {
+        const holder = users.find((u: any) => u.id === holderId);
+        if (holder?.phoneNumber || holder?.phone) return holder.phoneNumber || holder.phone;
+      }
+    }
+    return user.phoneNumber || user.phone || '';
+  };
+
   const sortedUsers = sortField ? [...users].sort((a, b) => {
     let aValue = a[sortField];
     let bValue = b[sortField];
 
-    // Handle special cases
+    if (sortField === 'email') {
+      aValue = getDisplayEmail(a);
+      bValue = getDisplayEmail(b);
+    }
+
+    if (sortField === 'phoneNumber') {
+      aValue = getDisplayPhone(a);
+      bValue = getDisplayPhone(b);
+    }
+
     if (sortField === 'team') {
       const aTeam = teams.find((t: any) => t.id === a.teamId);
       const bTeam = teams.find((t: any) => t.id === b.teamId);
@@ -1104,11 +1135,9 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
       bValue = b.isActive !== false ? 1 : 0;
     }
 
-    // Handle null/undefined values
     if (aValue == null) aValue = '';
     if (bValue == null) bValue = '';
 
-    // Convert to strings for comparison if needed
     const aStr = typeof aValue === 'string' ? aValue.toLowerCase() : aValue;
     const bStr = typeof bValue === 'string' ? bValue.toLowerCase() : bValue;
 
@@ -1922,27 +1951,27 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('firstName')}
                   data-testid="sort-name"
-                >Name</TableHead>
+                >Name {sortField === 'firstName' && (sortDirection === 'asc' ? '↑' : '↓')}</TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('email')}
                   data-testid="sort-email"
                 >
-                  Email
+                  Email {sortField === 'email' && (sortDirection === 'asc' ? '↑' : '↓')}
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('phoneNumber')}
                   data-testid="sort-phoneNumber"
                 >
-                  Phone
+                  Phone {sortField === 'phoneNumber' && (sortDirection === 'asc' ? '↑' : '↓')}
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('role')}
                   data-testid="sort-role"
                 >
-                  Role
+                  Role {sortField === 'role' && (sortDirection === 'asc' ? '↑' : '↓')}
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
@@ -4022,6 +4051,17 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [deleteConfirmEvent, setDeleteConfirmEvent] = useState<any>(null);
+  const [eventSortField, setEventSortField] = useState<string | null>(null);
+  const [eventSortDirection, setEventSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleEventSort = (field: string) => {
+    if (eventSortField === field) {
+      setEventSortDirection(eventSortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setEventSortField(field);
+      setEventSortDirection('asc');
+    }
+  };
 
   const bulkDeleteEvents = useMutation({
     mutationFn: async (ids: number[]) => {
@@ -5583,19 +5623,44 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                     aria-label="Select all events"
                   />
                 </TableHead>
-                <TableHead>Event</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Date & Time</TableHead>
-                <TableHead>Location</TableHead>
+                <TableHead className="cursor-pointer select-none hover:bg-gray-100" onClick={() => handleEventSort('title')}>
+                  Event {eventSortField === 'title' && (eventSortDirection === 'asc' ? '↑' : '↓')}
+                </TableHead>
+                <TableHead className="cursor-pointer select-none hover:bg-gray-100" onClick={() => handleEventSort('type')}>
+                  Type {eventSortField === 'type' && (eventSortDirection === 'asc' ? '↑' : '↓')}
+                </TableHead>
+                <TableHead className="cursor-pointer select-none hover:bg-gray-100" onClick={() => handleEventSort('startTime')}>
+                  Date & Time {eventSortField === 'startTime' && (eventSortDirection === 'asc' ? '↑' : '↓')}
+                </TableHead>
+                <TableHead className="cursor-pointer select-none hover:bg-gray-100" onClick={() => handleEventSort('location')}>
+                  Location {eventSortField === 'location' && (eventSortDirection === 'asc' ? '↑' : '↓')}
+                </TableHead>
                 <TableHead>For</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {(() => {
-                const sortedEvents = [...events].sort((a: any, b: any) => 
-                  new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
-                );
+                const sortedEvents = [...events].sort((a: any, b: any) => {
+                  const field = eventSortField;
+                  if (!field) {
+                    return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+                  }
+                  let aVal = a[field];
+                  let bVal = b[field];
+                  if (field === 'startTime') {
+                    const aTime = new Date(aVal || 0).getTime();
+                    const bTime = new Date(bVal || 0).getTime();
+                    return eventSortDirection === 'asc' ? aTime - bTime : bTime - aTime;
+                  }
+                  if (aVal == null) aVal = '';
+                  if (bVal == null) bVal = '';
+                  const aStr = typeof aVal === 'string' ? aVal.toLowerCase() : aVal;
+                  const bStr = typeof bVal === 'string' ? bVal.toLowerCase() : bVal;
+                  if (aStr < bStr) return eventSortDirection === 'asc' ? -1 : 1;
+                  if (aStr > bStr) return eventSortDirection === 'asc' ? 1 : -1;
+                  return 0;
+                });
                 const totalEventsPages = Math.max(1, Math.ceil(sortedEvents.length / EVENTS_PAGE_SIZE));
                 const safeEventsPage = Math.min(eventsPage, totalEventsPages);
                 const startIdx = (safeEventsPage - 1) * EVENTS_PAGE_SIZE;

@@ -2172,10 +2172,20 @@ function SaveProfile({
         data: payload,
       });
     },
+    onMutate: async (payload: any) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/profile", profileId] });
+      await queryClient.cancelQueries({ queryKey: ["/api/auth/user"] });
+      const previousProfile = queryClient.getQueryData(["/api/profile", profileId]);
+      const previousAuth = queryClient.getQueryData(["/api/auth/user"]);
+      queryClient.setQueryData(["/api/profile", profileId], (old: any) => old ? { ...old, ...payload } : old);
+      queryClient.setQueryData(["/api/auth/user"], (old: any) => {
+        if (old && String(old.id) === String(profileId)) return { ...old, ...payload };
+        return old;
+      });
+      return { previousProfile, previousAuth };
+    },
     onSuccess: () => {
       toast({ title: "Profile updated", description: "Changes saved." });
-      // Invalidate all profile-related queries to force refresh
-      // Use both string format and array format to ensure all queries are invalidated
       queryClient.invalidateQueries({ queryKey: [`/api/profile/${profileId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/profile", profileId] });
       queryClient.invalidateQueries({ queryKey: [`/api/profile/${currentUser.id}`] });
@@ -2183,9 +2193,18 @@ function SaveProfile({
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/child-profiles", currentUser.id] });
       queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/account/profiles"] });
       setIsEditingProfile(false);
     },
-    onError: (e) => toast({ title: "Save failed", description: String(e), variant: "destructive" }),
+    onError: (e, _payload, context) => {
+      if (context?.previousProfile) {
+        queryClient.setQueryData(["/api/profile", profileId], context.previousProfile);
+      }
+      if (context?.previousAuth) {
+        queryClient.setQueryData(["/api/auth/user"], context.previousAuth);
+      }
+      toast({ title: "Save failed", description: String(e), variant: "destructive" });
+    },
   });
 
   return (

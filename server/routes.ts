@@ -10538,7 +10538,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         coachId: latest.coachId,
         quarter: latest.quarter,
         year: latest.year,
-        skillsData: latest.scores, // Map scores to skillsData for frontend compatibility
+        skillsData: latest.scores,
+        previousScores: latest.previousScores || [],
         notes: latest.notes,
         createdAt: latest.createdAt,
       });

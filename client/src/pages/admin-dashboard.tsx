@@ -2744,16 +2744,69 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                 <AccordionContent>
                                   {evaluation.scores && Object.keys(evaluation.scores).length > 0 && (
                                     <div className="grid grid-cols-2 gap-2 py-3">
-                                      {Object.entries(evaluation.scores).map(([category, score]: [string, any]) => (
-                                        <div key={category} className="flex justify-between items-center text-sm">
-                                          <span className="text-gray-600 capitalize">{category.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                          <Badge variant={score >= 4 ? "default" : "secondary"} className="text-xs">{score}/5</Badge>
-                                        </div>
-                                      ))}
+                                      {Object.entries(evaluation.scores).map(([category, score]: [string, any]) => {
+                                        let prevScore: number | null = null;
+                                        if (evaluation.previousScores && Array.isArray(evaluation.previousScores) && evaluation.previousScores.length > 0) {
+                                          const lastSnapshot = evaluation.previousScores[evaluation.previousScores.length - 1];
+                                          if (lastSnapshot?.scores?.[category] !== undefined) {
+                                            prevScore = lastSnapshot.scores[category];
+                                          }
+                                        }
+                                        const diff = prevScore !== null ? (score as number) - prevScore : null;
+                                        return (
+                                          <div key={category} className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-600 capitalize">{category.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                            <div className="flex items-center gap-1.5">
+                                              <Badge variant={score >= 4 ? "default" : "secondary"} className="text-xs">{score}/5</Badge>
+                                              {diff !== null && diff !== 0 && (
+                                                <span className={`text-[10px] font-medium ${diff > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                  {diff > 0 ? `+${diff}` : diff}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
                                     </div>
                                   )}
                                   {evaluation.notes && (
                                     <p className="text-sm text-gray-600 bg-gray-50 rounded p-3 mt-2">{evaluation.notes}</p>
+                                  )}
+                                  {evaluation.previousScores && Array.isArray(evaluation.previousScores) && evaluation.previousScores.length > 0 && (
+                                    <div className="mt-3 pt-3 border-t">
+                                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Previous Evaluations</p>
+                                      <div className="space-y-2">
+                                        {[...evaluation.previousScores].reverse().map((snapshot: any, snapIdx: number) => {
+                                          const snapCoach = users.find((u: any) => u.id === snapshot.coachId);
+                                          const snapDate = snapshot.updatedAt ? new Date(snapshot.updatedAt) : null;
+                                          return (
+                                            <div key={snapIdx} className="bg-gray-50 rounded-lg p-3">
+                                              <div className="flex justify-between items-center mb-2">
+                                                <span className="text-xs font-medium text-gray-500">
+                                                  {snapCoach ? `${snapCoach.firstName} ${snapCoach.lastName}` : 'Coach'}
+                                                </span>
+                                                <span className="text-[10px] text-gray-400">
+                                                  {snapDate ? format(snapDate, 'MMM d, yyyy') : ''}
+                                                </span>
+                                              </div>
+                                              {snapshot.scores && (
+                                                <div className="grid grid-cols-2 gap-1">
+                                                  {Object.entries(snapshot.scores).map(([cat, sc]: [string, any]) => (
+                                                    <div key={cat} className="flex justify-between items-center text-xs">
+                                                      <span className="text-gray-500 capitalize">{cat.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                                      <span className="text-gray-600">{sc}/5</span>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              )}
+                                              {snapshot.notes && (
+                                                <p className="text-xs text-gray-500 mt-1">{snapshot.notes}</p>
+                                              )}
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
                                   )}
                                 </AccordionContent>
                               </AccordionItem>

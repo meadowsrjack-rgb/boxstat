@@ -4626,15 +4626,24 @@ class DatabaseStorage implements IStorage {
   }
 
   async createEvaluation(evaluation: InsertEvaluation): Promise<Evaluation> {
-    // Check if evaluation already exists for this player/quarter/year (upsert logic)
     const existing = await this.getEvaluationByPlayerQuarter(evaluation.playerId, evaluation.quarter, evaluation.year);
     
     if (existing) {
-      // Update existing evaluation
+      const prevHistory = Array.isArray((existing as any).previousScores) ? (existing as any).previousScores : [];
+      const existingUpdatedAt = existing.updatedAt instanceof Date ? existing.updatedAt.toISOString() : (existing.updatedAt || (existing.createdAt instanceof Date ? existing.createdAt.toISOString() : existing.createdAt));
+      const snapshot = {
+        scores: existing.scores,
+        coachId: existing.coachId,
+        notes: existing.notes,
+        updatedAt: existingUpdatedAt,
+      };
+      const updatedHistory = [...prevHistory, snapshot];
+
       const dbUpdates = {
         coachId: evaluation.coachId,
         scores: evaluation.scores,
         notes: evaluation.notes,
+        previousScores: updatedHistory,
         updatedAt: new Date().toISOString(),
       };
 
@@ -5688,6 +5697,7 @@ class DatabaseStorage implements IStorage {
       quarter: dbEvaluation.quarter,
       year: dbEvaluation.year,
       scores: dbEvaluation.scores,
+      previousScores: dbEvaluation.previousScores || [],
       notes: dbEvaluation.notes,
       createdAt: new Date(dbEvaluation.createdAt),
       updatedAt: new Date(dbEvaluation.updatedAt),

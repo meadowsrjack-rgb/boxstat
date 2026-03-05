@@ -846,6 +846,14 @@ function PlayerProfileCard({ player, onCoachClick, onNavigateToPayments }: { pla
   };
 
   const overallSkillScore = calculateOverallScore(latestEvaluation?.scores || latestEvaluation?.skillsData);
+  
+  const previousOverallScore = (() => {
+    const prev = latestEvaluation?.previousScores;
+    if (!prev || !Array.isArray(prev) || prev.length === 0) return null;
+    const lastSnapshot = prev[prev.length - 1];
+    return calculateOverallScore(lastSnapshot?.scores);
+  })();
+  const scoreDiff = previousOverallScore !== null && overallSkillScore > 0 ? overallSkillScore - previousOverallScore : null;
 
   const { data: awardsData } = useQuery<any>({
     queryKey: [`/api/users/${player.id}/awards`],
@@ -1004,7 +1012,14 @@ function PlayerProfileCard({ player, onCoachClick, onNavigateToPayments }: { pla
                 <div className="space-y-1">
                   <div className="flex justify-between text-sm">
                     <span className="font-medium text-gray-600">OVR</span>
-                    <span className="text-red-600 font-semibold">{overallSkillScore}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-red-600 font-semibold">{overallSkillScore}</span>
+                      {scoreDiff !== null && scoreDiff !== 0 && (
+                        <span className={`text-[10px] font-medium ${scoreDiff > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                          {scoreDiff > 0 ? `+${scoreDiff}` : scoreDiff}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
                     <div
@@ -1014,6 +1029,9 @@ function PlayerProfileCard({ player, onCoachClick, onNavigateToPayments }: { pla
                   </div>
                   {overallSkillScore === 0 && (
                     <p className="text-xs text-gray-400 mt-1">No evaluation yet</p>
+                  )}
+                  {previousOverallScore !== null && overallSkillScore > 0 && (
+                    <p className="text-xs text-gray-400 mt-1">Previous: {previousOverallScore}</p>
                   )}
                 </div>
               </div>

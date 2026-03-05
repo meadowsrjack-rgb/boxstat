@@ -877,6 +877,7 @@ export const evaluations = pgTable("evaluations", {
   quarter: varchar().notNull(), // "Q1", "Q2", "Q3", "Q4"
   year: integer().notNull(),
   scores: jsonb().notNull(), // Stores the EvalScores structure: { SHOOTING: { LAYUP: 3, ... }, ... }
+  previousScores: jsonb("previous_scores"), // Array of { scores, coachId, updatedAt } snapshots
   notes: text(),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
@@ -1890,6 +1891,7 @@ export interface Evaluation {
   quarter: string; // "Q1", "Q2", "Q3", "Q4"
   year: number;
   scores: any; // EvalScores structure from CoachAwardDialogs
+  previousScores?: any; // Array of { scores, coachId, notes, updatedAt } snapshots
   notes?: string;
   createdAt: Date;
   updatedAt: Date;

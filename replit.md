@@ -54,6 +54,12 @@ PostgreSQL, hosted on Neon serverless, is used with Drizzle ORM. The schema is o
 -   **Upload endpoint**: `POST /api/upload-profile-photo?profileId=xxx` — stores to `public/uploads/`, returns `{ success, imageUrl, message }`.
 -   **Dashboard photo upload**: Player dashboard and coach dashboard avatars have a camera icon overlay; tapping opens a file picker to upload a new profile photo directly from the dashboard header.
 -   **Parent photo upload**: Parent settings drawer in `unified-account.tsx` has a clickable avatar with camera icon for uploading parent profile photos.
+
+## Evaluation History System
+-   **History preservation**: When a coach re-evaluates a player for the same quarter/year, the previous scores are saved in a `previousScores` JSON array on the evaluation record (array of `{ scores, coachId, notes, updatedAt }` snapshots).
+-   **Admin view**: Performance tab in admin user view shows current scores with +/- change indicators from the last snapshot, plus a collapsible "Previous Evaluations" section showing full history.
+-   **Parent view**: Parent dashboard player card shows overall skill rating with +/- change indicator and "Previous: X" label when history exists.
+-   **Player profile instant updates**: Player dashboard profile save uses optimistic updates (`onMutate` with `setQueryData`) for instant UI feedback, with rollback on error.
 -   **Coach settings upload**: `coach-setting-pages.tsx` Profile tab has a full photo upload area.
 -   **Instant updates**: After upload, `setQueryData` optimistically updates the relevant caches (`/api/auth/user`, `/api/profile/:id`, `/api/account/profiles`, `/api/account/players`) so the new image appears immediately without page reload.
 -   **Profile gateway**: `profile-gateway.tsx` shows actual profile images for Parent/Account, Coach, Admin, and Player cards with gradient+icon fallback when no image is set.

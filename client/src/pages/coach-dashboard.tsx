@@ -731,7 +731,7 @@ export default function CoachDashboard() {
           )}
 
           {activeTab === "profile" && (
-            <ProfileTab currentUser={currentUser} />
+            <ProfileTab currentUser={currentUser} coachProfileId={coachProfileId} />
           )}
 
           {activeTab === "docs" && (
@@ -1506,7 +1506,14 @@ function PlayerProfileModal({
 }
 
 /* ---------- Profile Tab ---------- */
-function ProfileTab({ currentUser }: { currentUser: UserType }) {
+function ProfileTab({ currentUser, coachProfileId }: { currentUser: UserType; coachProfileId?: string }) {
+  const profileId = coachProfileId || currentUser.id;
+  const { data: coachProfile } = useQuery<any>({
+    queryKey: [`/api/profile/${profileId}`],
+    enabled: !!profileId,
+  });
+  const profile = coachProfile || currentUser;
+  
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -1525,24 +1532,24 @@ function ProfileTab({ currentUser }: { currentUser: UserType }) {
               <div>
                 <div className="text-xs font-semibold text-gray-600 mb-1">Name</div>
                 <div className="text-sm text-gray-900">
-                  {currentUser.firstName} {currentUser.lastName}
+                  {profile.firstName} {profile.lastName}
                 </div>
               </div>
               <div>
                 <div className="text-xs font-semibold text-gray-600 mb-1">Email</div>
-                <div className="text-sm text-gray-900">{currentUser.email}</div>
+                <div className="text-sm text-gray-900">{profile.email}</div>
               </div>
             </div>
-            {currentUser.phone && (
+            {(profile.phone || profile.phoneNumber) && (
               <div>
                 <div className="text-xs font-semibold text-gray-600 mb-1">Phone</div>
-                <div className="text-sm text-gray-900">{currentUser.phone}</div>
+                <div className="text-sm text-gray-900">{profile.phone || profile.phoneNumber}</div>
               </div>
             )}
-            {(currentUser as any)?.city && (
+            {(profile.city || profile.address) && (
               <div>
                 <div className="text-xs font-semibold text-gray-600 mb-1">City</div>
-                <div className="text-sm text-gray-900">{(currentUser as any).city}</div>
+                <div className="text-sm text-gray-900">{profile.city || profile.address}</div>
               </div>
             )}
           </div>
@@ -1557,75 +1564,75 @@ function ProfileTab({ currentUser }: { currentUser: UserType }) {
             <h3 className="text-md font-bold text-gray-900">Coaching Credentials</h3>
           </div>
           <div className="space-y-3">
-            {(currentUser as any)?.yearsExperience && (
+            {profile?.yearsExperience && (
               <div>
                 <div className="text-xs font-semibold text-gray-600 mb-1">Experience Level</div>
-                <div className="text-sm text-gray-900">{(currentUser as any).yearsExperience}</div>
+                <div className="text-sm text-gray-900">{profile.yearsExperience}</div>
               </div>
             )}
-            {(currentUser as any)?.bio && (
+            {profile?.bio && (
               <div>
                 <div className="text-xs font-semibold text-gray-600 mb-1">Coaching Bio</div>
-                <div className="text-sm text-gray-700 whitespace-pre-wrap">{(currentUser as any).bio}</div>
+                <div className="text-sm text-gray-700 whitespace-pre-wrap">{profile.bio}</div>
               </div>
             )}
-            {(currentUser as any)?.previousTeams && (
+            {profile?.previousTeams && (
               <div>
                 <div className="text-xs font-semibold text-gray-600 mb-1">Previous Teams</div>
-                <div className="text-sm text-gray-700 whitespace-pre-wrap">{(currentUser as any).previousTeams}</div>
+                <div className="text-sm text-gray-700 whitespace-pre-wrap">{profile.previousTeams}</div>
               </div>
             )}
-            {(currentUser as any)?.playingExperience && (
+            {profile?.playingExperience && (
               <div>
                 <div className="text-xs font-semibold text-gray-600 mb-1">Playing Experience</div>
-                <div className="text-sm text-gray-700 whitespace-pre-wrap">{(currentUser as any).playingExperience}</div>
+                <div className="text-sm text-gray-700 whitespace-pre-wrap">{profile.playingExperience}</div>
               </div>
             )}
-            {(currentUser as any)?.philosophy && (
+            {profile?.philosophy && (
               <div>
                 <div className="text-xs font-semibold text-gray-600 mb-1">Coaching Philosophy</div>
-                <div className="text-sm text-gray-700 whitespace-pre-wrap">{(currentUser as any).philosophy}</div>
+                <div className="text-sm text-gray-700 whitespace-pre-wrap">{profile.philosophy}</div>
               </div>
             )}
-            {(currentUser as any)?.coachingLicense && (
+            {profile?.coachingLicense && (
               <div>
                 <div className="text-xs font-semibold text-gray-600 mb-1">Coaching License</div>
-                <div className="text-sm text-gray-900">{(currentUser as any).coachingLicense}</div>
+                <div className="text-sm text-gray-900">{profile.coachingLicense}</div>
               </div>
             )}
-            {(currentUser as any)?.coachingStyle && (
+            {profile?.coachingStyle && (
               <div>
                 <div className="text-xs font-semibold text-gray-600 mb-1">Coaching Style</div>
-                <div className="text-sm text-gray-900">{(currentUser as any).coachingStyle}</div>
+                <div className="text-sm text-gray-900">{profile.coachingStyle}</div>
               </div>
             )}
-            {(currentUser as any)?.specialties?.length > 0 && (
+            {profile?.specialties?.length > 0 && (
               <div>
                 <div className="text-xs font-semibold text-gray-600 mb-1">Specialties</div>
                 <div className="flex flex-wrap gap-1">
-                  {(currentUser as any).specialties.map((s: string) => (
+                  {profile.specialties.map((s: string) => (
                     <span key={s} className="text-xs bg-red-50 text-red-700 px-2 py-0.5 rounded-full">{s}</span>
                   ))}
                 </div>
               </div>
             )}
-            {(currentUser as any)?.ageGroups?.length > 0 && (
+            {profile?.ageGroups?.length > 0 && (
               <div>
                 <div className="text-xs font-semibold text-gray-600 mb-1">Age Groups</div>
                 <div className="flex flex-wrap gap-1">
-                  {(currentUser as any).ageGroups.map((a: string) => (
+                  {profile.ageGroups.map((a: string) => (
                     <span key={a} className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">{a}</span>
                   ))}
                 </div>
               </div>
             )}
-            {(currentUser as any)?.availability && (
+            {profile?.availability && (
               <div>
                 <div className="text-xs font-semibold text-gray-600 mb-1">Availability</div>
-                <div className="text-sm text-gray-900">{(currentUser as any).availability}</div>
+                <div className="text-sm text-gray-900">{profile.availability}</div>
               </div>
             )}
-            {!(currentUser as any)?.yearsExperience && !(currentUser as any)?.bio && !(currentUser as any)?.previousTeams && !(currentUser as any)?.coachingLicense && !(currentUser as any)?.specialties?.length && (
+            {!profile?.yearsExperience && !profile?.bio && !profile?.previousTeams && !profile?.coachingLicense && !profile?.specialties?.length && (
               <div className="text-center py-4 text-gray-500 text-sm">
                 No coaching credentials added yet. Go to Settings to add your information.
               </div>

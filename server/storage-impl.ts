@@ -3071,9 +3071,39 @@ class DatabaseStorage implements IStorage {
   }
 
   async getUsersByOrganization(organizationId: string): Promise<User[]> {
-    // Return ALL users (active and inactive) so admin dashboard shows complete user list
     const results = await db.select().from(schema.users).where(eq(schema.users.organizationId, organizationId));
-    return results.map(user => this.mapDbUserToUser(user));
+    const users = results.map(user => this.mapDbUserToUser(user));
+    
+    const allUserIds = users.map(u => u.id);
+    if (allUserIds.length > 0) {
+      const memberships = await db.select({
+        profileId: schema.teamMemberships.profileId,
+        teamId: schema.teamMemberships.teamId,
+      }).from(schema.teamMemberships).where(
+        and(
+          sql`${schema.teamMemberships.profileId} IN (${sql.join(allUserIds.map(id => sql`${id}`), sql`, `)})`,
+          eq(schema.teamMemberships.status, 'active')
+        )
+      );
+      
+      const membershipMap = new Map<string, number[]>();
+      for (const m of memberships) {
+        if (!membershipMap.has(m.profileId)) membershipMap.set(m.profileId, []);
+        membershipMap.get(m.profileId)!.push(m.teamId);
+      }
+      
+      for (const user of users) {
+        const mTeamIds = membershipMap.get(user.id);
+        if (mTeamIds && mTeamIds.length > 0) {
+          (user as any).teamIds = mTeamIds;
+          if (!user.teamId) {
+            user.teamId = mTeamIds[0].toString();
+          }
+        }
+      }
+    }
+    
+    return users;
   }
 
   async getUsersByTeam(teamId: string): Promise<User[]> {

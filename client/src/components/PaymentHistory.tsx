@@ -295,10 +295,15 @@ export function PaymentHistory({ selectedPlayer }: PaymentHistoryProps = {}) {
                       {payment.description || payment.paymentType}
                     </p>
                     {getStatusBadge(subDetails?.status || payment.stripeData?.status || payment.status)}
-                    {isSubscription && (
+                    {isSubscription ? (
                       <Badge className="bg-amber-100 text-amber-700 border-0 text-xs">
                         <RefreshCw className="h-3 w-3 mr-1" />
                         Subscription
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-blue-100 text-blue-700 border-0 text-xs">
+                        <CreditCard className="h-3 w-3 mr-1" />
+                        Prepaid
                       </Badge>
                     )}
                   </div>

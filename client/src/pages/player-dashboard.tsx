@@ -1700,7 +1700,7 @@ function PriceCard({ title, priceLine, cta, badge }: { title: string; priceLine:
         <h3 className="text-lg font-bold text-gray-900">{title}</h3>
       </div>
       <div className="mb-1 text-3xl font-extrabold tracking-tight text-gray-900">{priceLine}</div>
-      <p className="mb-4 text-sm text-gray-500">{title === "Monthly" ? "Cancel anytime" : "One-time payment"}</p>
+      <p className="mb-4 text-sm text-gray-500">{/monthly|subscription|weekly|yearly|quarterly/i.test(title) ? "Subscription · Cancel anytime" : /pack|bundle|season|prepaid|\d+\s*(day|week|month)/i.test(title) ? "Prepaid" : "One-time purchase"}</p>
       <ul className="mb-6 space-y-3 text-sm text-gray-700">
         <li className="flex items-start gap-3">
           <Check className="mt-0.5 h-4 w-4 text-red-600" />

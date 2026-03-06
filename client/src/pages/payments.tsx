@@ -510,9 +510,13 @@ function EnrollmentDialog({
           </DialogTitle>
           <DialogDesc className="text-white/60">
             {currentStep === 1 ? (
-              program.type === 'Subscription' 
-                ? `Subscribe for $${program.price ? (program.price / 100).toFixed(2) : '0'}/${program.billingCycle?.toLowerCase() || 'month'}`
-                : `One-time payment of $${program.price ? (program.price / 100).toFixed(2) : '0'}`
+              program.type === 'Subscription' && program.billingCycle && program.billingCycle !== 'One-Time' && program.billingCycle !== 'One-time'
+                ? `Subscribe for $${program.price ? (program.price / 100).toFixed(2) : '0'}/${program.billingCycle.toLowerCase()} · Cancel anytime`
+                : (program.type === 'Subscription' || program.pricingOptions?.some((o: any) => o.optionType === 'subscription' || (o.billingCycle && o.billingCycle !== 'One-Time' && o.billingCycle !== 'One-time')))
+                  ? `Subscription · Multiple payment options available`
+                  : program.durationDays
+                    ? `Prepaid access · $${program.price ? (program.price / 100).toFixed(2) : '0'}`
+                    : `One-time purchase · $${program.price ? (program.price / 100).toFixed(2) : '0'}`
             ) : (
               "Add gear and equipment to your order"
             )}

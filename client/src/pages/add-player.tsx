@@ -1396,10 +1396,16 @@ function PackageSelectionStep({
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="font-medium text-white">{option.name}</p>
-                        {option.durationDays && (
+                        {option.optionType === "subscription" || (option.billingCycle && option.billingCycle !== "One-Time" && option.billingCycle !== "One-time") ? (
                           <p className="text-xs text-gray-400">
-                            {option.durationDays} days
+                            Subscription · Billed {option.billingInterval || option.billingCycle?.toLowerCase() || "monthly"} · Cancel anytime
                           </p>
+                        ) : option.durationDays ? (
+                          <p className="text-xs text-gray-400">
+                            Prepaid · {option.durationDays}-day access
+                          </p>
+                        ) : (
+                          <p className="text-xs text-gray-400">One-time purchase</p>
                         )}
                       </div>
                       <div className="text-right">

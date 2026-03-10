@@ -12547,16 +12547,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/contact-management", requireAuth, async (req: any, res) => {
     try {
       const { organizationId } = req.user;
-      // Check all profiles with same email for admin access (multi-profile support)
       const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
       if (!isAdminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const messages = await storage.getContactManagementMessages(organizationId);
       
-      // Enrich with sender info
       const enrichedMessages = await Promise.all(messages.map(async (msg: any) => {
         const sender = await storage.getUser(msg.senderId);
+        const replies = await storage.getContactManagementReplies(msg.id);
         return {
           ...msg,
           sender: sender ? {
@@ -12565,6 +12564,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lastName: sender.lastName,
             email: sender.email,
           } : null,
+          replies,
         };
       }));
       res.json(enrichedMessages);
@@ -12577,7 +12577,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/contact-management/my-messages", requireAuth, async (req: any, res) => {
     try {
       const messages = await storage.getContactManagementMessagesBySender(req.user.id);
-      res.json(messages);
+      const parentMessages = messages.filter((m: any) => !m.parentMessageId);
+      const enrichedMessages = await Promise.all(parentMessages.map(async (msg: any) => {
+        const replies = await storage.getContactManagementReplies(msg.id);
+        return { ...msg, replies };
+      }));
+      res.json(enrichedMessages);
     } catch (error: any) {
       console.error('Error fetching my contact messages:', error);
       res.status(500).json({ error: "Failed to fetch messages" });
@@ -13268,18 +13273,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Reply to contact management message
   app.post("/api/contact-management/:id/reply", requireAuth, async (req: any, res) => {
     try {
-      // Check all profiles with same email for admin access (multi-profile support)
       const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
       if (!isAdminUser) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const parentMessageId = parseInt(req.params.id);
+      const allOrgMessages = await storage.getContactManagementMessages(req.user.organizationId);
+      const parentMsg = allOrgMessages.find((m: any) => m.id === parentMessageId);
+      if (!parentMsg) {
+        return res.status(404).json({ error: "Message not found" });
+      }
+      const user = await storage.getUser(req.user.id);
+      const senderName = user ? `${user.firstName} ${user.lastName}` : 'Admin';
       const reply = await storage.createContactManagementMessage({
         senderId: req.user.id,
         organizationId: req.user.organizationId,
+        senderName,
+        senderEmail: user?.email || null,
         message: req.body.message,
         parentMessageId,
         isAdmin: true,
+      });
+      await storage.updateContactManagementMessage(parentMessageId, {
+        status: 'replied',
+        repliedBy: req.user.id,
+        repliedAt: new Date().toISOString(),
       });
       res.json(reply);
     } catch (error: any) {

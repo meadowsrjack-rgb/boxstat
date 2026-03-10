@@ -1204,8 +1204,12 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
     }
   };
 
+  const managementMessages = activeChat?.type === 'management'
+    ? myContactMessages.flatMap((msg: any) => [msg, ...(msg.replies || [])])
+    : [];
+
   const currentMessages = activeChat?.type === 'team' ? teamMessages :
-    activeChat?.type === 'coach' ? coachMessages : myContactMessages;
+    activeChat?.type === 'coach' ? coachMessages : managementMessages;
 
   if (activeChat) {
     // Chat view

@@ -340,6 +340,7 @@ export interface IStorage {
   
   // Contact Management Message operations (parent to admin)
   getContactManagementMessages(organizationId: string): Promise<ContactManagementMessage[]>;
+  getContactManagementReplies(parentMessageId: number): Promise<ContactManagementMessage[]>;
   getContactManagementMessagesBySender(senderId: string): Promise<ContactManagementMessage[]>;
   createContactManagementMessage(data: InsertContactManagementMessage): Promise<ContactManagementMessage>;
   updateContactManagementMessage(id: number, updates: Partial<ContactManagementMessage>): Promise<ContactManagementMessage | undefined>;
@@ -2476,6 +2477,7 @@ class MemStorage implements IStorage {
   
   // Contact Management Message operations (MemStorage stubs)
   async getContactManagementMessages(organizationId: string): Promise<ContactManagementMessage[]> { return []; }
+  async getContactManagementReplies(parentMessageId: number): Promise<ContactManagementMessage[]> { return []; }
   async getContactManagementMessagesBySender(senderId: string): Promise<ContactManagementMessage[]> { return []; }
   async createContactManagementMessage(data: InsertContactManagementMessage): Promise<ContactManagementMessage> { throw new Error("Not implemented"); }
   async updateContactManagementMessage(id: number, updates: Partial<ContactManagementMessage>): Promise<ContactManagementMessage | undefined> { return undefined; }
@@ -6053,8 +6055,18 @@ class DatabaseStorage implements IStorage {
   // Contact Management Message operations
   async getContactManagementMessages(organizationId: string): Promise<ContactManagementMessage[]> {
     const results = await db.select().from(schema.contactManagementMessages)
-      .where(eq(schema.contactManagementMessages.organizationId, organizationId))
+      .where(and(
+        eq(schema.contactManagementMessages.organizationId, organizationId),
+        isNull(schema.contactManagementMessages.parentMessageId)
+      ))
       .orderBy(desc(schema.contactManagementMessages.createdAt));
+    return results as ContactManagementMessage[];
+  }
+
+  async getContactManagementReplies(parentMessageId: number): Promise<ContactManagementMessage[]> {
+    const results = await db.select().from(schema.contactManagementMessages)
+      .where(eq(schema.contactManagementMessages.parentMessageId, parentMessageId))
+      .orderBy(schema.contactManagementMessages.createdAt);
     return results as ContactManagementMessage[];
   }
   

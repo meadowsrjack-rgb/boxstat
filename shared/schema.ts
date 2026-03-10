@@ -1078,6 +1078,8 @@ export const contactManagementMessages = pgTable("contact_management_messages", 
   assignedTo: varchar("assigned_to"), // admin user assigned to handle
   repliedBy: varchar("replied_by"),
   repliedAt: timestamp("replied_at", { mode: 'string' }),
+  parentMessageId: integer("parent_message_id"),
+  isAdmin: boolean("is_admin").default(false),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
 

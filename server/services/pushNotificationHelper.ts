@@ -440,6 +440,169 @@ export const pushNotifications = {
       message,
     });
   },
+
+  // ============================================
+  // ATTENDANCE PATTERN NOTIFICATIONS
+  // ============================================
+
+  // --- Player attendance notifications ---
+
+  async playerMissedStreak(storage: IStorage, playerId: string, missCount: number) {
+    const messages: Record<number, { title: string; message: string }> = {
+      2: { title: "💪 Get Back in the Grind!", message: "You've missed your last 2 events. Your team needs you out there!" },
+      3: { title: "⚠️ 3 Events Missed", message: "3 events missed in a row — your team needs you out there!" },
+      5: { title: "😟 We Miss You!", message: "5 events missed — don't let your hard work go to waste. We miss you!" },
+    };
+    const msg = messages[missCount] || (missCount >= 7
+      ? { title: "🚨 Time to Come Back", message: `You've missed ${missCount} events in a row. Your spot is waiting — come back stronger!` }
+      : null);
+    if (!msg) return;
+    await sendNotification(storage, { userId: playerId, ...msg });
+  },
+
+  async playerAttendStreak(storage: IStorage, playerId: string, streakCount: number) {
+    const messages: Record<number, { title: string; message: string }> = {
+      3: { title: "🔥 3 in a Row!", message: "3 events in a row! You're building momentum — keep showing up!" },
+      5: { title: "🔥 5-Event Streak!", message: "5 in a row! You're on fire — keep that streak alive!" },
+      10: { title: "🏆 10-Event Streak!", message: "10 straight events! You're setting the standard. Legendary commitment!" },
+    };
+    const msg = messages[streakCount] || (streakCount >= 15 && streakCount % 5 === 0
+      ? { title: "👑 Unstoppable!", message: `${streakCount} events in a row! You're in a league of your own.` }
+      : null);
+    if (!msg) return;
+    await sendNotification(storage, { userId: playerId, ...msg });
+  },
+
+  async playerPerfectMonth(storage: IStorage, playerId: string, monthName: string) {
+    await sendNotification(storage, {
+      userId: playerId,
+      title: "⭐ Perfect Month!",
+      message: `You attended every event in ${monthName}. That's elite dedication!`,
+    });
+  },
+
+  async playerWelcomeBack(storage: IStorage, playerId: string) {
+    await sendNotification(storage, {
+      userId: playerId,
+      title: "👋 Welcome Back!",
+      message: "Great to see you out there again. Let's keep the momentum going!",
+    });
+  },
+
+  // --- Parent attendance notifications ---
+
+  async parentPlayerMissedStreak(storage: IStorage, parentId: string, playerName: string, missCount: number) {
+    const messages: Record<number, { title: string; message: string }> = {
+      2: { title: "📋 Attendance Update", message: `Heads up — ${playerName} has missed the last 2 events.` },
+      3: { title: "🤔 Everything OK?", message: `Everything ok? ${playerName} has missed the last 3 events.` },
+      5: { title: "😟 We're Concerned", message: `We're concerned — ${playerName} has missed 5 events in a row. Is everything alright?` },
+    };
+    const msg = messages[missCount] || (missCount >= 7
+      ? { title: "⚠️ Extended Absence", message: `${playerName} has missed ${missCount} events in a row. Please reach out if we can help.` }
+      : null);
+    if (!msg) return;
+    await sendNotification(storage, { userId: parentId, ...msg });
+  },
+
+  async parentPlayerAttendStreak(storage: IStorage, parentId: string, playerName: string, streakCount: number) {
+    const messages: Record<number, { title: string; message: string }> = {
+      3: { title: "🌟 Great Consistency!", message: `${playerName} has attended 3 events in a row — great consistency!` },
+      5: { title: "🔥 Amazing Commitment!", message: `${playerName} is on a 5-event streak! Amazing commitment.` },
+      10: { title: "🏆 Incredible Streak!", message: `${playerName} hit a 10-event streak! Outstanding dedication.` },
+    };
+    const msg = messages[streakCount];
+    if (!msg) return;
+    await sendNotification(storage, { userId: parentId, ...msg });
+  },
+
+  async parentPlayerPerfectMonth(storage: IStorage, parentId: string, playerName: string, monthName: string) {
+    await sendNotification(storage, {
+      userId: parentId,
+      title: "⭐ Perfect Month!",
+      message: `${playerName} attended every event in ${monthName}. Outstanding!`,
+    });
+  },
+
+  // --- Coach attendance notifications (team players only) ---
+
+  async coachPlayerMissedStreak(storage: IStorage, coachId: string, playerName: string, missCount: number) {
+    const messages: Record<number, { title: string; message: string }> = {
+      2: { title: "📋 Player Absence", message: `${playerName} has missed 2 events. Might be worth a quick check-in.` },
+      3: { title: "⚠️ Player Missing Events", message: `${playerName} has missed 3 events — time to check in.` },
+      5: { title: "🚨 Extended Player Absence", message: `${playerName} has missed 5 events in a row. A conversation may be needed.` },
+    };
+    const msg = messages[missCount] || (missCount >= 7
+      ? { title: "🚨 Player Alert", message: `${playerName} has missed ${missCount} events in a row. Follow-up recommended.` }
+      : null);
+    if (!msg) return;
+    await sendNotification(storage, { userId: coachId, ...msg });
+  },
+
+  async coachPlayerAttendStreak(storage: IStorage, coachId: string, playerName: string, streakCount: number) {
+    if (streakCount === 5) {
+      await sendNotification(storage, {
+        userId: coachId,
+        title: "🌟 Player Streak",
+        message: `${playerName} is on a 5-event streak. Great to see!`,
+      });
+    }
+  },
+
+  async coachPlayerPerfectPracticeMonth(storage: IStorage, coachId: string, playerName: string, monthName: string) {
+    await sendNotification(storage, {
+      userId: coachId,
+      title: "🤝 Handshake-Worthy!",
+      message: `Maybe a handshake is in order — ${playerName} has attended every practice in ${monthName}!`,
+    });
+  },
+
+  async coachPlayerPerfectMonth(storage: IStorage, coachId: string, playerName: string, monthName: string) {
+    await sendNotification(storage, {
+      userId: coachId,
+      title: "⭐ Perfect Attendance",
+      message: `${playerName} hasn't missed a single event in ${monthName}. That's commitment!`,
+    });
+  },
+
+  // --- Admin attendance notifications ---
+
+  async adminPlayerMissedStreak(storage: IStorage, adminId: string, playerName: string, missCount: number) {
+    const messages: Record<number, { title: string; message: string }> = {
+      3: { title: "⚠️ Player Attendance Alert", message: `${playerName} has missed 3 events in a row — time to check in.` },
+      5: { title: "🚨 Player Attendance Alert", message: `${playerName} has missed 5 events in a row. May need follow-up.` },
+    };
+    const msg = messages[missCount] || (missCount >= 7
+      ? { title: "🚨 Intervention Needed", message: `Alert: ${playerName} has missed ${missCount} events in a row. Intervention recommended.` }
+      : null);
+    if (!msg) return;
+    await sendNotification(storage, { userId: adminId, ...msg });
+  },
+
+  async adminPlayerAttendStreak(storage: IStorage, adminId: string, playerName: string, streakCount: number) {
+    if (streakCount >= 10) {
+      await sendNotification(storage, {
+        userId: adminId,
+        title: "🏆 Outstanding Dedication",
+        message: `${playerName} has hit a ${streakCount}-event streak — outstanding dedication!`,
+      });
+    }
+  },
+
+  async adminPlayerPerfectMonth(storage: IStorage, adminId: string, playerName: string, monthName: string) {
+    await sendNotification(storage, {
+      userId: adminId,
+      title: "⭐ Perfect Attendance",
+      message: `${playerName} attended every event in ${monthName}.`,
+    });
+  },
+
+  async adminMultiplePlayersMissing(storage: IStorage, adminId: string, count: number) {
+    await sendNotification(storage, {
+      userId: adminId,
+      title: "📊 Attendance Report",
+      message: `${count} player${count === 1 ? ' has' : 's have'} missed 3+ events this week. Review attendance report.`,
+    });
+  },
 };
 
 export default pushNotifications;

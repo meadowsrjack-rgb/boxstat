@@ -1,7 +1,12 @@
 import cron from 'node-cron';
 import { storage } from '../storage';
 import { notificationService } from './notificationService';
+import { pushNotifications } from './pushNotificationHelper';
+import { analyzePlayerAttendance, getOrgPlayers, getTeamCoachIds, getOrgAdminIds } from './attendanceTracker';
 import type { Event } from '@shared/schema';
+import { db } from '../db';
+import { notifications, notificationRecipients } from '@shared/schema';
+import { eq, and, sql } from 'drizzle-orm';
 
 export class NotificationScheduler {
   private jobs: Map<string, cron.ScheduledTask> = new Map();
@@ -95,9 +100,16 @@ export class NotificationScheduler {
       scheduled: false
     });
 
+    const attendanceNotificationsJob = cron.schedule('0 8 * * *', async () => {
+      await this.processAttendanceNotifications();
+    }, {
+      scheduled: false
+    });
+
     this.jobs.set('eventReminders', eventReminderJob);
     this.jobs.set('checkinAvailable', checkinAvailableJob);
     this.jobs.set('rsvpClosing', rsvpClosingJob);
+    this.jobs.set('attendanceNotifications', attendanceNotificationsJob);
 
     // Start all jobs
     this.jobs.forEach((job, name) => {
@@ -475,6 +487,168 @@ export class NotificationScheduler {
     return nextRun.toISOString();
   }
   
+  private async hasRecentAttendanceNotification(userId: string, titlePattern: string, withinDays: number): Promise<boolean> {
+    try {
+      const cutoff = new Date(Date.now() - withinDays * 24 * 60 * 60 * 1000).toISOString();
+      const results = await db.select({ id: notifications.id })
+        .from(notifications)
+        .innerJoin(notificationRecipients, eq(notificationRecipients.notificationId, notifications.id))
+        .where(and(
+          eq(notificationRecipients.userId, userId),
+          sql`${notifications.title} = ${titlePattern}`,
+          sql`${notifications.createdAt} >= ${cutoff}`
+        ))
+        .limit(1);
+      return results.length > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  private async processAttendanceNotifications() {
+    try {
+      const allOrgs = await storage.getAllOrganizations();
+
+      for (const org of allOrgs) {
+        const players = await getOrgPlayers(org.id);
+        const adminIds = await getOrgAdminIds(org.id);
+        let playersWithMissStreak3Plus = 0;
+
+        for (const player of players) {
+          try {
+            const analysis = await analyzePlayerAttendance(player.id, org.id);
+            if (!analysis) continue;
+
+            const { streak, playerName, parentId, teamIds, isPerfectMonth, isPerfectPracticeMonth } = analysis;
+
+            // --- Missed streak notifications ---
+            if (streak <= -2) {
+              const missCount = Math.abs(streak);
+              const missThresholds = [2, 3, 5, 7];
+              const matchedThreshold = missThresholds.filter(t => missCount >= t).pop();
+              if (matchedThreshold) {
+                if (missCount >= 3) playersWithMissStreak3Plus++;
+
+                const playerTitle = missCount === 2 ? "💪 Get Back in the Grind!" :
+                  missCount === 3 ? "⚠️ 3 Events Missed" :
+                  missCount === 5 ? "😟 We Miss You!" : "🚨 Time to Come Back";
+
+                if (!(await this.hasRecentAttendanceNotification(player.id, playerTitle, 7))) {
+                  await pushNotifications.playerMissedStreak(storage, player.id, matchedThreshold);
+
+                  if (parentId) {
+                    const parentThresholds = [2, 3, 5, 7];
+                    const parentMatch = parentThresholds.filter(t => missCount >= t).pop();
+                    if (parentMatch) {
+                      await pushNotifications.parentPlayerMissedStreak(storage, parentId, playerName, parentMatch);
+                    }
+                  }
+
+                  if (missCount >= 2) {
+                    const coachIds = await getTeamCoachIds(teamIds);
+                    for (const coachId of coachIds) {
+                      const coachThresholds = [2, 3, 5, 7];
+                      const coachMatch = coachThresholds.filter(t => missCount >= t).pop();
+                      if (coachMatch) {
+                        await pushNotifications.coachPlayerMissedStreak(storage, coachId, playerName, coachMatch);
+                      }
+                    }
+                  }
+
+                  if (missCount >= 3) {
+                    const adminThresholds = [3, 5, 7];
+                    const adminMatch = adminThresholds.filter(t => missCount >= t).pop();
+                    if (adminMatch) {
+                      for (const adminId of adminIds) {
+                        await pushNotifications.adminPlayerMissedStreak(storage, adminId, playerName, adminMatch);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
+            // --- Attend streak notifications ---
+            if (streak >= 3) {
+              const streakThresholds = [3, 5, 10, 15, 20];
+              const matchedStreak = streakThresholds.filter(t => streak >= t).pop();
+              if (matchedStreak && streak === matchedStreak) {
+                const streakTitle = streak === 3 ? "🔥 3 in a Row!" :
+                  streak === 5 ? "🔥 5-Event Streak!" :
+                  streak === 10 ? "🏆 10-Event Streak!" : "👑 Unstoppable!";
+
+                if (!(await this.hasRecentAttendanceNotification(player.id, streakTitle, 7))) {
+                  await pushNotifications.playerAttendStreak(storage, player.id, streak);
+
+                  if (parentId) {
+                    await pushNotifications.parentPlayerAttendStreak(storage, parentId, playerName, streak);
+                  }
+
+                  if (streak >= 5) {
+                    const coachIds = await getTeamCoachIds(teamIds);
+                    for (const coachId of coachIds) {
+                      await pushNotifications.coachPlayerAttendStreak(storage, coachId, playerName, streak);
+                    }
+                  }
+
+                  if (streak >= 10) {
+                    for (const adminId of adminIds) {
+                      await pushNotifications.adminPlayerAttendStreak(storage, adminId, playerName, streak);
+                    }
+                  }
+                }
+              }
+            }
+
+            // --- Perfect month notifications (check on days 28-31) ---
+            const dayOfMonth = new Date().getDate();
+            if (dayOfMonth >= 28 && isPerfectMonth && analysis.eventsThisMonth >= 3) {
+              const monthName = new Date().toLocaleString('default', { month: 'long' });
+              if (!(await this.hasRecentAttendanceNotification(player.id, "⭐ Perfect Month!", 30))) {
+                await pushNotifications.playerPerfectMonth(storage, player.id, monthName);
+                if (parentId) {
+                  await pushNotifications.parentPlayerPerfectMonth(storage, parentId, playerName, monthName);
+                }
+                const coachIds = await getTeamCoachIds(teamIds);
+                for (const coachId of coachIds) {
+                  await pushNotifications.coachPlayerPerfectMonth(storage, coachId, playerName, monthName);
+                }
+                for (const adminId of adminIds) {
+                  await pushNotifications.adminPlayerPerfectMonth(storage, adminId, playerName, monthName);
+                }
+              }
+            }
+
+            // --- Perfect practice month (coach only) ---
+            if (dayOfMonth >= 28 && isPerfectPracticeMonth && analysis.practicesThisMonth >= 2) {
+              const monthName = new Date().toLocaleString('default', { month: 'long' });
+              const coachIds = await getTeamCoachIds(teamIds);
+              for (const coachId of coachIds) {
+                if (!(await this.hasRecentAttendanceNotification(coachId, "🤝 Handshake-Worthy!", 30))) {
+                  await pushNotifications.coachPlayerPerfectPracticeMonth(storage, coachId, playerName, monthName);
+                }
+              }
+            }
+
+          } catch (playerError) {
+            console.error(`Error processing attendance for player ${player.id}:`, playerError);
+          }
+        }
+
+        // --- Admin: multiple players missing ---
+        if (playersWithMissStreak3Plus >= 3) {
+          for (const adminId of adminIds) {
+            if (!(await this.hasRecentAttendanceNotification(adminId, "📊 Attendance Report", 7))) {
+              await pushNotifications.adminMultiplePlayersMissing(storage, adminId, playersWithMissStreak3Plus);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error processing attendance notifications:', error);
+    }
+  }
+
   // Manual trigger for campaigns (testing)
   async triggerCampaignProcessor() {
     await this.processScheduledCampaigns();

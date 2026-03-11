@@ -42,6 +42,7 @@ import { populateAwards } from "./utils/populateAwards";
 import { pushNotifications } from "./services/pushNotificationHelper";
 import { notificationScheduler } from "./services/notificationScheduler";
 import { notificationService } from "./services/notificationService";
+import { analyzePlayerAttendance, getTeamCoachIds, getOrgAdminIds, triggerRealTimeAttendanceNotifications } from "./services/attendanceTracker";
 import { db } from "./db";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards, platformSettings, organizations, attendances, rsvpResponses } from "@shared/schema";
@@ -7389,6 +7390,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (notifError: any) {
         console.error('⚠️ Check-in notification failed (non-fatal):', notifError.message);
       }
+
+      try {
+        const orgId = req.user?.organizationId;
+        if (orgId && attendanceData.userId) {
+          await triggerRealTimeAttendanceNotifications(storage, attendanceData.userId, orgId);
+        }
+      } catch (attendanceNotifError: any) {
+        console.error('⚠️ Attendance pattern notification failed (non-fatal):', attendanceNotifError.message);
+      }
       
       res.json(attendance);
     } catch (error: any) {
@@ -7608,6 +7618,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('⚠️ Award evaluation failed (non-fatal):', awardError.message);
       }
       
+      try {
+        if (organizationId && playerId) {
+          await triggerRealTimeAttendanceNotifications(storage, playerId, organizationId);
+        }
+      } catch (attendanceNotifError: any) {
+        console.error('⚠️ Attendance pattern notification failed (non-fatal):', attendanceNotifError.message);
+      }
+
       res.json({ 
         success: true, 
         attendance,
@@ -7894,6 +7912,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.error('⚠️ Award evaluation failed (non-fatal):', awardError.message);
             }
             
+            try {
+              const orgId = req.user?.organizationId;
+              if (orgId) {
+                await triggerRealTimeAttendanceNotifications(storage, playerId, orgId);
+              }
+            } catch (attendanceNotifError: any) {
+              console.error('⚠️ Attendance pattern notification failed (non-fatal):', attendanceNotifError.message);
+            }
+
             results.push({ playerId, success: true, action: 'checkin', playerName });
           }
         } catch (playerError: any) {

@@ -45,7 +45,7 @@ import { notificationService } from "./services/notificationService";
 import { analyzePlayerAttendance, getTeamCoachIds, getOrgAdminIds, triggerRealTimeAttendanceNotifications } from "./services/attendanceTracker";
 import { db } from "./db";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
-import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards, platformSettings, organizations, attendances, rsvpResponses, contactManagementMessages } from "@shared/schema";
+import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards, platformSettings, organizations, attendances, rsvpResponses, contactManagementMessages, payments } from "@shared/schema";
 import { eq, and, or, sql, desc, inArray, gte, count } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;
@@ -2045,6 +2045,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     } catch (awardError: any) {
                       console.error('⚠️ Award evaluation failed (non-fatal):', awardError.message);
                     }
+
+                    // Notify admins: store purchase needs dispatch OR program enrollment needs team assignment
+                    try {
+                      if (program.productCategory === 'goods') {
+                        await pushNotifications.notifyAllAdmins(storage,
+                          '📦 New Store Order',
+                          `${playerName} purchased ${program.name} — dispatch required`,
+                          updatedPlayer.organizationId
+                        );
+                      } else {
+                        await pushNotifications.notifyAllAdmins(storage,
+                          '🏀 New Enrollment',
+                          `${playerName} enrolled in ${program.name} — needs team/skill level assignment`,
+                          updatedPlayer.organizationId
+                        );
+                      }
+                    } catch (notifError: any) {
+                      console.error('⚠️ Enrollment/purchase admin notification failed (non-fatal):', notifError.message);
+                    }
                   } else {
                     console.log(`ℹ️ Player ${playerId} already has enrollment for program ${packageId}`);
                   }
@@ -2190,6 +2209,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     console.log(`✅ Awards evaluated for player ${playerId} after store purchase`);
                   } catch (awardError: any) {
                     console.error('⚠️ Award evaluation failed (non-fatal):', awardError.message);
+                  }
+
+                  // Notify admins: store purchase needs dispatch OR program enrollment needs team assignment
+                  try {
+                    const playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim();
+                    const orgId = player.organizationId || session.metadata?.organizationId;
+                    if (program.productCategory === 'goods') {
+                      await pushNotifications.notifyAllAdmins(storage,
+                        '📦 New Store Order',
+                        `${playerName} purchased ${program.name} — dispatch required`,
+                        orgId
+                      );
+                    } else {
+                      await pushNotifications.notifyAllAdmins(storage,
+                        '🏀 New Enrollment',
+                        `${playerName} enrolled in ${program.name} — needs team/skill level assignment`,
+                        orgId
+                      );
+                    }
+                  } catch (notifError: any) {
+                    console.error('⚠️ Enrollment/purchase admin notification failed (non-fatal):', notifError.message);
                   }
                 } else if (hasEnrollment) {
                   console.log(`ℹ️ Player ${playerId} already has enrollment for program ${packageId}`);
@@ -6499,6 +6539,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error fetching CRM unread count:', error);
       res.status(500).json({ error: 'Failed to fetch unread messages' });
+    }
+  });
+
+  app.get('/api/admin/pending-orders', requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role, id: userId } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(userId, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+
+      const recentOrders = await db.select({
+        paymentId: payments.id,
+        userId: payments.userId,
+        playerId: payments.playerId,
+        amount: payments.amount,
+        description: payments.description,
+        programId: payments.programId,
+        createdAt: payments.createdAt,
+        status: payments.status,
+      })
+        .from(payments)
+        .innerJoin(products, eq(payments.programId, products.id))
+        .where(and(
+          eq(payments.organizationId, organizationId),
+          eq(payments.status, 'completed'),
+          eq(products.productCategory, 'goods'),
+          gte(payments.createdAt, sql`NOW() - INTERVAL '30 days'`)
+        ))
+        .orderBy(desc(payments.createdAt))
+        .limit(50);
+
+      const enriched = await Promise.all(recentOrders.map(async (order: any) => {
+        const buyer = await storage.getUser(order.playerId || order.userId);
+        return {
+          ...order,
+          buyerName: buyer ? `${buyer.firstName || ''} ${buyer.lastName || ''}`.trim() : 'Unknown',
+        };
+      }));
+
+      res.json({
+        pendingCount: enriched.length,
+        orders: enriched.slice(0, 5),
+        latestBuyerName: enriched[0]?.buyerName || null,
+        latestDescription: enriched[0]?.description || null,
+        latestCreatedAt: enriched[0]?.createdAt || null,
+      });
+    } catch (error: any) {
+      console.error('Error fetching pending orders:', error);
+      res.status(500).json({ error: 'Failed to fetch pending orders' });
+    }
+  });
+
+  app.get('/api/admin/pending-assignments', requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role, id: userId } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(userId, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+
+      const recentEnrollments = await db.select({
+        enrollmentId: productEnrollments.id,
+        profileId: productEnrollments.profileId,
+        programId: productEnrollments.programId,
+        status: productEnrollments.status,
+        startDate: productEnrollments.startDate,
+      })
+        .from(productEnrollments)
+        .innerJoin(products, eq(productEnrollments.programId, products.id))
+        .where(and(
+          eq(productEnrollments.organizationId, organizationId),
+          eq(productEnrollments.status, 'active'),
+          sql`${products.productCategory} IS DISTINCT FROM 'goods'`,
+          gte(productEnrollments.startDate, sql`NOW() - INTERVAL '30 days'`)
+        ))
+        .orderBy(desc(productEnrollments.startDate));
+
+      const unassigned = [];
+      for (const enrollment of recentEnrollments) {
+        if (!enrollment.profileId) continue;
+        const membershipCount = await db.select({ cnt: count() })
+          .from(teamMemberships)
+          .where(and(
+            eq(teamMemberships.profileId, enrollment.profileId),
+            eq(teamMemberships.status, 'active')
+          ));
+        if (!membershipCount[0]?.cnt || membershipCount[0].cnt === 0) {
+          const player = await storage.getUser(enrollment.profileId);
+          const program = await storage.getProgram(enrollment.programId);
+          unassigned.push({
+            ...enrollment,
+            playerName: player ? `${player.firstName || ''} ${player.lastName || ''}`.trim() : 'Unknown',
+            programName: program?.name || 'Unknown Program',
+          });
+        }
+      }
+
+      res.json({
+        pendingCount: unassigned.length,
+        assignments: unassigned.slice(0, 5),
+        latestPlayerName: unassigned[0]?.playerName || null,
+        latestProgramName: unassigned[0]?.programName || null,
+        latestStartDate: unassigned[0]?.startDate || null,
+      });
+    } catch (error: any) {
+      console.error('Error fetching pending assignments:', error);
+      res.status(500).json({ error: 'Failed to fetch pending assignments' });
     }
   });
 

@@ -416,10 +416,14 @@ export const pushNotifications = {
   // UTILITY: Send to all admins
   // ============================================
 
-  async notifyAllAdmins(storage: IStorage, title: string, message: string) {
+  async notifyAllAdmins(storage: IStorage, title: string, message: string, organizationId?: string) {
+    const conditions = [eq(users.role, 'admin')];
+    if (organizationId) {
+      conditions.push(eq(users.organizationId, organizationId));
+    }
     const admins = await db.select({ id: users.id })
       .from(users)
-      .where(eq(users.role, 'admin'));
+      .where(and(...conditions));
     
     for (const admin of admins) {
       await sendNotification(storage, {

@@ -2,6 +2,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { authPersistence } from "@/services/authPersistence";
 import CrmMessageBanner from "@/components/CrmMessageBanner";
+import StorePurchaseBanner from "@/components/StorePurchaseBanner";
+import EnrollmentAssignmentBanner from "@/components/EnrollmentAssignmentBanner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BanterLoader } from "@/components/BanterLoader";
 import { Button } from "@/components/ui/button";
@@ -497,6 +499,8 @@ export default function AdminDashboard() {
           <TabsContent value="overview" className="space-y-6">
             {/* CRM Messages Banner */}
             <CrmMessageBanner onNavigateToCrm={() => { setCrmSubTab("messages"); setActiveTab("crm"); }} />
+            <StorePurchaseBanner onNavigateToStore={() => setActiveTab("store")} />
+            <EnrollmentAssignmentBanner onNavigateToUsers={() => setActiveTab("users")} />
             {/* People */}
             <div>
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">People</h3>

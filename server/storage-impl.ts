@@ -4384,6 +4384,7 @@ class DatabaseStorage implements IStorage {
       // Store-specific fields
       inventorySizes: updates.inventorySizes,
       inventoryCount: updates.inventoryCount,
+      sizeStock: updates.sizeStock,
       shippingRequired: updates.shippingRequired,
       sessionCount: updates.sessionCount,
       // Waiver requirements
@@ -5856,6 +5857,7 @@ class DatabaseStorage implements IStorage {
       // Store-specific fields
       inventorySizes: dbProgram.inventorySizes || [],
       inventoryCount: dbProgram.inventoryCount,
+      sizeStock: dbProgram.sizeStock || {},
       shippingRequired: dbProgram.shippingRequired ?? false,
       sessionCount: dbProgram.sessionCount,
       // Waiver requirements

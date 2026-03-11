@@ -2296,9 +2296,9 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                         
                         // Check for players without teams (Pending Assignment)
                         // Only show if teams actually exist in the organization
-                        // Check both legacy teamId AND teamIds from team_memberships
+                        // Check legacy teamId, teamIds, AND activeTeams from team_memberships table
                         const hasActiveEnrollmentWithoutTeam = teams.length > 0 ? (() => {
-                          const isOnTeam = (u: any) => u.teamId || (Array.isArray(u.teamIds) && u.teamIds.length > 0);
+                          const isOnTeam = (u: any) => u.teamId || (Array.isArray(u.teamIds) && u.teamIds.length > 0) || (Array.isArray(u.activeTeams) && u.activeTeams.length > 0);
                           if (user.role === "player") {
                             const hasActiveEnrollment = uniqueEnrollments.some((e: any) => 
                               e.profileId === user.id && e.status === 'active'

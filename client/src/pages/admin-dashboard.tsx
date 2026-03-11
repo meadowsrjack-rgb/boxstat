@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { authPersistence } from "@/services/authPersistence";
+import CrmMessageBanner from "@/components/CrmMessageBanner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BanterLoader } from "@/components/BanterLoader";
 import { Button } from "@/components/ui/button";
@@ -493,6 +494,8 @@ export default function AdminDashboard() {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
+            {/* CRM Messages Banner */}
+            <CrmMessageBanner onNavigateToCrm={() => setActiveTab("crm")} />
             {/* People */}
             <div>
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">People</h3>

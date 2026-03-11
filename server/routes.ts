@@ -45,7 +45,7 @@ import { notificationService } from "./services/notificationService";
 import { analyzePlayerAttendance, getTeamCoachIds, getOrgAdminIds, triggerRealTimeAttendanceNotifications } from "./services/attendanceTracker";
 import { db } from "./db";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
-import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards, platformSettings, organizations, attendances, rsvpResponses } from "@shared/schema";
+import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards, platformSettings, organizations, attendances, rsvpResponses, contactManagementMessages } from "@shared/schema";
 import { eq, and, or, sql, desc, inArray, gte, count } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;
@@ -6465,6 +6465,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
   
+  app.get('/api/admin/crm-unread', requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role, id: userId } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(userId, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+
+      const unreadMessages = await db.select({
+        id: contactManagementMessages.id,
+        senderName: contactManagementMessages.senderName,
+        message: contactManagementMessages.message,
+        createdAt: contactManagementMessages.createdAt,
+      })
+        .from(contactManagementMessages)
+        .where(and(
+          eq(contactManagementMessages.organizationId, organizationId),
+          eq(contactManagementMessages.status, 'unread'),
+          sql`${contactManagementMessages.isAdmin} IS NOT TRUE`
+        ))
+        .orderBy(desc(contactManagementMessages.createdAt));
+
+      const unreadCount = unreadMessages.length;
+      const latest = unreadMessages[0] || null;
+
+      res.json({
+        unreadCount,
+        latestSenderName: latest?.senderName || null,
+        latestMessage: latest?.message ? latest.message.substring(0, 80) : null,
+        latestCreatedAt: latest?.createdAt || null,
+      });
+    } catch (error: any) {
+      console.error('Error fetching CRM unread count:', error);
+      res.status(500).json({ error: 'Failed to fetch unread messages' });
+    }
+  });
+
   app.get('/api/admin/overview-stats', requireAuth, async (req: any, res) => {
     try {
       const { organizationId, role, id: userId } = req.user;

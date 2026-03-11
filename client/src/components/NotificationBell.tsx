@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
-import { Bell } from "lucide-react";
+import { Bell, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -74,10 +74,6 @@ export function NotificationBell() {
 
   const handlePopoverChange = async (open: boolean) => {
     setPopoverOpen(open);
-    
-    if (open && unreadCount > 0) {
-      markAllAsRead.mutate();
-    }
   };
 
   const handleNotificationClick = async (notification: NotificationItem) => {
@@ -129,9 +125,14 @@ export function NotificationBell() {
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-sm">Notifications</h3>
             {unreadCount > 0 && (
-              <span className="text-xs text-muted-foreground">
-                {unreadCount} unread
-              </span>
+              <button
+                onClick={() => markAllAsRead.mutate()}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                disabled={markAllAsRead.isPending}
+              >
+                <CheckCheck className="w-3.5 h-3.5" />
+                Mark all read
+              </button>
             )}
           </div>
 

@@ -281,6 +281,11 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/notifications"],
   });
 
+  // Fetch overview stats
+  const { data: overviewStats } = useQuery<any>({
+    queryKey: ["/api/admin/overview-stats"],
+  });
+
   const isLoading = orgLoading || usersLoading || teamsLoading || eventsLoading || programsLoading || enrollmentsLoading || awardDefinitionsLoading || paymentsLoading || divisionsLoading || evaluationsLoading || notificationsLoading;
 
   // Calculate stats
@@ -488,35 +493,125 @@ export default function AdminDashboard() {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard
-                title="Total Accounts"
-                value={stats.totalAccounts}
-                icon={<UserCircle className="w-6 h-6" />}
-                subtitle="Primary account holders"
-                testId="stat-total-accounts"
-              />
-              <StatCard
-                title="Total Users"
-                value={stats.totalUsers}
-                icon={<Users className="w-6 h-6" />}
-                subtitle={`${users.filter((u: any) => u.role === "admin").length} admin, ${stats.totalCoaches} coach, ${stats.totalParents} parent, ${stats.totalPlayers} player`}
-                testId="stat-total-users"
-              />
-              <StatCard
-                title="Events"
-                value={stats.totalEvents}
-                icon={<Calendar className="w-6 h-6" />}
-                subtitle={`${stats.upcomingEvents} upcoming`}
-                testId="stat-total-events"
-              />
-              <StatCard
-                title="Revenue"
-                value={`$${(stats.totalRevenue / 100).toFixed(2)}`}
-                icon={<DollarSign className="w-6 h-6" />}
-                subtitle={`${stats.pendingPayments} pending`}
-                testId="stat-total-revenue"
-              />
+            {/* People */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">People</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <StatCard
+                  title="Total Accounts"
+                  value={stats.totalAccounts}
+                  icon={<UserCircle className="w-6 h-6" />}
+                  subtitle="Primary account holders"
+                  testId="stat-total-accounts"
+                />
+                <StatCard
+                  title="Enrolled Players"
+                  value={overviewStats?.enrolledPlayers ?? '—'}
+                  icon={<CheckCircle2 className="w-6 h-6" />}
+                  subtitle="Active enrollment"
+                  testId="stat-enrolled-players"
+                />
+                <StatCard
+                  title="Coaches"
+                  value={overviewStats?.totalCoaches ?? stats.totalCoaches}
+                  icon={<Shield className="w-6 h-6" />}
+                  subtitle=""
+                  testId="stat-total-coaches"
+                />
+                <StatCard
+                  title="Admins"
+                  value={overviewStats?.totalAdmins ?? users.filter((u: any) => u.role === "admin").length}
+                  icon={<User className="w-6 h-6" />}
+                  subtitle=""
+                  testId="stat-total-admins"
+                />
+              </div>
+            </div>
+
+            {/* Revenue */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Revenue</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <StatCard
+                  title="This Month"
+                  value={`$${((overviewStats?.revenueThisMonth ?? 0) / 100).toFixed(2)}`}
+                  icon={<DollarSign className="w-6 h-6" />}
+                  subtitle={new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
+                  testId="stat-revenue-month"
+                />
+                <StatCard
+                  title="This Year"
+                  value={`$${((overviewStats?.revenueThisYear ?? 0) / 100).toFixed(2)}`}
+                  icon={<TrendingUp className="w-6 h-6" />}
+                  subtitle={`${new Date().getFullYear()}`}
+                  testId="stat-revenue-year"
+                />
+                <StatCard
+                  title="All-Time Revenue"
+                  value={`$${((overviewStats?.revenueTotal ?? stats.totalRevenue) / 100).toFixed(2)}`}
+                  icon={<DollarSign className="w-6 h-6" />}
+                  subtitle={`${stats.pendingPayments} pending`}
+                  testId="stat-revenue-total"
+                />
+              </div>
+            </div>
+
+            {/* Events */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Events</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <StatCard
+                  title="Total Events"
+                  value={stats.totalEvents}
+                  icon={<Calendar className="w-6 h-6" />}
+                  subtitle={`${stats.upcomingEvents} upcoming`}
+                  testId="stat-total-events"
+                />
+                <StatCard
+                  title="RSVPs"
+                  value={overviewStats?.totalRsvps ?? '—'}
+                  icon={<CheckCircle2 className="w-6 h-6" />}
+                  subtitle="Total attending"
+                  testId="stat-total-rsvps"
+                />
+                <StatCard
+                  title="Check-Ins"
+                  value={overviewStats?.totalCheckins ?? '—'}
+                  icon={<Target className="w-6 h-6" />}
+                  subtitle="Total check-ins"
+                  testId="stat-total-checkins"
+                />
+                <StatCard
+                  title="Check-In Rate"
+                  value={overviewStats && overviewStats.totalRsvps > 0
+                    ? `${Math.round((overviewStats.totalCheckins / overviewStats.totalRsvps) * 100)}%`
+                    : '—'}
+                  icon={<TrendingUp className="w-6 h-6" />}
+                  subtitle="Check-ins vs RSVPs"
+                  testId="stat-checkin-rate"
+                />
+              </div>
+            </div>
+
+            {/* Awards */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Awards</h3>
+              <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+                <StatCard
+                  title="Awards This Month"
+                  value={overviewStats?.awardsThisMonth ?? '—'}
+                  icon={<Trophy className="w-6 h-6" />}
+                  subtitle={new Date().toLocaleString('default', { month: 'long' })}
+                  testId="stat-awards-month"
+                />
+                <StatCard
+                  title="Awards All-Time"
+                  value={overviewStats?.awardsAllTime ?? '—'}
+                  icon={<Award className="w-6 h-6" />}
+                  subtitle="Total awards given"
+                  testId="stat-awards-total"
+                />
+              </div>
             </div>
 
             <RecentTransactionsCard payments={payments} users={users} programs={programs} />

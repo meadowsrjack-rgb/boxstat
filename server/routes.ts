@@ -44,8 +44,8 @@ import { notificationScheduler } from "./services/notificationScheduler";
 import { notificationService } from "./services/notificationService";
 import { db } from "./db";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
-import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards, platformSettings, organizations } from "@shared/schema";
-import { eq, and, or, sql, desc, inArray } from "drizzle-orm";
+import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards, platformSettings, organizations, attendances, rsvpResponses } from "@shared/schema";
+import { eq, and, or, sql, desc, inArray, gte, count } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;
 
@@ -6413,6 +6413,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
   
+  app.get('/api/admin/overview-stats', requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role, id: userId } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(userId, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+      const orgUsers = await db.select().from(users).where(eq(users.organizationId, organizationId));
+      const orgPlayerIds = orgUsers.filter(u => u.role === 'player').map(u => u.id);
+
+      const activeEnrollments = await db.select().from(productEnrollments)
+        .where(and(
+          eq(productEnrollments.organizationId, organizationId),
+          eq(productEnrollments.status, 'active')
+        ));
+      const enrolledPlayerIds = new Set(
+        activeEnrollments
+          .map(e => e.profileId)
+          .filter(Boolean)
+      );
+
+      const totalRsvpsResult = await db.execute(
+        sql`SELECT COUNT(*) as count FROM rsvp_responses r
+            INNER JOIN events e ON e.id = r.event_id AND e.organization_id = ${organizationId}
+            WHERE r.response = 'attending'`
+      );
+
+      const totalCheckinsResult = await db.execute(
+        sql`SELECT COUNT(DISTINCT (a.event_id, a.user_id)) as count FROM attendances a
+            INNER JOIN events e ON e.id = a.event_id AND e.organization_id = ${organizationId}`
+      );
+
+      const orgPlayerIdsSet = new Set(orgPlayerIds);
+      const allAwards = await db.select().from(userAwards)
+        .where(
+          orgPlayerIds.length > 0 ? inArray(userAwards.userId, orgPlayerIds) : sql`false`
+        );
+
+      const monthlyAwards = allAwards.filter(a => a.awardedAt && new Date(a.awardedAt) >= startOfMonth);
+
+      const allPayments = await db.execute(
+        sql`SELECT amount, paid_at, created_at FROM payments
+            WHERE organization_id = ${organizationId} AND status = 'completed'`
+      );
+
+      let revenueThisMonth = 0;
+      let revenueThisYear = 0;
+      let revenueTotal = 0;
+      for (const p of (allPayments.rows || allPayments) as any[]) {
+        const amount = p.amount || 0;
+        revenueTotal += amount;
+        const paidDate = p.paid_at ? new Date(p.paid_at) : (p.created_at ? new Date(p.created_at) : null);
+        if (paidDate) {
+          if (paidDate >= startOfMonth) revenueThisMonth += amount;
+          if (paidDate >= startOfYear) revenueThisYear += amount;
+        }
+      }
+
+      const rsvpRows = (totalRsvpsResult.rows || totalRsvpsResult) as any[];
+      const checkinRows = (totalCheckinsResult.rows || totalCheckinsResult) as any[];
+
+      const enrolledPlayerCount = [...enrolledPlayerIds].filter(id => orgPlayerIdsSet.has(id as string)).length;
+
+      res.json({
+        enrolledPlayers: enrolledPlayerCount,
+        totalAdmins: orgUsers.filter(u => u.role === 'admin').length,
+        totalCoaches: orgUsers.filter(u => u.role === 'coach').length,
+        revenueThisMonth,
+        revenueThisYear,
+        revenueTotal,
+        totalRsvps: parseInt(rsvpRows[0]?.count) || 0,
+        totalCheckins: parseInt(checkinRows[0]?.count) || 0,
+        awardsThisMonth: monthlyAwards.length,
+        awardsAllTime: allAwards.length,
+      });
+    } catch (error: any) {
+      console.error('Error fetching overview stats:', error);
+      res.status(500).json({ error: "Failed to fetch overview stats" });
+    }
+  });
+
   app.get('/api/admin/alerts', requireAuth, async (req: any, res) => {
     try {
       const { organizationId, role, id: userId } = req.user;

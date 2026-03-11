@@ -163,6 +163,7 @@ export default function AdminDashboard() {
     return 'overview';
   };
   const [activeTab, setActiveTabState] = useState(getInitialTab);
+  const [crmSubTab, setCrmSubTab] = useState<string | null>(null);
   const setActiveTab = (tab: string) => {
     setActiveTabState(tab);
     const url = new URL(window.location.href);
@@ -495,7 +496,7 @@ export default function AdminDashboard() {
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             {/* CRM Messages Banner */}
-            <CrmMessageBanner onNavigateToCrm={() => setActiveTab("crm")} />
+            <CrmMessageBanner onNavigateToCrm={() => { setCrmSubTab("messages"); setActiveTab("crm"); }} />
             {/* People */}
             <div>
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">People</h3>
@@ -657,7 +658,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="crm">
-            <CRMTab organization={organization} users={users} teams={teams} />
+            <CRMTab organization={organization} users={users} teams={teams} initialSubTab={crmSubTab} key={crmSubTab || 'default'} />
           </TabsContent>
         </Tabs>
       </div>
@@ -14868,9 +14869,9 @@ function MigrationsTab({ organization, users }: any) {
 }
 
 // CRM Tab Component
-function CRMTab({ organization, users, teams }: any) {
+function CRMTab({ organization, users, teams, initialSubTab }: any) {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'leads' | 'messages' | 'quotes'>('leads');
+  const [activeTab, setActiveTab] = useState<'leads' | 'messages' | 'quotes'>(initialSubTab || 'leads');
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [viewingEvaluation, setViewingEvaluation] = useState<any>(null);
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
@@ -14929,10 +14930,11 @@ function CRMTab({ organization, users, teams }: any) {
   // Mark contact message as read mutation
   const markMessageAsReadMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest(`/api/contact-management/${id}`, { method: 'PATCH', data: { isRead: true } });
+      return apiRequest(`/api/contact-management/${id}`, { method: 'PATCH', data: { status: 'read' } });
     },
     onSuccess: () => {
       refetchMessages();
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/crm-unread'] });
     },
   });
 
@@ -15215,7 +15217,7 @@ function CRMTab({ organization, users, teams }: any) {
                           className={`p-3 rounded-lg cursor-pointer hover:bg-gray-50 ${selectedConversation?.id === msg.id ? 'bg-gray-100 border-l-4 border-red-600' : ''}`}
                           onClick={() => {
                             setSelectedConversation(msg);
-                            if (!msg.isRead) {
+                            if (msg.status === 'unread') {
                               markMessageAsReadMutation.mutate(msg.id);
                             }
                           }}
@@ -15230,7 +15232,7 @@ function CRMTab({ organization, users, teams }: any) {
                             </div>
                           </div>
                           <p className="text-sm text-gray-600 truncate">{msg.message}</p>
-                          {!msg.isRead && <Badge variant="default" className="mt-1">New</Badge>}
+                          {msg.status === 'unread' && <Badge variant="default" className="mt-1">New</Badge>}
                         </div>
                       ))}
                     </div>

@@ -506,9 +506,9 @@ export default function AdminDashboard() {
                 />
                 <StatCard
                   title="Enrolled Players"
-                  value={overviewStats?.enrolledPlayers ?? '—'}
+                  value={overviewStats ? `${overviewStats.enrolledPlayers} / ${overviewStats.totalPlayers}` : '—'}
                   icon={<CheckCircle2 className="w-6 h-6" />}
-                  subtitle="Active enrollment"
+                  subtitle={overviewStats ? `Enrolled ${overviewStats.enrolledPlayers} · Not enrolled ${overviewStats.notEnrolledPlayers}` : ''}
                   testId="stat-enrolled-players"
                 />
                 <StatCard
@@ -582,13 +582,13 @@ export default function AdminDashboard() {
                   testId="stat-total-checkins"
                 />
                 <StatCard
-                  title="Check-In Rate"
-                  value={overviewStats && overviewStats.totalRsvps > 0
-                    ? `${Math.round((overviewStats.totalCheckins / overviewStats.totalRsvps) * 100)}%`
+                  title="Attendance Rate"
+                  value={overviewStats && overviewStats.attendanceInvited > 0
+                    ? `${Math.round((overviewStats.attendanceActual / overviewStats.attendanceInvited) * 100)}%`
                     : '—'}
                   icon={<TrendingUp className="w-6 h-6" />}
-                  subtitle="Check-ins vs RSVPs"
-                  testId="stat-checkin-rate"
+                  subtitle={overviewStats ? `${overviewStats.attendanceActual} checked in / ${overviewStats.attendanceInvited} invited` : 'Past events'}
+                  testId="stat-attendance-rate"
                 />
               </div>
             </div>

@@ -6431,7 +6431,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const activeEnrollments = await db.select().from(productEnrollments)
         .where(and(
           eq(productEnrollments.organizationId, organizationId),
-          eq(productEnrollments.status, 'active')
+          or(
+            eq(productEnrollments.status, 'active'),
+            eq(productEnrollments.status, 'pending')
+          )
         ));
       const enrolledPlayerIds = new Set(
         activeEnrollments
@@ -6448,6 +6451,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalCheckinsResult = await db.execute(
         sql`SELECT COUNT(DISTINCT (a.event_id, a.user_id)) as count FROM attendances a
             INNER JOIN events e ON e.id = a.event_id AND e.organization_id = ${organizationId}`
+      );
+
+      const attendanceRateResult = await db.execute(
+        sql`WITH past_events AS (
+              SELECT id, team_id FROM events
+              WHERE organization_id = ${organizationId} AND start_time < NOW()
+            ),
+            event_participants AS (
+              SELECT pe.id as event_id, tm.profile_id as user_id
+              FROM past_events pe
+              INNER JOIN team_memberships tm ON tm.team_id = pe.team_id
+              WHERE pe.team_id IS NOT NULL AND tm.status = 'active'
+            ),
+            event_checkins AS (
+              SELECT DISTINCT a.event_id, a.user_id
+              FROM attendances a
+              INNER JOIN past_events pe ON pe.id = a.event_id
+            )
+            SELECT
+              (SELECT COUNT(*) FROM event_participants) as total_invited,
+              (SELECT COUNT(*) FROM event_checkins) as total_attended`
       );
 
       const orgPlayerIdsSet = new Set(orgPlayerIds);
@@ -6478,11 +6502,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const rsvpRows = (totalRsvpsResult.rows || totalRsvpsResult) as any[];
       const checkinRows = (totalCheckinsResult.rows || totalCheckinsResult) as any[];
+      const attendanceRows = (attendanceRateResult.rows || attendanceRateResult) as any[];
 
       const enrolledPlayerCount = [...enrolledPlayerIds].filter(id => orgPlayerIdsSet.has(id as string)).length;
+      const totalPlayers = orgPlayerIds.length;
+      const notEnrolledPlayers = totalPlayers - enrolledPlayerCount;
+
+      const totalInvited = parseInt(attendanceRows[0]?.total_invited) || 0;
+      const totalAttended = parseInt(attendanceRows[0]?.total_attended) || 0;
 
       res.json({
         enrolledPlayers: enrolledPlayerCount,
+        notEnrolledPlayers: notEnrolledPlayers,
+        totalPlayers,
         totalAdmins: orgUsers.filter(u => u.role === 'admin').length,
         totalCoaches: orgUsers.filter(u => u.role === 'coach').length,
         revenueThisMonth,
@@ -6490,6 +6522,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         revenueTotal,
         totalRsvps: parseInt(rsvpRows[0]?.count) || 0,
         totalCheckins: parseInt(checkinRows[0]?.count) || 0,
+        attendanceInvited: totalInvited,
+        attendanceActual: totalAttended,
         awardsThisMonth: monthlyAwards.length,
         awardsAllTime: allAwards.length,
       });

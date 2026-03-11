@@ -106,10 +106,17 @@ export class NotificationScheduler {
       scheduled: false
     });
 
+    const abandonedCartRemindersJob = cron.schedule('*/15 * * * *', async () => {
+      await this.processAbandonedCartReminders();
+    }, {
+      scheduled: false
+    });
+
     this.jobs.set('eventReminders', eventReminderJob);
     this.jobs.set('checkinAvailable', checkinAvailableJob);
     this.jobs.set('rsvpClosing', rsvpClosingJob);
     this.jobs.set('attendanceNotifications', attendanceNotificationsJob);
+    this.jobs.set('abandonedCartReminders', abandonedCartRemindersJob);
 
     // Start all jobs
     this.jobs.forEach((job, name) => {
@@ -646,6 +653,39 @@ export class NotificationScheduler {
       }
     } catch (error) {
       console.error('Error processing attendance notifications:', error);
+    }
+  }
+
+  private async processAbandonedCartReminders() {
+    try {
+      const pendingCarts = await storage.getPendingAbandonedCarts();
+      const now = Date.now();
+      const HOUR_MS = 1000 * 60 * 60;
+
+      for (const cart of pendingCarts) {
+        try {
+          const createdAt = new Date(cart.createdAt!).getTime();
+          const ageHours = (now - createdAt) / HOUR_MS;
+          const remindersSent = cart.remindersSent || 0;
+          const lastReminderAt = cart.lastReminderAt ? new Date(cart.lastReminderAt).getTime() : 0;
+          const hoursSinceLastReminder = lastReminderAt ? (now - lastReminderAt) / HOUR_MS : Infinity;
+
+          if (remindersSent === 0 && ageHours >= 1) {
+            await pushNotifications.cartReminder1Hour(storage, cart.userId, cart.productName || 'your item', cart.playerName || undefined);
+            await storage.updateAbandonedCartReminder(cart.id, 1);
+          } else if (remindersSent === 1 && ageHours >= 24 && hoursSinceLastReminder >= 12) {
+            await pushNotifications.cartReminder24Hours(storage, cart.userId, cart.productName || 'your item', cart.playerName || undefined);
+            await storage.updateAbandonedCartReminder(cart.id, 2);
+          } else if (remindersSent === 2 && ageHours >= 72 && hoursSinceLastReminder >= 24) {
+            await pushNotifications.cartReminder3Days(storage, cart.userId, cart.productName || 'your item', cart.playerName || undefined);
+            await storage.updateAbandonedCartReminder(cart.id, 3);
+          }
+        } catch (cartError) {
+          console.error(`Error processing abandoned cart ${cart.id}:`, cartError);
+        }
+      }
+    } catch (error) {
+      console.error('Error processing abandoned cart reminders:', error);
     }
   }
 

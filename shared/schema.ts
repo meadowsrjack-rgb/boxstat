@@ -1134,6 +1134,31 @@ export const quoteCheckouts = pgTable("quote_checkouts", {
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
 
+// Abandoned Cart Tracking (for checkout reminder notifications)
+export const abandonedCarts = pgTable("abandoned_carts", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  stripeSessionId: varchar("stripe_session_id"),
+  productId: varchar("product_id"),
+  productName: varchar("product_name"),
+  playerName: varchar("player_name"),
+  amount: integer("amount"),
+  status: varchar().default('pending'),
+  remindersSent: integer("reminders_sent").default(0),
+  lastReminderAt: timestamp("last_reminder_at", { mode: 'string' }),
+  completedAt: timestamp("completed_at", { mode: 'string' }),
+  dismissedAt: timestamp("dismissed_at", { mode: 'string' }),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+export const insertAbandonedCartSchema = createInsertSchema(abandonedCarts).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertAbandonedCart = z.infer<typeof insertAbandonedCartSchema>;
+export type AbandonedCart = typeof abandonedCarts.$inferSelect;
+
 // Insert schemas for new tables
 export const insertDirectMessageSchema = createInsertSchema(directMessages).omit({
   id: true,

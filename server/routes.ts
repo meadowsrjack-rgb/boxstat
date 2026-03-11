@@ -1880,6 +1880,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const session = await orgStripe2.checkout.sessions.create(sessionParams);
+
+      try {
+        const playerUser = playerId ? await storage.getUser(playerId) : null;
+        const playerFullName = playerUser ? `${playerUser.firstName || ''} ${playerUser.lastName || ''}`.trim() : undefined;
+        await storage.createAbandonedCart({
+          userId: user.id,
+          organizationId: req.user.organizationId,
+          stripeSessionId: session.id,
+          productId: packageId,
+          productName: program.name || program.title || 'Program',
+          playerName: playerFullName || undefined,
+          amount: lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0),
+          status: 'pending',
+        });
+      } catch (cartError: any) {
+        console.error('⚠️ Abandoned cart tracking failed (non-fatal):', cartError.message);
+      }
       
       res.json({
         url: session.url,
@@ -1927,6 +1944,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const session = event.data.object as Stripe.Checkout.Session;
         
         console.log("✅ Checkout session completed:", session.id);
+
+        try {
+          await storage.completeAbandonedCart(session.id);
+        } catch (cartError: any) {
+          console.error('⚠️ Abandoned cart completion failed (non-fatal):', cartError.message);
+        }
         
         // Check if this is an "add_player" payment
         if (session.metadata?.type === 'add_player') {
@@ -2552,6 +2575,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // =============================================
+  // ABANDONED CART ROUTES
+  // =============================================
+
+  app.get('/api/abandoned-carts', requireAuth, async (req: any, res) => {
+    try {
+      const carts = await storage.getAbandonedCartsByUser(req.user.id);
+      res.json(carts);
+    } catch (error: any) {
+      console.error('Error fetching abandoned carts:', error);
+      res.status(500).json({ error: 'Failed to fetch cart items' });
+    }
+  });
+
+  app.post('/api/abandoned-carts/:id/dismiss', requireAuth, async (req: any, res) => {
+    try {
+      const cartId = parseInt(req.params.id);
+      if (isNaN(cartId)) {
+        return res.status(400).json({ error: 'Invalid cart ID' });
+      }
+      await storage.dismissAbandonedCart(cartId, req.user.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error dismissing abandoned cart:', error);
+      res.status(500).json({ error: 'Failed to dismiss cart item' });
+    }
+  });
+
   // =============================================
   // REGISTRATION ROUTES
   // =============================================

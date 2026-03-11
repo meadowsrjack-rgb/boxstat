@@ -603,6 +603,43 @@ export const pushNotifications = {
       message: `${count} player${count === 1 ? ' has' : 's have'} missed 3+ events this week. Review attendance report.`,
     });
   },
+
+  // ============================================
+  // ABANDONED CART NOTIFICATIONS
+  // ============================================
+
+  async cartReminder1Hour(storage: IStorage, userId: string, productName: string, playerName?: string) {
+    const msg = playerName
+      ? `You started enrolling ${playerName} in ${productName} but didn't finish. Complete checkout before the spot fills up!`
+      : `You left ${productName} in your cart. Complete checkout before it's gone!`;
+    await sendNotification(storage, {
+      userId,
+      title: "🛒 You Left Something Behind!",
+      message: msg,
+    });
+  },
+
+  async cartReminder24Hours(storage: IStorage, userId: string, productName: string, playerName?: string) {
+    const msg = playerName
+      ? `${playerName}'s enrollment in ${productName} is still waiting. Don't miss out — finish checkout today!`
+      : `${productName} is still in your cart. Don't miss out — finish checkout today!`;
+    await sendNotification(storage, {
+      userId,
+      title: "⏰ Still Interested?",
+      message: msg,
+    });
+  },
+
+  async cartReminder3Days(storage: IStorage, userId: string, productName: string, playerName?: string) {
+    const msg = playerName
+      ? `Last reminder — ${playerName}'s spot in ${productName} won't be held forever. Complete checkout now!`
+      : `Last reminder — ${productName} is still in your cart. Complete checkout before it's too late!`;
+    await sendNotification(storage, {
+      userId,
+      title: "🔔 Last Chance!",
+      message: msg,
+    });
+  },
 };
 
 export default pushNotifications;

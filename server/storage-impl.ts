@@ -80,6 +80,9 @@ import {
   type ProgramAvailabilitySlot,
   type InsertProgramAvailabilitySlot,
   programAvailabilitySlots,
+  type AbandonedCart,
+  type InsertAbandonedCart,
+  abandonedCarts,
 } from "@shared/schema";
 
 // =============================================
@@ -345,6 +348,14 @@ export interface IStorage {
   createContactManagementMessage(data: InsertContactManagementMessage): Promise<ContactManagementMessage>;
   updateContactManagementMessage(id: number, updates: Partial<ContactManagementMessage>): Promise<ContactManagementMessage | undefined>;
   
+  // Abandoned Cart operations
+  createAbandonedCart(data: InsertAbandonedCart): Promise<AbandonedCart>;
+  getAbandonedCartsByUser(userId: string): Promise<AbandonedCart[]>;
+  getPendingAbandonedCarts(): Promise<AbandonedCart[]>;
+  completeAbandonedCart(stripeSessionId: string): Promise<void>;
+  dismissAbandonedCart(id: number, userId: string): Promise<void>;
+  updateAbandonedCartReminder(id: number, remindersSent: number): Promise<void>;
+
   // CRM Lead operations
   getCrmLead(id: number): Promise<CrmLead | undefined>;
   getCrmLeadsByOrganization(organizationId: string): Promise<CrmLead[]>;
@@ -2515,6 +2526,14 @@ class MemStorage implements IStorage {
   async getScheduleRequestsByProgram(programId: string): Promise<Event[]> { return []; }
   async getScheduleRequestsByEnrollment(enrollmentId: number): Promise<Event[]> { return []; }
   async getPendingScheduleRequests(organizationId: string): Promise<Event[]> { return []; }
+
+  // Abandoned Cart operations (MemStorage stubs)
+  async createAbandonedCart(data: InsertAbandonedCart): Promise<AbandonedCart> { throw new Error("Not implemented"); }
+  async getAbandonedCartsByUser(userId: string): Promise<AbandonedCart[]> { return []; }
+  async getPendingAbandonedCarts(): Promise<AbandonedCart[]> { return []; }
+  async completeAbandonedCart(stripeSessionId: string): Promise<void> {}
+  async dismissAbandonedCart(id: number, userId: string): Promise<void> {}
+  async updateAbandonedCartReminder(id: number, remindersSent: number): Promise<void> {}
 }
 
 // =============================================
@@ -6236,6 +6255,47 @@ class DatabaseStorage implements IStorage {
         sql`"schedule_request_source" IS NOT NULL`
       ));
     return allEvents as Event[];
+  }
+
+  async createAbandonedCart(data: InsertAbandonedCart): Promise<AbandonedCart> {
+    const [cart] = await db.insert(schema.abandonedCarts).values(data).returning();
+    return cart;
+  }
+
+  async getAbandonedCartsByUser(userId: string): Promise<AbandonedCart[]> {
+    return db.select().from(schema.abandonedCarts)
+      .where(and(
+        eq(schema.abandonedCarts.userId, userId),
+        eq(schema.abandonedCarts.status, 'pending')
+      ))
+      .orderBy(desc(schema.abandonedCarts.createdAt));
+  }
+
+  async getPendingAbandonedCarts(): Promise<AbandonedCart[]> {
+    return db.select().from(schema.abandonedCarts)
+      .where(eq(schema.abandonedCarts.status, 'pending'))
+      .orderBy(schema.abandonedCarts.createdAt);
+  }
+
+  async completeAbandonedCart(stripeSessionId: string): Promise<void> {
+    await db.update(schema.abandonedCarts)
+      .set({ status: 'completed', completedAt: new Date().toISOString() })
+      .where(eq(schema.abandonedCarts.stripeSessionId, stripeSessionId));
+  }
+
+  async dismissAbandonedCart(id: number, userId: string): Promise<void> {
+    await db.update(schema.abandonedCarts)
+      .set({ status: 'dismissed', dismissedAt: new Date().toISOString() })
+      .where(and(
+        eq(schema.abandonedCarts.id, id),
+        eq(schema.abandonedCarts.userId, userId)
+      ));
+  }
+
+  async updateAbandonedCartReminder(id: number, remindersSent: number): Promise<void> {
+    await db.update(schema.abandonedCarts)
+      .set({ remindersSent, lastReminderAt: new Date().toISOString() })
+      .where(eq(schema.abandonedCarts.id, id));
   }
 }
 

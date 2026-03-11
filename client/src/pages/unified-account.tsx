@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import AbandonedCartBanner from "@/components/AbandonedCartBanner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BanterLoader } from "@/components/BanterLoader";
 import { Button } from "@/components/ui/button";
@@ -2015,6 +2016,8 @@ export default function UnifiedAccount() {
 
           {/* Home Tab */}
           <TabsContent value="home" className="space-y-6">
+            {/* Abandoned Cart Banner */}
+            <AbandonedCartBanner onNavigateToPayments={() => setParentDashTab("payments")} />
             {/* Player Switcher Carousel */}
             <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide" data-testid="player-switcher">
               <Button
@@ -2225,6 +2228,8 @@ export default function UnifiedAccount() {
 
           {/* Payments Tab - Redesigned with Category-Based Storefront */}
           <TabsContent value="payments" className="space-y-6">
+            {/* Abandoned Cart Banner */}
+            <AbandonedCartBanner />
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>

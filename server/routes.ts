@@ -6620,19 +6620,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const unassigned = [];
       for (const enrollment of recentEnrollments) {
         if (!enrollment.profileId) continue;
-        const membershipCount = await db.select({ cnt: count() })
-          .from(teamMemberships)
+
+        const program = await storage.getProgram(enrollment.programId);
+        if (!program) continue;
+
+        const programTeams = await db.select({ id: teams.id })
+          .from(teams)
           .where(and(
-            eq(teamMemberships.profileId, enrollment.profileId),
-            eq(teamMemberships.status, 'active')
+            eq(teams.organizationId, organizationId),
+            eq(teams.programId, enrollment.programId)
           ));
-        if (!membershipCount[0]?.cnt || membershipCount[0].cnt === 0) {
+
+        if (programTeams.length === 0) {
           const player = await storage.getUser(enrollment.profileId);
-          const program = await storage.getProgram(enrollment.programId);
           unassigned.push({
             ...enrollment,
             playerName: player ? `${player.firstName || ''} ${player.lastName || ''}`.trim() : 'Unknown',
-            programName: program?.name || 'Unknown Program',
+            programName: program.name || 'Unknown Program',
+          });
+          continue;
+        }
+
+        const programTeamIds = programTeams.map(t => t.id);
+        const membershipInProgram = await db.select({ cnt: count() })
+          .from(teamMemberships)
+          .where(and(
+            eq(teamMemberships.profileId, enrollment.profileId),
+            eq(teamMemberships.status, 'active'),
+            inArray(teamMemberships.teamId, programTeamIds)
+          ));
+
+        if (!membershipInProgram[0]?.cnt || membershipInProgram[0].cnt === 0) {
+          const player = await storage.getUser(enrollment.profileId);
+          unassigned.push({
+            ...enrollment,
+            playerName: player ? `${player.firstName || ''} ${player.lastName || ''}`.trim() : 'Unknown',
+            programName: program.name || 'Unknown Program',
           });
         }
       }

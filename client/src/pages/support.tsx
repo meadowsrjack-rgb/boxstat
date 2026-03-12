@@ -1,4 +1,4 @@
-import { Mail, MessageCircle, HelpCircle, FileText, ExternalLink, ChevronRight } from 'lucide-react';
+import { Mail, HelpCircle, FileText, ExternalLink, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import BoxStatLogo from "@/components/boxstat-logo";
@@ -37,7 +37,7 @@ export default function SupportPage() {
         </div>
 
         <div className="max-w-5xl mx-auto px-4 pb-16">
-          <div className="grid gap-6 md:grid-cols-2 mb-16">
+          <div className="grid gap-6 md:grid-cols-1 max-w-md mx-auto mb-16">
             <Card className="bg-white/5 border-white/10 hover:bg-white/[0.08] transition-colors" data-testid="card-email-support">
               <CardHeader>
                 <div className="flex items-center gap-3">
@@ -45,31 +45,8 @@ export default function SupportPage() {
                     <Mail className="h-6 w-6 text-red-400" />
                   </div>
                   <div>
-                    <CardTitle className="text-white">Email Support</CardTitle>
+                    <CardTitle className="text-white">Contact Us</CardTitle>
                     <CardDescription className="text-gray-400">We typically respond within 24 hours</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <a
-                  href="mailto:support@boxstat.app"
-                  className="text-red-400 hover:text-red-300 hover:underline font-medium transition-colors"
-                  data-testid="link-email-support"
-                >
-                  support@boxstat.app
-                </a>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white/5 border-white/10 hover:bg-white/[0.08] transition-colors" data-testid="card-general-contact">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-red-500/20 rounded-lg">
-                    <MessageCircle className="h-6 w-6 text-red-400" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-white">General Inquiries</CardTitle>
-                    <CardDescription className="text-gray-400">For general questions and feedback</CardDescription>
                   </div>
                 </div>
               </CardHeader>
@@ -77,7 +54,7 @@ export default function SupportPage() {
                 <a
                   href="mailto:info@boxstat.app"
                   className="text-red-400 hover:text-red-300 hover:underline font-medium transition-colors"
-                  data-testid="link-general-contact"
+                  data-testid="link-email-support"
                 >
                   info@boxstat.app
                 </a>
@@ -201,7 +178,7 @@ export default function SupportPage() {
               className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white border-0 shadow-lg shadow-red-500/25"
               data-testid="button-contact-support"
             >
-              <a href="mailto:support@boxstat.app">
+              <a href="mailto:info@boxstat.app">
                 <Mail className="mr-2 h-4 w-4" />
                 Contact Support
               </a>

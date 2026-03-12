@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, User, Award, Phone, Mail, MapPin, Calendar, Shield, Bell, Link2, CreditCard, FileText, AlertTriangle, Trash2, Camera, Users, MessageCircle, Send, ChevronDown, ChevronUp } from "lucide-react";
 import SettingPage from "./setting-page";
+import CoachCareerRings from "@/components/CoachCareerRings";
 import TeamRoster from "@/components/TeamRoster";
 import PlayerCard from "@/components/PlayerCard";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -253,111 +254,16 @@ export function CoachProfilePage() {
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Personal Information */}
+          {/* Career Stats */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Personal Information
+                <Award className="h-5 w-5" />
+                Career Stats
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Profile Picture */}
-              <div className="flex flex-col items-center py-4 border-b border-gray-200 dark:border-gray-700 mb-4">
-                <Avatar className="h-16 w-16 mb-4">
-                  <AvatarImage 
-                    src={previewUrl || (user as any)?.profileImageUrl} 
-                    alt="Profile"
-                    className="object-cover w-full h-full"
-                  />
-                  <AvatarFallback className="text-sm font-bold bg-gray-300 dark:bg-gray-600">
-                    {`${profile.firstName?.[0] || ''}${profile.lastName?.[0] || ''}`.toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadMutation.isPending}
-                    data-testid="button-upload-profile-photo"
-                  >
-                    <Camera className="h-4 w-4 mr-2" />
-                    {uploadMutation.isPending ? "Uploading..." : "Change Photo"}
-                  </Button>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  data-testid="input-profile-photo"
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">First Name</label>
-                  <Input
-                    value={profile.firstName}
-                    onChange={(e) => setProfile(p => ({ ...p, firstName: e.target.value }))}
-                    placeholder="Enter first name"
-                    data-testid="input-first-name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Name</label>
-                  <Input
-                    value={profile.lastName}
-                    onChange={(e) => setProfile(p => ({ ...p, lastName: e.target.value }))}
-                    placeholder="Enter last name"
-                    data-testid="input-last-name"
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    <Mail className="h-4 w-4" />
-                    Email Address
-                  </label>
-                  <Input
-                    value={profile.email}
-                    onChange={(e) => setProfile(p => ({ ...p, email: e.target.value }))}
-                    placeholder="Enter email address"
-                    type="email"
-                    data-testid="input-email"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    <Phone className="h-4 w-4" />
-                    Phone Number
-                  </label>
-                  <Input
-                    value={profile.phoneNumber}
-                    onChange={(e) => setProfile(p => ({ ...p, phoneNumber: e.target.value }))}
-                    placeholder="Enter phone number"
-                    data-testid="input-phone"
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  <MapPin className="h-4 w-4" />
-                  City
-                </label>
-                <Input
-                  value={profile.city}
-                  onChange={(e) => setProfile(p => ({ ...p, city: e.target.value }))}
-                  placeholder="Enter your city"
-                  data-testid="input-city"
-                />
-              </div>
+            <CardContent>
+              <CoachCareerRings profileId={profileId} />
             </CardContent>
           </Card>
 

@@ -7277,6 +7277,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(filteredEvents);
   });
   
+  app.get('/api/coach/career-stats', requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, id: sessionUserId, role: sessionRole } = req.user;
+      const profileId = req.query.profileId as string | undefined;
+      let effectiveUserId = sessionUserId;
+      let effectiveRole = sessionRole;
+
+      if (profileId && profileId !== sessionUserId) {
+        const profile = await storage.getUser(profileId);
+        if (profile && profile.role === 'coach') {
+          const sessionUser = await storage.getUser(sessionUserId);
+          if (sessionUser && (profile.email === sessionUser.email ||
+              profile.accountHolderId === sessionUserId ||
+              profile.parentId === sessionUserId)) {
+            effectiveUserId = profileId;
+            effectiveRole = 'coach';
+          }
+        }
+      }
+
+      if (effectiveRole !== 'coach') {
+        return res.status(403).json({ message: 'Only coaches can access this endpoint' });
+      }
+
+      const coachUser = await storage.getUser(effectiveUserId);
+      const monthsWithOrg = coachUser?.createdAt
+        ? Math.max(1, Math.floor((Date.now() - new Date(coachUser.createdAt).getTime()) / (30 * 24 * 60 * 60 * 1000)))
+        : 0;
+
+      const allEvents = await storage.getEventsByOrganization(organizationId);
+      const { teamIds, divisionIds, programIds, targetUserId } = await getUserEventScope(
+        effectiveUserId, effectiveRole, organizationId
+      );
+      const coachEvents = filterEventsByScope(allEvents, effectiveRole, teamIds, divisionIds, programIds, targetUserId, false);
+
+      const pastEvents = coachEvents.filter(e => new Date(e.startTime) < new Date());
+      const totalInvited = pastEvents.length;
+
+      const allAttendances = await storage.getAttendancesByUser(effectiveUserId);
+      const coachEventIds = new Set(pastEvents.map(e => e.id));
+      const attendedCount = allAttendances.filter(a => coachEventIds.has(a.eventId)).length;
+      const attendancePct = totalInvited > 0 ? Math.round((attendedCount / totalInvited) * 100) : 0;
+
+      res.json({
+        monthsWithOrg,
+        eventsAttended: attendedCount,
+        totalEventsInvited: totalInvited,
+        attendancePercentage: attendancePct,
+      });
+    } catch (err: any) {
+      console.error('Error fetching coach career stats:', err);
+      res.status(500).json({ message: 'Failed to fetch career stats' });
+    }
+  });
+
   app.get('/api/events/team/:teamId', requireAuth, async (req: any, res) => {
     const events = await storage.getEventsByTeam(req.params.teamId);
     res.json(events);

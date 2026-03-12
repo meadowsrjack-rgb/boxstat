@@ -394,7 +394,8 @@ export const products = pgTable("products", {
   slug: varchar(),
   description: text(),
   type: varchar(), // "Subscription", "One-Time", "Program", "Add-On"
-  billingCycle: varchar("billing_cycle"), // "Monthly", "Quarterly", "6-Month", "Yearly"
+  billingCycle: varchar("billing_cycle"),
+  billingIntervalDays: integer("billing_interval_days"),
   price: integer(), // Price in cents
   billingModel: varchar("billing_model"), // "Per Player", "Per Family", "Organization-Wide"
   pricingModel: varchar("pricing_model"), // DEPRECATED: backwards compat
@@ -1677,7 +1678,8 @@ export interface Product {
   slug?: string; // Unique key for internal mapping/API (e.g., "youth_club_fnh_package")
   description?: string;
   type?: string; // "Subscription", "One-Time", "Program", "Add-On"
-  billingCycle?: string; // "Monthly", "Quarterly", "6-Month", "Yearly" (only for subscriptions)
+  billingCycle?: string;
+  billingIntervalDays?: number;
   price?: number; // Price in cents (e.g., 14900 for $149.00)
   billingModel?: string; // "Per Player", "Per Family", "Organization-Wide"
   pricingModel?: string; // DEPRECATED: Use "type" instead. Kept for backwards compatibility
@@ -1734,10 +1736,11 @@ export interface PricingOption {
   name: string; // Display name (e.g., "Monthly", "3 Months", "6 Months")
   price: number; // Price in cents
   optionType?: string; // "one_time" | "credit_pack" | "subscription"
-  billingCycle?: string; // "Monthly", "One-Time", etc.
+  billingCycle?: string;
+  billingIntervalDays?: number;
   durationDays?: number; // How long this option lasts (one_time)
   creditCount?: number; // Number of credits/sessions (credit_pack)
-  billingInterval?: string; // "weekly" | "monthly" | "quarterly" | "yearly" (subscription)
+  billingInterval?: string; // Legacy: "weekly" | "monthly" | "quarterly" | "yearly"
   trialDays?: number; // Free trial period in days (subscription)
   comparePrice?: number; // Equivalent monthly price for comparison
   savingsNote?: string; // Savings display text (e.g., "Save $30!")
@@ -1755,7 +1758,8 @@ export const insertProductSchema = z.object({
   slug: z.string().optional(),
   description: z.string().optional(),
   type: z.string().optional(),
-  billingCycle: z.string().nullish(), // Accept null, undefined, or string
+  billingCycle: z.string().nullish(),
+  billingIntervalDays: z.number().nullish(),
   price: z.number().optional(),
   billingModel: z.string().optional(),
   pricingModel: z.string().optional(), // DEPRECATED
@@ -1808,6 +1812,7 @@ export const insertProductSchema = z.object({
     price: z.number(),
     optionType: z.string().optional(),
     billingCycle: z.string().optional(),
+    billingIntervalDays: z.number().optional(),
     durationDays: z.number().optional(),
     creditCount: z.number().optional(),
     billingInterval: z.string().optional(),

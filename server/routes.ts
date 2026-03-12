@@ -244,6 +244,37 @@ function generateStablePricingOptionId(): string {
   return `po_${crypto.randomUUID()}`;
 }
 
+function billingIntervalDaysToStripe(days: number): { interval: 'day' | 'week' | 'month' | 'year'; interval_count: number } {
+  if (days === 7) return { interval: 'week', interval_count: 1 };
+  if (days === 14) return { interval: 'week', interval_count: 2 };
+  if (days === 30) return { interval: 'month', interval_count: 1 };
+  if (days === 60) return { interval: 'month', interval_count: 2 };
+  if (days === 90) return { interval: 'month', interval_count: 3 };
+  if (days === 180) return { interval: 'month', interval_count: 6 };
+  if (days === 365) return { interval: 'year', interval_count: 1 };
+  return { interval: 'day', interval_count: days };
+}
+
+function legacyBillingCycleToStripe(billingCycle: string): { interval: 'day' | 'week' | 'month' | 'year'; interval_count: number } {
+  const cycle = billingCycle.toLowerCase();
+  if (cycle === 'quarterly') return { interval: 'month', interval_count: 3 };
+  if (cycle === '6-month' || cycle === '6 month' || cycle === 'semi-annual') return { interval: 'month', interval_count: 6 };
+  if (cycle === 'yearly' || cycle === 'year' || cycle === 'annual') return { interval: 'year', interval_count: 1 };
+  if (cycle === 'weekly' || cycle === 'week') return { interval: 'week', interval_count: 1 };
+  if (cycle === 'daily' || cycle === 'day') return { interval: 'day', interval_count: 1 };
+  if (cycle === '28-day' || cycle === '28 day') return { interval: 'day', interval_count: 28 };
+  const dayMatch = cycle.match(/^(\d+)[- ]?day$/);
+  if (dayMatch) return { interval: 'day', interval_count: parseInt(dayMatch[1]) };
+  return { interval: 'month', interval_count: 1 };
+}
+
+function resolveStripeInterval(billingIntervalDays?: number, billingCycle?: string): { interval: 'day' | 'week' | 'month' | 'year'; interval_count: number } {
+  if (billingIntervalDays && billingIntervalDays > 0) {
+    return billingIntervalDaysToStripe(billingIntervalDays);
+  }
+  return legacyBillingCycleToStripe(billingCycle || 'Monthly');
+}
+
 // Deep clone helper that preserves types (unlike JSON.stringify which loses Dates/BigInt)
 function deepClone<T>(obj: T): T {
   if (obj === null || typeof obj !== 'object') {
@@ -329,7 +360,7 @@ async function syncProgramWithStripe(
         if (option.price && option.price > 0) {
           try {
             // Determine if this is recurring or one-time based on billingCycle
-            const isRecurring = option.billingCycle === 'Monthly' || 
+            const isRecurring = option.optionType === 'subscription' || option.billingCycle || option.billingIntervalDays || 
                                (option.convertsToMonthly && option.durationDays && option.durationDays > 31);
             
             // For bundles that convert to monthly, create as one-time (the initial bundle payment)
@@ -346,8 +377,9 @@ async function syncProgramWithStripe(
             };
 
             // If it's a straight monthly subscription (not a bundle), make it recurring
-            if (option.billingCycle === 'Monthly' && !option.convertsToMonthly) {
-              priceParams.recurring = { interval: 'month' };
+            if ((option.billingCycle || option.billingIntervalDays || option.optionType === 'subscription') && !option.convertsToMonthly) {
+              const optResolved = resolveStripeInterval(option.billingIntervalDays, option.billingCycle);
+              priceParams.recurring = { interval: optResolved.interval, interval_count: optResolved.interval_count };
             }
 
             const stripePrice = await stripe.prices.create(priceParams);
@@ -1422,7 +1454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Check if this is a subscription product
-        if (product.type === 'Subscription' && product.billingCycle) {
+        if (product.type === 'Subscription' && (product.billingCycle || product.billingIntervalDays)) {
           // Create a subscription checkout
           mode = 'subscription';
           lineItems.push({
@@ -1433,9 +1465,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 description: product.description || undefined,
               },
               unit_amount: product.price,
-              recurring: {
-                interval: product.billingCycle.toLowerCase() as 'day' | 'week' | 'month' | 'year',
-              },
+              recurring: (() => {
+                const r = resolveStripeInterval(product.billingIntervalDays, product.billingCycle);
+                return { interval: r.interval, interval_count: r.interval_count };
+              })(),
             },
             quantity: 1,
           });
@@ -1685,7 +1718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Determine if this is a subscription or one-time payment
       // Bundle pricing options are always one-time payments (may convert to subscription later)
-      const isSubscription = !selectedPricingOption && program.type === 'Subscription' && program.billingCycle;
+      const isSubscription = !selectedPricingOption && program.type === 'Subscription' && (program.billingCycle || program.billingIntervalDays);
       const isBundleWithMonthlyConversion = selectedPricingOption?.convertsToMonthly;
       
       // Build line items - start with main program
@@ -1713,37 +1746,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         quantity: 1,
       };
       
-      // Add recurring for subscriptions (not for bundle purchases)
       if (isSubscription) {
-        const billingCycle = (program.billingCycle || 'Monthly').toLowerCase();
-        // Map billing cycle to Stripe interval and interval_count
-        // Stripe only supports: day, week, month, year with optional interval_count
-        let stripeInterval: 'day' | 'week' | 'month' | 'year' = 'month';
-        let intervalCount = 1;
-        
-        if (billingCycle === 'monthly' || billingCycle === 'month') {
-          stripeInterval = 'month';
-          intervalCount = 1;
-        } else if (billingCycle === 'quarterly') {
-          stripeInterval = 'month';
-          intervalCount = 3;
-        } else if (billingCycle === '6-month' || billingCycle === '6 month' || billingCycle === 'semi-annual') {
-          stripeInterval = 'month';
-          intervalCount = 6;
-        } else if (billingCycle === 'yearly' || billingCycle === 'year' || billingCycle === 'annual') {
-          stripeInterval = 'year';
-          intervalCount = 1;
-        } else if (billingCycle === 'weekly' || billingCycle === 'week') {
-          stripeInterval = 'week';
-          intervalCount = 1;
-        } else if (billingCycle === 'daily' || billingCycle === 'day') {
-          stripeInterval = 'day';
-          intervalCount = 1;
-        }
+        const resolved = resolveStripeInterval(program.billingIntervalDays, program.billingCycle);
         
         mainLineItem.price_data.recurring = {
-          interval: stripeInterval,
-          interval_count: intervalCount,
+          interval: resolved.interval,
+          interval_count: resolved.interval_count,
         };
       }
       
@@ -1791,35 +1799,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           quantity: 1,
         };
         
-        // For subscriptions, the fee must also be recurring
         if (isSubscription) {
-          const billingCycle = (program.billingCycle || 'Monthly').toLowerCase();
-          let stripeInterval: 'day' | 'week' | 'month' | 'year' = 'month';
-          let intervalCount = 1;
-          
-          if (billingCycle === 'monthly' || billingCycle === 'month') {
-            stripeInterval = 'month';
-            intervalCount = 1;
-          } else if (billingCycle === 'quarterly') {
-            stripeInterval = 'month';
-            intervalCount = 3;
-          } else if (billingCycle === '6-month' || billingCycle === '6 month' || billingCycle === 'semi-annual') {
-            stripeInterval = 'month';
-            intervalCount = 6;
-          } else if (billingCycle === 'yearly' || billingCycle === 'year' || billingCycle === 'annual') {
-            stripeInterval = 'year';
-            intervalCount = 1;
-          } else if (billingCycle === 'weekly' || billingCycle === 'week') {
-            stripeInterval = 'week';
-            intervalCount = 1;
-          } else if (billingCycle === 'daily' || billingCycle === 'day') {
-            stripeInterval = 'day';
-            intervalCount = 1;
-          }
-          
+          const feeResolved = resolveStripeInterval(program.billingIntervalDays, program.billingCycle);
           platformFeeItem.price_data.recurring = {
-            interval: stripeInterval,
-            interval_count: intervalCount,
+            interval: feeResolved.interval,
+            interval_count: feeResolved.interval_count,
           };
         }
         

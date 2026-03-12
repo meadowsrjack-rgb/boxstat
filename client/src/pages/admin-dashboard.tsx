@@ -7847,6 +7847,7 @@ function StoreTab({ organization }: any) {
       sessionCount: z.number().optional().nullable(),
       isRecurring: z.boolean().default(false),
       billingCycle: z.string().optional().nullable(),
+      billingIntervalDays: z.number().optional().nullable(),
       subscriptionDisclosure: z.string().optional().nullable(),
       requiredWaivers: z.array(z.string()).default([]),
     })),
@@ -7864,6 +7865,7 @@ function StoreTab({ organization }: any) {
       sessionCount: undefined as number | undefined,
       isRecurring: false,
       billingCycle: "Monthly",
+      billingIntervalDays: 30,
       subscriptionDisclosure: "",
       requiredWaivers: [] as string[],
     },
@@ -7872,14 +7874,15 @@ function StoreTab({ organization }: any) {
   const selectedStoreCategory = form.watch("storeCategory");
   const isRecurring = form.watch("isRecurring");
   const watchedProductPrice = form.watch("price");
-  const watchedProductBillingCycle = form.watch("billingCycle");
+  const watchedProductBillingIntervalDays = form.watch("billingIntervalDays");
   const watchedProductSubscriptionDisclosure = form.watch("subscriptionDisclosure");
   
-  // Auto-generate subscription disclosure for store products when price or billing cycle changes
+  // Auto-generate subscription disclosure for store products when price or billing interval changes
   useEffect(() => {
-    if (isRecurring && watchedProductPrice !== undefined && watchedProductBillingCycle) {
+    if (isRecurring && watchedProductPrice !== undefined && watchedProductBillingIntervalDays) {
       const priceInDollars = (watchedProductPrice / 100).toFixed(2);
-      const cycleText = watchedProductBillingCycle.toLowerCase();
+      const days = watchedProductBillingIntervalDays;
+      const cycleText = days === 7 ? "week" : days === 14 ? "2 weeks" : days === 30 ? "month" : days === 90 ? "3 months" : days === 180 ? "6 months" : days === 365 ? "year" : `${days} days`;
       const generatedDisclosure = `You will be charged $${priceInDollars} every ${cycleText}. Your subscription renews automatically until canceled. Cancel anytime from your account.`;
       
       // Only auto-fill if the field is empty or matches a previously generated pattern
@@ -7888,7 +7891,7 @@ function StoreTab({ organization }: any) {
         form.setValue("subscriptionDisclosure", generatedDisclosure);
       }
     }
-  }, [isRecurring, watchedProductPrice, watchedProductBillingCycle, form]);
+  }, [isRecurring, watchedProductPrice, watchedProductBillingIntervalDays, form]);
 
   const createProduct = useMutation({
     mutationFn: async (data: any) => {
@@ -7902,7 +7905,8 @@ function StoreTab({ organization }: any) {
         organizationId: organization.id,
         productCategory: "goods",
         type: data.isRecurring ? "Subscription" : (isTraining ? "Pack" : "One-Time"),
-        billingCycle: data.isRecurring ? (data.billingCycle || "Monthly") : null,
+        billingCycle: data.isRecurring ? "Subscription" : null,
+        billingIntervalDays: data.isRecurring ? (data.billingIntervalDays || 30) : null,
         coverImageUrl: productImageUrl || null,
         tags: data.storeCategory ? [data.storeCategory] : [],
         sessionCount: isTraining ? (data.sessionCount || 0) : null,
@@ -7980,6 +7984,7 @@ function StoreTab({ organization }: any) {
       sessionCount: product.sessionCount,
       isRecurring: product.type === "Subscription",
       billingCycle: product.billingCycle || "Monthly",
+      billingIntervalDays: product.billingIntervalDays || (product.billingCycle === "Weekly" ? 7 : product.billingCycle === "28-Day" ? 28 : product.billingCycle === "Quarterly" ? 90 : product.billingCycle === "6-Month" ? 180 : product.billingCycle === "Yearly" ? 365 : 30),
       subscriptionDisclosure: product.subscriptionDisclosure || "",
       requiredWaivers: product.requiredWaivers || [],
     });
@@ -8017,6 +8022,7 @@ function StoreTab({ organization }: any) {
       storeCategory: "gear",
       isRecurring: false,
       billingCycle: "Monthly",
+      billingIntervalDays: 30,
       subscriptionDisclosure: "",
       requiredWaivers: [],
     });
@@ -8545,25 +8551,34 @@ function StoreTab({ organization }: any) {
                   <>
                     <FormField
                       control={form.control}
-                      name="billingCycle"
+                      name="billingIntervalDays"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Billing Cycle</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || "Monthly"}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-billing-cycle">
-                                <SelectValue placeholder="Select billing cycle" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Weekly">Weekly</SelectItem>
-                              <SelectItem value="28-Day">28 Days</SelectItem>
-                              <SelectItem value="Monthly">Monthly</SelectItem>
-                              <SelectItem value="Quarterly">Quarterly (every 3 months)</SelectItem>
-                              <SelectItem value="6-Month">6-Month</SelectItem>
-                              <SelectItem value="Yearly">Yearly</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormLabel>Billing Interval (days)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="30"
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              data-testid="input-billing-interval-days"
+                            />
+                          </FormControl>
+                          <FormDescription className="text-xs">
+                            {(() => {
+                              const d = field.value;
+                              if (!d || d <= 0) return "e.g. 30 = monthly, 90 = quarterly, 180 = 6 months, 365 = yearly";
+                              if (d === 7) return "Charges every week";
+                              if (d === 14) return "Charges every 2 weeks";
+                              if (d === 28) return "Charges every 28 days";
+                              if (d === 30) return "Charges monthly";
+                              if (d === 60) return "Charges every 2 months";
+                              if (d === 90) return "Charges every 3 months (quarterly)";
+                              if (d === 180) return "Charges every 6 months";
+                              if (d === 365) return "Charges yearly";
+                              return `Charges every ${d} days`;
+                            })()}
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -8991,6 +9006,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       type: "Subscription",
       price: 0,
       billingCycle: "Monthly",
+      billingIntervalDays: 30,
       billingModel: "Per Player",
       durationDays: 90,
       durationValue: 90,
@@ -9011,7 +9027,6 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       productCategory: "service",
       displayCategory: "general",
       iconName: "",
-      // Multi-tier pricing fields
       comparePrice: undefined as number | undefined,
       savingsNote: "",
       coverImageUrl: "",
@@ -9020,6 +9035,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
         name: string;
         price: number;
         billingCycle?: string;
+        billingIntervalDays?: number;
         durationDays?: number;
         comparePrice?: number;
         savingsNote?: string;
@@ -9034,14 +9050,15 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
   const selectedAccessTag = form.watch("accessTag");
   const allowInstallments = form.watch("allowInstallments");
   const watchedPrice = form.watch("price");
-  const watchedBillingCycle = form.watch("billingCycle");
+  const watchedBillingIntervalDays = form.watch("billingIntervalDays");
   const watchedSubscriptionDisclosure = form.watch("subscriptionDisclosure");
   
-  // Auto-generate subscription disclosure when price or billing cycle changes
+  // Auto-generate subscription disclosure when price or billing interval changes
   useEffect(() => {
-    if (selectedType === "Subscription" && watchedPrice !== undefined && watchedBillingCycle) {
+    if (selectedType === "Subscription" && watchedPrice !== undefined && watchedBillingIntervalDays) {
       const priceInDollars = (watchedPrice / 100).toFixed(2);
-      const cycleText = watchedBillingCycle.toLowerCase();
+      const days = watchedBillingIntervalDays;
+      const cycleText = days === 7 ? "week" : days === 14 ? "2 weeks" : days === 30 ? "month" : days === 90 ? "3 months" : days === 180 ? "6 months" : days === 365 ? "year" : `${days} days`;
       const generatedDisclosure = `You will be charged $${priceInDollars} every ${cycleText}. Your subscription renews automatically until canceled. Cancel anytime from your account.`;
       
       // Only auto-fill if the field is empty or matches a previously generated pattern
@@ -9050,7 +9067,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
         form.setValue("subscriptionDisclosure", generatedDisclosure);
       }
     }
-  }, [selectedType, watchedPrice, watchedBillingCycle, form]);
+  }, [selectedType, watchedPrice, watchedBillingIntervalDays, form]);
 
   const createProgram = useMutation({
     mutationFn: async (data: any) => {
@@ -9135,6 +9152,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       type: program.type || "Subscription",
       price: program.price || 0,
       billingCycle: program.billingCycle || "Monthly",
+      billingIntervalDays: program.billingIntervalDays || (program.billingCycle === "Weekly" ? 7 : program.billingCycle === "28-Day" ? 28 : program.billingCycle === "Quarterly" ? 90 : program.billingCycle === "6-Month" ? 180 : program.billingCycle === "Yearly" ? 365 : program.billingCycle?.endsWith("-Day") ? parseInt(program.billingCycle) || 30 : 30),
       billingModel: program.billingModel || "Per Player",
       durationDays: durationDays,
       durationValue: durationValue,
@@ -9178,6 +9196,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
         type: "Subscription",
         price: 0,
         billingCycle: "Monthly",
+        billingIntervalDays: 30,
         billingModel: "Per Player",
         durationDays: 90,
         durationValue: 90,
@@ -9215,6 +9234,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
         type: "Subscription",
         price: 0,
         billingCycle: "Monthly",
+        billingIntervalDays: 30,
         billingModel: "Per Player",
         durationDays: 90,
         durationValue: 90,
@@ -9825,60 +9845,38 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                       <div className="grid grid-cols-2 gap-3 mt-3">
                         <FormField
                           control={form.control}
-                          name="billingCycle"
-                          render={({ field }) => {
-                            const presetValues = ["Weekly", "28-Day", "Monthly", "Quarterly", "6-Month", "Yearly"];
-                            const isCustom = field.value && !presetValues.includes(field.value);
-                            return (
+                          name="billingIntervalDays"
+                          render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Billing Cycle</FormLabel>
-                              <Select 
-                                value={isCustom ? "Custom" : field.value} 
-                                onValueChange={(val) => {
-                                  if (val === "Custom") {
-                                    field.onChange("Custom");
-                                  } else {
-                                    field.onChange(val);
-                                  }
-                                }}
-                              >
-                                <FormControl>
-                                  <SelectTrigger data-testid="select-billing-cycle">
-                                    <SelectValue placeholder="Select cycle" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="Weekly">Weekly</SelectItem>
-                                  <SelectItem value="28-Day">28 Days</SelectItem>
-                                  <SelectItem value="Monthly">Monthly</SelectItem>
-                                  <SelectItem value="Quarterly">Quarterly</SelectItem>
-                                  <SelectItem value="6-Month">6-Month</SelectItem>
-                                  <SelectItem value="Yearly">Yearly</SelectItem>
-                                  <SelectItem value="Custom">Custom (Days)</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              {(field.value === "Custom" || isCustom) && (
-                                <div className="mt-2">
-                                  <Input
-                                    type="number"
-                                    min="1"
-                                    placeholder="Number of days"
-                                    data-testid="input-custom-billing-days"
-                                    defaultValue={isCustom && field.value !== "Custom" ? field.value.replace("-Day", "") : ""}
-                                    onChange={(e) => {
-                                      const days = parseInt(e.target.value);
-                                      if (days > 0) {
-                                        field.onChange(`${days}-Day`);
-                                      }
-                                    }}
-                                  />
-                                  <p className="text-xs text-gray-500 mt-1">Enter the number of days between each billing cycle</p>
-                                </div>
-                              )}
+                              <FormLabel>Billing Interval (days)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  placeholder="30"
+                                  value={field.value || ""}
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                  data-testid="input-billing-interval-days"
+                                />
+                              </FormControl>
+                              <FormDescription className="text-xs">
+                                {(() => {
+                                  const d = field.value;
+                                  if (!d || d <= 0) return "e.g. 30 = monthly, 90 = quarterly, 180 = 6 months";
+                                  if (d === 7) return "Charges every week";
+                                  if (d === 14) return "Charges every 2 weeks";
+                                  if (d === 28) return "Charges every 28 days";
+                                  if (d === 30) return "Charges monthly";
+                                  if (d === 60) return "Charges every 2 months";
+                                  if (d === 90) return "Charges every 3 months (quarterly)";
+                                  if (d === 180) return "Charges every 6 months";
+                                  if (d === 365) return "Charges yearly";
+                                  return `Charges every ${d} days`;
+                                })()}
+                              </FormDescription>
                               <FormMessage />
                             </FormItem>
-                            );
-                          }}
+                          )}
                         />
 
                         <FormField
@@ -10226,25 +10224,34 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                 ) : option.optionType === "subscription" ? (
                                   <>
                                     <div>
-                                      <label className="text-xs font-medium">Billing Interval</label>
-                                      <Select
-                                        value={option.billingInterval || "monthly"}
-                                        onValueChange={(value) => {
+                                      <label className="text-xs font-medium">Billing Interval (days)</label>
+                                      <Input
+                                        type="number"
+                                        placeholder="30"
+                                        value={option.billingIntervalDays || ""}
+                                        onChange={(e) => {
                                           const current = form.getValues("pricingOptions") || [];
-                                          current[index] = { ...current[index], billingInterval: value };
+                                          const days = parseInt(e.target.value) || 0;
+                                          current[index] = { ...current[index], billingIntervalDays: days };
                                           form.setValue("pricingOptions", [...current]);
                                         }}
-                                      >
-                                        <SelectTrigger data-testid={`select-billing-interval-${index}`}>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="weekly">Weekly</SelectItem>
-                                          <SelectItem value="monthly">Monthly</SelectItem>
-                                          <SelectItem value="quarterly">Quarterly</SelectItem>
-                                          <SelectItem value="yearly">Yearly</SelectItem>
-                                        </SelectContent>
-                                      </Select>
+                                        data-testid={`input-billing-interval-days-${index}`}
+                                      />
+                                      <p className="text-xs text-gray-400 mt-0.5">
+                                        {(() => {
+                                          const d = option.billingIntervalDays;
+                                          if (!d || d <= 0) return "e.g. 30 = monthly, 90 = quarterly, 180 = 6 months, 365 = yearly";
+                                          if (d === 7) return "Charges every week";
+                                          if (d === 14) return "Charges every 2 weeks";
+                                          if (d === 28) return "Charges every 28 days";
+                                          if (d === 30) return "Charges monthly";
+                                          if (d === 60) return "Charges every 2 months";
+                                          if (d === 90) return "Charges every 3 months (quarterly)";
+                                          if (d === 180) return "Charges every 6 months";
+                                          if (d === 365) return "Charges yearly";
+                                          return `Charges every ${d} days`;
+                                        })()}
+                                      </p>
                                     </div>
                                     <div>
                                       <label className="text-xs font-medium">Trial Period (days)</label>

@@ -105,6 +105,8 @@ export interface User {
   phoneNumber?: string;
   address?: string;
   city?: string;
+  state?: string;
+  postalCode?: string;
   gender?: string;
   height?: string;
   age?: string;
@@ -226,6 +228,7 @@ export const users = pgTable("users", {
   notes: text(),
   aauMembershipId: varchar("aau_membership_id"),
   postalCode: varchar("postal_code"),
+  state: varchar(),
   concussionWaiverAcknowledged: boolean("concussion_waiver_acknowledged").default(false),
   concussionWaiverDate: timestamp("concussion_waiver_date", { mode: 'string' }),
   clubAgreementAcknowledged: boolean("club_agreement_acknowledged").default(false),

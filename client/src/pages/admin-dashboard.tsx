@@ -2576,6 +2576,31 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                     </div>
                   </div>
 
+                  {/* Address */}
+                  {(viewingUser.address || viewingUser.city || viewingUser.state || viewingUser.postalCode) && (
+                    <div className="pt-4 border-t">
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Address</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Street</p>
+                          <p className="text-sm text-gray-900" data-testid="text-user-address">{viewingUser.address || "—"}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">City</p>
+                          <p className="text-sm text-gray-900" data-testid="text-user-city">{viewingUser.city || "—"}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">State</p>
+                          <p className="text-sm text-gray-900" data-testid="text-user-state">{viewingUser.state || "—"}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">ZIP / Postal Code</p>
+                          <p className="text-sm text-gray-900" data-testid="text-user-postal-code">{viewingUser.postalCode || "—"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Bio */}
                   {viewingUser.bio && (
                     <div className="pt-4 border-t">

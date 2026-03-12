@@ -2773,7 +2773,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/registration/complete', async (req: any, res) => {
     try {
-      const { registrationType, parentInfo, players, password, email } = req.body;
+      const { registrationType, parentInfo, addressInfo, players, password, email } = req.body;
       
       console.log('[Registration] Received data:', {
         registrationType,
@@ -2884,6 +2884,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lastName: parentInfo.lastName,
             phoneNumber: parentInfo.phoneNumber,
             dateOfBirth: sanitizeDate(parentInfo.dateOfBirth),
+            address: addressInfo?.address || null,
+            city: addressInfo?.city || null,
+            state: addressInfo?.state || null,
+            postalCode: addressInfo?.postalCode || null,
             password: hashedPassword,
             hasRegistered: true,
             verified: true,
@@ -2936,6 +2940,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lastName: player.lastName,
             dateOfBirth: sanitizeDate(player.dateOfBirth),
             gender: player.gender,
+            address: addressInfo?.address || null,
+            city: addressInfo?.city || null,
+            state: addressInfo?.state || null,
+            postalCode: addressInfo?.postalCode || null,
             password: hashedPassword,
             hasRegistered: true,
             verified: true,

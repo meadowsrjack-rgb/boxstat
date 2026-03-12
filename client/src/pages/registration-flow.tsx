@@ -41,6 +41,15 @@ const playerInfoSchema = z.object({
   gender: z.string().optional(),
 });
 
+const addressInfoSchema = z.object({
+  address: z.string().min(1, "Street address is required"),
+  city: z.string().min(1, "City is required"),
+  state: z.string().min(1, "State is required"),
+  postalCode: z.string().min(3, "Postal/ZIP code is required"),
+});
+
+type AddressInfo = z.infer<typeof addressInfoSchema>;
+
 const accountCreationSchema = z.object({
   password: z.string()
     .min(8, "Password must be at least 8 characters")
@@ -85,6 +94,7 @@ export default function RegistrationFlow() {
     emailCheckData?: any;
     registrationType?: "myself" | "my_child";
     parentInfo?: ParentInfo;
+    addressInfo?: AddressInfo;
     players: Player[];
     password?: string;
   }>({
@@ -135,7 +145,7 @@ export default function RegistrationFlow() {
     };
   }, [emailSent, registrationData.email, currentStep, verificationSessionId, toast]);
 
-  const totalSteps = registrationData.registrationType === "my_child" ? 6 : 5;
+  const totalSteps = registrationData.registrationType === "my_child" ? 7 : 6;
 
   const registrationMutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -232,9 +242,10 @@ export default function RegistrationFlow() {
     if (currentStep === 3) return "Who are you registering for?";
     if (currentStep === 4 && registrationData.registrationType === "myself") return "Your Information";
     if (currentStep === 4 && registrationData.registrationType === "my_child") return "Parent/Guardian Information";
-    if (currentStep === 5 && registrationData.registrationType === "my_child") return "Player Information";
-    if ((currentStep === 5 && registrationData.registrationType === "myself") ||
-        (currentStep === 6 && registrationData.registrationType === "my_child")) return "Create Account";
+    if (currentStep === 5) return "Your Address";
+    if (currentStep === 6 && registrationData.registrationType === "my_child") return "Player Information";
+    if ((currentStep === 6 && registrationData.registrationType === "myself") ||
+        (currentStep === 7 && registrationData.registrationType === "my_child")) return "Create Account";
     return "Email Verification";
   };
 
@@ -384,7 +395,17 @@ export default function RegistrationFlow() {
               />
             )}
 
-            {currentStep === 5 && registrationData.registrationType === "my_child" && (
+            {currentStep === 5 && (
+              <AddressInfoStep
+                onSubmit={(data) => {
+                  setRegistrationData({ ...registrationData, addressInfo: data });
+                  handleNext();
+                }}
+                defaultValues={registrationData.addressInfo}
+              />
+            )}
+
+            {currentStep === 6 && registrationData.registrationType === "my_child" && (
               <PlayerListStep
                 players={registrationData.players}
                 onUpdate={(players) => {
@@ -394,8 +415,8 @@ export default function RegistrationFlow() {
               />
             )}
 
-            {((currentStep === 5 && registrationData.registrationType === "myself") ||
-              (currentStep === 6 && registrationData.registrationType === "my_child")) && (
+            {((currentStep === 6 && registrationData.registrationType === "myself") ||
+              (currentStep === 7 && registrationData.registrationType === "my_child")) && (
               <AccountCreationStep
                 onSubmit={handleSubmitRegistration}
                 isLoading={registrationMutation.isPending}
@@ -1178,6 +1199,119 @@ function PlayerInfoStep({
         >
           Continue
           <ChevronRight className="w-4 h-4 ml-2" />
+        </Button>
+      </form>
+    </Form>
+  );
+}
+
+function AddressInfoStep({
+  onSubmit,
+  defaultValues,
+}: {
+  onSubmit: (data: AddressInfo) => void;
+  defaultValues?: AddressInfo;
+}) {
+  const form = useForm<AddressInfo>({
+    resolver: zodResolver(addressInfoSchema),
+    defaultValues: {
+      address: defaultValues?.address || "",
+      city: defaultValues?.city || "",
+      state: defaultValues?.state || "",
+      postalCode: defaultValues?.postalCode || "",
+    },
+  });
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+        <p className="text-gray-400 text-sm">
+          Please provide your home address.
+        </p>
+
+        <FormField
+          control={form.control}
+          name="address"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-gray-300 text-sm font-medium">Street Address</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  placeholder="123 Main Street"
+                  data-testid="input-address"
+                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-red-500"
+                />
+              </FormControl>
+              <FormMessage className="text-red-400" />
+            </FormItem>
+          )}
+        />
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="city"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-gray-300 text-sm font-medium">City</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    placeholder="City"
+                    data-testid="input-city"
+                    className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-red-500"
+                  />
+                </FormControl>
+                <FormMessage className="text-red-400" />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="state"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-gray-300 text-sm font-medium">State</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    placeholder="State"
+                    data-testid="input-state"
+                    className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-red-500"
+                  />
+                </FormControl>
+                <FormMessage className="text-red-400" />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="postalCode"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-gray-300 text-sm font-medium">ZIP / Postal Code</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  placeholder="12345"
+                  data-testid="input-postal-code"
+                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-red-500"
+                />
+              </FormControl>
+              <FormMessage className="text-red-400" />
+            </FormItem>
+          )}
+        />
+
+        <Button
+          type="submit"
+          className="w-full h-14 bg-red-600 hover:bg-red-700 text-white text-lg font-semibold rounded-2xl"
+          data-testid="button-address-continue"
+        >
+          Continue
         </Button>
       </form>
     </Form>

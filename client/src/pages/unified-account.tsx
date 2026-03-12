@@ -2523,7 +2523,7 @@ export default function UnifiedAccount() {
                                     >
                                       <div className="flex items-center justify-between">
                                         <div>
-                                          <p className="font-medium text-sm">{option.name}{option.allowInstallments ? ' (Pay in Full)' : ''}</p>
+                                          <p className="font-medium text-sm">{option.name}{option.allowInstallments ? (option.payInFullDiscount ? ` (Pay in Full - ${option.payInFullDiscount}% off)` : ' (Pay in Full)') : ''}</p>
                                           {option.optionType === "credit_pack" && option.creditCount ? (
                                             <p className="text-xs text-blue-600">{option.creditCount} session{option.creditCount > 1 ? 's' : ''} included</p>
                                           ) : option.optionType === "subscription" || (option.billingCycle && option.billingCycle !== "One-Time" && option.billingCycle !== "One-time") ? (
@@ -2542,12 +2542,21 @@ export default function UnifiedAccount() {
                                           )}
                                         </div>
                                         <div className="text-right">
-                                          <p className="font-semibold text-red-600">
-                                            ${(option.price / 100).toFixed(2)}
-                                            {(option.optionType === "subscription" || (option.billingCycle && option.billingCycle !== "One-Time" && option.billingCycle !== "One-time")) && (
-                                              <span className="text-xs font-normal text-gray-500">/{option.billingInterval === "yearly" ? "yr" : option.billingInterval === "quarterly" ? "qtr" : option.billingInterval === "weekly" ? "wk" : "mo"}</span>
-                                            )}
-                                          </p>
+                                          {option.allowInstallments && option.payInFullDiscount && option.payInFullDiscount > 0 ? (
+                                            <>
+                                              <p className="font-semibold text-red-600">
+                                                ${(Math.round(option.price * (1 - option.payInFullDiscount / 100)) / 100).toFixed(2)}
+                                              </p>
+                                              <p className="text-xs text-gray-400 line-through">${(option.price / 100).toFixed(2)}</p>
+                                            </>
+                                          ) : (
+                                            <p className="font-semibold text-red-600">
+                                              ${(option.price / 100).toFixed(2)}
+                                              {(option.optionType === "subscription" || (option.billingCycle && option.billingCycle !== "One-Time" && option.billingCycle !== "One-time")) && (
+                                                <span className="text-xs font-normal text-gray-500">/{option.billingInterval === "yearly" ? "yr" : option.billingInterval === "quarterly" ? "qtr" : option.billingInterval === "weekly" ? "wk" : "mo"}</span>
+                                              )}
+                                            </p>
+                                          )}
                                           {option.optionType === "credit_pack" && option.creditCount ? (
                                             <p className="text-xs text-gray-500">${((option.price / 100) / option.creditCount).toFixed(2)}/session</p>
                                           ) : null}
@@ -2557,7 +2566,15 @@ export default function UnifiedAccount() {
                                         </div>
                                       </div>
                                     </div>
-                                    {option.allowInstallments && option.installmentCount && option.installmentPrice && (
+                                    {option.allowInstallments && option.installmentCount && option.installmentPrice && (() => {
+                                      const interval = option.installmentIntervalDays || 30;
+                                      const freqLabel = interval === 7 ? "weekly"
+                                        : interval === 14 ? "bi-weekly"
+                                        : interval === 30 ? "monthly"
+                                        : interval === 90 ? "quarterly"
+                                        : interval === 180 ? "every 6 months"
+                                        : `every ${interval} days`;
+                                      return (
                                       <div
                                         onClick={() => setSelectedPricingOptionId(`${option.id}_installments`)}
                                         className={`p-3 rounded-lg border cursor-pointer transition-colors mt-1 ${
@@ -2571,7 +2588,7 @@ export default function UnifiedAccount() {
                                           <div>
                                             <p className="font-medium text-sm">{option.name} (Installment Plan)</p>
                                             <p className="text-xs text-amber-700">
-                                              {option.installmentCount} payments of ${(option.installmentPrice / 100).toFixed(2)} every {option.installmentIntervalDays || 30} days
+                                              {option.installmentCount} {freqLabel} payments
                                             </p>
                                           </div>
                                           <div className="text-right">
@@ -2584,7 +2601,8 @@ export default function UnifiedAccount() {
                                           </div>
                                         </div>
                                       </div>
-                                    )}
+                                      );
+                                    })()}
                                   </div>
                                 ))}
                                 
@@ -2955,11 +2973,15 @@ export default function UnifiedAccount() {
                                 <span>{displayName}</span>
                                 <span>${(basePrice / 100).toFixed(2)}{isBundleInstallmentSelected ? '/payment' : ''}</span>
                               </div>
-                              {bundleInstallmentOption && (
+                              {bundleInstallmentOption && (() => {
+                                const intv = bundleInstallmentOption.installmentIntervalDays || 30;
+                                const fLabel = intv === 7 ? "weekly" : intv === 14 ? "bi-weekly" : intv === 30 ? "monthly" : intv === 90 ? "quarterly" : intv === 180 ? "every 6 months" : `every ${intv} days`;
+                                return (
                                 <p className="text-xs text-amber-700">
-                                  {bundleInstallmentOption.installmentCount} payments of ${((bundleInstallmentOption.installmentPrice || 0) / 100).toFixed(2)} every {bundleInstallmentOption.installmentIntervalDays || 30} days · ${((bundleInstallmentOption.installmentCount * (bundleInstallmentOption.installmentPrice || 0)) / 100).toFixed(2)} total
+                                  {bundleInstallmentOption.installmentCount} {fLabel} payments of ${((bundleInstallmentOption.installmentPrice || 0) / 100).toFixed(2)} · ${((bundleInstallmentOption.installmentCount * (bundleInstallmentOption.installmentPrice || 0)) / 100).toFixed(2)} total
                                 </p>
-                              )}
+                                );
+                              })()}
                               {selectedOption?.optionType === "subscription" || (selectedOption?.billingCycle && selectedOption.billingCycle !== "One-Time" && selectedOption.billingCycle !== "One-time") ? (
                                 <p className="text-xs text-gray-500">
                                   Subscription · Billed {selectedOption.billingInterval || selectedOption.billingCycle?.toLowerCase() || "monthly"} · Cancel anytime

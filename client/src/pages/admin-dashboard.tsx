@@ -10200,7 +10200,11 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                     onBlur={(e) => {
                                       const current = form.getValues("pricingOptions") || [];
                                       const val = parseFloat(e.target.value);
-                                      current[index] = { ...current[index], price: isNaN(val) ? 0 : Math.round(val * 100) };
+                                      const newPrice = isNaN(val) ? 0 : Math.round(val * 100);
+                                      current[index] = { ...current[index], price: newPrice };
+                                      if (current[index].allowInstallments && current[index].installmentCount) {
+                                        current[index].installmentPrice = newPrice > 0 ? Math.ceil(newPrice / current[index].installmentCount) : 0;
+                                      }
                                       form.setValue("pricingOptions", [...current]);
                                     }}
                                     data-testid={`input-option-price-${index}`}
@@ -10278,7 +10282,16 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                         value={option.durationDays || ""}
                                         onChange={(e) => {
                                           const current = form.getValues("pricingOptions") || [];
-                                          current[index] = { ...current[index], durationDays: parseInt(e.target.value) || undefined };
+                                          const newDur = parseInt(e.target.value) || undefined;
+                                          current[index] = { ...current[index], durationDays: newDur };
+                                          if (current[index].allowInstallments && current[index].installmentCount && newDur) {
+                                            const cnt = current[index].installmentCount;
+                                            const raw = Math.floor((newDur * 0.75) / cnt);
+                                            const stds = [7, 14, 30, 90, 180];
+                                            current[index].installmentIntervalDays = stds.reduce((p, c) =>
+                                              Math.abs(c - raw) < Math.abs(p - raw) ? c : p
+                                            );
+                                          }
                                           form.setValue("pricingOptions", [...current]);
                                         }}
                                         data-testid={`input-option-duration-${index}`}
@@ -10290,14 +10303,38 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                           checked={option.allowInstallments || false}
                                           onCheckedChange={(checked) => {
                                             const current = form.getValues("pricingOptions") || [];
-                                            const totalPrice = current[index].price || 0;
-                                            const defaultCount = 3;
+                                            const opt = current[index];
+                                            const duration = opt.durationDays || 90;
+                                            const totalPrice = opt.price || 0;
+                                            let defaultCount = 3;
+                                            let defaultInterval = 30;
+                                            if (duration < 30) {
+                                              defaultCount = 2;
+                                              defaultInterval = 7;
+                                            } else if (duration <= 90) {
+                                              defaultCount = Math.min(3, Math.floor(duration / 14));
+                                              defaultInterval = duration <= 60 ? 14 : 30;
+                                              if (defaultCount < 2) defaultCount = 2;
+                                            } else if (duration <= 180) {
+                                              defaultCount = Math.min(4, Math.floor(duration / 30));
+                                              defaultInterval = 30;
+                                              if (defaultCount < 2) defaultCount = 2;
+                                            } else if (duration <= 365) {
+                                              defaultCount = Math.min(6, Math.floor(duration / 30));
+                                              defaultInterval = 30;
+                                            } else {
+                                              defaultCount = Math.min(8, Math.floor(duration / 90));
+                                              defaultInterval = 90;
+                                              if (defaultCount < 2) defaultCount = 2;
+                                            }
+                                            const perPayment = totalPrice > 0 ? Math.ceil(totalPrice / defaultCount) : 0;
                                             current[index] = {
-                                              ...current[index],
+                                              ...opt,
                                               allowInstallments: !!checked,
-                                              installmentCount: checked ? (current[index].installmentCount || defaultCount) : undefined,
-                                              installmentPrice: checked ? (current[index].installmentPrice || Math.ceil(totalPrice / defaultCount)) : undefined,
-                                              installmentIntervalDays: checked ? (current[index].installmentIntervalDays || 30) : undefined,
+                                              installmentCount: checked ? defaultCount : undefined,
+                                              installmentPrice: checked ? perPayment : undefined,
+                                              installmentIntervalDays: checked ? defaultInterval : undefined,
+                                              payInFullDiscount: checked ? (opt.payInFullDiscount || 0) : undefined,
                                             };
                                             form.setValue("pricingOptions", [...current]);
                                           }}
@@ -10305,66 +10342,94 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                         />
                                         <label className="text-xs font-medium">Allow Installment Payments</label>
                                       </div>
-                                      {option.allowInstallments && (
-                                        <div className="grid grid-cols-3 gap-2 bg-amber-50 border border-amber-200 rounded p-2">
-                                          <div>
-                                            <label className="text-xs font-medium">Payments</label>
-                                            <Input
-                                              type="number"
-                                              min="2"
-                                              max="24"
-                                              value={option.installmentCount || ""}
-                                              onChange={(e) => {
-                                                const current = form.getValues("pricingOptions") || [];
-                                                const count = parseInt(e.target.value) || 2;
-                                                current[index] = { ...current[index], installmentCount: count };
-                                                if (current[index].price && count > 0) {
-                                                  current[index].installmentPrice = Math.ceil(current[index].price / count);
-                                                }
-                                                form.setValue("pricingOptions", [...current]);
-                                              }}
-                                              data-testid={`input-installment-count-${index}`}
-                                            />
+                                      {option.allowInstallments && (() => {
+                                        const duration = option.durationDays || 90;
+                                        const count = option.installmentCount || 3;
+                                        const totalPrice = option.price || 0;
+                                        const perPayment = totalPrice > 0 && count > 0 ? Math.ceil(totalPrice / count) : 0;
+                                        const smartInterval = option.installmentIntervalDays || 30;
+                                        const intervalLabel = smartInterval === 7 ? "Weekly"
+                                          : smartInterval === 14 ? "Bi-Weekly"
+                                          : smartInterval === 30 ? "Monthly"
+                                          : smartInterval === 90 ? "Quarterly"
+                                          : smartInterval === 180 ? "Every 6 months"
+                                          : `Every ${smartInterval} days`;
+                                        const totalInstallmentCost = perPayment * count;
+                                        const totalDays = smartInterval * count;
+                                        const discount = option.payInFullDiscount || 0;
+                                        const discountedFullPrice = discount > 0 ? Math.round(totalPrice * (1 - discount / 100)) : totalPrice;
+                                        const maxCount = duration < 30 ? 2
+                                          : duration <= 90 ? Math.min(6, Math.floor(duration / 14))
+                                          : duration <= 365 ? Math.min(12, Math.floor(duration / 14))
+                                          : 24;
+                                        return (
+                                        <div className="bg-amber-50 border border-amber-200 rounded p-3 space-y-3">
+                                          <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                              <label className="text-xs font-medium">Number of Installments</label>
+                                              <Input
+                                                type="number"
+                                                min="2"
+                                                max={maxCount}
+                                                value={option.installmentCount || ""}
+                                                onChange={(e) => {
+                                                  const current = form.getValues("pricingOptions") || [];
+                                                  const newCount = Math.max(2, Math.min(maxCount, parseInt(e.target.value) || 2));
+                                                  const dur = current[index].durationDays || 90;
+                                                  const rawInterval = Math.floor((dur * 0.75) / newCount);
+                                                  const standards = [7, 14, 30, 90, 180];
+                                                  const newInterval = standards.reduce((prev, curr) =>
+                                                    Math.abs(curr - rawInterval) < Math.abs(prev - rawInterval) ? curr : prev
+                                                  );
+                                                  const price = current[index].price || 0;
+                                                  current[index] = {
+                                                    ...current[index],
+                                                    installmentCount: newCount,
+                                                    installmentPrice: price > 0 ? Math.ceil(price / newCount) : 0,
+                                                    installmentIntervalDays: newInterval,
+                                                  };
+                                                  form.setValue("pricingOptions", [...current]);
+                                                }}
+                                                data-testid={`input-installment-count-${index}`}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="text-xs font-medium">Pay-in-Full Discount (%)</label>
+                                              <Input
+                                                type="number"
+                                                min="0"
+                                                max="50"
+                                                placeholder="0"
+                                                value={option.payInFullDiscount || ""}
+                                                onChange={(e) => {
+                                                  const current = form.getValues("pricingOptions") || [];
+                                                  current[index] = { ...current[index], payInFullDiscount: parseInt(e.target.value) || 0 };
+                                                  form.setValue("pricingOptions", [...current]);
+                                                }}
+                                                data-testid={`input-pay-in-full-discount-${index}`}
+                                              />
+                                            </div>
                                           </div>
-                                          <div>
-                                            <label className="text-xs font-medium">Per Payment ($)</label>
-                                            <Input
-                                              type="text"
-                                              inputMode="decimal"
-                                              defaultValue={option.installmentPrice ? (option.installmentPrice / 100).toFixed(2) : ""}
-                                              key={`inst-price-${option.installmentCount}-${option.price}`}
-                                              onBlur={(e) => {
-                                                const current = form.getValues("pricingOptions") || [];
-                                                const val = parseFloat(e.target.value);
-                                                current[index] = { ...current[index], installmentPrice: isNaN(val) ? 0 : Math.round(val * 100) };
-                                                form.setValue("pricingOptions", [...current]);
-                                              }}
-                                              data-testid={`input-installment-price-${index}`}
-                                            />
-                                          </div>
-                                          <div>
-                                            <label className="text-xs font-medium">Every (days)</label>
-                                            <Input
-                                              type="number"
-                                              min="1"
-                                              value={option.installmentIntervalDays || ""}
-                                              onChange={(e) => {
-                                                const current = form.getValues("pricingOptions") || [];
-                                                current[index] = { ...current[index], installmentIntervalDays: parseInt(e.target.value) || 30 };
-                                                form.setValue("pricingOptions", [...current]);
-                                              }}
-                                              data-testid={`input-installment-interval-${index}`}
-                                            />
-                                          </div>
-                                          <div className="col-span-3">
-                                            <p className="text-xs text-amber-700">
-                                              {option.installmentCount && option.installmentCount >= 2 && option.installmentPrice && option.installmentPrice > 0
-                                                ? `${option.installmentCount} payments of $${(option.installmentPrice / 100).toFixed(2)} every ${option.installmentIntervalDays || 30} days = $${((option.installmentCount * option.installmentPrice) / 100).toFixed(2)} total`
-                                                : "Set the option price above, then configure installment details"}
+                                          <div className="bg-white/60 rounded p-2 space-y-1">
+                                            <p className="text-xs text-amber-800 font-medium">
+                                              {perPayment > 0
+                                                ? `${count} payments of $${(perPayment / 100).toFixed(2)} · ${intervalLabel} · $${(totalInstallmentCost / 100).toFixed(2)} total`
+                                                : "Set the option price above to see installment breakdown"}
                                             </p>
+                                            {totalDays > duration && perPayment > 0 && (
+                                              <p className="text-xs text-amber-600">
+                                                Payments span {totalDays} days ({duration}-day program)
+                                              </p>
+                                            )}
+                                            {discount > 0 && totalPrice > 0 && (
+                                              <p className="text-xs text-green-700">
+                                                Pay-in-full price: ${(discountedFullPrice / 100).toFixed(2)} ({discount}% off)
+                                              </p>
+                                            )}
                                           </div>
                                         </div>
-                                      )}
+                                        );
+                                      })()}
                                     </div>
                                   </>
                                 )}

@@ -1755,6 +1755,7 @@ export interface PricingOption {
   installmentPrice?: number;
   installmentIntervalDays?: number;
   installmentStripePriceId?: string;
+  payInFullDiscount?: number;
 }
 
 export const insertProductSchema = z.object({
@@ -1834,6 +1835,7 @@ export const insertProductSchema = z.object({
     installmentPrice: z.number().optional(),
     installmentIntervalDays: z.number().optional(),
     installmentStripePriceId: z.string().optional(),
+    payInFullDiscount: z.number().min(0).max(50).optional(),
   })).default([]),
 });
 

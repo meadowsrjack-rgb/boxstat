@@ -1778,12 +1778,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const lineItems: any[] = [];
       
       // Determine the price to use (pricing option price or program base price)
-      const priceToCharge = selectedPricingOption ? selectedPricingOption.price : program.price;
+      let priceToCharge = selectedPricingOption ? selectedPricingOption.price : program.price;
+      // Apply pay-in-full discount when selecting the standard (non-installment) option
+      // that has installments enabled with a discount
+      if (selectedPricingOption && !isInstallmentPlan && selectedPricingOption.allowInstallments && selectedPricingOption.payInFullDiscount && selectedPricingOption.payInFullDiscount > 0) {
+        priceToCharge = Math.round(priceToCharge * (1 - selectedPricingOption.payInFullDiscount / 100));
+      }
       const itemName = selectedPricingOption 
         ? `${program.name} - ${selectedPricingOption.name}`
         : program.name;
+      const intervalLabel = isInstallmentPlan ? (() => {
+        const d = selectedPricingOption.installmentIntervalDays;
+        return d === 7 ? 'weekly' : d === 14 ? 'bi-weekly' : d === 30 ? 'monthly' : d === 90 ? 'quarterly' : `every ${d} days`;
+      })() : '';
       const itemDescription = isInstallmentPlan
-        ? `${selectedPricingOption.installmentCount} payments of $${(selectedPricingOption.price / 100).toFixed(2)} every ${selectedPricingOption.installmentIntervalDays} days`
+        ? `${selectedPricingOption.installmentCount} ${intervalLabel} payments of $${(selectedPricingOption.price / 100).toFixed(2)}`
         : selectedPricingOption?.durationDays 
           ? `${selectedPricingOption.durationDays} days${selectedPricingOption.convertsToMonthly ? ', then converts to monthly subscription' : ''}`
           : (program.description || undefined);

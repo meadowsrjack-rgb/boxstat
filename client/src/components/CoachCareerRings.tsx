@@ -26,8 +26,8 @@ function CareerRing({
   total,
   displayValue,
   scheme,
-  size = 120,
-  stroke = 14,
+  size = 136,
+  stroke = 16,
 }: {
   label: string;
   value: number;
@@ -47,7 +47,8 @@ function CareerRing({
 
   return (
     <motion.div
-      className="flex flex-col items-center gap-2"
+      style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      whileHover={{ scale: 1.05 }}
       initial={{ opacity: 0, scale: 0.8 }}
       whileInView={{ opacity: 1, scale: 1 }}
       viewport={{ once: true, amount: 0.3 }}
@@ -59,6 +60,10 @@ function CareerRing({
         height={size}
         role="img"
         aria-label={`${label} ${displayValue}`}
+        initial={{ rotate: -10 }}
+        whileInView={{ rotate: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, ease: "easeOut", delay: 0.1 }}
       >
         <defs>
           <linearGradient id={ringId} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -101,17 +106,28 @@ function CareerRing({
 
         <text
           x={center}
-          y={center + 2}
+          y={center + 6}
           textAnchor="middle"
           fontFamily="ui-sans-serif, system-ui"
-          fontWeight={600}
-          fontSize={28}
+          fontWeight={400}
+          fontSize={34}
           fill="#0f172a"
         >
           {displayValue}
         </text>
+
+        <text
+          x={center}
+          y={center + 20}
+          textAnchor="middle"
+          fontFamily="ui-sans-serif, system-ui"
+          fontWeight={400}
+          fontSize={9}
+          fill="#334155"
+        >
+          {label}
+        </text>
       </motion.svg>
-      <span className="text-xs font-medium text-gray-600 dark:text-gray-400 text-center leading-tight">{label}</span>
     </motion.div>
   );
 }
@@ -141,15 +157,25 @@ export default function CoachCareerRings({ profileId }: { profileId?: string }) 
   const attendancePct = stats?.attendancePercentage ?? 0;
 
   const monthsCap = Math.max(monthsWithOrg, 12);
+  const size = 136;
 
   return (
-    <div className="flex justify-center gap-6 py-4">
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(3, ${size}px)`,
+        gap: 4,
+        justifyContent: 'center',
+        padding: '4px',
+      }}
+    >
       <CareerRing
         label="Months"
         value={monthsWithOrg}
         total={monthsCap}
         displayValue={String(monthsWithOrg)}
         scheme={schemes.months}
+        size={size}
       />
       <CareerRing
         label="Events"
@@ -157,6 +183,7 @@ export default function CoachCareerRings({ profileId }: { profileId?: string }) 
         total={Math.max(totalInvited, 1)}
         displayValue={String(eventsAttended)}
         scheme={schemes.events}
+        size={size}
       />
       <CareerRing
         label="Attendance"
@@ -164,6 +191,7 @@ export default function CoachCareerRings({ profileId }: { profileId?: string }) 
         total={100}
         displayValue={`${attendancePct}%`}
         scheme={schemes.attendance}
+        size={size}
       />
     </div>
   );

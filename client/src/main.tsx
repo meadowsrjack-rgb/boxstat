@@ -103,33 +103,31 @@ async function initApp() {
 }
 
 function registerServiceWorker() {
-  // Register service worker for PWA functionality with auto-update
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
         .then((registration) => {
           console.log('SW registered: ', registration);
-          
-          // Check for updates immediately and every 5 minutes
+
           registration.update();
           setInterval(() => registration.update(), 5 * 60 * 1000);
-          
-          // Handle new service worker installation
+
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('New version available, reloading...');
-                  // Force the new service worker to activate
+                  console.log('New version available, activating...');
                   newWorker.postMessage({ type: 'SKIP_WAITING' });
                 }
               });
             }
           });
-          
-          // Reload when new service worker takes control
+
+          let refreshing = false;
           navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            refreshing = true;
             console.log('New service worker activated, reloading page...');
             window.location.reload();
           });
@@ -138,6 +136,19 @@ function registerServiceWorker() {
           console.log('SW registration failed: ', registrationError);
         });
     });
+
+    fetch('/api/health', { cache: 'no-store' })
+      .then((r) => {
+        if (!r.ok) throw new Error('Health check failed');
+      })
+      .catch(() => {
+        console.log('Server unreachable, clearing stale SW caches...');
+        if ('caches' in window) {
+          caches.keys().then((names) => {
+            names.filter((n) => n.startsWith('boxstat-')).forEach((n) => caches.delete(n));
+          });
+        }
+      });
   }
 }
 

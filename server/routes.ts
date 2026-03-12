@@ -527,6 +527,11 @@ const isAuthenticated = requireAuth;
 export async function registerRoutes(app: Express): Promise<Server> {
   
   setAuthStorage(storage);
+
+  app.get('/api/health', (_req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.json({ status: 'ok', timestamp: Date.now() });
+  });
   
   // Register object storage routes for persistent file uploads
   registerObjectStorageRoutes(app);

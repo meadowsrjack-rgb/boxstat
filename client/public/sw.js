@@ -1,76 +1,93 @@
-const CACHE_NAME = 'boxstat-v5';
-const urlsToCache = [
+const CACHE_VERSION = '6';
+const CACHE_NAME = 'boxstat-v' + CACHE_VERSION;
+const STATIC_CACHE = [
   '/',
-  '/manifest.json',
   'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
 ];
 
-// Install event - skip waiting to activate immediately
 self.addEventListener('install', (event) => {
   console.log('Service worker installing, version:', CACHE_NAME);
-  self.skipWaiting(); // Force immediate activation
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Opened cache');
-        return cache.addAll(urlsToCache);
-      })
+      .then((cache) => cache.addAll(STATIC_CACHE))
   );
 });
 
-// Fetch event - Network first for JS files, cache first for others
 self.addEventListener('fetch', (event) => {
-  // Skip service worker for external resources
-  if (event.request.url.includes('fonts.googleapis.com') ||
-      event.request.url.includes('openstreetmap.org') ||
-      event.request.url.includes('cdnjs.cloudflare.com')) {
+  const url = new URL(event.request.url);
+
+  if (url.origin !== self.location.origin) {
     return;
   }
 
-  // Network-first strategy for JavaScript files to avoid stale code
-  if (event.request.url.includes('.js') || event.request.url.includes('.css')) {
+  if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          // Clone the response
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           return response;
         })
-        .catch(() => {
-          // If network fails, try cache
-          return caches.match(event.request);
-        })
+        .catch(() => caches.match(event.request).then((r) => r || caches.match('/')))
     );
-  } else {
-    // Cache-first strategy for other resources
-    event.respondWith(
-      caches.match(event.request)
-        .then((response) => {
-          return response || fetch(event.request);
-        })
-    );
+    return;
   }
+
+  if (url.pathname.match(/\.[a-f0-9]{8,}\.(js|css)$/)) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(event.request).then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  if (url.pathname.startsWith('/api/')) {
+    return;
+  }
+
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
+  );
 });
 
-// Activate event - claim clients immediately
 self.addEventListener('activate', (event) => {
   console.log('Service worker activating, version:', CACHE_NAME);
   event.waitUntil(
     Promise.all([
-      // Take control of all clients immediately
       clients.claim(),
-      // Delete old caches
       caches.keys().then((cacheNames) => {
         return Promise.all(
-          cacheNames.map((cacheName) => {
-            if (cacheName !== CACHE_NAME) {
-              console.log('Deleting old cache:', cacheName);
-              return caches.delete(cacheName);
+          cacheNames.map((name) => {
+            if (name !== CACHE_NAME) {
+              console.log('Deleting old cache:', name);
+              return caches.delete(name);
             }
           })
         );
@@ -79,14 +96,12 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Listen for skip waiting message from client
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
 });
 
-// Background sync for offline actions
 self.addEventListener('sync', (event) => {
   if (event.tag === 'background-sync') {
     event.waitUntil(doBackgroundSync());
@@ -95,13 +110,11 @@ self.addEventListener('sync', (event) => {
 
 function doBackgroundSync() {
   return new Promise((resolve) => {
-    // Implement background sync logic here
     console.log('Background sync triggered');
     resolve();
   });
 }
 
-// Push notification handling
 self.addEventListener('push', (event) => {
   let notificationData = {
     title: 'BoxStat',
@@ -130,14 +143,8 @@ self.addEventListener('push', (event) => {
       type: notificationData.type
     },
     actions: [
-      {
-        action: 'view',
-        title: 'View'
-      },
-      {
-        action: 'dismiss',
-        title: 'Dismiss'
-      }
+      { action: 'view', title: 'View' },
+      { action: 'dismiss', title: 'Dismiss' }
     ]
   };
 
@@ -146,7 +153,6 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// Notification click handling
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
@@ -159,14 +165,12 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        // Try to focus existing window
         for (const client of clientList) {
           if (client.url.includes(self.location.origin) && 'focus' in client) {
             client.navigate(urlToOpen);
             return client.focus();
           }
         }
-        // Open new window if no existing window found
         if (clients.openWindow) {
           return clients.openWindow(urlToOpen);
         }
@@ -174,15 +178,6 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// Share target handling
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SHARE_TARGET') {
-    // Handle shared content
-    console.log('Shared content:', event.data);
-  }
-});
-
-// Periodic background sync
 self.addEventListener('periodicsync', (event) => {
   if (event.tag === 'content-sync') {
     event.waitUntil(syncContent());
@@ -191,7 +186,6 @@ self.addEventListener('periodicsync', (event) => {
 
 function syncContent() {
   return new Promise((resolve) => {
-    // Sync content in background
     console.log('Periodic sync triggered');
     resolve();
   });

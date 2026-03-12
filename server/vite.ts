@@ -76,10 +76,32 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  app.use("/sw.js", (_req, res) => {
+    res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.set("Content-Type", "application/javascript");
+    res.sendFile(path.resolve(distPath, "sw.js"));
+  });
 
-  // fall through to index.html if the file doesn't exist
+  app.use("/manifest.json", (_req, res) => {
+    res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.set("Content-Type", "application/json");
+    res.sendFile(path.resolve(distPath, "manifest.json"));
+  });
+
+  app.use(express.static(distPath, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+      } else if (/\.[a-f0-9]{8,}\.(js|css)$/.test(filePath)) {
+        res.set("Cache-Control", "public, max-age=31536000, immutable");
+      } else {
+        res.set("Cache-Control", "public, max-age=3600");
+      }
+    }
+  }));
+
   app.use("*", (_req, res) => {
+    res.set("Cache-Control", "no-cache, no-store, must-revalidate");
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

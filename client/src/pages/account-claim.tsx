@@ -7,7 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
 import { useLocation } from "wouter";
-import logoPath from "@assets/UYP Logo nback_1752703900579.png";
+import BoxStatLogo from "@/components/boxstat-logo";
 
 interface ClaimResponse {
   success: boolean;
@@ -109,7 +109,7 @@ export default function AccountClaim() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
-            <img src={logoPath} alt="BoxStat" className="h-16 w-auto" />
+            <BoxStatLogo variant="auto" className="h-16 w-auto" />
           </div>
           
           {!isSubmitted ? (

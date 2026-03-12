@@ -1,7 +1,7 @@
 import { Mail, MessageCircle, HelpCircle, FileText, ExternalLink, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import logoIcon from "@assets/iOS_icon_1772431532358.png";
+import BoxStatLogo from "@/components/boxstat-logo";
 
 export default function SupportPage() {
   return (
@@ -14,7 +14,7 @@ export default function SupportPage() {
       <nav className="sticky z-50 w-full border-b border-white/10 backdrop-blur-xl bg-black/70 top-0 left-0">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <a href="https://boxstat.app" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <img src={logoIcon} alt="BoxStat" className="h-12 w-auto" />
+            <BoxStatLogo variant="dark" className="h-12 w-auto" />
           </a>
           <a
             href="https://boxstat.app"

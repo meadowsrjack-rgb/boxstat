@@ -17,7 +17,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { DateScrollPicker } from "react-date-wheel-picker";
-import logoPath from "@assets/UYP Logo nback_1752703900579.png";
+import BoxStatLogo from "@/components/boxstat-logo";
 
 // Account setup schema for new users with conditional validation
 const accountSetupSchema = z.object({
@@ -125,7 +125,7 @@ export default function AccountSetup() {
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <img src={logoPath} alt="BoxStat" className="h-16 mx-auto mb-4" />
+          <BoxStatLogo variant="auto" className="h-16 mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome to BoxStat</h1>
           <p className="text-gray-600">Let's set up your account to get started</p>
           {isTestMode && (

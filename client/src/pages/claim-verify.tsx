@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import logoPath from "@assets/UYP Logo nback_1752703900579.png";
+import BoxStatLogo from "@/components/boxstat-logo";
 interface VerifyResponse {
   success: boolean;
   account: {
@@ -89,7 +89,7 @@ export default function ClaimVerify() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
-            <img src={logoPath} alt="BoxStat" className="h-16 w-auto" />
+            <BoxStatLogo variant="auto" className="h-16 w-auto" />
           </div>
           
           {status === "loading" && (

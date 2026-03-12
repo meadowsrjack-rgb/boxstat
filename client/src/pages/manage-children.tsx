@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import QRCode from "qrcode";
 import { DateScrollPicker } from "react-date-wheel-picker";
-import logoPath from "@assets/UYP Logo nback_1752703900579.png";
+import BoxStatLogo from "@/components/boxstat-logo";
 
 const childSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -273,7 +273,7 @@ export default function ManageChildren() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div className="flex items-center space-x-3">
-                <img src={logoPath} alt="BoxStat" className="h-8 w-8" />
+                <BoxStatLogo variant="auto" className="h-8 w-8" />
                 <h1 className="text-xl font-bold text-gray-900">Manage Children</h1>
               </div>
             </div>

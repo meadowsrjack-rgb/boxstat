@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import logo from "@assets/dark_1768878462814.png";
+import BoxStatLogo from "@/components/boxstat-logo";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
@@ -46,16 +46,9 @@ export default function Landing() {
         <div />
 
         {/* Row 2: Logo */}
-        <img 
-          src={logo} 
-          alt="BoxStat Logo" 
-          style={{
-            width: '320px',
-            height: 'auto',
-            filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.5))',
-          }}
-          data-testid="img-logo"
-        />
+        <div style={{ filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.5))' }} data-testid="img-logo">
+          <BoxStatLogo variant="dark" className="w-[320px] h-auto" />
+        </div>
 
         {/* Row 3: Spacer */}
         <div />

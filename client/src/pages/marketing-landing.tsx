@@ -18,8 +18,7 @@ import {
   Check
 } from "lucide-react";
 import { SiApple } from "react-icons/si";
-import logo from "@assets/logonew_1772431265698.png";
-import logoIcon from "@assets/iOS_icon_1772431532358.png";
+import BoxStatLogo from "@/components/boxstat-logo";
 import screenshot1 from "@assets/1_1768860806315.png";
 import screenshot2 from "@assets/2_1768860806316.png";
 import screenshot3 from "@assets/3_1768860806317.png";
@@ -104,7 +103,7 @@ export default function MarketingLanding() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={logoIcon} alt="BoxStat" className="h-16 w-auto" />
+              <BoxStatLogo variant="dark" className="h-16 w-auto" />
             </div>
             
             <div className="flex items-center gap-3">
@@ -407,7 +406,7 @@ export default function MarketingLanding() {
       <section id="contact" className="relative z-10 py-24 px-6">
         <div className="max-w-4xl mx-auto">
           <div className="p-12 rounded-3xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 text-center">
-            <img src={logo} alt="BoxStat" className="h-16 w-auto mx-auto mb-6" />
+            <BoxStatLogo variant="dark" className="h-16 w-auto mx-auto mb-6" />
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               Ready to Transform Your Club?
             </h2>
@@ -444,7 +443,7 @@ export default function MarketingLanding() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
             <div>
-              <img src={logo} alt="BoxStat" className="h-8 w-auto mb-4" />
+              <BoxStatLogo variant="dark" className="h-8 w-auto mb-4" />
               <p className="text-sm text-gray-500">The all-in-one platform for sports league management.</p>
             </div>
             <div>

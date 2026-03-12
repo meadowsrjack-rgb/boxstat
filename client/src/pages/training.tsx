@@ -20,7 +20,7 @@ import {
 import { useState } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import logoPath from "@assets/UYP Logo nback_1752703900579.png";
+import BoxStatLogo from "@/components/boxstat-logo";
 
 interface TrainingProgram {
   id: number;
@@ -158,8 +158,8 @@ export default function Training() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <img 
-                src={logoPath} 
+              <BoxStatLogo 
+                variant="auto" 
                 alt="BoxStat Academy" 
                 className="h-10 w-10 mr-3 object-contain"
               />

@@ -7,7 +7,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Users, User, Settings, TestTube, ArrowRight, UserPlus, Briefcase } from "lucide-react";
-import logoPath from "@assets/UYP Logo nback_1752703900579.png";
+import BoxStatLogo from "@/components/boxstat-logo";
 
 const unifiedAccount = {
   type: "unified",
@@ -112,8 +112,8 @@ export default function TestAccounts() {
         <div className="max-w-4xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <img 
-                src={logoPath} 
+              <BoxStatLogo 
+                variant="auto" 
                 alt="BoxStat Academy" 
                 className="h-10 w-10 object-contain"
               />

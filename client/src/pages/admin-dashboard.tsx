@@ -10030,49 +10030,87 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                     )}
                   />
 
-                  {allowInstallments && (
-                    <div className="grid grid-cols-2 gap-3 mt-3 pl-6">
-                      <FormField
-                        control={form.control}
-                        name="installments"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Number of Installments</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                {...field} 
-                                onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                placeholder="3" 
-                                data-testid="input-installments" 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                  {allowInstallments && (() => {
+                    const duration = form.watch("durationDays") || 90;
+                    const count = form.watch("installments") || 3;
+                    const totalPrice = form.watch("price") || 0;
+                    const perPayment = totalPrice > 0 && count > 0 ? Math.ceil(totalPrice / count) : 0;
+                    const rawInterval = count > 0 ? Math.floor((duration * 0.75) / count) : 30;
+                    const standards = [7, 14, 30, 90, 180];
+                    const smartInterval = standards.reduce((p, c) => Math.abs(c - rawInterval) < Math.abs(p - rawInterval) ? c : p);
+                    const intervalLabel = smartInterval === 7 ? "Weekly"
+                      : smartInterval === 14 ? "Bi-Weekly"
+                      : smartInterval === 30 ? "Monthly"
+                      : smartInterval === 90 ? "Quarterly"
+                      : smartInterval === 180 ? "Every 6 months"
+                      : `Every ${smartInterval} days`;
+                    const totalInstallmentCost = perPayment * count;
+                    const totalDays = smartInterval * count;
+                    const discount = form.watch("payInFullDiscount") || 0;
+                    const discountedFullPrice = discount > 0 ? Math.round(totalPrice * (1 - discount / 100)) : totalPrice;
+                    return (
+                    <div className="bg-amber-50 border border-amber-200 rounded p-3 space-y-3 mt-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField
+                          control={form.control}
+                          name="installments"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Number of Installments</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  {...field} 
+                                  onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                  placeholder="3" 
+                                  data-testid="input-installments" 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                      <FormField
-                        control={form.control}
-                        name="payInFullDiscount"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Pay-in-Full Discount (%)</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                {...field} 
-                                onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                placeholder="0" 
-                                data-testid="input-pay-in-full-discount" 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
+                        <FormField
+                          control={form.control}
+                          name="payInFullDiscount"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Pay-in-Full Discount (%)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  {...field} 
+                                  onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                  placeholder="0" 
+                                  data-testid="input-pay-in-full-discount" 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="bg-white/60 rounded p-2 space-y-1">
+                        <p className="text-xs text-amber-800 font-medium">
+                          {perPayment > 0
+                            ? `${count} payments of $${(perPayment / 100).toFixed(2)} · ${intervalLabel} · $${(totalInstallmentCost / 100).toFixed(2)} total`
+                            : "Set the option price above to see installment breakdown"}
+                        </p>
+                        {totalDays > duration && perPayment > 0 && (
+                          <p className="text-xs text-amber-600">
+                            Payments span {totalDays} days ({duration}-day program)
+                          </p>
                         )}
-                      />
+                        {discount > 0 && totalPrice > 0 && (
+                          <p className="text-xs text-green-700">
+                            Pay-in-full price: ${(discountedFullPrice / 100).toFixed(2)} ({discount}% off)
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  )}
+                    );
+                  })()}
 
                   <FormField
                     control={form.control}

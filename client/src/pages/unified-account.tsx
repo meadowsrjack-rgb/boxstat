@@ -2511,51 +2511,80 @@ export default function UnifiedAccount() {
                                 
                                 {/* Pricing Options (One-Time Bundles & Credit Packs) */}
                                 {pricingOptions.map((option: any) => (
-                                  <div
-                                    key={option.id}
-                                    onClick={() => setSelectedPricingOptionId(option.id)}
-                                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                                      selectedPricingOptionId === option.id
-                                        ? 'border-red-500 bg-red-50'
-                                        : 'border-gray-200 hover:border-gray-300'
-                                    }`}
-                                    data-testid={`pricing-option-${option.id}`}
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      <div>
-                                        <p className="font-medium text-sm">{option.name}</p>
-                                        {option.optionType === "credit_pack" && option.creditCount ? (
-                                          <p className="text-xs text-blue-600">{option.creditCount} session{option.creditCount > 1 ? 's' : ''} included</p>
-                                        ) : option.optionType === "subscription" || (option.billingCycle && option.billingCycle !== "One-Time" && option.billingCycle !== "One-time") ? (
-                                          <p className="text-xs text-purple-600">
-                                            Subscription · Billed {option.billingInterval || option.billingCycle?.toLowerCase() || "monthly"}
-                                            {option.trialDays ? ` · ${option.trialDays}-day free trial` : ''}
-                                            {' · Cancel anytime'}
-                                          </p>
-                                        ) : option.durationDays ? (
-                                          <p className="text-xs text-gray-500">Prepaid · {option.durationDays}-day access</p>
-                                        ) : (
-                                          <p className="text-xs text-gray-500">One-time purchase</p>
-                                        )}
-                                        {option.convertsToMonthly && (
-                                          <p className="text-xs text-green-600">Then ${(option.monthlyPrice / 100).toFixed(2)}/month after</p>
-                                        )}
-                                      </div>
-                                      <div className="text-right">
-                                        <p className="font-semibold text-red-600">
-                                          ${(option.price / 100).toFixed(2)}
-                                          {(option.optionType === "subscription" || (option.billingCycle && option.billingCycle !== "One-Time" && option.billingCycle !== "One-time")) && (
-                                            <span className="text-xs font-normal text-gray-500">/{option.billingInterval === "yearly" ? "yr" : option.billingInterval === "quarterly" ? "qtr" : option.billingInterval === "weekly" ? "wk" : "mo"}</span>
+                                  <div key={option.id}>
+                                    <div
+                                      onClick={() => setSelectedPricingOptionId(option.id)}
+                                      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                                        selectedPricingOptionId === option.id
+                                          ? 'border-red-500 bg-red-50'
+                                          : 'border-gray-200 hover:border-gray-300'
+                                      }`}
+                                      data-testid={`pricing-option-${option.id}`}
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <p className="font-medium text-sm">{option.name}{option.allowInstallments ? ' (Pay in Full)' : ''}</p>
+                                          {option.optionType === "credit_pack" && option.creditCount ? (
+                                            <p className="text-xs text-blue-600">{option.creditCount} session{option.creditCount > 1 ? 's' : ''} included</p>
+                                          ) : option.optionType === "subscription" || (option.billingCycle && option.billingCycle !== "One-Time" && option.billingCycle !== "One-time") ? (
+                                            <p className="text-xs text-purple-600">
+                                              Subscription · Billed {option.billingInterval || option.billingCycle?.toLowerCase() || "monthly"}
+                                              {option.trialDays ? ` · ${option.trialDays}-day free trial` : ''}
+                                              {' · Cancel anytime'}
+                                            </p>
+                                          ) : option.durationDays ? (
+                                            <p className="text-xs text-gray-500">Prepaid · {option.durationDays}-day access</p>
+                                          ) : (
+                                            <p className="text-xs text-gray-500">One-time purchase</p>
                                           )}
-                                        </p>
-                                        {option.optionType === "credit_pack" && option.creditCount ? (
-                                          <p className="text-xs text-gray-500">${((option.price / 100) / option.creditCount).toFixed(2)}/session</p>
-                                        ) : null}
-                                        {option.savingsNote && (
-                                          <p className="text-xs text-green-600">{option.savingsNote}</p>
-                                        )}
+                                          {option.convertsToMonthly && (
+                                            <p className="text-xs text-green-600">Then ${(option.monthlyPrice / 100).toFixed(2)}/month after</p>
+                                          )}
+                                        </div>
+                                        <div className="text-right">
+                                          <p className="font-semibold text-red-600">
+                                            ${(option.price / 100).toFixed(2)}
+                                            {(option.optionType === "subscription" || (option.billingCycle && option.billingCycle !== "One-Time" && option.billingCycle !== "One-time")) && (
+                                              <span className="text-xs font-normal text-gray-500">/{option.billingInterval === "yearly" ? "yr" : option.billingInterval === "quarterly" ? "qtr" : option.billingInterval === "weekly" ? "wk" : "mo"}</span>
+                                            )}
+                                          </p>
+                                          {option.optionType === "credit_pack" && option.creditCount ? (
+                                            <p className="text-xs text-gray-500">${((option.price / 100) / option.creditCount).toFixed(2)}/session</p>
+                                          ) : null}
+                                          {option.savingsNote && (
+                                            <p className="text-xs text-green-600">{option.savingsNote}</p>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
+                                    {option.allowInstallments && option.installmentCount && option.installmentPrice && (
+                                      <div
+                                        onClick={() => setSelectedPricingOptionId(`${option.id}_installments`)}
+                                        className={`p-3 rounded-lg border cursor-pointer transition-colors mt-1 ${
+                                          selectedPricingOptionId === `${option.id}_installments`
+                                            ? 'border-amber-500 bg-amber-50'
+                                            : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                        data-testid={`pricing-option-installments-${option.id}`}
+                                      >
+                                        <div className="flex items-center justify-between">
+                                          <div>
+                                            <p className="font-medium text-sm">{option.name} (Installment Plan)</p>
+                                            <p className="text-xs text-amber-700">
+                                              {option.installmentCount} payments of ${(option.installmentPrice / 100).toFixed(2)} every {option.installmentIntervalDays || 30} days
+                                            </p>
+                                          </div>
+                                          <div className="text-right">
+                                            <p className="font-semibold text-amber-600">
+                                              ${(option.installmentPrice / 100).toFixed(2)}<span className="text-xs font-normal text-gray-500">/payment</span>
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                              ${((option.installmentCount * option.installmentPrice) / 100).toFixed(2)} total
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
                                 
@@ -2885,7 +2914,12 @@ export default function UnifiedAccount() {
                           const installmentPlans = pkg.installmentPlans || [];
                           const selectedOption = pricingOptions.find((opt: any) => opt.id === selectedPricingOptionId);
                           
-                          // Check if an installment plan is selected
+                          // Check if a bundle installment option is selected (e.g., "{optionId}_installments")
+                          const isBundleInstallmentSelected = selectedPricingOptionId.endsWith('_installments');
+                          const bundleInstallmentBaseId = isBundleInstallmentSelected ? selectedPricingOptionId.replace('_installments', '') : null;
+                          const bundleInstallmentOption = bundleInstallmentBaseId ? pricingOptions.find((opt: any) => opt.id === bundleInstallmentBaseId) : null;
+                          
+                          // Check if an old-style installment plan is selected
                           const isInstallmentSelected = selectedPricingOptionId.startsWith('installment_');
                           const selectedInstallmentId = isInstallmentSelected ? selectedPricingOptionId.replace('installment_', '') : null;
                           const selectedInstallment = installmentPlans.find((p: any) => p.id === selectedInstallmentId);
@@ -2894,7 +2928,10 @@ export default function UnifiedAccount() {
                           let basePrice = pkg.price || 0;
                           let displayName = pkg.name;
                           
-                          if (selectedOption) {
+                          if (bundleInstallmentOption) {
+                            basePrice = bundleInstallmentOption.installmentPrice || 0;
+                            displayName = `${pkg.name} - ${bundleInstallmentOption.name} (Installment Plan)`;
+                          } else if (selectedOption) {
                             basePrice = selectedOption.price;
                             displayName = `${pkg.name} - ${selectedOption.name}`;
                           } else if (selectedInstallment) {
@@ -2910,14 +2947,19 @@ export default function UnifiedAccount() {
                           
                           // Determine billing type display
                           const isBundle = !!selectedOption;
-                          const isSubscription = !isBundle && !isInstallmentSelected && pkg.type === "Subscription" && pkg.billingCycle && pkg.billingCycle !== "One-Time" && pkg.billingCycle !== "One-time";
+                          const isSubscription = !isBundle && !isInstallmentSelected && !isBundleInstallmentSelected && pkg.type === "Subscription" && pkg.billingCycle && pkg.billingCycle !== "One-Time" && pkg.billingCycle !== "One-time";
                           
                           return (
                             <div className="bg-gray-100 p-4 rounded-lg space-y-2">
                               <div className="flex justify-between text-sm">
                                 <span>{displayName}</span>
-                                <span>${(basePrice / 100).toFixed(2)}</span>
+                                <span>${(basePrice / 100).toFixed(2)}{isBundleInstallmentSelected ? '/payment' : ''}</span>
                               </div>
+                              {bundleInstallmentOption && (
+                                <p className="text-xs text-amber-700">
+                                  {bundleInstallmentOption.installmentCount} payments of ${((bundleInstallmentOption.installmentPrice || 0) / 100).toFixed(2)} every {bundleInstallmentOption.installmentIntervalDays || 30} days · ${((bundleInstallmentOption.installmentCount * (bundleInstallmentOption.installmentPrice || 0)) / 100).toFixed(2)} total
+                                </p>
+                              )}
                               {selectedOption?.optionType === "subscription" || (selectedOption?.billingCycle && selectedOption.billingCycle !== "One-Time" && selectedOption.billingCycle !== "One-time") ? (
                                 <p className="text-xs text-gray-500">
                                   Subscription · Billed {selectedOption.billingInterval || selectedOption.billingCycle?.toLowerCase() || "monthly"} · Cancel anytime

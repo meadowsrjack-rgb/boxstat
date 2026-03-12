@@ -390,6 +390,32 @@ async function syncProgramWithStripe(
           }
         }
 
+        // Create installment Stripe price for bundle installment plans
+        if (option.allowInstallments && option.installmentPrice && option.installmentPrice > 0 && !option.installmentStripePriceId) {
+          try {
+            const instInterval = billingIntervalDaysToStripe(option.installmentIntervalDays || 30);
+            const installmentPriceParams: Stripe.PriceCreateParams = {
+              product: stripeProductId!,
+              unit_amount: option.installmentPrice,
+              currency: 'usd',
+              recurring: { interval: instInterval.interval, interval_count: instInterval.interval_count },
+              metadata: {
+                programId: program.id,
+                pricingOptionId: option.id,
+                pricingOptionName: `${option.name} - Installment`,
+                isInstallmentPlan: 'true',
+                installmentCount: String(option.installmentCount || 3),
+              },
+            };
+
+            const installmentStripePrice = await stripe.prices.create(installmentPriceParams);
+            updatedOption.installmentStripePriceId = installmentStripePrice.id;
+            console.log(`Created installment Stripe Price ${installmentStripePrice.id} for option "${option.name}"`);
+          } catch (error: any) {
+            console.error(`Failed to create installment Stripe Price for option "${option.name}":`, error.message);
+          }
+        }
+
         // Create monthly price for bundle-to-monthly conversion if needed
         if (option.convertsToMonthly && option.monthlyPrice > 0 && !option.monthlyStripePriceId) {
           try {
@@ -1679,6 +1705,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
               numberOfPayments: installmentPlan.numberOfPayments
             };
           }
+        } else if (selectedPricingOptionId.endsWith('_installments')) {
+          const baseOptionId = selectedPricingOptionId.replace('_installments', '');
+          const pricingOptions = (program as any).pricingOptions;
+          if (pricingOptions && Array.isArray(pricingOptions)) {
+            const baseOption = pricingOptions.find((opt: any) => opt.id === baseOptionId);
+            if (baseOption && baseOption.allowInstallments && baseOption.installmentCount && baseOption.installmentPrice) {
+              const count = Math.max(2, Math.min(24, baseOption.installmentCount));
+              const perPayment = Math.max(100, baseOption.installmentPrice); // min $1.00
+              const intervalDays = Math.max(1, baseOption.installmentIntervalDays || 30);
+              selectedPricingOption = {
+                ...baseOption,
+                id: selectedPricingOptionId,
+                isInstallmentPlan: true,
+                price: perPayment,
+                originalPrice: baseOption.price,
+                installmentCount: count,
+                installmentIntervalDays: intervalDays,
+                name: `${baseOption.name} (${count} Payment Plan)`,
+              };
+            }
+          }
         } else {
           // Standard pricing option from program
           const pricingOptions = (program as any).pricingOptions;
@@ -1720,6 +1767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Bundle pricing options are always one-time payments (may convert to subscription later)
       const isSubscription = !selectedPricingOption && program.type === 'Subscription' && (program.billingCycle || program.billingIntervalDays);
       const isBundleWithMonthlyConversion = selectedPricingOption?.convertsToMonthly;
+      const isInstallmentPlan = selectedPricingOption?.isInstallmentPlan;
       
       // Build line items - start with main program
       const lineItems: any[] = [];
@@ -1729,9 +1777,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const itemName = selectedPricingOption 
         ? `${program.name} - ${selectedPricingOption.name}`
         : program.name;
-      const itemDescription = selectedPricingOption?.durationDays 
-        ? `${selectedPricingOption.durationDays} days${selectedPricingOption.convertsToMonthly ? ', then converts to monthly subscription' : ''}`
-        : (program.description || undefined);
+      const itemDescription = isInstallmentPlan
+        ? `${selectedPricingOption.installmentCount} payments of $${(selectedPricingOption.price / 100).toFixed(2)} every ${selectedPricingOption.installmentIntervalDays} days`
+        : selectedPricingOption?.durationDays 
+          ? `${selectedPricingOption.durationDays} days${selectedPricingOption.convertsToMonthly ? ', then converts to monthly subscription' : ''}`
+          : (program.description || undefined);
       
       // Main program line item
       const mainLineItem: any = {
@@ -1752,6 +1802,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mainLineItem.price_data.recurring = {
           interval: resolved.interval,
           interval_count: resolved.interval_count,
+        };
+      }
+      
+      // Installment plans use recurring billing with a fixed number of payments
+      if (isInstallmentPlan) {
+        const instInterval = resolveStripeInterval(selectedPricingOption.installmentIntervalDays);
+        mainLineItem.price_data.recurring = {
+          interval: instInterval.interval,
+          interval_count: instInterval.interval_count,
         };
       }
       
@@ -1807,6 +1866,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }
         
+        if (isInstallmentPlan) {
+          const feeInstInterval = resolveStripeInterval(selectedPricingOption.installmentIntervalDays);
+          platformFeeItem.price_data.recurring = {
+            interval: feeInstInterval.interval,
+            interval_count: feeInstInterval.interval_count,
+          };
+        }
+        
         lineItems.push(platformFeeItem);
       }
       
@@ -1822,10 +1889,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const connectInfo = await getOrgConnectInfo(req.user.organizationId);
       const totalAmount = lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
 
+      const checkoutMode = (isSubscription || isInstallmentPlan) ? 'subscription' : 'payment';
+      
       const sessionParams: any = {
         customer: stripeCustomerId,
         line_items: lineItems,
-        mode: isSubscription ? 'subscription' : 'payment',
+        mode: checkoutMode,
         success_url: successUrl,
         cancel_url: cancelUrl,
         metadata: {
@@ -1841,12 +1910,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
           monthlyPrice: selectedPricingOption?.monthlyPrice ? String(selectedPricingOption.monthlyPrice) : '',
           durationDays: selectedPricingOption?.durationDays ? String(selectedPricingOption.durationDays) : '',
           quoteId: selectedPricingOption?.quoteId || '',
+          isInstallmentPlan: isInstallmentPlan ? 'true' : '',
+          installmentCount: isInstallmentPlan ? String(selectedPricingOption.installmentCount) : '',
+          installmentOriginalPrice: isInstallmentPlan ? String(selectedPricingOption.originalPrice) : '',
         },
       };
+      
+      // For installment plans, set the subscription to cancel after the specified number of payments
+      if (isInstallmentPlan) {
+        const intervalDays = selectedPricingOption.installmentIntervalDays;
+        const count = selectedPricingOption.installmentCount;
+        // Calculate cancel_at using proper date math for month-aligned intervals
+        const now = new Date();
+        let cancelDate: Date;
+        if (intervalDays === 30 || intervalDays === 60 || intervalDays === 90 || intervalDays === 180) {
+          // Month-based: add months instead of raw days to avoid drift
+          const months = Math.round(intervalDays / 30) * count;
+          cancelDate = new Date(now);
+          cancelDate.setMonth(cancelDate.getMonth() + months);
+          cancelDate.setDate(cancelDate.getDate() + 2); // 2-day buffer for billing anchor
+        } else if (intervalDays === 365) {
+          cancelDate = new Date(now);
+          cancelDate.setFullYear(cancelDate.getFullYear() + count);
+          cancelDate.setDate(cancelDate.getDate() + 2);
+        } else {
+          // Day-based: straightforward
+          cancelDate = new Date(now.getTime() + (count * intervalDays * 86400000) + (2 * 86400000));
+        }
+        const cancelAt = Math.floor(cancelDate.getTime() / 1000);
+        
+        sessionParams.subscription_data = {
+          ...(sessionParams.subscription_data || {}),
+          metadata: {
+            isInstallmentPlan: 'true',
+            installmentCount: String(count),
+            installmentIntervalDays: String(intervalDays),
+            originalPrice: String(selectedPricingOption.originalPrice),
+            programId: packageId,
+            playerId: playerId || '',
+          },
+        };
+        sessionParams.subscription_data.cancel_at = cancelAt;
+      }
 
       if (connectInfo.isConnected && connectInfo.connectedAccountId) {
-        if (isSubscription) {
+        if (isSubscription || isInstallmentPlan) {
           sessionParams.subscription_data = {
+            ...(sessionParams.subscription_data || {}),
             application_fee_percent: 2,
             transfer_data: {
               destination: connectInfo.connectedAccountId,

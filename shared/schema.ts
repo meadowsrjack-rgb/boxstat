@@ -1750,6 +1750,11 @@ export interface PricingOption {
   convertsToMonthly?: boolean; // If true, this bundle converts to monthly after initial period
   monthlyPrice?: number; // Monthly price in cents after bundle ends
   monthlyStripePriceId?: string; // Stripe Price ID for the monthly rate (auto-created)
+  allowInstallments?: boolean;
+  installmentCount?: number;
+  installmentPrice?: number;
+  installmentIntervalDays?: number;
+  installmentStripePriceId?: string;
 }
 
 export const insertProductSchema = z.object({
@@ -1824,6 +1829,11 @@ export const insertProductSchema = z.object({
     convertsToMonthly: z.boolean().optional(),
     monthlyPrice: z.number().optional(),
     monthlyStripePriceId: z.string().optional(),
+    allowInstallments: z.boolean().optional(),
+    installmentCount: z.number().optional(),
+    installmentPrice: z.number().optional(),
+    installmentIntervalDays: z.number().optional(),
+    installmentStripePriceId: z.string().optional(),
   })).default([]),
 });
 

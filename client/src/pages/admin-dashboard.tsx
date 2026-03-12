@@ -10269,20 +10269,104 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                     </div>
                                   </>
                                 ) : (
-                                  <div>
-                                    <label className="text-xs font-medium">Duration (days)</label>
-                                    <Input
-                                      type="number"
-                                      placeholder="90"
-                                      value={option.durationDays || ""}
-                                      onChange={(e) => {
-                                        const current = form.getValues("pricingOptions") || [];
-                                        current[index] = { ...current[index], durationDays: parseInt(e.target.value) || undefined };
-                                        form.setValue("pricingOptions", [...current]);
-                                      }}
-                                      data-testid={`input-option-duration-${index}`}
-                                    />
-                                  </div>
+                                  <>
+                                    <div>
+                                      <label className="text-xs font-medium">Duration (days)</label>
+                                      <Input
+                                        type="number"
+                                        placeholder="90"
+                                        value={option.durationDays || ""}
+                                        onChange={(e) => {
+                                          const current = form.getValues("pricingOptions") || [];
+                                          current[index] = { ...current[index], durationDays: parseInt(e.target.value) || undefined };
+                                          form.setValue("pricingOptions", [...current]);
+                                        }}
+                                        data-testid={`input-option-duration-${index}`}
+                                      />
+                                    </div>
+                                    <div className="col-span-2 border-t pt-2 mt-1">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <Checkbox
+                                          checked={option.allowInstallments || false}
+                                          onCheckedChange={(checked) => {
+                                            const current = form.getValues("pricingOptions") || [];
+                                            const totalPrice = current[index].price || 0;
+                                            const defaultCount = 3;
+                                            current[index] = {
+                                              ...current[index],
+                                              allowInstallments: !!checked,
+                                              installmentCount: checked ? (current[index].installmentCount || defaultCount) : undefined,
+                                              installmentPrice: checked ? (current[index].installmentPrice || Math.ceil(totalPrice / defaultCount)) : undefined,
+                                              installmentIntervalDays: checked ? (current[index].installmentIntervalDays || 30) : undefined,
+                                            };
+                                            form.setValue("pricingOptions", [...current]);
+                                          }}
+                                          data-testid={`checkbox-allow-installments-${index}`}
+                                        />
+                                        <label className="text-xs font-medium">Allow Installment Payments</label>
+                                      </div>
+                                      {option.allowInstallments && (
+                                        <div className="grid grid-cols-3 gap-2 bg-amber-50 border border-amber-200 rounded p-2">
+                                          <div>
+                                            <label className="text-xs font-medium">Payments</label>
+                                            <Input
+                                              type="number"
+                                              min="2"
+                                              max="24"
+                                              value={option.installmentCount || ""}
+                                              onChange={(e) => {
+                                                const current = form.getValues("pricingOptions") || [];
+                                                const count = parseInt(e.target.value) || 2;
+                                                current[index] = { ...current[index], installmentCount: count };
+                                                if (current[index].price && count > 0) {
+                                                  current[index].installmentPrice = Math.ceil(current[index].price / count);
+                                                }
+                                                form.setValue("pricingOptions", [...current]);
+                                              }}
+                                              data-testid={`input-installment-count-${index}`}
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="text-xs font-medium">Per Payment ($)</label>
+                                            <Input
+                                              type="text"
+                                              inputMode="decimal"
+                                              defaultValue={option.installmentPrice ? (option.installmentPrice / 100).toFixed(2) : ""}
+                                              key={`inst-price-${option.installmentCount}-${option.price}`}
+                                              onBlur={(e) => {
+                                                const current = form.getValues("pricingOptions") || [];
+                                                const val = parseFloat(e.target.value);
+                                                current[index] = { ...current[index], installmentPrice: isNaN(val) ? 0 : Math.round(val * 100) };
+                                                form.setValue("pricingOptions", [...current]);
+                                              }}
+                                              data-testid={`input-installment-price-${index}`}
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="text-xs font-medium">Every (days)</label>
+                                            <Input
+                                              type="number"
+                                              min="1"
+                                              value={option.installmentIntervalDays || ""}
+                                              onChange={(e) => {
+                                                const current = form.getValues("pricingOptions") || [];
+                                                current[index] = { ...current[index], installmentIntervalDays: parseInt(e.target.value) || 30 };
+                                                form.setValue("pricingOptions", [...current]);
+                                              }}
+                                              data-testid={`input-installment-interval-${index}`}
+                                            />
+                                          </div>
+                                          <div className="col-span-3">
+                                            <p className="text-xs text-amber-700">
+                                              {option.installmentCount && option.installmentCount >= 2 && option.installmentPrice && option.installmentPrice > 0
+                                                ? `${option.installmentCount} payments of $${(option.installmentPrice / 100).toFixed(2)} every ${option.installmentIntervalDays || 30} days = $${((option.installmentCount * option.installmentPrice) / 100).toFixed(2)} total`
+                                                : "Set the option price above, then configure installment details"}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </>
                                 )}
                                 <div>
                                   <label className="text-xs font-medium">Savings Note</label>

@@ -110,14 +110,14 @@
         justify-content: center;
       }
 
-      /* Banter Loader - 9 box shuffling animation */
-      .banter-loader {
+      /* Startup Banter Loader - scoped to #startup-loader only */
+      #startup-loader .banter-loader {
         position: relative;
         width: 72px;
         height: 72px;
       }
 
-      .banter-loader__box {
+      #startup-loader .banter-loader__box {
         position: absolute;
         width: 20px;
         height: 20px;
@@ -125,21 +125,25 @@
         border-radius: 2px;
       }
 
-      .banter-loader__box:nth-child(1) {
+      #startup-loader .banter-loader__box:before {
+        display: none;
+      }
+
+      #startup-loader .banter-loader__box:nth-child(1) {
         background: hsl(355, 85%, 48%);
       }
 
-      .banter-loader__box:nth-child(1) { left: 0; top: 0; animation: moveBox-1 4s infinite; }
-      .banter-loader__box:nth-child(2) { left: 0; top: 26px; animation: moveBox-2 4s infinite; }
-      .banter-loader__box:nth-child(3) { left: 0; top: 52px; animation: moveBox-3 4s infinite; }
-      .banter-loader__box:nth-child(4) { left: 26px; top: 0; animation: moveBox-4 4s infinite; }
-      .banter-loader__box:nth-child(5) { left: 26px; top: 26px; animation: moveBox-5 4s infinite; }
-      .banter-loader__box:nth-child(6) { left: 26px; top: 52px; animation: moveBox-6 4s infinite; }
-      .banter-loader__box:nth-child(7) { left: 52px; top: 0; animation: moveBox-7 4s infinite; }
-      .banter-loader__box:nth-child(8) { left: 52px; top: 26px; animation: moveBox-8 4s infinite; }
-      .banter-loader__box:nth-child(9) { left: 52px; top: 52px; animation: moveBox-9 4s infinite; }
+      #startup-loader .banter-loader__box:nth-child(1) { left: 0; top: 0; animation: startupBox-1 4s infinite; }
+      #startup-loader .banter-loader__box:nth-child(2) { left: 0; top: 26px; animation: startupBox-2 4s infinite; }
+      #startup-loader .banter-loader__box:nth-child(3) { left: 0; top: 52px; animation: startupBox-3 4s infinite; }
+      #startup-loader .banter-loader__box:nth-child(4) { left: 26px; top: 0; animation: startupBox-4 4s infinite; }
+      #startup-loader .banter-loader__box:nth-child(5) { left: 26px; top: 26px; animation: startupBox-5 4s infinite; }
+      #startup-loader .banter-loader__box:nth-child(6) { left: 26px; top: 52px; animation: startupBox-6 4s infinite; }
+      #startup-loader .banter-loader__box:nth-child(7) { left: 52px; top: 0; animation: startupBox-7 4s infinite; }
+      #startup-loader .banter-loader__box:nth-child(8) { left: 52px; top: 26px; animation: startupBox-8 4s infinite; }
+      #startup-loader .banter-loader__box:nth-child(9) { left: 52px; top: 52px; animation: startupBox-9 4s infinite; }
 
-      @keyframes moveBox-1 {
+      @keyframes startupBox-1 {
         9.09% { transform: translate(26px, 0); }
         18.18% { transform: translate(52px, 0); }
         27.27% { transform: translate(52px, 26px); }
@@ -153,7 +157,7 @@
         100% { transform: translate(0, 0); }
       }
 
-      @keyframes moveBox-2 {
+      @keyframes startupBox-2 {
         9.09% { transform: translate(0, 26px); }
         18.18% { transform: translate(0, 26px); }
         27.27% { transform: translate(0, 0); }
@@ -167,7 +171,7 @@
         100% { transform: translate(0, 0); }
       }
 
-      @keyframes moveBox-3 {
+      @keyframes startupBox-3 {
         9.09% { transform: translate(26px, 0); }
         18.18% { transform: translate(26px, -26px); }
         27.27% { transform: translate(52px, -26px); }
@@ -181,7 +185,7 @@
         100% { transform: translate(0, 0); }
       }
 
-      @keyframes moveBox-4 {
+      @keyframes startupBox-4 {
         9.09% { transform: translate(-26px, 0); }
         18.18% { transform: translate(-26px, 26px); }
         27.27% { transform: translate(-26px, 26px); }
@@ -195,7 +199,7 @@
         100% { transform: translate(0, 0); }
       }
 
-      @keyframes moveBox-5 {
+      @keyframes startupBox-5 {
         9.09% { transform: translate(0, 0); }
         18.18% { transform: translate(0, 0); }
         27.27% { transform: translate(0, 0); }
@@ -209,7 +213,7 @@
         100% { transform: translate(0, 0); }
       }
 
-      @keyframes moveBox-6 {
+      @keyframes startupBox-6 {
         9.09% { transform: translate(0, -26px); }
         18.18% { transform: translate(0, -52px); }
         27.27% { transform: translate(-26px, -52px); }
@@ -223,7 +227,7 @@
         100% { transform: translate(0, 0); }
       }
 
-      @keyframes moveBox-7 {
+      @keyframes startupBox-7 {
         9.09% { transform: translate(0, 26px); }
         18.18% { transform: translate(-26px, 26px); }
         27.27% { transform: translate(-26px, 0); }
@@ -237,7 +241,7 @@
         100% { transform: translate(0, 0); }
       }
 
-      @keyframes moveBox-8 {
+      @keyframes startupBox-8 {
         9.09% { transform: translate(0, 0); }
         18.18% { transform: translate(0, 26px); }
         27.27% { transform: translate(0, 26px); }
@@ -251,7 +255,7 @@
         100% { transform: translate(0, 0); }
       }
 
-      @keyframes moveBox-9 {
+      @keyframes startupBox-9 {
         9.09% { transform: translate(-26px, 0); }
         18.18% { transform: translate(-26px, 0); }
         27.27% { transform: translate(0, 0); }
@@ -266,7 +270,7 @@
       }
 
       @media (prefers-reduced-motion: reduce) {
-        .banter-loader__box {
+        #startup-loader .banter-loader__box {
           animation: none !important;
         }
       }

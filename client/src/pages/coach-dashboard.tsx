@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import PlayerCalendar from "@/components/PlayerCalendar";
 import EventDetailModal from "@/components/EventDetailModal";
 import { BanterLoader } from "@/components/BanterLoader";
+import CoachCareerRings from "@/components/CoachCareerRings";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -1520,41 +1521,7 @@ function ProfileTab({ currentUser, coachProfileId }: { currentUser: UserType; co
         <h2 className="text-xl font-bold text-gray-900">Profile</h2>
       </div>
 
-      {/* Personal Information Card */}
-      <Card className="border-0 shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <User className="h-5 w-5 text-red-600" />
-            <h3 className="text-md font-bold text-gray-900">Personal Information</h3>
-          </div>
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="text-xs font-semibold text-gray-600 mb-1">Name</div>
-                <div className="text-sm text-gray-900">
-                  {profile.firstName} {profile.lastName}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-gray-600 mb-1">Email</div>
-                <div className="text-sm text-gray-900">{profile.email}</div>
-              </div>
-            </div>
-            {(profile.phone || profile.phoneNumber) && (
-              <div>
-                <div className="text-xs font-semibold text-gray-600 mb-1">Phone</div>
-                <div className="text-sm text-gray-900">{profile.phone || profile.phoneNumber}</div>
-              </div>
-            )}
-            {(profile.city || profile.address) && (
-              <div>
-                <div className="text-xs font-semibold text-gray-600 mb-1">City</div>
-                <div className="text-sm text-gray-900">{profile.city || profile.address}</div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <CoachCareerRings profileId={coachProfileId} />
 
       {/* Coaching Credentials Card */}
       <Card className="border-0 shadow-sm">

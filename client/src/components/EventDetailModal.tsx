@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { 
   MapPin, Calendar, Clock, Check,
   CheckCircle2, XCircle, Circle, Navigation,
-  MapPinOff, QrCode, Locate, Users, Loader2, Settings, RefreshCw, HelpCircle, UserCheck, ClipboardList, ArrowLeft
+  MapPinOff, QrCode, Locate, Users, Loader2, Settings, RefreshCw, HelpCircle, UserCheck, ClipboardList, ChevronLeft
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RSVPWheel, CheckInWheel, RsvpData, CheckInData } from '@/components/RSVPCheckInWheels';
@@ -896,8 +896,8 @@ export default function EventDetailModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden p-0 flex flex-col" data-testid="event-detail-modal">
-          <div className="shrink-0 bg-white/95 backdrop-blur-sm px-6 pt-6 pb-4 border-b z-[1100]">
+        <DialogContent hideClose className="max-w-lg max-h-[90vh] overflow-hidden p-0 flex flex-col bg-white/80 backdrop-blur-xl" data-testid="event-detail-modal">
+          <div className="shrink-0 bg-white/70 backdrop-blur-sm px-6 pt-6 pb-4 border-b z-[1100]">
             <div className="flex items-start gap-3">
               <Button 
                 variant="ghost" 
@@ -906,7 +906,7 @@ export default function EventDetailModal({
                 onClick={() => onOpenChange(false)}
                 data-testid="button-back"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <ChevronLeft className="h-5 w-5" />
               </Button>
               <div className="flex-1">
                 <DialogTitle className="text-xl font-bold text-gray-900">

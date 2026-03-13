@@ -9787,8 +9787,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/programs', requireAuth, async (req: any, res) => {
     try {
-      const { role } = req.user;
-      if (role !== 'admin') {
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ message: 'Only admins can create programs' });
       }
       
@@ -9929,8 +9929,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.delete('/api/programs/:id', requireAuth, async (req: any, res) => {
-    const { role } = req.user;
-    if (role !== 'admin') {
+    const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+    if (!isAdminUser) {
       return res.status(403).json({ message: 'Only admins can delete programs' });
     }
     
@@ -9973,8 +9973,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set suggested add-ons for a program (admin only)
   app.put('/api/programs/:programId/suggested-add-ons', requireAuth, async (req: any, res) => {
     try {
-      const { role } = req.user;
-      if (role !== 'admin') {
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ message: 'Only admins can manage suggested add-ons' });
       }
       

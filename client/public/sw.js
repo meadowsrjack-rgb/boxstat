@@ -1,4 +1,4 @@
-const CACHE_VERSION = '8';
+const CACHE_VERSION = '9';
 const CACHE_NAME = 'boxstat-v' + CACHE_VERSION;
 const STATIC_CACHE = [
   '/',

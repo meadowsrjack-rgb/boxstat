@@ -26,8 +26,8 @@ function CareerRing({
   total,
   displayValue,
   scheme,
-  size = 136,
-  stroke = 16,
+  size = 100,
+  stroke = 10,
 }: {
   label: string;
   value: number;
@@ -106,11 +106,11 @@ function CareerRing({
 
         <text
           x={center}
-          y={center + 6}
+          y={center + 4}
           textAnchor="middle"
           fontFamily="ui-sans-serif, system-ui"
           fontWeight={400}
-          fontSize={34}
+          fontSize={26}
           fill="#0f172a"
         >
           {displayValue}
@@ -118,7 +118,7 @@ function CareerRing({
 
         <text
           x={center}
-          y={center + 20}
+          y={center + 16}
           textAnchor="middle"
           fontFamily="ui-sans-serif, system-ui"
           fontWeight={400}
@@ -157,7 +157,7 @@ export default function CoachCareerRings({ profileId }: { profileId?: string }) 
   const attendancePct = stats?.attendancePercentage ?? 0;
 
   const monthsCap = Math.max(monthsWithOrg, 12);
-  const size = 136;
+  const size = 100;
 
   return (
     <div

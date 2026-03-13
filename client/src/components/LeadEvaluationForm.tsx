@@ -11,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, FileDown, Users, ClipboardCheck, Share2, Save, Loader2 } from "lucide-react";
+import { CalendarIcon, FileDown, Users, ClipboardCheck, Share2, Save, Loader2, ChevronDown } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -544,40 +545,51 @@ export default function LeadEvaluationForm({ onClose, preselectedLeadId, readOnl
 
       {/* Action Buttons */}
       {!readOnly && (
-        <div className="flex justify-end gap-3">
-          <Button
-            onClick={sharePDF}
-            disabled={!isFormValid || isSharing}
-            variant="outline"
-            className="border-red-600 text-red-600 hover:bg-red-50"
-            data-testid="button-share-pdf"
-          >
-            <Share2 className="h-4 w-4 mr-2" />
-            {isSharing ? "Preparing..." : "Share"}
-          </Button>
-          <Button
-            onClick={generatePDF}
-            disabled={!isFormValid || isGeneratingPDF}
-            variant="outline"
-            className="border-red-600 text-red-600 hover:bg-red-50"
-            data-testid="button-generate-pdf"
-          >
-            <FileDown className="h-4 w-4 mr-2" />
-            {isGeneratingPDF ? "Generating..." : "Export as PDF"}
-          </Button>
-          <Button
-            onClick={() => saveEvaluationMutation.mutate(formData)}
-            disabled={!formData.leadId || !isFormValid || saveEvaluationMutation.isPending}
-            className="bg-red-600 hover:bg-red-700"
-            data-testid="button-save-evaluation"
-          >
-            {saveEvaluationMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            {saveEvaluationMutation.isPending ? "Saving..." : "Save"}
-          </Button>
+        <div className="flex justify-end">
+          <div className="inline-flex rounded-md shadow-sm">
+            <Button
+              onClick={() => saveEvaluationMutation.mutate(formData)}
+              disabled={!formData.leadId || !isFormValid || saveEvaluationMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 rounded-r-none"
+              data-testid="button-save-evaluation"
+            >
+              {saveEvaluationMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              {saveEvaluationMutation.isPending ? "Saving..." : "Save"}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  className="bg-red-600 hover:bg-red-700 rounded-l-none border-l border-red-500 px-2"
+                  disabled={!isFormValid}
+                  data-testid="button-save-dropdown"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={sharePDF}
+                  disabled={isSharing}
+                  data-testid="button-share-pdf"
+                >
+                  <Share2 className="h-4 w-4 mr-2" />
+                  {isSharing ? "Preparing..." : "Share"}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={generatePDF}
+                  disabled={isGeneratingPDF}
+                  data-testid="button-generate-pdf"
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  {isGeneratingPDF ? "Generating..." : "Export as PDF"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       )}
     </div>

@@ -34,22 +34,39 @@ export function MapPreview({
     );
   }
 
+  const mapsUrl = `https://maps.google.com/?q=${lat},${lng}`;
+
   return (
-    <div className={`${height} ${className} rounded-lg overflow-hidden border`} data-testid="map-preview">
-      <MapContainer
-        center={[lat, lng]}
-        zoom={zoom}
-        scrollWheelZoom={false}
-        className="w-full h-full"
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <Marker position={[lat, lng]}>
-          <Popup>{locationName}</Popup>
-        </Marker>
-      </MapContainer>
-    </div>
+    <a
+      href={mapsUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block cursor-pointer"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className={`${height} ${className} rounded-lg overflow-hidden border relative`} data-testid="map-preview">
+        <MapContainer
+          center={[lat, lng]}
+          zoom={zoom}
+          scrollWheelZoom={false}
+          zoomControl={false}
+          dragging={false}
+          doubleClickZoom={false}
+          touchZoom={false}
+          attributionControl={false}
+          className="w-full h-full pointer-events-none"
+        >
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <Marker position={[lat, lng]}>
+            <Popup>{locationName}</Popup>
+          </Marker>
+        </MapContainer>
+        <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm rounded-md px-2 py-1 text-xs text-gray-600 shadow-sm">
+          Open in Maps
+        </div>
+      </div>
+    </a>
   );
 }

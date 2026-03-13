@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
-  MapPin, Calendar, Clock, Check,
+  MapPin, Calendar, Check,
   CheckCircle2, XCircle, Circle, Navigation,
   MapPinOff, QrCode, Locate, Users, Loader2, Settings, RefreshCw, HelpCircle, UserCheck, ClipboardList, ChevronLeft
 } from 'lucide-react';
@@ -929,23 +929,27 @@ export default function EventDetailModal({
           <div className="overflow-y-auto flex-1 px-6 pb-6 space-y-5">
             <div className="space-y-3">
               <div className="flex items-center gap-3 text-sm text-gray-700">
-                <Calendar className="h-4 w-4 text-gray-400" />
-                <span className="font-medium">{formatDateTime(new Date(event.startTime))}</span>
-              </div>
-              
-              <div className="flex items-center gap-3 text-sm text-gray-700">
-                <Clock className="h-4 w-4 text-gray-400" />
-                <span>
+                <Calendar className="h-5 w-5 text-gray-400 shrink-0" />
+                <span className="font-medium">
+                  {new Date(event.startTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  {' at '}
                   {new Date(event.startTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
                   {event.endTime && ` - ${new Date(event.endTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`}
                 </span>
               </div>
               
               {event.location && (
-                <div className="flex items-center gap-3 text-sm text-gray-700">
-                  <MapPin className="h-4 w-4 text-gray-400" />
-                  <span>{event.location}</span>
-                </div>
+                <a
+                  href={event.latitude && event.longitude
+                    ? `https://maps.google.com/?q=${event.latitude},${event.longitude}`
+                    : `https://maps.google.com/?q=${encodeURIComponent(event.location)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 text-sm text-gray-700 hover:text-red-600 transition-colors cursor-pointer"
+                >
+                  <MapPin className="h-5 w-5 text-gray-400 shrink-0" />
+                  <span className="underline decoration-gray-300 underline-offset-2">{event.location}</span>
+                </a>
               )}
 
               {event.description && (

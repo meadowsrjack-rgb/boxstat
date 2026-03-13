@@ -897,7 +897,7 @@ export default function EventDetailModal({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent hideClose className="max-w-lg max-h-[90vh] overflow-hidden p-0 flex flex-col bg-white/80 backdrop-blur-xl" data-testid="event-detail-modal">
-          <div className="shrink-0 bg-white/70 backdrop-blur-sm px-6 pt-6 pb-4 border-b z-[1100]">
+          <div className="shrink-0 bg-white/50 backdrop-blur-xl px-6 pt-6 pb-4 border-b border-white/30 z-[1100]">
             <div className="flex items-start gap-3">
               <Button 
                 variant="ghost" 

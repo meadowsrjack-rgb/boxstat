@@ -1026,7 +1026,7 @@ export default function EventDetailModal({
                           }`}>
                             {userDistance <= (event.checkInRadius ?? 200) 
                               ? 'Within check-in range!' 
-                              : `Need to be within ${event.checkInRadius ?? 200}m`}
+                              : `Need to be within ${event.checkInRadius ?? 200}m to check-in`}
                           </div>
                         </>
                       ) : (

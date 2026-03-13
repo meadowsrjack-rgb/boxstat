@@ -896,8 +896,8 @@ export default function EventDetailModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent hideClose className="max-w-lg max-h-[90vh] overflow-hidden p-0 flex flex-col !bg-white/80 backdrop-blur-xl border-white/30" data-testid="event-detail-modal">
-          <div className="shrink-0 bg-white/60 backdrop-blur-xl px-6 pt-6 pb-4 border-b border-white/30 z-[1100]">
+        <DialogContent hideClose className="max-w-lg max-h-[90vh] overflow-hidden p-0 flex flex-col backdrop-blur-xl border-white/30" style={{ background: 'rgba(255,255,255,0.75)' }} data-testid="event-detail-modal">
+          <div className="shrink-0 backdrop-blur-xl px-6 pt-6 pb-4 border-b border-white/30 z-[1100]" style={{ background: 'rgba(255,255,255,0.55)' }}>
             <div className="flex items-start gap-3">
               <Button 
                 variant="ghost" 

@@ -32,7 +32,7 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { hideClose?: boolean }
->(({ className, children, hideClose, ...props }, ref) => (
+>(({ className, children, hideClose, style, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -43,7 +43,8 @@ const DialogContent = React.forwardRef<
       )}
       style={{ 
         paddingTop: 'max(1.5rem, env(safe-area-inset-top, 0px))',
-        maxHeight: 'calc(100vh - env(safe-area-inset-top, 40px) - env(safe-area-inset-bottom, 40px) - 40px)'
+        maxHeight: 'calc(100vh - env(safe-area-inset-top, 40px) - env(safe-area-inset-bottom, 40px) - 40px)',
+        ...style,
       }}
       {...props}
     >

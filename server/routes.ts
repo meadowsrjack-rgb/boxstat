@@ -1965,6 +1965,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         };
         sessionParams.subscription_data.cancel_at = cancelAt;
+      } else if (isSubscription && selectedPricingOption?.durationDays && selectedPricingOption.durationDays > 0) {
+        const intervalDays = selectedPricingOption.billingIntervalDays || 30;
+        const durationDays = selectedPricingOption.durationDays;
+        const now = new Date();
+        let cancelDate: Date;
+        if (intervalDays === 30 || intervalDays === 60 || intervalDays === 90 || intervalDays === 180) {
+          const months = Math.round(durationDays / 30);
+          cancelDate = new Date(now);
+          cancelDate.setMonth(cancelDate.getMonth() + months);
+          cancelDate.setDate(cancelDate.getDate() + 2);
+        } else if (intervalDays === 365) {
+          const years = Math.round(durationDays / 365);
+          cancelDate = new Date(now);
+          cancelDate.setFullYear(cancelDate.getFullYear() + years);
+          cancelDate.setDate(cancelDate.getDate() + 2);
+        } else {
+          cancelDate = new Date(now.getTime() + (durationDays * 86400000) + (2 * 86400000));
+        }
+        const cancelAt = Math.floor(cancelDate.getTime() / 1000);
+        sessionParams.subscription_data = {
+          ...(sessionParams.subscription_data || {}),
+        };
+        sessionParams.subscription_data.cancel_at = cancelAt;
       }
 
       if (connectInfo.isConnected && connectInfo.connectedAccountId) {

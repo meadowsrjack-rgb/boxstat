@@ -10296,6 +10296,29 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                       </p>
                                     </div>
                                     <div>
+                                      <label className="text-xs font-medium">Ends After (days)</label>
+                                      <Input
+                                        type="number"
+                                        placeholder="e.g. 120"
+                                        value={option.durationDays || ""}
+                                        onChange={(e) => {
+                                          const current = form.getValues("pricingOptions") || [];
+                                          current[index] = { ...current[index], durationDays: parseInt(e.target.value) || undefined };
+                                          form.setValue("pricingOptions", [...current]);
+                                        }}
+                                        data-testid={`input-option-sub-duration-${index}`}
+                                      />
+                                      <p className="text-xs text-gray-400 mt-0.5">
+                                        {(() => {
+                                          const d = option.durationDays;
+                                          const interval = option.billingIntervalDays || 30;
+                                          if (!d || d <= 0) return "Leave empty for ongoing (no end date)";
+                                          const payments = Math.ceil(d / interval);
+                                          return `~${payments} payment${payments !== 1 ? 's' : ''} over ${d} days`;
+                                        })()}
+                                      </p>
+                                    </div>
+                                    <div>
                                       <label className="text-xs font-medium">Trial Period (days)</label>
                                       <Input
                                         type="number"

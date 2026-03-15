@@ -1471,6 +1471,68 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               </div>
             </div>
           )}
+
+          {/* Season Stats (Coming Soon) */}
+          <div className="px-4 mt-3">
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden" style={{ opacity: 0.85 }}>
+              <div className="px-4 pt-3 pb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Season Stats</h3>
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400">Coming Soon</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-0 px-2 pb-2">
+                {[
+                  { label: "PPG", value: "—" },
+                  { label: "RPG", value: "—" },
+                  { label: "APG", value: "—" },
+                  { label: "FG%", value: "—" },
+                ].map((stat) => (
+                  <div key={stat.label} className="flex flex-col items-center py-2">
+                    <span className="text-xl font-bold text-gray-900 dark:text-white">{stat.value}</span>
+                    <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{stat.label}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="text-center pb-1.5">
+                <span className="text-[10px] text-gray-400 dark:text-gray-500">2025-26</span>
+              </div>
+              <button className="w-full flex items-center justify-center gap-1 py-2 border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">View Full Stats History</span>
+                <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
+              </button>
+            </div>
+          </div>
+
+          {/* Highlights (Coming Soon) */}
+          <div className="px-4 mt-3 mb-4">
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden" style={{ opacity: 0.85 }}>
+              <div className="px-4 pt-3 pb-2 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Highlights</h3>
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400">Coming Soon</span>
+              </div>
+              <div className="px-3 pb-3">
+                <div className="flex gap-2.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                  {[
+                    { title: "Game-Winning 3PT", subtitle: "vs. Eagles" },
+                    { title: "Crossover to Assist", subtitle: "vs. Hawks" },
+                    { title: "Defense Lockdown", subtitle: "vs. Lions" },
+                  ].map((clip) => (
+                    <div key={clip.title} className="flex-shrink-0 w-[130px]">
+                      <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-video flex items-center justify-center">
+                        <div className="absolute inset-0 bg-gradient-to-br from-gray-700 to-gray-900" />
+                        <div className="relative z-10 w-8 h-8 rounded-full bg-red-600/90 flex items-center justify-center">
+                          <Play className="h-4 w-4 text-white fill-white ml-0.5" />
+                        </div>
+                      </div>
+                      <p className="text-[11px] font-medium text-gray-900 dark:text-white mt-1.5 leading-tight truncate">{clip.title}</p>
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">{clip.subtitle}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
       {/* Foundation Program Popup (unchanged) */}

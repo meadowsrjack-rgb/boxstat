@@ -1470,11 +1470,22 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 </div>
               </div>
 
+              {/* Trophy Room link */}
+              <div className="px-4">
+                <button 
+                  className="w-full flex items-center justify-center gap-1 py-2 border-t border-gray-100 hover:bg-gray-50 transition-colors"
+                  onClick={() => setLocation("/trophies-badges")}
+                >
+                  <span className="text-sm font-medium text-gray-700">Trophy Room</span>
+                  <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
+                </button>
+              </div>
+
               {/* Season Stats (Coming Soon) */}
               <div className="px-4 mt-2">
                 <div className="border-t border-gray-100 pt-3">
                   <div className="flex items-center gap-2 px-1 mb-1">
-                    <h3 className="text-sm font-semibold text-gray-900">Season Stats</h3>
+                    <span className="text-sm font-medium text-gray-700">Season Stats</span>
                     <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-red-100 text-red-600">Coming Soon</span>
                   </div>
                   <div className="grid grid-cols-4 gap-0 px-2 pb-2">
@@ -1490,13 +1501,10 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                       </div>
                     ))}
                   </div>
-                  <div className="text-center pb-1.5">
+                  <div className="flex items-center justify-center gap-1 pb-2">
                     <span className="text-[10px] text-gray-400">2025-26</span>
+                    <ChevronDown className="h-3 w-3 text-gray-400" />
                   </div>
-                  <button className="w-full flex items-center justify-center gap-1 py-2 border-t border-gray-100 hover:bg-gray-50 transition-colors rounded-b-lg">
-                    <span className="text-xs font-medium text-gray-500">View Full Stats History</span>
-                    <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
-                  </button>
                 </div>
               </div>
 
@@ -1504,7 +1512,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               <div className="px-4 mt-2 pb-4">
                 <div className="border-t border-gray-100 pt-3">
                   <div className="flex items-center gap-2 px-1 mb-2">
-                    <h3 className="text-sm font-semibold text-gray-900">Highlights</h3>
+                    <span className="text-sm font-medium text-gray-700">Highlights</span>
                     <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-red-100 text-red-600">Coming Soon</span>
                   </div>
                   <div className="flex gap-2.5 overflow-x-auto pb-1 px-1" style={{ scrollbarWidth: 'none' }}>

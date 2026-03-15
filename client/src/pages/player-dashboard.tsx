@@ -1468,17 +1468,12 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 >
                   <UypTrophyRings data={ringsData} size={109} stroke={8} />
                 </div>
-              </div>
-
-              {/* Trophy Room link */}
-              <div className="px-4 mt-2">
-                <div className="border-t border-gray-100 pt-3">
+                <div className="flex items-center justify-center pt-2">
                   <button 
-                    className="flex items-center gap-2 hover:opacity-70 transition-opacity"
+                    className="text-[10px] text-gray-400 hover:opacity-70 transition-opacity"
                     onClick={() => setLocation("/trophies-badges")}
                   >
-                    <span className="text-sm font-medium text-gray-700">Awards</span>
-                    <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+                    View all
                   </button>
                 </div>
               </div>

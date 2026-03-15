@@ -1460,7 +1460,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               </div>
 
               {/* Trophies & Badges */}
-              <div className="p-2">
+              <div className="p-2 mb-3">
                 <div 
                   className="cursor-pointer" 
                   onClick={() => setLocation("/trophies-badges")}

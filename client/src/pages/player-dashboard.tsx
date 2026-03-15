@@ -1477,7 +1477,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                     className="flex items-center gap-2 hover:opacity-70 transition-opacity"
                     onClick={() => setLocation("/trophies-badges")}
                   >
-                    <span className="text-sm font-medium text-gray-700">Trophy Room</span>
+                    <span className="text-sm font-medium text-gray-700">Awards</span>
                     <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
                   </button>
                 </div>

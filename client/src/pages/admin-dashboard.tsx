@@ -5796,30 +5796,31 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
         )}
         {viewMode === "list" ? (
           <>
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-10">
+                <TableHead className="w-10 px-2">
                   <Checkbox 
                     checked={events.length > 0 && selectedEventIds.size === events.length}
                     onCheckedChange={() => toggleAllEvents(events.map((e: any) => e.id))}
                     aria-label="Select all events"
                   />
                 </TableHead>
-                <TableHead className="cursor-pointer select-none hover:bg-gray-100" onClick={() => handleEventSort('title')}>
+                <TableHead className="cursor-pointer select-none hover:bg-gray-100 whitespace-nowrap px-2" onClick={() => handleEventSort('title')}>
                   Event {eventSortField === 'title' && (eventSortDirection === 'asc' ? '↑' : '↓')}
                 </TableHead>
-                <TableHead className="cursor-pointer select-none hover:bg-gray-100" onClick={() => handleEventSort('type')}>
+                <TableHead className="cursor-pointer select-none hover:bg-gray-100 whitespace-nowrap px-2" onClick={() => handleEventSort('type')}>
                   Type {eventSortField === 'type' && (eventSortDirection === 'asc' ? '↑' : '↓')}
                 </TableHead>
-                <TableHead className="cursor-pointer select-none hover:bg-gray-100" onClick={() => handleEventSort('startTime')}>
+                <TableHead className="cursor-pointer select-none hover:bg-gray-100 whitespace-nowrap px-2" onClick={() => handleEventSort('startTime')}>
                   Date & Time {eventSortField === 'startTime' && (eventSortDirection === 'asc' ? '↑' : '↓')}
                 </TableHead>
-                <TableHead className="cursor-pointer select-none hover:bg-gray-100" onClick={() => handleEventSort('location')}>
+                <TableHead className="cursor-pointer select-none hover:bg-gray-100 whitespace-nowrap px-2" onClick={() => handleEventSort('location')}>
                   Location {eventSortField === 'location' && (eventSortDirection === 'asc' ? '↑' : '↓')}
                 </TableHead>
-                <TableHead>For</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead className="whitespace-nowrap px-2">For</TableHead>
+                <TableHead className="whitespace-nowrap px-2">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -5903,42 +5904,42 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                   const dateTimeDisplay = new Date(event.startTime).toLocaleString();
                   
                   return (
-                  <TableRow key={event.id} data-testid={`row-event-${event.id}`}>
-                    <TableCell>
+                  <TableRow key={event.id} data-testid={`row-event-${event.id}`} className="whitespace-nowrap">
+                    <TableCell className="px-2 py-1.5">
                       <Checkbox 
                         checked={selectedEventIds.has(event.id)}
                         onCheckedChange={() => toggleEventSelection(event.id)}
                         aria-label={`Select ${event.title}`}
                       />
                     </TableCell>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {event.title}
+                    <TableCell className="font-medium px-2 py-1.5 max-w-[180px] truncate">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate">{event.title}</span>
                         {event.isRecurring && (
-                          <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-300 text-xs">
+                          <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-300 text-[10px] px-1 py-0 shrink-0">
                             Recurring
                           </Badge>
                         )}
                         {event.scheduleRequestSource && event.status === 'pending' && (
-                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-xs">
+                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-[10px] px-1 py-0 shrink-0">
                             Requested
                           </Badge>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge className={
+                    <TableCell className="px-2 py-1.5">
+                      <Badge className={`text-[10px] px-1.5 py-0 ${
                         (event.eventType || event.type) === 'practice' ? 'bg-blue-100 text-blue-700' :
                         (event.eventType || event.type) === 'game' ? 'bg-red-100 text-red-700' :
                         (event.eventType || event.type) === 'training' ? 'bg-green-100 text-green-700' :
                         (event.eventType || event.type) === 'meeting' ? 'bg-purple-100 text-purple-700' :
                         'bg-gray-100 text-gray-700'
-                      }>
+                      }`}>
                         {(event.eventType || event.type || 'unknown').charAt(0).toUpperCase() + (event.eventType || event.type || 'unknown').slice(1)}
                       </Badge>
                     </TableCell>
-                    <TableCell>{dateTimeDisplay}</TableCell>
-                    <TableCell>
+                    <TableCell className="px-2 py-1.5 text-xs">{dateTimeDisplay}</TableCell>
+                    <TableCell className="px-2 py-1.5 text-xs max-w-[140px] truncate">
                       {event.location === 'Online' && event.meetingLink ? (
                         <a href={event.meetingLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
                           Online
@@ -5946,23 +5947,25 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                         </a>
                       ) : event.location || "-"}
                     </TableCell>
-                    <TableCell className="max-w-[200px] truncate" title={forDisplay}>
+                    <TableCell className="px-2 py-1.5 text-xs max-w-[150px] truncate" title={forDisplay}>
                       {forDisplay}
                     </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
+                  <TableCell className="px-2 py-1.5">
+                    <div className="flex gap-1">
                       <Button 
                         variant="ghost" 
                         size="sm" 
+                        className="h-7 w-7 p-0"
                         onClick={() => setSelectedEventForDetails(event)}
                         data-testid={`button-view-details-${event.id}`}
                         title="View Details"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-3.5 h-3.5" />
                       </Button>
                       <Button 
                         variant="ghost" 
                         size="sm" 
+                        className="h-7 w-7 p-0"
                         onClick={() => {
                           // Convert assignTo/visibility to legacy format for edit form
                           const eventToEdit = { ...event };
@@ -6007,7 +6010,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                         data-testid={`button-edit-event-${event.id}`}
                         title="Edit Event"
                       >
-                        <Edit className="w-4 h-4" />
+                        <Edit className="w-3.5 h-3.5" />
                       </Button>
                     </div>
                   </TableCell>
@@ -6017,6 +6020,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
               })()}
             </TableBody>
           </Table>
+          </div>
           {events.length > EVENTS_PAGE_SIZE && (
             <div className="flex items-center justify-between mt-4 px-2">
               <span className="text-sm text-gray-500">

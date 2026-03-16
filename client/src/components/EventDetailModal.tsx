@@ -1281,17 +1281,17 @@ export default function EventDetailModal({
                             <AvatarFallback className={`text-xs text-white ${
                               user.role === 'admin' ? 'bg-red-500' :
                               user.role === 'parent' ? 'bg-purple-500' :
-                              user.role === 'coach' ? 'bg-blue-500' :
+                              (user.role === 'coach' || user.role === 'head_coach' || user.role === 'assistant_coach') ? 'bg-blue-500' :
                               'bg-green-500'
                             }`}>
                               {initials}
                             </AvatarFallback>
                           </Avatar>
                           <span className={`text-sm font-medium ${
-                            user.role === 'player' ? 'text-purple-700' :
+                            user.role === 'player' ? 'text-green-700' :
+                            (user.role === 'coach' || user.role === 'head_coach' || user.role === 'assistant_coach') ? 'text-blue-700' :
+                            user.role === 'parent' ? 'text-purple-700' :
                             user.role === 'admin' ? 'text-red-700' :
-                            (user.role === 'coach' || user.role === 'head_coach' || user.role === 'assistant_coach') ? 'text-green-700' :
-                            user.role === 'parent' ? 'text-blue-700' :
                             'text-gray-900'
                           }`}>
                             {user.firstName} {user.lastName}

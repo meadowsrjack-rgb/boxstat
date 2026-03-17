@@ -709,10 +709,15 @@ function RecentTransactionsCard({ payments, users, programs }: any) {
     return <Badge variant={config.variant as any} data-testid={`badge-status-${status}`}>{config.label}</Badge>;
   };
   
-  const getUserName = (userId: string) => {
-    const user = users.find((u: any) => u.id === userId);
+  const getUserName = (payment: any) => {
+    if (payment.userName) return payment.userName;
+    const user = users.find((u: any) => String(u.id) === String(payment.userId));
     if (user) {
-      return `${user.firstName} ${user.lastName}`;
+      return `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'User';
+    }
+    const byAccount = users.find((u: any) => u.accountHolderId === payment.userId);
+    if (byAccount) {
+      return `${byAccount.firstName || ''} ${byAccount.lastName || ''}`.trim() || byAccount.email || 'User';
     }
     return "Unknown User";
   };
@@ -776,7 +781,7 @@ function RecentTransactionsCard({ payments, users, programs }: any) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="font-medium text-sm truncate" data-testid={`transaction-user-${payment.id}`}>
-            {getUserName(payment.userId)}
+            {getUserName(payment)}
           </p>
           {getStatusBadge(payment.status)}
           {getPaymentTypeBadge(payment)}

@@ -9305,7 +9305,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/payments', requireAuth, async (req: any, res) => {
     const { organizationId } = req.user;
     const payments = await storage.getPaymentsByOrganization(organizationId);
-    res.json(payments);
+    const enriched = await Promise.all(payments.map(async (p: any) => {
+      if (p.userId) {
+        const user = await storage.getUser(p.userId);
+        if (user) {
+          return { ...p, userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || undefined };
+        }
+      }
+      return p;
+    }));
+    res.json(enriched);
   });
   
   app.get('/api/payments/user/:userId', requireAuth, async (req: any, res) => {

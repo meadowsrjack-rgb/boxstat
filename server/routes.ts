@@ -6951,7 +6951,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const details = [];
         for (const enrollment of lowCreditEnrollments) {
           const profile = enrollment.profileId ? await storage.getUser(enrollment.profileId) : null;
-          const program = await storage.getProduct(enrollment.programId);
+          const program = await storage.getProgram(enrollment.programId);
           details.push({
             enrollmentId: enrollment.id,
             profileName: profile ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : 'Unknown',
@@ -7035,7 +7035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (!hasTeam) {
             const profile = await storage.getUser(enrollment.profileId);
-            const program = await storage.getProduct(enrollment.programId);
+            const program = await storage.getProgram(enrollment.programId);
             unassigned.push({
               enrollmentId: enrollment.id,
               profileId: enrollment.profileId,

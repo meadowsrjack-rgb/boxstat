@@ -43,11 +43,10 @@ export class NotificationScheduler {
       
       // Role targeting
       if (assignTo.roles && assignTo.roles.length > 0) {
-        const allUsers = await storage.getAllUsers();
-        for (const user of allUsers) {
-          if (assignTo.roles.includes(user.role)) {
-            participantIds.add(String(user.id));
-          }
+        const orgId = (event as any).organizationId || 'default-org';
+        for (const role of assignTo.roles) {
+          const roleUsers = await storage.getUsersByRole(orgId, role);
+          roleUsers.forEach(u => participantIds.add(String(u.id)));
         }
       }
       

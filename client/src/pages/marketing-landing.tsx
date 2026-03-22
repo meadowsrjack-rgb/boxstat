@@ -338,7 +338,7 @@ export default function MarketingLanding() {
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-gray-500 mb-4">2.9% + 30¢ (transaction fee) + 1% software fee</p>
+              <p className="text-xs text-gray-500 mb-4">2.9% + 30¢ transaction fee + 1% software fee</p>
               <Button 
                 variant="outline" 
                 className="w-full bg-white/5 border-white/20 text-white hover:bg-white/10"
@@ -367,7 +367,7 @@ export default function MarketingLanding() {
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-gray-400 mb-4">2.9% + 30¢ (transaction fee) + 1% software fee</p>
+              <p className="text-xs text-gray-400 mb-4">2.9% + 30¢ transaction fee + 1% software fee</p>
               <Button 
                 className="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white border-0"
                 onClick={() => setLocation('/registration')}
@@ -392,7 +392,7 @@ export default function MarketingLanding() {
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-gray-500 mb-4">2.9% + 30¢ (transaction fee) + 0.75% software fee</p>
+              <p className="text-xs text-gray-500 mb-4">2.9% + 30¢ transaction fee + 0.75% software fee</p>
               <Button 
                 variant="outline" 
                 className="w-full bg-white/5 border-white/20 text-white hover:bg-white/10"

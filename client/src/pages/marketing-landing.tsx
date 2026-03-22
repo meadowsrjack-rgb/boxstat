@@ -321,22 +321,24 @@ export default function MarketingLanding() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
             {/* Starter */}
             <div className="p-8 rounded-2xl bg-gradient-to-b from-white/[0.05] to-transparent border border-white/10">
               <h3 className="text-xl font-bold mb-2">Starter</h3>
-              <p className="text-gray-500 text-sm mb-6">For small programs</p>
+              <p className="text-gray-500 text-sm mb-6">For small trainers, clubs & single programs</p>
               <div className="mb-6">
-                <span className="text-4xl font-bold">Free</span>
+                <span className="text-4xl font-bold">$99</span>
+                <span className="text-gray-500">/month</span>
               </div>
               <ul className="space-y-3 mb-8">
-                {["Up to 25 players", "Basic scheduling", "Team messaging", "Email support"].map((item, i) => (
+                {["Up to 100 families", "Registration", "Payments", "Schedules", "Messaging", "Basic reporting"].map((item, i) => (
                   <li key={i} className="flex items-center gap-2 text-gray-400 text-sm">
                     <Check className="w-4 h-4 text-green-500" />
                     {item}
                   </li>
                 ))}
               </ul>
+              <p className="text-xs text-gray-500 mb-4">2.9% + 30¢ + 1% BoxStat fee</p>
               <Button 
                 variant="outline" 
                 className="w-full bg-white/5 border-white/20 text-white hover:bg-white/10"
@@ -346,48 +348,76 @@ export default function MarketingLanding() {
               </Button>
             </div>
 
-            {/* Pro - Featured */}
+            {/* Growth - Featured */}
             <div className="relative p-8 rounded-2xl bg-gradient-to-b from-red-500/20 to-red-500/5 border border-red-500/30">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-red-500 to-red-600 rounded-full text-xs font-bold">
                 MOST POPULAR
               </div>
-              <h3 className="text-xl font-bold mb-2">Pro</h3>
-              <p className="text-gray-500 text-sm mb-6">For growing clubs</p>
+              <h3 className="text-xl font-bold mb-2">Growth</h3>
+              <p className="text-gray-500 text-sm mb-6">For clubs, academies, leagues & camps</p>
               <div className="mb-6">
-                <span className="text-4xl font-bold">$49</span>
+                <span className="text-4xl font-bold">$249</span>
                 <span className="text-gray-500">/month</span>
               </div>
               <ul className="space-y-3 mb-8">
-                {["Unlimited players", "Advanced scheduling", "Payment processing", "GPS check-ins", "Custom branding", "Priority support"].map((item, i) => (
+                {["Up to 500 families", "All core features", "Admin dashboard", "Team management", "Payment tracking", "Communication tools", "Analytics", "Priority support"].map((item, i) => (
                   <li key={i} className="flex items-center gap-2 text-gray-300 text-sm">
                     <Check className="w-4 h-4 text-red-500" />
                     {item}
                   </li>
                 ))}
               </ul>
+              <p className="text-xs text-gray-400 mb-4">2.9% + 30¢ + 1% BoxStat fee</p>
               <Button 
                 className="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white border-0"
                 onClick={() => setLocation('/registration')}
               >
-                Start Free Trial
+                Get Started
               </Button>
             </div>
 
-            {/* Enterprise */}
+            {/* Pro */}
             <div className="p-8 rounded-2xl bg-gradient-to-b from-white/[0.05] to-transparent border border-white/10">
-              <h3 className="text-xl font-bold mb-2">Enterprise</h3>
-              <p className="text-gray-500 text-sm mb-6">For large organizations</p>
+              <h3 className="text-xl font-bold mb-2">Pro</h3>
+              <p className="text-gray-500 text-sm mb-6">For big clubs, multi-team orgs & facilities</p>
               <div className="mb-6">
-                <span className="text-4xl font-bold">Custom</span>
+                <span className="text-4xl font-bold">$499</span>
+                <span className="text-gray-500">/month</span>
               </div>
               <ul className="space-y-3 mb-8">
-                {["Everything in Pro", "Multiple locations", "API access", "Dedicated success manager", "Custom integrations", "SLA guarantee"].map((item, i) => (
+                {["Unlimited families", "Advanced analytics", "Multiple admins", "Multi-location", "Automation", "Custom reports", "Priority onboarding"].map((item, i) => (
                   <li key={i} className="flex items-center gap-2 text-gray-400 text-sm">
                     <Check className="w-4 h-4 text-green-500" />
                     {item}
                   </li>
                 ))}
               </ul>
+              <p className="text-xs text-gray-500 mb-4">2.9% + 30¢ + 0.75% BoxStat fee</p>
+              <Button 
+                variant="outline" 
+                className="w-full bg-white/5 border-white/20 text-white hover:bg-white/10"
+                onClick={() => setLocation('/registration')}
+              >
+                Get Started
+              </Button>
+            </div>
+
+            {/* Enterprise */}
+            <div className="p-8 rounded-2xl bg-gradient-to-b from-white/[0.05] to-transparent border border-white/10">
+              <h3 className="text-xl font-bold mb-2">Enterprise</h3>
+              <p className="text-gray-500 text-sm mb-6">For large clubs, franchises & national circuits</p>
+              <div className="mb-6">
+                <span className="text-4xl font-bold">Custom</span>
+              </div>
+              <ul className="space-y-3 mb-8">
+                {["White glove onboarding", "Custom setup", "Priority dev support", "Custom integrations", "Custom features", "Negotiable transaction fees"].map((item, i) => (
+                  <li key={i} className="flex items-center gap-2 text-gray-400 text-sm">
+                    <Check className="w-4 h-4 text-green-500" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-gray-500 mb-4">Transaction fees negotiable</p>
               <Button 
                 variant="outline" 
                 className="w-full bg-white/5 border-white/20 text-white hover:bg-white/10"

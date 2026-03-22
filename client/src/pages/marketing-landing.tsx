@@ -1,5 +1,11 @@
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { 
   Users, 
   Calendar, 
@@ -15,7 +21,8 @@ import {
   CreditCard,
   ArrowRight,
   Play,
-  Check
+  Check,
+  Info
 } from "lucide-react";
 import { SiApple } from "react-icons/si";
 import BoxStatLogo from "@/components/boxstat-logo";
@@ -338,7 +345,24 @@ export default function MarketingLanding() {
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-gray-500 mb-4">Standard platform & merchant rates apply.</p>
+              <div className="flex items-center gap-2 mb-4">
+                <p className="text-xs text-gray-500">Standard platform & merchant rates apply.</p>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-3 h-3 text-gray-400 cursor-help flex-shrink-0" />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-xs">
+                      <div className="text-xs space-y-1">
+                        <p className="font-semibold">Transaction Summary</p>
+                        <p>Merchant Processing: 2.9% + 30¢</p>
+                        <p>BoxStat Platform Fee: 1.0%</p>
+                        <p className="text-gray-300 pt-1">Fees are calculated on the gross transaction total. By default, these are added to the registrant's total at checkout so your organization receives your full list price.</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Button 
                 variant="outline" 
                 className="w-full bg-white/5 border-white/20 text-white hover:bg-white/10"
@@ -367,7 +391,24 @@ export default function MarketingLanding() {
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-gray-400 mb-4">Standard platform & merchant rates apply.</p>
+              <div className="flex items-center gap-2 mb-4">
+                <p className="text-xs text-gray-400">Standard platform & merchant rates apply.</p>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-3 h-3 text-gray-400 cursor-help flex-shrink-0" />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-xs">
+                      <div className="text-xs space-y-1">
+                        <p className="font-semibold">Transaction Summary</p>
+                        <p>Merchant Processing: 2.9% + 30¢</p>
+                        <p>BoxStat Platform Fee: 1.0%</p>
+                        <p className="text-gray-300 pt-1">Fees are calculated on the gross transaction total. By default, these are added to the registrant's total at checkout so your organization receives your full list price.</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Button 
                 className="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white border-0"
                 onClick={() => setLocation('/registration')}
@@ -392,7 +433,24 @@ export default function MarketingLanding() {
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-gray-500 mb-4">Standard platform & merchant rates apply.</p>
+              <div className="flex items-center gap-2 mb-4">
+                <p className="text-xs text-gray-500">Standard platform & merchant rates apply.</p>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-3 h-3 text-gray-400 cursor-help flex-shrink-0" />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-xs">
+                      <div className="text-xs space-y-1">
+                        <p className="font-semibold">Transaction Summary</p>
+                        <p>Merchant Processing: 2.9% + 30¢</p>
+                        <p>BoxStat Platform Fee: 0.75%</p>
+                        <p className="text-gray-300 pt-1">Fees are calculated on the gross transaction total. By default, these are added to the registrant's total at checkout so your organization receives your full list price.</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Button 
                 variant="outline" 
                 className="w-full bg-white/5 border-white/20 text-white hover:bg-white/10"

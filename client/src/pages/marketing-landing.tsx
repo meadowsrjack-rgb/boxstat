@@ -338,7 +338,6 @@ export default function MarketingLanding() {
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-gray-500 mb-4">2.9% + 30¢ transaction fee + 1% software fee</p>
               <Button 
                 variant="outline" 
                 className="w-full bg-white/5 border-white/20 text-white hover:bg-white/10"
@@ -367,7 +366,6 @@ export default function MarketingLanding() {
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-gray-400 mb-4">2.9% + 30¢ transaction fee + 1% software fee</p>
               <Button 
                 className="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white border-0"
                 onClick={() => setLocation('/registration')}
@@ -392,7 +390,6 @@ export default function MarketingLanding() {
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-gray-500 mb-4">2.9% + 30¢ transaction fee + 0.75% software fee</p>
               <Button 
                 variant="outline" 
                 className="w-full bg-white/5 border-white/20 text-white hover:bg-white/10"
@@ -417,7 +414,6 @@ export default function MarketingLanding() {
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-gray-500 mb-4">Transaction fees negotiable</p>
               <Button 
                 variant="outline" 
                 className="w-full bg-white/5 border-white/20 text-white hover:bg-white/10"
@@ -429,6 +425,13 @@ export default function MarketingLanding() {
                 Contact Sales
               </Button>
             </div>
+          </div>
+
+          {/* Pricing Callout */}
+          <div className="mt-16 p-8 rounded-2xl bg-gradient-to-r from-white/[0.08] to-white/[0.04] border border-white/10 text-center max-w-3xl mx-auto">
+            <p className="text-gray-300 text-sm leading-relaxed">
+              <span className="font-semibold">BoxStat is $0 out-of-pocket for your club.</span> We apply a small 1% Technology Fee plus standard processing (2.9% + 30¢) at checkout, so you keep 100% of your registration revenue.
+            </p>
           </div>
         </div>
       </section>

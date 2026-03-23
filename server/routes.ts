@@ -2909,8 +2909,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!organizationName || !firstName || !lastName || !email || !password) {
         return res.status(400).json({ success: false, message: "All fields are required" });
       }
-      if (password.length < 8) {
-        return res.status(400).json({ success: false, message: "Password must be at least 8 characters" });
+      if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9!@#$%^&*]/.test(password)) {
+        return res.status(400).json({ success: false, message: "Password must be at least 8 characters with one uppercase letter and one number or symbol" });
       }
 
       const existingUsers = await db.select({ id: users.id })
@@ -2931,24 +2931,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const hashedPassword = hashPassword(password);
-      const adminUser = await storage.createUser({
-        organizationId: org.id,
-        email,
-        role: "admin",
-        firstName,
-        lastName,
-        phoneNumber: phoneNumber || null,
-        password: hashedPassword,
-        hasRegistered: true,
-        verified: true,
-        isActive: true,
-        awards: [],
-        totalPractices: 0,
-        totalGames: 0,
-        consecutiveCheckins: 0,
-        videosCompleted: 0,
-        yearsActive: 0,
-      });
+
+      let adminUser;
+      try {
+        adminUser = await storage.createUser({
+          organizationId: org.id,
+          email,
+          role: "admin",
+          firstName,
+          lastName,
+          phoneNumber: phoneNumber || null,
+          password: hashedPassword,
+          hasRegistered: true,
+          verified: true,
+          isActive: true,
+          awards: [],
+          totalPractices: 0,
+          totalGames: 0,
+          consecutiveCheckins: 0,
+          videosCompleted: 0,
+          yearsActive: 0,
+        });
+      } catch (userError: any) {
+        await db.delete(organizations).where(eq(organizations.id, org.id));
+        throw userError;
+      }
 
       req.session.userId = adminUser.id;
       req.session.organizationId = org.id;
@@ -2970,6 +2977,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("[Org Signup] Error:", error);
+      if (error.code === "23505") {
+        return res.status(400).json({ success: false, message: "This email is already registered." });
+      }
       res.status(500).json({ success: false, message: error.message || "Something went wrong" });
     }
   });

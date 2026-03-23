@@ -48,8 +48,10 @@ type PersonalInfo = z.infer<typeof personalInfoSchema>;
 type PasswordInfo = z.infer<typeof passwordSchema>;
 
 export default function OrgSignup() {
+  console.log('[OrgSignup] Component rendering');
   const [, setLocation] = useLocation();
   const searchString = useSearch();
+  console.log('[OrgSignup] searchString:', searchString);
   const params = new URLSearchParams(searchString);
   const planKey = params.get('plan') || 'growth';
   const selectedPlan = PLANS[planKey] || PLANS.growth;

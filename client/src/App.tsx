@@ -308,7 +308,9 @@ function ProfileCheckWrapper({ children }: { children: React.ReactNode }) {
 }
 
 function AppRouter() {
+  const [currentPath] = useLocation();
   const { user, isLoading, isAuthenticated } = useAuth();
+  console.log('[AppRouter] path:', currentPath, 'isLoading:', isLoading, 'user:', !!user);
   const [, setLocation] = useLocation();
   
   // Check if user needs profile setup

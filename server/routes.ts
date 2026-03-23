@@ -5294,7 +5294,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add a new role profile for an existing account
   app.post('/api/users/:userId/add-role', requireAuth, async (req: any, res) => {
     const { role: adminRole, organizationId } = req.user;
-    if (adminRole !== 'admin') {
+    const isAdminUser = adminRole === 'admin' || await hasAdminProfile(req.user.id, organizationId);
+    if (!isAdminUser) {
       return res.status(403).json({ message: 'Only admins can add roles' });
     }
     
@@ -5377,7 +5378,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.delete('/api/users/:userId/remove-role', requireAuth, async (req: any, res) => {
     const { role: adminRole, organizationId } = req.user;
-    if (adminRole !== 'admin') {
+    const isAdminUser = adminRole === 'admin' || await hasAdminProfile(req.user.id, organizationId);
+    if (!isAdminUser) {
       return res.status(403).json({ message: 'Only admins can remove roles' });
     }
     

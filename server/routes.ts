@@ -2902,6 +2902,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.post('/api/signup/organization', async (req: any, res) => {
+    try {
+      const { organizationName, sportType, firstName, lastName, email, phoneNumber, password } = req.body;
+
+      if (!organizationName || !firstName || !lastName || !email || !password) {
+        return res.status(400).json({ success: false, message: "All fields are required" });
+      }
+      if (password.length < 8) {
+        return res.status(400).json({ success: false, message: "Password must be at least 8 characters" });
+      }
+
+      const existingUsers = await db.select({ id: users.id })
+        .from(users)
+        .where(sql`LOWER(${users.email}) = LOWER(${email})`);
+      if (existingUsers.length > 0) {
+        return res.status(400).json({ success: false, message: "This email is already registered. Please login instead." });
+      }
+
+      const org = await storage.createOrganization({
+        name: organizationName,
+        subdomain: organizationName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 30),
+        sportType: sportType || 'basketball',
+        primaryColor: '#1E40AF',
+        secondaryColor: '#DC2626',
+        terminology: { athlete: "Player", coach: "Coach", parent: "Parent", team: "Team", practice: "Practice", game: "Game" },
+        features: { payments: true, awards: true, messaging: true, events: true, training: true },
+      });
+
+      const hashedPassword = hashPassword(password);
+      const adminUser = await storage.createUser({
+        organizationId: org.id,
+        email,
+        role: "admin",
+        firstName,
+        lastName,
+        phoneNumber: phoneNumber || null,
+        password: hashedPassword,
+        hasRegistered: true,
+        verified: true,
+        isActive: true,
+        awards: [],
+        totalPractices: 0,
+        totalGames: 0,
+        consecutiveCheckins: 0,
+        videosCompleted: 0,
+        yearsActive: 0,
+      });
+
+      req.session.userId = adminUser.id;
+      req.session.organizationId = org.id;
+      req.session.role = "admin";
+
+      const token = jwt.sign(
+        { userId: adminUser.id, organizationId: org.id, role: "admin" },
+        process.env.JWT_SECRET,
+        { expiresIn: '30d' }
+      );
+
+      console.log(`[Org Signup] Created org "${org.name}" (${org.id}) with admin ${adminUser.email} (${adminUser.id})`);
+
+      res.json({
+        success: true,
+        token,
+        user: { id: adminUser.id, email: adminUser.email, role: "admin", firstName: adminUser.firstName, lastName: adminUser.lastName },
+        organization: { id: org.id, name: org.name },
+      });
+    } catch (error: any) {
+      console.error("[Org Signup] Error:", error);
+      res.status(500).json({ success: false, message: error.message || "Something went wrong" });
+    }
+  });
+
   app.post('/api/registration/complete', async (req: any, res) => {
     try {
       const { registrationType, parentInfo, addressInfo, players, password, email } = req.body;

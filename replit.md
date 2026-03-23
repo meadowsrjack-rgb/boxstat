@@ -32,7 +32,8 @@ PostgreSQL, hosted on Neon serverless, is used in conjunction with Drizzle ORM. 
 -   **Native iOS Launch Experience**: Implements a Capacitor Splash Screen with a 3-step "Handoff" strategy for a seamless launch experience, including a red pulsing ring animation and zero white-flash transitions.
 -   **Android App**: Capacitor Android platform configured with BoxStat branding, GPS/location permissions, push notification support, and deep links.
 -   **iOS Scroll & Keyboard Fixes**: Utilizes a "Fixed Curtain" pattern to prevent visual glitches during iOS keyboard appearance and overscroll.
--   **Marketing Landing Page**: A professional Stripe-like marketing website accessible at `/` for web visitors, featuring hero section, role-based login cards, features showcase, and pricing.
+-   **Marketing Landing Page**: A professional Stripe-like marketing website accessible at `/` for web visitors, featuring hero section, role-based login cards, features showcase, and pricing (Starter $99, Growth $249, Pro $499, Enterprise custom).
+-   **Organization Owner Signup**: Coaches/club owners can sign up at `/signup` to create their own organization and become its admin. 3-step flow: org info → personal info → password. Backend creates org + admin user with auto-login. Linked from all pricing page "Get Started" buttons.
 
 ## External Dependencies
 

@@ -33,6 +33,7 @@ import MagicLinkLogin from "@/pages/magic-link-login";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import SetPassword from "@/pages/set-password";
+import OrgSignup from "@/pages/org-signup";
 
 import RosterManagement from "@/pages/roster-management";
 import ScheduleRequests from "@/pages/schedule-requests";
@@ -405,6 +406,7 @@ function AppRouter() {
       <Route path="/support" component={SupportPage} />
       <Route path="/notifications" component={ProtectedNotificationsPage} />
       <Route path="/teams" component={Teams} />
+      <Route path="/signup" component={OrgSignup} />
       <Route path="/registration" component={RegistrationFlow} />
       <Route path="/login" component={LoginPage} />
       <Route path="/test-datepicker" component={TestDatePicker} />

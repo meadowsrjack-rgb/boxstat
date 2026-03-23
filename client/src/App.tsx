@@ -403,13 +403,13 @@ function AppRouter() {
 
   return (
     <Switch>
+      <Route path="/signup" component={OrgSignup} />
       {/* Public routes - always accessible */}
       <Route path="/privacy" component={PrivacySettingsPage} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/support" component={SupportPage} />
       <Route path="/notifications" component={ProtectedNotificationsPage} />
       <Route path="/teams" component={Teams} />
-      <Route path="/signup">{() => { console.log('[Route /signup] MATCHED!'); return <OrgSignup />; }}</Route>
       <Route path="/registration" component={RegistrationFlow} />
       <Route path="/login" component={LoginPage} />
       <Route path="/test-datepicker" component={TestDatePicker} />

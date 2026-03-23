@@ -182,7 +182,7 @@ export default function MarketingLanding() {
             <div className="flex items-center gap-5 mb-6">
               <img src={uypLogo} alt="UYP Basketball" className="w-20 h-20 rounded-full object-cover" />
               <div className="text-left">
-                <h3 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                <h3 className="md:text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent text-[20px]">
                   UYP Basketball
                 </h3>
                 <p className="text-gray-500 text-sm">Up Your Performance Academy</p>

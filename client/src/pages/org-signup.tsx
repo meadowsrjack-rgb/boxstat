@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Building2, User, Lock, Loader2, Eye, EyeOff, CreditCard, Check } from "lucide-react";
-import BoxStatLogo from "@/components/boxstat-logo";
+import darkThemeLogo from "@assets/darktheme_1768878672908.png";
 import { authPersistence } from "@/services/authPersistence";
 
 const PLANS: Record<string, { name: string; price: string; families: string; features: string[] }> = {
@@ -164,7 +164,7 @@ export default function OrgSignup() {
       <div className="relative z-10 flex flex-col items-center justify-start min-h-full overflow-y-auto"
         style={{ paddingTop: 'max(40px, env(safe-area-inset-top))', paddingBottom: 'max(40px, env(safe-area-inset-bottom))' }}>
 
-        <BoxStatLogo variant="dark" className="w-[140px] h-auto mb-6" />
+        <img src={darkThemeLogo} alt="BoxStat" className="w-[140px] h-auto mb-6" />
 
         <div className="w-full max-w-md px-6">
           <div className="flex items-center justify-center gap-2 mb-8">

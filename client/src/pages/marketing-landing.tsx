@@ -1,4 +1,4 @@
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -116,7 +116,7 @@ export default function MarketingLanding() {
             <div className="flex items-center gap-3">
               <Button 
                 className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white border-0 shadow-lg shadow-red-500/25"
-                onClick={() => setLocation('/signup?plan=growth')}
+                onClick={() => { window.location.href = '/signup?plan=growth'; }}
               >
                 Get Started
                 <ChevronRight className="w-4 h-4 ml-1" />
@@ -150,7 +150,7 @@ export default function MarketingLanding() {
               <Button 
                 size="lg"
                 className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white text-lg px-8 py-6 rounded-xl shadow-2xl shadow-red-500/30 border-0"
-                onClick={() => setLocation('/signup?plan=growth')}
+                onClick={() => { window.location.href = '/signup?plan=growth'; }}
               >
                 Start Free Trial
                 <ArrowRight className="w-5 h-5 ml-2" />
@@ -366,7 +366,7 @@ export default function MarketingLanding() {
               <Button 
                 variant="outline" 
                 className="w-full bg-white/5 border-white/20 text-white hover:bg-white/10"
-                onClick={() => setLocation('/signup?plan=starter')}
+                onClick={() => { window.location.href = '/signup?plan=starter'; }}
               >
                 Get Started
               </Button>
@@ -411,7 +411,7 @@ export default function MarketingLanding() {
               </div>
               <Button 
                 className="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white border-0"
-                onClick={() => setLocation('/signup?plan=growth')}
+                onClick={() => { window.location.href = '/signup?plan=growth'; }}
               >
                 Get Started
               </Button>
@@ -454,7 +454,7 @@ export default function MarketingLanding() {
               <Button 
                 variant="outline" 
                 className="w-full bg-white/5 border-white/20 text-white hover:bg-white/10"
-                onClick={() => setLocation('/signup?plan=pro')}
+                onClick={() => { window.location.href = '/signup?plan=pro'; }}
               >
                 Get Started
               </Button>
@@ -515,7 +515,7 @@ export default function MarketingLanding() {
                 size="lg"
                 variant="outline"
                 className="bg-white/5 border-white/20 text-white hover:bg-white/10 text-lg px-8 py-6 rounded-xl"
-                onClick={() => setLocation('/signup?plan=growth')}
+                onClick={() => { window.location.href = '/signup?plan=growth'; }}
               >
                 Start Free Trial
               </Button>

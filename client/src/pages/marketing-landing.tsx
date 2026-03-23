@@ -185,7 +185,7 @@ export default function MarketingLanding() {
                 <h3 className="md:text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent text-[20px]">
                   UYP Basketball
                 </h3>
-                <p className="text-gray-500 text-sm">Up Your Performance Academy</p>
+                <p className="text-gray-500 text-[11px]">Up Your Performance Academy</p>
               </div>
             </div>
             <p className="text-gray-400 text-lg max-w-2xl leading-relaxed">

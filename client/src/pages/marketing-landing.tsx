@@ -174,27 +174,6 @@ export default function MarketingLanding() {
           </div>
         </div>
       </section>
-      {/* Currently Transforming Section */}
-      <section className="relative z-10 py-16 border-y border-white/10 bg-white/[0.02]">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="flex flex-col items-center text-center">
-            <p className="text-gray-400 text-sm uppercase tracking-widest mb-4">Currently Transforming</p>
-            <div className="flex items-center gap-5 mb-6">
-              <img src={uypLogo} alt="UYP Basketball" className="w-20 h-20 rounded-full object-cover" />
-              <div className="text-left">
-                <h3 className="md:text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent text-[20px]">
-                  UYP Basketball
-                </h3>
-                <p className="text-gray-500 text-[11px]">Up Your Performance Academy</p>
-              </div>
-            </div>
-            <p className="text-gray-400 text-lg max-w-2xl leading-relaxed">
-              BoxStat is brand new — and we're already powering UYP Basketball's entire operation. 
-              From registration and payments to schedules and communication, we're proving what modern sports management looks like.
-            </p>
-          </div>
-        </div>
-      </section>
       {/* App Screenshots Section */}
       <section className="relative z-10 py-24 px-6 overflow-hidden">
         <div className="max-w-7xl mx-auto">
@@ -240,41 +219,31 @@ export default function MarketingLanding() {
           </div>
         </div>
       </section>
-      {/* Testimonials Section */}
+      {/* Currently Transforming Section */}
       <section id="testimonials" className="relative z-10 py-24 px-6 bg-gradient-to-b from-transparent via-white/[0.02] to-transparent">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-bold mb-4">
               <span className="bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                Loved by Teams Everywhere
+                Currently Transforming
               </span>
             </h2>
-            <p className="text-gray-400 text-lg">
-              See what coaches, parents, and players are saying
-            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {testimonials.map((testimonial, i) => (
-              <div 
-                key={i}
-                className="p-8 rounded-2xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 relative"
-              >
-                <div className="flex gap-1 mb-4">
-                  {[1,2,3,4,5].map(star => (
-                    <Star key={star} className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-                  ))}
-                </div>
-                <p className="text-gray-300 mb-6 leading-relaxed">"{testimonial.quote}"</p>
-                <div className="flex items-center gap-3">
-                  <img src={uypLogo} alt="UYP" className="w-12 h-12 rounded-full object-cover" />
-                  <div>
-                    <div className="font-medium">{testimonial.author}</div>
-                    <div className="text-sm text-gray-500">{testimonial.role}</div>
-                  </div>
-                </div>
+          <div className="flex flex-col items-center text-center max-w-3xl mx-auto">
+            <div className="flex items-center gap-5 mb-8">
+              <img src={uypLogo} alt="UYP Basketball" className="w-20 h-20 rounded-full object-cover" />
+              <div className="text-left">
+                <h3 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                  UYP Basketball
+                </h3>
+                <p className="text-gray-500 text-sm">Up Your Performance Academy</p>
               </div>
-            ))}
+            </div>
+            <p className="text-gray-400 text-lg leading-relaxed">
+              BoxStat is brand new — and we're already powering UYP Basketball's entire operation. 
+              From registration and payments to schedules and communication, we're proving what modern sports management looks like.
+            </p>
           </div>
         </div>
       </section>

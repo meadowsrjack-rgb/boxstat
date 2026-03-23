@@ -401,9 +401,12 @@ function AppRouter() {
     );
   }
 
+  if (currentPath === '/signup') {
+    return <OrgSignup />;
+  }
+
   return (
     <Switch>
-      <Route path="/signup" component={OrgSignup} />
       {/* Public routes - always accessible */}
       <Route path="/privacy" component={PrivacySettingsPage} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />

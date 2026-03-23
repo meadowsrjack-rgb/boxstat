@@ -191,7 +191,7 @@ export default function OrgSignup() {
                 <span className="text-gray-500 text-sm ml-2">{selectedPlan.price}/mo</span>
               </div>
               <button
-                onClick={() => setLocation('/#pricing')}
+                onClick={() => { window.location.href = '/#pricing'; }}
                 className="text-xs text-red-400 hover:text-red-300 transition-colors"
               >
                 Change

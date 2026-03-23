@@ -33,7 +33,7 @@ PostgreSQL, hosted on Neon serverless, is used in conjunction with Drizzle ORM. 
 -   **Android App**: Capacitor Android platform configured with BoxStat branding, GPS/location permissions, push notification support, and deep links.
 -   **iOS Scroll & Keyboard Fixes**: Utilizes a "Fixed Curtain" pattern to prevent visual glitches during iOS keyboard appearance and overscroll.
 -   **Marketing Landing Page**: A professional Stripe-like marketing website accessible at `/` for web visitors, featuring hero section, role-based login cards, features showcase, and pricing (Starter $99, Growth $249, Pro $499, Enterprise custom).
--   **Organization Owner Signup**: Coaches/club owners can sign up at `/signup` to create their own organization and become its admin. 3-step flow: org info → personal info → password. Backend creates org + admin user with auto-login. Linked from all pricing page "Get Started" buttons.
+-   **Organization Owner Signup**: Coaches/club owners can sign up at `/signup` to create their own organization and become its admin. 4-step flow: org info → personal info → password → billing. Backend creates org + admin user with auto-login. Step 4 shows selected plan summary and redirects to Stripe Checkout for platform subscription. Plan passed via `?plan=` query param from pricing page. Stripe webhook handles `platform_subscription` type to update org `platformPlan`, `platformSubscriptionId`, `platformSubscriptionStatus` columns. Users can skip billing and set it up later from dashboard.
 
 ## External Dependencies
 

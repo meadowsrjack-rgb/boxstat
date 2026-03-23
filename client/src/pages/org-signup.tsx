@@ -5,14 +5,20 @@ import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Building2, User, Lock, Loader2, Eye, EyeOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, Building2, User, Lock, Loader2, Eye, EyeOff, CreditCard, Check } from "lucide-react";
 import BoxStatLogo from "@/components/boxstat-logo";
 import { authPersistence } from "@/services/authPersistence";
+
+const PLANS: Record<string, { name: string; price: string; families: string; features: string[] }> = {
+  starter: { name: 'Starter', price: '$99', families: 'Up to 100 families', features: ['Registration', 'Payments', 'Schedules', 'Messaging', 'Basic reporting'] },
+  growth: { name: 'Growth', price: '$249', families: 'Up to 500 families', features: ['All core features', 'Admin dashboard', 'Team management', 'Payment tracking', 'Analytics', 'Priority support'] },
+  pro: { name: 'Pro', price: '$499', families: 'Unlimited families', features: ['Advanced analytics', 'Multiple admins', 'Multi-location', 'Automation', 'Custom reports', 'Priority onboarding'] },
+};
 
 const orgInfoSchema = z.object({
   organizationName: z.string().min(2, "Organization name is required"),
@@ -43,6 +49,11 @@ type PasswordInfo = z.infer<typeof passwordSchema>;
 
 export default function OrgSignup() {
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
+  const params = new URLSearchParams(searchString);
+  const planKey = params.get('plan') || 'growth';
+  const selectedPlan = PLANS[planKey] || PLANS.growth;
+
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
@@ -56,7 +67,7 @@ export default function OrgSignup() {
     phoneNumber?: string;
   }>({});
 
-  const totalSteps = 3;
+  const totalSteps = 4;
 
   const orgForm = useForm<OrgInfo>({
     resolver: zodResolver(orgInfoSchema),
@@ -73,6 +84,27 @@ export default function OrgSignup() {
     defaultValues: { password: "", confirmPassword: "" },
   });
 
+  const checkoutMutation = useMutation({
+    mutationFn: async (plan: string) => {
+      return await apiRequest("/api/platform/create-subscription-checkout", {
+        method: "POST",
+        data: { plan },
+      });
+    },
+    onSuccess: (response: any) => {
+      if (response.url) {
+        window.location.href = response.url;
+      } else {
+        toast({ title: "Billing Setup Issue", description: "Could not redirect to payment. You can set up billing from your dashboard.", variant: "destructive" });
+        setTimeout(() => { window.location.href = "/dashboard"; }, 2000);
+      }
+    },
+    onError: (error: any) => {
+      toast({ title: "Payment Setup Failed", description: error.message || "Could not set up billing. You can configure this later from your dashboard.", variant: "destructive" });
+      setTimeout(() => { window.location.href = "/dashboard"; }, 2000);
+    },
+  });
+
   const signupMutation = useMutation({
     mutationFn: async (payload: any) => {
       return await apiRequest("/api/signup/organization", {
@@ -84,8 +116,8 @@ export default function OrgSignup() {
       if (response.token) {
         await authPersistence.setToken(response.token);
       }
-      toast({ title: "Welcome to BoxStat!", description: `${response.organization?.name} has been created. Let's set up your organization.` });
-      setTimeout(() => { window.location.href = "/dashboard"; }, 500);
+      toast({ title: "Account Created!", description: `${response.organization?.name} is ready. Setting up billing...` });
+      setCurrentStep(4);
     },
     onError: (error: any) => {
       toast({ title: "Sign Up Failed", description: error.message || "Something went wrong. Please try again.", variant: "destructive" });
@@ -109,8 +141,16 @@ export default function OrgSignup() {
     });
   };
 
-  const stepTitles = ["Your Organization", "Your Information", "Create Password"];
-  const stepIcons = [Building2, User, Lock];
+  const handleStartSubscription = () => {
+    checkoutMutation.mutate(planKey);
+  };
+
+  const handleSkipBilling = () => {
+    window.location.href = "/dashboard";
+  };
+
+  const stepTitles = ["Your Organization", "Your Information", "Create Password", "Choose Your Plan"];
+  const stepIcons = [Building2, User, Lock, CreditCard];
 
   return (
     <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', backgroundColor: '#000000' }}>
@@ -126,7 +166,7 @@ export default function OrgSignup() {
 
         <div className="w-full max-w-md px-6">
           <div className="flex items-center justify-center gap-2 mb-8">
-            {[1, 2, 3].map((step) => (
+            {[1, 2, 3, 4].map((step) => (
               <div key={step} className="flex items-center gap-2">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
                   step === currentStep ? 'bg-red-600 text-white' :
@@ -134,13 +174,28 @@ export default function OrgSignup() {
                 }`}>
                   {step < currentStep ? '✓' : step}
                 </div>
-                {step < 3 && <div className={`w-8 h-0.5 ${step < currentStep ? 'bg-green-600' : 'bg-white/10'}`} />}
+                {step < 4 && <div className={`w-6 h-0.5 ${step < currentStep ? 'bg-green-600' : 'bg-white/10'}`} />}
               </div>
             ))}
           </div>
 
           <h2 className="text-xl font-bold text-white text-center mb-1">{stepTitles[currentStep - 1]}</h2>
           <p className="text-gray-400 text-sm text-center mb-6">Step {currentStep} of {totalSteps}</p>
+
+          {selectedPlan && currentStep <= 3 && (
+            <div className="mb-4 p-3 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-between">
+              <div>
+                <span className="text-white font-semibold text-sm">{selectedPlan.name} Plan</span>
+                <span className="text-gray-500 text-sm ml-2">{selectedPlan.price}/mo</span>
+              </div>
+              <button
+                onClick={() => setLocation('/#pricing')}
+                className="text-xs text-red-400 hover:text-red-300 transition-colors"
+              >
+                Change
+              </button>
+            </div>
+          )}
 
           <div className="p-6 rounded-2xl bg-white/[0.05] border border-white/10 backdrop-blur-sm">
             {currentStep === 1 && (
@@ -284,26 +339,82 @@ export default function OrgSignup() {
                     </Button>
                     <Button type="submit" disabled={signupMutation.isPending}
                       className="flex-1 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white border-0">
-                      {signupMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating...</> : "Create Organization"}
+                      {signupMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating...</> : "Create Account"}
                     </Button>
                   </div>
                 </form>
               </Form>
             )}
+
+            {currentStep === 4 && (
+              <div className="space-y-5">
+                <div className="text-center">
+                  <div className="w-12 h-12 rounded-full bg-green-600/20 flex items-center justify-center mx-auto mb-3">
+                    <Check className="w-6 h-6 text-green-500" />
+                  </div>
+                  <p className="text-green-400 text-sm font-medium">Account created successfully!</p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-white/[0.05] border border-white/10">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-white font-bold text-lg">{selectedPlan.name} Plan</h3>
+                    <div>
+                      <span className="text-2xl font-bold text-white">{selectedPlan.price}</span>
+                      <span className="text-gray-500 text-sm">/mo</span>
+                    </div>
+                  </div>
+                  <p className="text-gray-400 text-sm mb-3">{selectedPlan.families}</p>
+                  <ul className="space-y-1.5">
+                    {selectedPlan.features.map((feature, i) => (
+                      <li key={i} className="flex items-center gap-2 text-gray-400 text-xs">
+                        <Check className="w-3 h-3 text-green-500 flex-shrink-0" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <Button
+                  onClick={handleStartSubscription}
+                  disabled={checkoutMutation.isPending}
+                  className="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white border-0 py-5"
+                >
+                  {checkoutMutation.isPending ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Setting up billing...</>
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Subscribe — {selectedPlan.price}/month
+                    </>
+                  )}
+                </Button>
+
+                <button
+                  onClick={handleSkipBilling}
+                  className="w-full text-center text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                >
+                  Skip for now — set up billing later
+                </button>
+              </div>
+            )}
           </div>
 
-          <p className="text-center text-sm text-gray-500 mt-6">
-            Already have an account?{" "}
-            <button onClick={() => setLocation('/login')} className="text-white font-semibold hover:text-red-400 transition-colors">
-              Sign In
-            </button>
-          </p>
-          <p className="text-center text-sm text-gray-500 mt-2">
-            Looking to join an existing organization?{" "}
-            <button onClick={() => setLocation('/registration')} className="text-white font-semibold hover:text-red-400 transition-colors">
-              Register as a Player
-            </button>
-          </p>
+          {currentStep <= 3 && (
+            <>
+              <p className="text-center text-sm text-gray-500 mt-6">
+                Already have an account?{" "}
+                <button onClick={() => setLocation('/login')} className="text-white font-semibold hover:text-red-400 transition-colors">
+                  Sign In
+                </button>
+              </p>
+              <p className="text-center text-sm text-gray-500 mt-2">
+                Looking to join an existing organization?{" "}
+                <button onClick={() => setLocation('/registration')} className="text-white font-semibold hover:text-red-400 transition-colors">
+                  Register as a Player
+                </button>
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>

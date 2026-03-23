@@ -72,6 +72,9 @@ export const organizations = pgTable("organizations", {
   stripeWebhookSecret: text("stripe_webhook_secret"),
   stripeConnectedId: text("stripe_connected_id"),
   stripeConnectStatus: text("stripe_connect_status").default("not_started"),
+  platformPlan: varchar("platform_plan"),
+  platformSubscriptionId: varchar("platform_subscription_id"),
+  platformSubscriptionStatus: varchar("platform_subscription_status").default("inactive"),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 });

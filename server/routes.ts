@@ -2082,6 +2082,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('⚠️ Abandoned cart completion failed (non-fatal):', cartError.message);
         }
         
+        if (session.metadata?.type === 'platform_subscription') {
+          const orgId = session.metadata.organizationId;
+          const plan = session.metadata.plan;
+          const subId = (session as any).subscription;
+          console.log(`[Platform Subscription] Completed for org ${orgId}, plan: ${plan}, subscription: ${subId}`);
+
+          if (orgId) {
+            try {
+              await storage.updateOrganization(orgId, {
+                platformPlan: plan,
+                platformSubscriptionStatus: 'active',
+                platformSubscriptionId: subId || null,
+              } as any);
+              console.log(`[Platform Subscription] Updated org ${orgId} with plan ${plan}`);
+            } catch (orgUpdateErr: any) {
+              console.error(`[Platform Subscription] Failed to update org ${orgId}:`, orgUpdateErr.message);
+            }
+          }
+
+          return res.json({ received: true, type: 'platform_subscription' });
+        }
+
         // Check if this is an "add_player" payment
         if (session.metadata?.type === 'add_player') {
           const playerId = session.metadata.playerId;
@@ -2981,6 +3003,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: "This email is already registered." });
       }
       res.status(500).json({ success: false, message: error.message || "Something went wrong" });
+    }
+  });
+
+  const PLATFORM_PLANS: Record<string, { name: string; price: number; families: string }> = {
+    starter: { name: 'Starter', price: 9900, families: 'Up to 100 families' },
+    growth: { name: 'Growth', price: 24900, families: 'Up to 500 families' },
+    pro: { name: 'Pro', price: 49900, families: 'Unlimited families' },
+  };
+
+  app.post('/api/platform/create-subscription-checkout', requireAuth, isAdmin, async (req: any, res) => {
+    try {
+      if (!stripe) {
+        return res.status(500).json({ success: false, message: 'Payment processing is not configured' });
+      }
+
+      const { plan } = req.body;
+      const planInfo = PLATFORM_PLANS[plan];
+      if (!planInfo) {
+        return res.status(400).json({ success: false, message: 'Invalid plan selected' });
+      }
+
+      const userId = req.user.id;
+      const orgId = req.user.organizationId;
+      const user = await storage.getUser(userId);
+      const userEmail = user?.email;
+
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+      const session = await stripe.checkout.sessions.create({
+        mode: 'subscription',
+        customer_email: userEmail,
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `BoxStat ${planInfo.name} Plan`,
+              description: `${planInfo.families} - Monthly platform subscription`,
+            },
+            unit_amount: planInfo.price,
+            recurring: { interval: 'month' },
+          },
+          quantity: 1,
+        }],
+        metadata: {
+          type: 'platform_subscription',
+          plan,
+          userId,
+          organizationId: orgId,
+        },
+        success_url: `${baseUrl}/dashboard?subscription=success&plan=${plan}`,
+        cancel_url: `${baseUrl}/dashboard?subscription=cancelled`,
+      });
+
+      console.log(`[Platform Subscription] Created checkout session for org ${orgId}, plan: ${plan}, session: ${session.id}`);
+      res.json({ success: true, url: session.url });
+    } catch (error: any) {
+      console.error('[Platform Subscription] Error creating checkout:', error);
+      res.status(500).json({ success: false, message: error.message || 'Failed to create checkout session' });
     }
   });
 

@@ -180,7 +180,7 @@ export default function MarketingLanding() {
           <div className="flex flex-col items-center text-center">
             <p className="text-gray-400 text-sm uppercase tracking-widest mb-4">Currently Transforming</p>
             <div className="flex items-center gap-5 mb-6">
-              <img src={uypLogo} alt="UYP Basketball" className="w-16 h-16 rounded-full object-cover border-2 border-white/20" />
+              <img src={uypLogo} alt="UYP Basketball" className="w-20 h-20 rounded-full object-cover" />
               <div className="text-left">
                 <h3 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
                   UYP Basketball
@@ -297,7 +297,7 @@ export default function MarketingLanding() {
                 </div>
                 <p className="text-gray-300 mb-6 leading-relaxed">"{testimonial.quote}"</p>
                 <div className="flex items-center gap-3">
-                  <img src={uypLogo} alt="UYP" className="w-10 h-10 rounded-full object-cover border border-white/20" />
+                  <img src={uypLogo} alt="UYP" className="w-12 h-12 rounded-full object-cover" />
                   <div>
                     <div className="font-medium">{testimonial.author}</div>
                     <div className="text-sm text-gray-500">{testimonial.role}</div>

@@ -25,7 +25,8 @@ import {
   Info
 } from "lucide-react";
 import { SiApple } from "react-icons/si";
-import BoxStatLogo from "@/components/boxstat-logo";
+import darkThemeLogo from "@assets/darktheme_1768878672908.png";
+import uypLogo from "@assets/UYP Logo nback_1752703900579.png";
 import screenshot1 from "@assets/1_1768860806315.png";
 import screenshot2 from "@assets/2_1768860806316.png";
 import screenshot3 from "@assets/3_1768860806317.png";
@@ -71,30 +72,19 @@ export default function MarketingLanding() {
 
   const testimonials = [
     {
-      quote: "BoxStat transformed how we run our youth basketball program. Registration that used to take weeks now takes minutes.",
-      author: "Coach Michael Thompson",
-      role: "Youth Academy Director",
-      avatar: "MT"
+      quote: "BoxStat completely changed how we manage UYP Basketball. Registration, payments, scheduling — everything that used to take us hours is now automatic. Our families love it.",
+      author: "Coach Cory",
+      role: "Club Director, UYP Basketball",
+      avatar: "CC",
+      org: "UYP"
     },
     {
-      quote: "Finally, an app that lets me track all three of my kids' schedules and payments in one place. The notifications are a lifesaver.",
-      author: "Sarah Johnson",
-      role: "Basketball Parent",
-      avatar: "SJ"
-    },
-    {
-      quote: "I love seeing my stats and trophies. The check-in feature makes me feel like a pro when I arrive at practice!",
-      author: "Marcus Williams",
-      role: "U14 Player",
-      avatar: "MW"
+      quote: "As an owner, I needed real visibility into the business side of our club. BoxStat gives me that — from payment tracking to roster management, it's all in one place. Game changer.",
+      author: "Carlos Jimenez",
+      role: "Club Owner, UYP Basketball",
+      avatar: "CJ",
+      org: "UYP"
     }
-  ];
-
-  const stats = [
-    { value: "10,000+", label: "Active Players" },
-    { value: "500+", label: "Teams" },
-    { value: "98%", label: "Satisfaction Rate" },
-    { value: "50K+", label: "Events Managed" }
   ];
 
   return (
@@ -110,7 +100,7 @@ export default function MarketingLanding() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <BoxStatLogo variant="dark" className="h-16 w-auto" />
+              <img src={darkThemeLogo} alt="BoxStat" className="h-16 w-auto" />
             </div>
             
             <div className="flex items-center gap-3">
@@ -184,18 +174,24 @@ export default function MarketingLanding() {
           </div>
         </div>
       </section>
-      {/* Stats Section */}
+      {/* Currently Transforming Section */}
       <section className="relative z-10 py-16 border-y border-white/10 bg-white/[0.02]">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, i) => (
-              <div key={i} className="text-center">
-                <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent mb-2">
-                  {stat.value}
-                </div>
-                <div className="text-gray-500 text-sm uppercase tracking-wider">{stat.label}</div>
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="flex flex-col items-center text-center">
+            <p className="text-gray-400 text-sm uppercase tracking-widest mb-4">Currently Transforming</p>
+            <div className="flex items-center gap-5 mb-6">
+              <img src={uypLogo} alt="UYP Basketball" className="w-16 h-16 rounded-full object-cover border-2 border-white/20" />
+              <div className="text-left">
+                <h3 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                  UYP Basketball
+                </h3>
+                <p className="text-gray-500 text-sm">Up Your Performance Academy</p>
               </div>
-            ))}
+            </div>
+            <p className="text-gray-400 text-lg max-w-2xl leading-relaxed">
+              BoxStat is brand new — and we're already powering UYP Basketball's entire operation. 
+              From registration and payments to schedules and communication, we're proving what modern sports management looks like.
+            </p>
           </div>
         </div>
       </section>
@@ -288,7 +284,7 @@ export default function MarketingLanding() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {testimonials.map((testimonial, i) => (
               <div 
                 key={i}
@@ -301,9 +297,7 @@ export default function MarketingLanding() {
                 </div>
                 <p className="text-gray-300 mb-6 leading-relaxed">"{testimonial.quote}"</p>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-sm font-bold">
-                    {testimonial.avatar}
-                  </div>
+                  <img src={uypLogo} alt="UYP" className="w-10 h-10 rounded-full object-cover border border-white/20" />
                   <div>
                     <div className="font-medium">{testimonial.author}</div>
                     <div className="text-sm text-gray-500">{testimonial.role}</div>
@@ -494,13 +488,13 @@ export default function MarketingLanding() {
       <section id="contact" className="relative z-10 py-24 px-6">
         <div className="max-w-4xl mx-auto">
           <div className="p-12 rounded-3xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 text-center">
-            <BoxStatLogo variant="dark" className="h-16 w-auto mx-auto mb-6" />
+            <img src={darkThemeLogo} alt="BoxStat" className="h-16 w-auto mx-auto mb-6" />
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               Ready to Transform Your Club?
             </h2>
             <p className="text-gray-400 text-lg mb-8 max-w-2xl mx-auto">
-              Join hundreds of basketball organizations already using BoxStat. 
-              Our team will help you get set up and running in no time.
+              Be one of the first organizations to experience BoxStat. 
+              We'll personally help you get set up and running in no time.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button 
@@ -531,7 +525,7 @@ export default function MarketingLanding() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
             <div>
-              <BoxStatLogo variant="dark" className="h-8 w-auto mb-4" />
+              <img src={darkThemeLogo} alt="BoxStat" className="h-8 w-auto mb-4" />
               <p className="text-sm text-gray-500">The all-in-one platform for sports league management.</p>
             </div>
             <div>

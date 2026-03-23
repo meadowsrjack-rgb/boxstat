@@ -1606,7 +1606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const { packageId, playerId, addOnIds, signedWaiverIds, selectedPricingOptionId, platform } = req.body;
+      const { packageId, playerId, addOnIds, signedWaiverIds, selectedPricingOptionId, platform, couponCode } = req.body;
       const isNativeIOS = platform === 'ios';
       
       if (!packageId) {
@@ -1784,6 +1784,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (selectedPricingOption && !isInstallmentPlan && selectedPricingOption.allowInstallments && selectedPricingOption.payInFullDiscount && selectedPricingOption.payInFullDiscount > 0) {
         priceToCharge = Math.round(priceToCharge * (1 - selectedPricingOption.payInFullDiscount / 100));
       }
+
+      // Apply coupon discount if provided
+      let appliedCouponId: number | null = null;
+      if (couponCode) {
+        const coupon = await storage.getCouponByCode(couponCode.toUpperCase(), req.user.organizationId);
+        if (!coupon || !coupon.isActive) {
+          return res.status(400).json({ error: "Invalid or inactive coupon code" });
+        }
+        if (new Date(coupon.expiresAt) < new Date()) {
+          return res.status(400).json({ error: "Coupon has expired" });
+        }
+        if (coupon.maxUses && coupon.currentUses !== null && coupon.currentUses >= coupon.maxUses) {
+          return res.status(400).json({ error: "Coupon has reached maximum uses" });
+        }
+        if (coupon.programId && coupon.programId !== packageId) {
+          return res.status(400).json({ error: "Coupon is not valid for this program" });
+        }
+        if (coupon.discountType === 'percentage') {
+          priceToCharge = Math.round(priceToCharge * (1 - coupon.discountValue / 100));
+        } else {
+          priceToCharge = Math.max(0, priceToCharge - coupon.discountValue);
+        }
+        if (priceToCharge < 50) priceToCharge = 50; // Stripe minimum is $0.50
+        appliedCouponId = coupon.id;
+      }
       const itemName = selectedPricingOption 
         ? `${program.name} - ${selectedPricingOption.name}`
         : program.name;
@@ -1924,6 +1949,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           monthlyPrice: selectedPricingOption?.monthlyPrice ? String(selectedPricingOption.monthlyPrice) : '',
           durationDays: selectedPricingOption?.durationDays ? String(selectedPricingOption.durationDays) : '',
           quoteId: selectedPricingOption?.quoteId || '',
+          couponId: appliedCouponId ? String(appliedCouponId) : '',
+          couponCode: couponCode || '',
           isInstallmentPlan: isInstallmentPlan ? 'true' : '',
           installmentCount: isInstallmentPlan ? String(selectedPricingOption.installmentCount) : '',
           installmentOriginalPrice: isInstallmentPlan ? String(selectedPricingOption.originalPrice) : '',
@@ -2323,7 +2350,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`✅ Created payment record for user ${userId}${playerId ? ` (player: ${playerId})` : ''}`);
             } catch (paymentError: any) {
               console.error("Error creating payment record:", paymentError);
-              // Don't fail the webhook if payment record creation fails
+            }
+          }
+
+          // Increment coupon usage on successful payment
+          if (session.metadata?.couponId) {
+            try {
+              const couponId = parseInt(session.metadata.couponId);
+              const coupon = await storage.getCoupon(couponId);
+              if (coupon) {
+                await storage.updateCoupon(couponId, { currentUses: (coupon.currentUses || 0) + 1 });
+                console.log(`✅ Incremented coupon ${coupon.code} usage to ${(coupon.currentUses || 0) + 1}`);
+              }
+            } catch (couponError: any) {
+              console.error("Error incrementing coupon usage:", couponError);
             }
           }
           
@@ -13583,6 +13623,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // =============================================
+  // COUPONS
+  // =============================================
+  
+  app.post("/api/coupons", requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId } = req.user;
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { programId, discountType, discountValue, maxUses } = req.body;
+      
+      if (!discountType || !discountValue) {
+        return res.status(400).json({ error: "discountType and discountValue are required" });
+      }
+      if (!['percentage', 'fixed'].includes(discountType)) {
+        return res.status(400).json({ error: "discountType must be 'percentage' or 'fixed'" });
+      }
+      const parsedValue = parseInt(discountValue);
+      if (isNaN(parsedValue) || parsedValue <= 0) {
+        return res.status(400).json({ error: "discountValue must be a positive number" });
+      }
+      if (discountType === 'percentage' && parsedValue > 100) {
+        return res.status(400).json({ error: "Percentage discount cannot exceed 100%" });
+      }
+
+      const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+      
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+      const coupon = await storage.createCoupon({
+        code,
+        organizationId,
+        programId: programId || null,
+        discountType,
+        discountValue: parsedValue,
+        expiresAt,
+        maxUses: maxUses ? parseInt(maxUses) : 1,
+        isActive: true,
+        createdBy: req.user.id,
+      });
+
+      res.json(coupon);
+    } catch (error: any) {
+      console.error("Error creating coupon:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/coupons", requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId } = req.user;
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const allCoupons = await storage.getCouponsByOrganization(organizationId);
+      res.json(allCoupons);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/coupons/program/:programId", requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId } = req.user;
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const programCoupons = await storage.getCouponsByProgram(req.params.programId, organizationId);
+      res.json(programCoupons);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/coupons/validate", requireAuth, async (req: any, res) => {
+    try {
+      const { code, programId } = req.body;
+      const { organizationId } = req.user;
+
+      if (!code) {
+        return res.status(400).json({ error: "Coupon code is required" });
+      }
+
+      const coupon = await storage.getCouponByCode(code.toUpperCase(), organizationId);
+      
+      if (!coupon) {
+        return res.status(404).json({ error: "Invalid coupon code" });
+      }
+
+      if (!coupon.isActive) {
+        return res.status(400).json({ error: "This coupon is no longer active" });
+      }
+
+      if (new Date(coupon.expiresAt) < new Date()) {
+        return res.status(400).json({ error: "This coupon has expired" });
+      }
+
+      if (coupon.maxUses && coupon.currentUses !== null && coupon.currentUses >= coupon.maxUses) {
+        return res.status(400).json({ error: "This coupon has reached its maximum uses" });
+      }
+
+      if (coupon.programId && programId && coupon.programId !== programId) {
+        return res.status(400).json({ error: "This coupon is not valid for this program" });
+      }
+
+      res.json({
+        valid: true,
+        coupon: {
+          id: coupon.id,
+          code: coupon.code,
+          discountType: coupon.discountType,
+          discountValue: coupon.discountValue,
+          programId: coupon.programId,
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/coupons/:id", requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId } = req.user;
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      await storage.deleteCoupon(parseInt(req.params.id), organizationId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // =============================================
   // QUOTE CHECKOUTS
   // =============================================

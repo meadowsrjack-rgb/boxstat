@@ -83,6 +83,9 @@ import {
   type AbandonedCart,
   type InsertAbandonedCart,
   abandonedCarts,
+  type Coupon,
+  type InsertCoupon,
+  coupons,
 } from "@shared/schema";
 
 // =============================================
@@ -389,6 +392,15 @@ export interface IStorage {
   getScheduleRequestsByProgram(programId: string): Promise<Event[]>;
   getScheduleRequestsByEnrollment(enrollmentId: number): Promise<Event[]>;
   getPendingScheduleRequests(organizationId: string): Promise<Event[]>;
+  
+  // Coupon operations
+  createCoupon(coupon: InsertCoupon): Promise<Coupon>;
+  getCoupon(id: number): Promise<Coupon | undefined>;
+  getCouponByCode(code: string, organizationId: string): Promise<Coupon | undefined>;
+  getCouponsByOrganization(organizationId: string): Promise<Coupon[]>;
+  getCouponsByProgram(programId: string, organizationId?: string): Promise<Coupon[]>;
+  updateCoupon(id: number, updates: Partial<Coupon>): Promise<Coupon | undefined>;
+  deleteCoupon(id: number, organizationId?: string): Promise<void>;
 }
 
 // =============================================
@@ -2534,6 +2546,15 @@ class MemStorage implements IStorage {
   async completeAbandonedCart(stripeSessionId: string): Promise<void> {}
   async dismissAbandonedCart(id: number, userId: string): Promise<void> {}
   async updateAbandonedCartReminder(id: number, remindersSent: number): Promise<void> {}
+
+  // Coupon operations (MemStorage stubs)
+  async createCoupon(coupon: InsertCoupon): Promise<Coupon> { throw new Error("Not implemented"); }
+  async getCoupon(id: number): Promise<Coupon | undefined> { return undefined; }
+  async getCouponByCode(code: string, organizationId: string): Promise<Coupon | undefined> { return undefined; }
+  async getCouponsByOrganization(organizationId: string): Promise<Coupon[]> { return []; }
+  async getCouponsByProgram(programId: string, organizationId?: string): Promise<Coupon[]> { return []; }
+  async updateCoupon(id: number, updates: Partial<Coupon>): Promise<Coupon | undefined> { return undefined; }
+  async deleteCoupon(id: number, organizationId?: string): Promise<void> {}
 }
 
 // =============================================
@@ -6308,6 +6329,47 @@ class DatabaseStorage implements IStorage {
     await db.update(schema.abandonedCarts)
       .set({ remindersSent, lastReminderAt: new Date().toISOString() })
       .where(eq(schema.abandonedCarts.id, id));
+  }
+
+  async createCoupon(coupon: InsertCoupon): Promise<Coupon> {
+    const [result] = await db.insert(coupons).values(coupon).returning();
+    return result;
+  }
+
+  async getCoupon(id: number): Promise<Coupon | undefined> {
+    const [result] = await db.select().from(coupons).where(eq(coupons.id, id));
+    return result;
+  }
+
+  async getCouponByCode(code: string, organizationId: string): Promise<Coupon | undefined> {
+    const [result] = await db.select().from(coupons)
+      .where(and(eq(coupons.code, code), eq(coupons.organizationId, organizationId)));
+    return result;
+  }
+
+  async getCouponsByOrganization(organizationId: string): Promise<Coupon[]> {
+    return db.select().from(coupons)
+      .where(eq(coupons.organizationId, organizationId))
+      .orderBy(coupons.createdAt);
+  }
+
+  async getCouponsByProgram(programId: string, organizationId?: string): Promise<Coupon[]> {
+    const conditions = [eq(coupons.programId, programId)];
+    if (organizationId) conditions.push(eq(coupons.organizationId, organizationId));
+    return db.select().from(coupons)
+      .where(and(...conditions))
+      .orderBy(coupons.createdAt);
+  }
+
+  async updateCoupon(id: number, updates: Partial<Coupon>): Promise<Coupon | undefined> {
+    const [result] = await db.update(coupons).set(updates).where(eq(coupons.id, id)).returning();
+    return result;
+  }
+
+  async deleteCoupon(id: number, organizationId?: string): Promise<void> {
+    const conditions = [eq(coupons.id, id)];
+    if (organizationId) conditions.push(eq(coupons.organizationId, organizationId));
+    await db.update(coupons).set({ isActive: false }).where(and(...conditions));
   }
 }
 

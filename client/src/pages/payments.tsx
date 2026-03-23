@@ -403,7 +403,9 @@ function EnrollmentDialog({
   onClose, 
   onConfirm,
   onConfirmWithAddOns,
-  isLoading 
+  isLoading,
+  onCouponApplied,
+  appliedCoupon,
 }: { 
   program: Program | null; 
   children: ChildPlayer[];
@@ -412,11 +414,16 @@ function EnrollmentDialog({
   onConfirm: (playerId: string | null) => void;
   onConfirmWithAddOns: (playerId: string | null, addOnIds: string[]) => void;
   isLoading: boolean;
+  onCouponApplied: (coupon: { id: number; code: string; discountType: string; discountValue: number } | null) => void;
+  appliedCoupon: { id: number; code: string; discountType: string; discountValue: number } | null;
 }) {
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [suggestedAddOnIds, setSuggestedAddOnIds] = useState<string[]>([]);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponError, setCouponError] = useState("");
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
   const isPerFamily = program?.billingModel === 'Per Family';
   
   // Fetch suggested add-ons for this program
@@ -442,6 +449,9 @@ function EnrollmentDialog({
       setCurrentStep(1);
       setSelectedAddOns([]);
       setSelectedPlayer("");
+      setCouponCode("");
+      setCouponError("");
+      onCouponApplied(null);
     }
   }, [program]);
   
@@ -499,6 +509,32 @@ function EnrollmentDialog({
       if (addOn?.price) total += addOn.price;
     }
     return total;
+  };
+
+  const handleValidateCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setValidatingCoupon(true);
+    setCouponError("");
+    try {
+      const res = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponCode.trim(), programId: program.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCouponError(data.error || 'Invalid coupon');
+        onCouponApplied(null);
+      } else {
+        onCouponApplied(data.coupon);
+        setCouponError("");
+      }
+    } catch {
+      setCouponError("Failed to validate coupon");
+      onCouponApplied(null);
+    } finally {
+      setValidatingCoupon(false);
+    }
   };
 
   return (
@@ -635,6 +671,54 @@ function EnrollmentDialog({
           </div>
         )}
 
+        <div className="border-t border-white/10 pt-3">
+          <label className="text-xs text-white/50">Have a coupon code?</label>
+          <div className="flex gap-2 mt-1">
+            <input
+              type="text"
+              placeholder="Enter code"
+              value={couponCode}
+              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+              className="flex-1 bg-white/5 border border-white/10 rounded px-3 py-1.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30"
+              disabled={!!appliedCoupon}
+            />
+            {appliedCoupon ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-white/20 text-white hover:bg-white/10"
+                onClick={() => {
+                  onCouponApplied(null);
+                  setCouponCode("");
+                  setCouponError("");
+                }}
+              >
+                Remove
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={handleValidateCoupon}
+                disabled={!couponCode.trim() || validatingCoupon}
+                className="bg-white/10 hover:bg-white/20 text-white"
+              >
+                {validatingCoupon ? <Loader2 className="h-3 w-3 animate-spin" /> : "Apply"}
+              </Button>
+            )}
+          </div>
+          {couponError && <p className="text-xs text-red-400 mt-1">{couponError}</p>}
+          {appliedCoupon && (
+            <div className="flex items-center gap-1 mt-1">
+              <CheckCircle2 className="h-3 w-3 text-green-400" />
+              <span className="text-xs text-green-400">
+                {appliedCoupon.discountType === 'percentage'
+                  ? `${appliedCoupon.discountValue}% discount applied`
+                  : `$${(appliedCoupon.discountValue / 100).toFixed(2)} discount applied`}
+              </span>
+            </div>
+          )}
+        </div>
+
         <DialogFooter className="gap-2">
           {currentStep === 2 && (
             <Button 
@@ -693,6 +777,7 @@ export default function PaymentsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedStoreCategory, setSelectedStoreCategory] = useState<string | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{ id: number; code: string; discountType: string; discountValue: number } | null>(null);
   
   const urlParams = new URLSearchParams(window.location.search);
   const paymentSuccess = urlParams.get('success') === 'true';
@@ -758,6 +843,7 @@ export default function PaymentsPage() {
         body: JSON.stringify({
           packageId: selectedProgram.id,
           playerId: playerId,
+          couponCode: appliedCoupon?.code || undefined,
           successUrl: `${window.location.origin}/payments?success=true&session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: `${window.location.origin}/payments?canceled=true`,
         }),
@@ -792,6 +878,7 @@ export default function PaymentsPage() {
           packageId: selectedProgram.id,
           playerId: playerId,
           addOnIds: addOnIds.length > 0 ? addOnIds : undefined,
+          couponCode: appliedCoupon?.code || undefined,
           successUrl: `${window.location.origin}/payments?success=true&session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: `${window.location.origin}/payments?canceled=true`,
         }),
@@ -1072,10 +1159,12 @@ export default function PaymentsPage() {
           program={selectedProgram}
           children={children}
           storeItems={storeItems}
-          onClose={() => setSelectedProgram(null)}
+          onClose={() => { setSelectedProgram(null); setAppliedCoupon(null); }}
           onConfirm={handleEnroll}
           onConfirmWithAddOns={handleEnrollWithAddOns}
           isLoading={loading}
+          onCouponApplied={setAppliedCoupon}
+          appliedCoupon={appliedCoupon}
         />
       </div>
     </div>

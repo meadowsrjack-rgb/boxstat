@@ -1166,6 +1166,30 @@ export const insertAbandonedCartSchema = createInsertSchema(abandonedCarts).omit
 export type InsertAbandonedCart = z.infer<typeof insertAbandonedCartSchema>;
 export type AbandonedCart = typeof abandonedCarts.$inferSelect;
 
+// Coupons for programs and products
+export const coupons = pgTable("coupons", {
+  id: serial("id").primaryKey(),
+  code: varchar("code").notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  programId: varchar("program_id"),
+  discountType: varchar("discount_type").notNull().default('percentage'),
+  discountValue: integer("discount_value").notNull(),
+  expiresAt: timestamp("expires_at", { mode: 'string' }).notNull(),
+  maxUses: integer("max_uses").default(1),
+  currentUses: integer("current_uses").default(0),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+export const insertCouponSchema = createInsertSchema(coupons).omit({
+  id: true,
+  createdAt: true,
+  currentUses: true,
+});
+export type InsertCoupon = z.infer<typeof insertCouponSchema>;
+export type Coupon = typeof coupons.$inferSelect;
+
 // Insert schemas for new tables
 export const insertDirectMessageSchema = createInsertSchema(directMessages).omit({
   id: true,

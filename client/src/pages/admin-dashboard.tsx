@@ -15126,11 +15126,10 @@ function MigrationsTab({ organization, users }: any) {
 // CRM Tab Component
 function CRMTab({ organization, users, teams, initialSubTab }: any) {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'leads' | 'messages' | 'quotes'>(initialSubTab || 'leads');
+  const [activeTab, setActiveTab] = useState<'leads' | 'messages'>(initialSubTab || 'leads');
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [viewingEvaluation, setViewingEvaluation] = useState<any>(null);
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
-  const [isQuoteDialogOpen, setIsQuoteDialogOpen] = useState(false);
   const [newNote, setNewNote] = useState("");
   const [replyMessage, setReplyMessage] = useState("");
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
@@ -15193,21 +15192,6 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
     },
   });
 
-  // Fetch quote checkouts
-  const { data: quotes = [], refetch: refetchQuotes } = useQuery<any[]>({
-    queryKey: ['/api/quote-checkouts'],
-  });
-
-  // Fetch programs for quote creation
-  const { data: programs = [] } = useQuery<any[]>({
-    queryKey: ['/api/programs'],
-  });
-
-  // Fetch store products for quote creation
-  const { data: storeProducts = [] } = useQuery<any[]>({
-    queryKey: ['/api/store-products'],
-  });
-
   // Create lead mutation
   const createLeadMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -15258,21 +15242,6 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
     },
   });
 
-  // Create quote checkout mutation
-  const createQuoteMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return apiRequest('/api/quote-checkouts', { method: 'POST', data });
-    },
-    onSuccess: () => {
-      refetchQuotes();
-      setIsQuoteDialogOpen(false);
-      toast({ title: "Quote created successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to create quote", variant: "destructive" });
-    },
-  });
-
   // Lead form
   const leadForm = useForm({
     defaultValues: {
@@ -15285,25 +15254,8 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
     },
   });
 
-  // Quote form - items can have custom prices
-  const [quoteRecipientType, setQuoteRecipientType] = useState<'lead' | 'user'>('lead');
-  const quoteForm = useForm({
-    defaultValues: {
-      leadId: '',
-      userId: '',
-      items: [] as { type: string; productId: string; quantity: number; customPrice?: number }[],
-      expiresAt: '',
-    },
-  });
-
   const handleCreateLead = (data: any) => {
     createLeadMutation.mutate(data);
-  };
-
-  const copyQuoteLink = (quote: any) => {
-    const url = `${window.location.origin}/checkout/${quote.checkoutId}`;
-    navigator.clipboard.writeText(url);
-    toast({ title: "Link copied to clipboard" });
   };
 
   return (
@@ -15313,7 +15265,7 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
           <Headphones className="w-5 h-5" />
           Customer Relationship Management
         </CardTitle>
-        <CardDescription>Manage leads, quotes, and customer communications</CardDescription>
+        <CardDescription>Manage leads and customer communications</CardDescription>
       </CardHeader>
       <CardContent>
         {/* Sub-tabs */}
@@ -15335,15 +15287,6 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
           >
             <MessageSquare className="w-4 h-4 mr-2" />
             Messages
-          </Button>
-          <Button
-            variant={activeTab === 'quotes' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setActiveTab('quotes')}
-            data-testid="button-crm-quotes"
-          >
-            <LinkIcon className="w-4 h-4 mr-2" />
-            Quotes
           </Button>
         </div>
 
@@ -15663,68 +15606,6 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
           </div>
         )}
 
-        {/* Quotes Tab */}
-        {activeTab === 'quotes' && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-medium">Quote Checkouts</h3>
-              <Button onClick={() => setIsQuoteDialogOpen(true)} data-testid="button-create-quote">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Quote
-              </Button>
-            </div>
-
-            {quotes.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <LinkIcon className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                <p>No quotes created yet. Create a quote to share with leads.</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Lead</TableHead>
-                    <TableHead>Items</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Link</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {quotes.map((quote: any) => (
-                    <TableRow key={quote.id} data-testid={`row-quote-${quote.id}`}>
-                      <TableCell>
-                        <div className="font-medium">{quote.lead?.firstName} {quote.lead?.lastName}</div>
-                        <div className="text-xs text-gray-500">{quote.lead?.email}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">{quote.items?.length || 0} items</div>
-                      </TableCell>
-                      <TableCell>
-                        ${((quote.totalAmount || 0) / 100).toFixed(2)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={quote.status === 'completed' ? 'default' : quote.status === 'expired' ? 'destructive' : 'secondary'}>
-                          {quote.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyQuoteLink(quote)}
-                          data-testid={`button-copy-quote-${quote.id}`}
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </div>
-        )}
       </CardContent>
 
       {/* Add Lead Dialog */}
@@ -15951,253 +15832,6 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
         </DialogContent>
       </Dialog>
 
-      {/* Create Quote Dialog */}
-      <Dialog open={isQuoteDialogOpen} onOpenChange={(open) => {
-        setIsQuoteDialogOpen(open);
-        if (!open) {
-          quoteForm.reset();
-          setQuoteRecipientType('lead');
-        }
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create Quote Checkout</DialogTitle>
-            <DialogDescription>Create a checkout link for a lead or existing member</DialogDescription>
-          </DialogHeader>
-          <Form {...quoteForm}>
-            <form onSubmit={quoteForm.handleSubmit((data) => createQuoteMutation.mutate({
-              ...data,
-              recipientType: quoteRecipientType,
-            }))} className="space-y-4">
-              {/* Recipient Type Toggle */}
-              <div className="flex gap-2 border-b pb-3">
-                <Button
-                  type="button"
-                  variant={quoteRecipientType === 'lead' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => {
-                    setQuoteRecipientType('lead');
-                    quoteForm.setValue('userId', '');
-                  }}
-                  data-testid="button-recipient-lead"
-                >
-                  New Lead
-                </Button>
-                <Button
-                  type="button"
-                  variant={quoteRecipientType === 'user' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => {
-                    setQuoteRecipientType('user');
-                    quoteForm.setValue('leadId', '');
-                  }}
-                  data-testid="button-recipient-user"
-                >
-                  Existing Member
-                </Button>
-              </div>
-
-              {quoteRecipientType === 'lead' ? (
-                <FormField
-                  control={quoteForm.control}
-                  name="leadId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Lead</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-quote-lead">
-                            <SelectValue placeholder="Select a lead..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {leads.map((lead: any) => (
-                            <SelectItem key={lead.id} value={String(lead.id)}>
-                              {lead.firstName} {lead.lastName} - {lead.email}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-              ) : (
-                <FormField
-                  control={quoteForm.control}
-                  name="userId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Member</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-quote-user">
-                            <SelectValue placeholder="Select a member..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {users.filter((u: any) => u.role === 'parent').map((user: any) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.firstName} {user.lastName} - {user.email}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-              )}
-              
-              <div>
-                <FormLabel>Items</FormLabel>
-                <p className="text-sm text-gray-500 mb-2">Select programs and store products, adjust prices if needed</p>
-                <div className="space-y-2 max-h-60 overflow-y-auto border rounded p-2">
-                  {/* Programs (services) section */}
-                  {programs.filter((p: any) => p.isActive && p.productCategory !== 'goods').length > 0 && (
-                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide pb-1 border-b">Programs</div>
-                  )}
-                  {programs.filter((p: any) => p.isActive && p.productCategory !== 'goods').map((program: any) => {
-                    const items = quoteForm.watch('items');
-                    const itemIndex = items.findIndex((i: any) => i.productId === program.id);
-                    const isSelected = itemIndex !== -1;
-                    const currentItem = isSelected ? items[itemIndex] : null;
-                    const displayPrice = currentItem?.customPrice !== undefined ? currentItem.customPrice : program.price;
-                    
-                    return (
-                      <div key={program.id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50">
-                        <Checkbox
-                          id={`program-${program.id}`}
-                          checked={isSelected}
-                          onCheckedChange={(checked) => {
-                            const currentItems = quoteForm.getValues('items');
-                            if (checked) {
-                              quoteForm.setValue('items', [...currentItems, { type: 'program', productId: program.id, quantity: 1 }]);
-                            } else {
-                              quoteForm.setValue('items', currentItems.filter((i: any) => i.productId !== program.id));
-                            }
-                          }}
-                          data-testid={`checkbox-program-${program.id}`}
-                        />
-                        <label htmlFor={`program-${program.id}`} className="text-sm flex-1">
-                          {program.name}
-                        </label>
-                        {isSelected && (
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-gray-500">$</span>
-                            <Input
-                              type="text"
-                              inputMode="decimal"
-                              className="w-20 h-7 text-sm"
-                              defaultValue={(displayPrice / 100).toFixed(2)}
-                              key={`price-${program.id}-${isSelected}`}
-                              onBlur={(e) => {
-                                const val = e.target.value.replace(/[^0-9.]/g, '');
-                                const newPrice = Math.round(parseFloat(val || '0') * 100);
-                                const currentItems = [...quoteForm.getValues('items')];
-                                const idx = currentItems.findIndex((i: any) => i.productId === program.id);
-                                if (idx !== -1) {
-                                  currentItems[idx] = { ...currentItems[idx], customPrice: newPrice };
-                                  quoteForm.setValue('items', currentItems);
-                                }
-                                e.target.value = (newPrice / 100).toFixed(2);
-                              }}
-                              data-testid={`input-price-${program.id}`}
-                            />
-                          </div>
-                        )}
-                        {!isSelected && (
-                          <span className="text-sm text-gray-400">${((program.price || 0) / 100).toFixed(2)}</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {/* Store Products (goods) section */}
-                  {storeProducts.filter((p: any) => p.isActive !== false).length > 0 && (
-                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide pb-1 border-b mt-3">Store Products</div>
-                  )}
-                  {storeProducts.filter((p: any) => p.isActive !== false).map((product: any) => {
-                    const items = quoteForm.watch('items');
-                    const itemIndex = items.findIndex((i: any) => i.productId === product.id);
-                    const isSelected = itemIndex !== -1;
-                    const currentItem = isSelected ? items[itemIndex] : null;
-                    const displayPrice = currentItem?.customPrice !== undefined ? currentItem.customPrice : product.price;
-                    
-                    return (
-                      <div key={product.id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50">
-                        <Checkbox
-                          id={`product-${product.id}`}
-                          checked={isSelected}
-                          onCheckedChange={(checked) => {
-                            const currentItems = quoteForm.getValues('items');
-                            if (checked) {
-                              quoteForm.setValue('items', [...currentItems, { type: 'store', productId: product.id, quantity: 1 }]);
-                            } else {
-                              quoteForm.setValue('items', currentItems.filter((i: any) => i.productId !== product.id));
-                            }
-                          }}
-                          data-testid={`checkbox-product-${product.id}`}
-                        />
-                        <label htmlFor={`product-${product.id}`} className="text-sm flex-1">
-                          {product.name}
-                        </label>
-                        {isSelected && (
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-gray-500">$</span>
-                            <Input
-                              type="text"
-                              inputMode="decimal"
-                              className="w-20 h-7 text-sm"
-                              defaultValue={(displayPrice / 100).toFixed(2)}
-                              key={`price-${product.id}-${isSelected}`}
-                              onBlur={(e) => {
-                                const val = e.target.value.replace(/[^0-9.]/g, '');
-                                const newPrice = Math.round(parseFloat(val || '0') * 100);
-                                const currentItems = [...quoteForm.getValues('items')];
-                                const idx = currentItems.findIndex((i: any) => i.productId === product.id);
-                                if (idx !== -1) {
-                                  currentItems[idx] = { ...currentItems[idx], customPrice: newPrice };
-                                  quoteForm.setValue('items', currentItems);
-                                }
-                                e.target.value = (newPrice / 100).toFixed(2);
-                              }}
-                              data-testid={`input-price-${product.id}`}
-                            />
-                          </div>
-                        )}
-                        {!isSelected && (
-                          <span className="text-sm text-gray-400">${((product.price || 0) / 100).toFixed(2)}</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                {/* Show total */}
-                {quoteForm.watch('items').length > 0 && (
-                  <div className="mt-2 p-2 bg-gray-50 rounded flex justify-between">
-                    <span className="font-medium">Total:</span>
-                    <span className="font-bold">
-                      ${(quoteForm.watch('items').reduce((sum: number, item: any) => {
-                        const allProducts = [...programs, ...storeProducts];
-                        const product = allProducts.find((p: any) => p.id === item.productId);
-                        const price = item.customPrice !== undefined ? item.customPrice : (product?.price || 0);
-                        return sum + (price * (item.quantity || 1));
-                      }, 0) / 100).toFixed(2)}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsQuoteDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createQuoteMutation.isPending} data-testid="button-create-quote-submit">
-                  {createQuoteMutation.isPending ? 'Creating...' : 'Create Quote'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
     </Card>
   );
 }

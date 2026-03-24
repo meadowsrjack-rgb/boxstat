@@ -412,7 +412,7 @@ export default function OrgSignup() {
               <p className="text-center text-sm text-gray-500 mt-2">
                 Looking to join an existing organization?{" "}
                 <button onClick={() => setLocation('/registration')} className="text-white font-semibold hover:text-red-400 transition-colors">
-                  Register a Player
+                  Register
                 </button>
               </p>
             </>

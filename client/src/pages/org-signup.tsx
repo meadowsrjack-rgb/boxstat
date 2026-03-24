@@ -164,15 +164,15 @@ export default function OrgSignup() {
       <div className="relative z-10 flex flex-col items-center justify-start min-h-full overflow-y-auto"
         style={{ paddingTop: 'max(40px, env(safe-area-inset-top))', paddingBottom: 'max(40px, env(safe-area-inset-bottom))' }}>
 
+        <button onClick={() => window.location.href = '/'} className="absolute top-6 left-6 cursor-pointer text-gray-400 hover:text-white transition-colors z-20">
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+
         <button onClick={() => window.location.href = '/'} className="cursor-pointer hover:opacity-80 transition-opacity mb-6">
           <img src={darkThemeLogo} alt="BoxStat" className="w-[140px] h-auto" />
         </button>
 
         <div className="w-full max-w-md px-6">
-          <Button type="button" variant="ghost" onClick={() => window.location.href = '/'} 
-            className="mb-4 text-gray-400 hover:text-white hover:bg-white/10">
-            <ChevronLeft className="w-4 h-4 mr-1" /> Back
-          </Button>
 
           <div className="flex items-center justify-center gap-2 mb-8">
             {[1, 2, 3, 4].map((step) => (

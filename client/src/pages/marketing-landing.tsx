@@ -243,17 +243,6 @@ export default function MarketingLanding() {
       {/* Testimonials Section */}
       <section id="testimonials" className="relative z-10 py-24 px-6 bg-gradient-to-b from-transparent via-white/[0.02] to-transparent">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">
-              <span className="bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                Loved by Teams Everywhere
-              </span>
-            </h2>
-            <p className="text-gray-400 text-lg">
-              See what coaches, parents, and players are saying
-            </p>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {testimonials.map((testimonial, i) => (
               <div 

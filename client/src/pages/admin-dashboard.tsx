@@ -7797,7 +7797,7 @@ function InlineCouponSection({ programId }: { programId: string }) {
   const { data: coupons = [], isLoading } = useQuery<CouponData[]>({
     queryKey: ['/api/coupons/program', programId],
     queryFn: async () => {
-      const res = await fetch(`/api/coupons/program/${programId}`);
+      const res = await fetch(`/api/coupons/program/${programId}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch coupons');
       return res.json();
     },
@@ -7807,6 +7807,7 @@ function InlineCouponSection({ programId }: { programId: string }) {
     mutationFn: async () => {
       const res = await fetch('/api/coupons', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           programId,
@@ -7831,7 +7832,7 @@ function InlineCouponSection({ programId }: { programId: string }) {
 
   const deleteCoupon = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/coupons/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/coupons/${id}`, { method: 'DELETE', credentials: 'include' });
       if (!res.ok) throw new Error('Failed to delete coupon');
     },
     onSuccess: () => {

@@ -64,7 +64,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar as ShadcnCalendar } from "@/components/ui/calendar";
 import { useEffect, useState, useRef } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import { PINDialog } from "@/components/PINDialog";
 import CoachProfileDialog from "@/components/CoachProfileDialog";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -1590,6 +1590,10 @@ export default function UnifiedAccount() {
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [signedWaivers, setSignedWaivers] = useState<Record<string, boolean>>({});
   const [waiverScrollStatus, setWaiverScrollStatus] = useState<Record<string, boolean>>({});
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ id: number; code: string; discountType: string; discountValue: number; programId?: string | null } | null>(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [couponError, setCouponError] = useState("");
   
   // Store tab state
   const [selectedStorePlayer, setSelectedStorePlayer] = useState<string>("");
@@ -2433,6 +2437,9 @@ export default function UnifiedAccount() {
                 setSelectedAddOns([]);
                 setSignedWaivers({});
                 setWaiverScrollStatus({});
+                setCouponCode("");
+                setAppliedCoupon(null);
+                setCouponError("");
               }
             }}>
               <DrawerContent className="max-h-[90vh]" data-testid="dialog-make-payment">
@@ -3051,6 +3058,81 @@ export default function UnifiedAccount() {
                           return null;
                         })()}
 
+                        {/* Coupon Code Input */}
+                        {selectedPackage && !isStoreItemPurchase && (
+                          <div className="border-t pt-3">
+                            <label className="text-xs text-muted-foreground">Have a coupon code?</label>
+                            <div className="flex gap-2 mt-1">
+                              <input
+                                type="text"
+                                placeholder="Enter code"
+                                value={couponCode}
+                                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                                className="flex-1 bg-muted border border-border rounded px-3 py-1.5 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-ring"
+                                disabled={!!appliedCoupon}
+                              />
+                              {appliedCoupon ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setAppliedCoupon(null);
+                                    setCouponCode("");
+                                    setCouponError("");
+                                  }}
+                                >
+                                  Remove
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  onClick={async () => {
+                                    if (!couponCode.trim()) return;
+                                    setValidatingCoupon(true);
+                                    setCouponError("");
+                                    try {
+                                      const res = await fetch('/api/coupons/validate', {
+                                        method: 'POST',
+                                        credentials: 'include',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ code: couponCode.trim(), programId: selectedPackage }),
+                                      });
+                                      const data = await res.json();
+                                      if (!res.ok) {
+                                        setCouponError(data.error || 'Invalid coupon');
+                                        setAppliedCoupon(null);
+                                      } else {
+                                        setAppliedCoupon(data.coupon);
+                                        setCouponError("");
+                                      }
+                                    } catch {
+                                      setCouponError("Failed to validate coupon");
+                                      setAppliedCoupon(null);
+                                    } finally {
+                                      setValidatingCoupon(false);
+                                    }
+                                  }}
+                                  disabled={!couponCode.trim() || validatingCoupon}
+                                  variant="secondary"
+                                >
+                                  {validatingCoupon ? <Loader2 className="h-3 w-3 animate-spin" /> : "Apply"}
+                                </Button>
+                              )}
+                            </div>
+                            {couponError && <p className="text-xs text-destructive mt-1">{couponError}</p>}
+                            {appliedCoupon && (
+                              <div className="flex items-center gap-1 mt-1">
+                                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                <span className="text-xs text-green-500">
+                                  {appliedCoupon.discountType === 'percentage'
+                                    ? `${appliedCoupon.discountValue}% discount applied`
+                                    : `$${(appliedCoupon.discountValue / 100).toFixed(2)} discount applied`}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {/* Action Buttons */}
                         <div className="flex gap-2 pt-4">
                           <Button
@@ -3129,6 +3211,7 @@ export default function UnifiedAccount() {
                                     addOnIds: selectedAddOns.length > 0 ? selectedAddOns : undefined,
                                     signedWaiverIds: Object.keys(signedWaivers).filter(id => signedWaivers[id]),
                                     platform: Capacitor.getPlatform() === 'ios' ? 'ios' : 'web',
+                                    couponCode: appliedCoupon?.code || undefined,
                                   },
                                 }) as { url: string };
 

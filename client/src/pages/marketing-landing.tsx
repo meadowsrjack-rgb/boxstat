@@ -155,22 +155,6 @@ export default function MarketingLanding() {
                 Watch Demo
               </Button>
             </div>
-
-            {/* App Download */}
-            <div className="flex flex-col items-center gap-2">
-              <a 
-                href="https://apps.apple.com/us/app/boxstat/id6754899159"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/10 border border-white/20 hover:bg-white/15 hover:border-white/30 transition-all duration-300"
-              >
-                <SiApple className="w-4 h-4" />
-                <span className="text-sm font-medium">Download for iOS</span>
-                <ChevronRight className="w-3 h-3 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
-              </a>
-              <span className="text-xs text-gray-500">Android coming soon</span>
-            </div>
-
           </div>
         </div>
       </section>
@@ -201,6 +185,21 @@ export default function MarketingLanding() {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* App Download */}
+          <div className="flex flex-col items-center gap-2 mt-12">
+            <a 
+              href="https://apps.apple.com/us/app/boxstat/id6754899159"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/10 border border-white/20 hover:bg-white/15 hover:border-white/30 transition-all duration-300"
+            >
+              <SiApple className="w-4 h-4" />
+              <span className="text-sm font-medium">Download for iOS</span>
+              <ChevronRight className="w-3 h-3 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
+            </a>
+            <span className="text-xs text-gray-500">Android coming soon</span>
           </div>
         </div>
       </section>

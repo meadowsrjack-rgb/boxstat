@@ -77,6 +77,8 @@ import {
   EyeOff,
   Clock,
   UsersRound,
+  Ticket,
+  Copy,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -7774,6 +7776,179 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
   );
 }
 
+function InlineCouponSection({ programId }: { programId: string }) {
+  const { toast } = useToast();
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
+  const [discountValue, setDiscountValue] = useState('');
+  const [maxUses, setMaxUses] = useState('1');
+
+  interface CouponData {
+    id: number;
+    code: string;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number;
+    maxUses: number | null;
+    currentUses: number | null;
+    expiresAt: string;
+    isActive: boolean;
+  }
+
+  const { data: coupons = [], isLoading } = useQuery<CouponData[]>({
+    queryKey: ['/api/coupons/program', programId],
+    queryFn: async () => {
+      const res = await fetch(`/api/coupons/program/${programId}`);
+      if (!res.ok) throw new Error('Failed to fetch coupons');
+      return res.json();
+    },
+  });
+
+  const createCoupon = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          programId,
+          discountType,
+          discountValue,
+          maxUses: parseInt(maxUses) || 1,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to create coupon');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/coupons/program', programId] });
+      setDiscountValue('');
+      setMaxUses('1');
+      toast({ title: "Coupon created" });
+    },
+    onError: () => {
+      toast({ title: "Failed to create coupon", variant: "destructive" });
+    },
+  });
+
+  const deleteCoupon = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/coupons/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete coupon');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/coupons/program', programId] });
+      toast({ title: "Coupon deactivated" });
+    },
+  });
+
+  const copyCode = (coupon: { id: number; code: string }) => {
+    navigator.clipboard.writeText(coupon.code);
+    setCopiedId(coupon.id);
+    toast({ title: "Coupon code copied" });
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const isExpired = (expiresAt: string) => new Date(expiresAt) < new Date();
+  const isMaxed = (coupon: CouponData) => coupon.maxUses && (coupon.currentUses ?? 0) >= coupon.maxUses;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2 items-end flex-wrap">
+        <div className="space-y-1">
+          <Label className="text-xs">Type</Label>
+          <Select value={discountType} onValueChange={(v: 'percentage' | 'fixed') => setDiscountType(v)}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="percentage">Percentage</SelectItem>
+              <SelectItem value="fixed">Fixed ($)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Value</Label>
+          <Input
+            type="number"
+            placeholder={discountType === 'percentage' ? "e.g. 10" : "e.g. 500 (cents)"}
+            value={discountValue}
+            onChange={(e) => setDiscountValue(e.target.value)}
+            className="w-[130px]"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Max Uses</Label>
+          <Input
+            type="number"
+            value={maxUses}
+            onChange={(e) => setMaxUses(e.target.value)}
+            className="w-[80px]"
+            min="1"
+          />
+        </div>
+        <Button
+          type="button"
+          onClick={() => createCoupon.mutate()}
+          disabled={!discountValue || createCoupon.isPending}
+          size="sm"
+        >
+          <Plus className="w-4 h-4 mr-1" />
+          {createCoupon.isPending ? "Creating..." : "Generate Coupon"}
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <p className="text-sm text-gray-500">Loading coupons...</p>
+      ) : coupons.length === 0 ? (
+        <p className="text-sm text-gray-500 text-center py-2">No coupons yet.</p>
+      ) : (
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          {coupons.map((coupon: CouponData) => {
+            const expired = isExpired(coupon.expiresAt);
+            const maxedOut = isMaxed(coupon);
+            const inactive = !coupon.isActive;
+            const status = inactive ? 'Deactivated' : expired ? 'Expired' : maxedOut ? 'Used Up' : 'Active';
+            const statusVariant: 'default' | 'secondary' = status === 'Active' ? 'default' : 'secondary';
+
+            return (
+              <div key={coupon.id} className="flex items-center justify-between bg-white rounded border px-2 py-1.5 text-sm">
+                <div className="flex items-center gap-2">
+                  <code className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono">{coupon.code}</code>
+                  <span className="text-xs text-gray-600">
+                    {coupon.discountType === 'percentage'
+                      ? `${coupon.discountValue}%`
+                      : `$${(coupon.discountValue / 100).toFixed(2)}`}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {coupon.currentUses || 0}/{coupon.maxUses || '∞'}
+                  </span>
+                  <Badge variant={statusVariant} className="text-xs">{status}</Badge>
+                </div>
+                <div className="flex gap-1">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => copyCode(coupon)} title="Copy code" className="h-7 w-7 p-0">
+                    {copiedId === coupon.id ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                  </Button>
+                  {status === 'Active' && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteCoupon.mutate(coupon.id)}
+                      title="Deactivate"
+                      className="h-7 w-7 p-0"
+                    >
+                      <Trash2 className="w-3 h-3 text-red-500" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Store Tab - Physical Goods/Inventory Management (Simplified)
 function StoreTab({ organization }: any) {
   const { toast } = useToast();
@@ -8849,6 +9024,22 @@ function StoreTab({ organization }: any) {
                   <p className="text-xs text-green-600">
                     This product will be suggested for {selectedSuggestedPrograms.length} program(s)
                   </p>
+                )}
+              </div>
+
+              {/* Coupons Section */}
+              <div className="border rounded-lg p-3 mt-3 bg-purple-50">
+                <div className="flex items-center gap-2 mb-2">
+                  <Ticket className="h-4 w-4 text-purple-600" />
+                  <h4 className="font-medium text-sm">Coupons</h4>
+                </div>
+                <p className="text-xs text-gray-500 mb-3">Generate discount coupons for this product. Coupons expire 24 hours after creation.</p>
+                {editingProduct?.id ? (
+                  <InlineCouponSection programId={editingProduct.id} />
+                ) : (
+                  <div className="text-center py-4 bg-gray-50 rounded border border-dashed border-gray-300">
+                    <p className="text-sm text-gray-400">Save the product first to create coupons.</p>
+                  </div>
                 )}
               </div>
 
@@ -10648,6 +10839,22 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                         </div>
                       )}
                     </div>
+                  </div>
+
+                  {/* Coupons Section */}
+                  <div className="border rounded-lg p-3 mt-3 bg-purple-50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Ticket className="h-4 w-4 text-purple-600" />
+                      <h4 className="font-medium text-sm">Coupons</h4>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-3">Generate discount coupons for this program. Coupons expire 24 hours after creation.</p>
+                    {editingProgram?.id ? (
+                      <InlineCouponSection programId={editingProgram.id} />
+                    ) : (
+                      <div className="text-center py-4 bg-gray-50 rounded border border-dashed border-gray-300">
+                        <p className="text-sm text-gray-400">Save the program first to create coupons.</p>
+                      </div>
+                    )}
                   </div>
 
                   {waivers.length > 0 && (

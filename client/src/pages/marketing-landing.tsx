@@ -202,21 +202,6 @@ export default function MarketingLanding() {
               </div>
             ))}
           </div>
-
-          {/* Download CTA */}
-          <div className="flex flex-col items-center gap-4 mt-16">
-            <a 
-              href="https://apps.apple.com/us/app/boxstat/id6754899159"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group inline-flex items-center gap-3 px-6 py-3 rounded-full bg-gradient-to-r from-gray-900 to-black border border-white/20 hover:border-white/40 transition-all duration-300"
-            >
-              <SiApple className="w-5 h-5 text-white" />
-              <span className="text-white font-medium">Download for iOS</span>
-              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
-            </a>
-            <span className="text-xs text-gray-500">Android coming soon</span>
-          </div>
         </div>
       </section>
       {/* Currently Transforming Section */}

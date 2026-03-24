@@ -188,7 +188,7 @@ export default function MarketingLanding() {
           </div>
 
           {/* App Download */}
-          <div className="flex flex-col items-center gap-2 mt-12 mb-12">
+          <div className="flex flex-col items-center gap-2 mt-12 mb-12 pt-[60px] pb-[60px]">
             <a 
               href="https://apps.apple.com/us/app/boxstat/id6754899159"
               target="_blank"

@@ -203,7 +203,7 @@ export default function MarketingLanding() {
           </div>
 
           {/* Currently Transforming Case Study */}
-          <div className="mt-24 pt-16 border-t border-white/10">
+          <div className="mt-12 pt-12 border-t border-white/10">
             <div className="flex flex-col items-center text-center">
               <p className="text-gray-400 text-sm uppercase tracking-widest mb-4">Currently Transforming</p>
               <div className="flex items-center gap-5 mb-6">

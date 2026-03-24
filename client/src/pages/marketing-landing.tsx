@@ -159,7 +159,7 @@ export default function MarketingLanding() {
         </div>
       </section>
       {/* App Screenshots Section */}
-      <section className="relative z-10 py-24 px-6 overflow-hidden">
+      <section className="relative z-10 pt-24 pb-12 px-6 overflow-hidden">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-bold mb-4">

@@ -2873,6 +2873,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Stripe is not configured for this organization' });
       }
 
+      const { platform } = req.body || {};
+      const isNativeIOS = platform === 'ios';
+
       // Try to retrieve the existing Stripe session
       if (cart.stripeSessionId) {
         try {
@@ -2903,6 +2906,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const customerId = await getOrCreateStripeCustomer(orgStripe, user);
       const origin = `${req.protocol}://${req.get('host')}`;
 
+      let iosAuthToken = '';
+      if (isNativeIOS) {
+        iosAuthToken = jwt.sign(
+          { 
+            userId: user.id, 
+            organizationId: user.organizationId, 
+            role: user.role,
+            purpose: 'stripe_success'
+          },
+          process.env.JWT_SECRET!,
+          { expiresIn: '10m' }
+        );
+      }
+
+      const successUrl = isNativeIOS
+        ? `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}&auth_token=${iosAuthToken}`
+        : `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = isNativeIOS
+        ? `${origin}/unified-account?payment=canceled`
+        : `${origin}/unified-account?payment=canceled`;
+
       const newSession = await orgStripe.checkout.sessions.create({
         customer: customerId,
         line_items: [{
@@ -2914,8 +2938,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           quantity: 1,
         }],
         mode: 'payment',
-        success_url: `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${origin}/unified-account?payment=canceled`,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
         metadata: {
           type: 'package_purchase',
           userId: req.user.id,

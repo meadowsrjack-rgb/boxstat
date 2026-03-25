@@ -4,6 +4,8 @@ import { ShoppingCart, X, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 
 interface AbandonedCart {
   id: number;
@@ -33,10 +35,24 @@ export default function AbandonedCartBanner({ onNavigateToPayments }: { onNaviga
 
   const resumeMutation = useMutation({
     mutationFn: async (cartId: number) => {
-      return await apiRequest("POST", `/api/abandoned-carts/${cartId}/resume`);
+      return await apiRequest("POST", `/api/abandoned-carts/${cartId}/resume`, {
+        platform: Capacitor.getPlatform() === 'ios' ? 'ios' : 'web',
+      });
     },
-    onSuccess: (data: { url: string }) => {
-      window.location.href = data.url;
+    onSuccess: async (data: { url: string }) => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await Browser.open({
+            url: data.url,
+            toolbarColor: '#dc2626',
+            presentationStyle: 'popover',
+          });
+        } catch {
+          window.location.href = data.url;
+        }
+      } else {
+        window.location.href = data.url;
+      }
     },
     onError: () => {
       toast({

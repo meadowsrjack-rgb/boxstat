@@ -1407,7 +1407,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                 <Plus className="w-4 h-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-[95vw] w-full">
               <DialogHeader>
                 <DialogTitle>Create New User</DialogTitle>
               </DialogHeader>
@@ -1504,7 +1504,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
               setSelectedDivision("");
             }
           }}>
-            <DialogContent className="max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Edit User</DialogTitle>
               </DialogHeader>
@@ -2476,19 +2476,6 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       })()}
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => {
-                            setViewingUser(user);
-                            setDetailTab("team");
-                          }}
-                          data-testid={`button-view-user-${user.id}`}
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
                         <Button 
                           variant="ghost" 
                           size="sm" 
@@ -2500,7 +2487,6 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
-                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -2511,7 +2497,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
       </CardContent>
       {/* User Detail View Dialog */}
       <Dialog open={!!viewingUser} onOpenChange={(open) => !open && setViewingUser(null)}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden p-0 flex flex-col">
+        <DialogContent className="max-w-[95vw] w-full max-h-[85vh] overflow-hidden p-0 flex flex-col">
           {viewingUser && (
             <>
               {/* Header with user info */}
@@ -3546,7 +3532,7 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
                   Team
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create New Team</DialogTitle>
                 </DialogHeader>
@@ -3804,7 +3790,7 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
 
             {/* Edit Team Dialog */}
             <Dialog open={!!editingTeam} onOpenChange={(open) => !open && setEditingTeam(null)}>
-              <DialogContent className="max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Edit Team</DialogTitle>
                 </DialogHeader>
@@ -4166,7 +4152,7 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
       {/* Roster Management Dialog */}
       {selectedTeam && (
         <Dialog open={!!selectedTeam} onOpenChange={() => setSelectedTeam(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Manage Roster - {selectedTeam.name}</DialogTitle>
               <CardDescription>
@@ -4923,7 +4909,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                 <Plus className="w-4 h-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-[95vw] w-full">
               <DialogHeader>
                 <DialogTitle>Create New Event</DialogTitle>
               </DialogHeader>
@@ -5470,7 +5456,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
           {/* Edit Event Dialog */}
           {editingEvent && (
             <Dialog open={!!editingEvent} onOpenChange={(open) => !open && setEditingEvent(null)}>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-[95vw] w-full">
                 <DialogHeader>
                   <DialogTitle>Edit Event</DialogTitle>
                 </DialogHeader>
@@ -6872,7 +6858,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                 <Plus className="w-4 h-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingAward ? "Edit Award" : "Create Award"}</DialogTitle>
               </DialogHeader>
@@ -7760,7 +7746,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
 
       {/* Recipients Dialog */}
       <Dialog open={!!recipientsAward} onOpenChange={(open) => !open && setRecipientsAward(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh]">
+        <DialogContent className="max-w-[95vw] w-full max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>Recipients: {recipientsAward?.name}</DialogTitle>
           </DialogHeader>
@@ -9889,7 +9875,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                 <Plus className="w-4 h-4" />
               </Button>
             </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingProgram ? "Edit Program" : "Create New Program"}</DialogTitle>
             </DialogHeader>
@@ -11347,21 +11333,13 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewProgram(program.id)}
-                          data-testid={`button-view-program-${program.id}`}
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          Manage
-                        </Button>
+                      <div onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEdit(program)}
                           data-testid={`button-edit-program-${program.id}`}
+                          title="Edit Program"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -12001,7 +11979,7 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                 <Plus className="w-4 h-4" />
               </Button>
             </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Notification</DialogTitle>
             </DialogHeader>
@@ -13601,7 +13579,7 @@ function WaiversTab({ organization }: any) {
       </CardContent>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle data-testid="dialog-title-waiver">
               {editingWaiver ? "Edit Waiver" : "Create New Waiver"}
@@ -14693,7 +14671,7 @@ function MigrationsTab({ organization, users }: any) {
                   <Upload className="w-4 h-4" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-[95vw] w-full">
                 <DialogHeader>
                   <DialogTitle>Bulk Upload Migrations</DialogTitle>
                   <DialogDescription>
@@ -15008,7 +14986,7 @@ function MigrationsTab({ organization, users }: any) {
 
       {/* Add/Edit Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingMigration ? "Edit Migration Record" : "Add Migration Record"}</DialogTitle>
             <DialogDescription>
@@ -15982,7 +15960,7 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
 
       {/* Lead Detail Dialog with Notes */}
       <Dialog open={!!selectedLead} onOpenChange={() => setSelectedLead(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-[95vw] w-full">
           <DialogHeader>
             <DialogTitle>{selectedLead?.firstName} {selectedLead?.lastName}</DialogTitle>
             <DialogDescription>Lead details and notes</DialogDescription>
@@ -16090,7 +16068,7 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
       
       {/* View Evaluation Dialog */}
       <Dialog open={!!viewingEvaluation} onOpenChange={() => setViewingEvaluation(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Lead Evaluation - {viewingEvaluation?.firstName} {viewingEvaluation?.lastName}</DialogTitle>
             <DialogDescription>View saved evaluation details</DialogDescription>

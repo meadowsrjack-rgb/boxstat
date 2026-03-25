@@ -2881,7 +2881,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const existingSession = await orgStripe.checkout.sessions.retrieve(cart.stripeSessionId);
           if (existingSession.status === 'open' && existingSession.url) {
-            return res.json({ url: existingSession.url });
+            return res.json({ url: existingSession.url, sessionId: cart.stripeSessionId });
           }
         } catch (stripeErr: any) {
           console.warn('Could not retrieve existing Stripe session:', stripeErr.message);
@@ -2957,7 +2957,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Failed to create checkout session' });
       }
 
-      res.json({ url: newSession.url });
+      res.json({ url: newSession.url, sessionId: newSession.id });
     } catch (error: any) {
       console.error('Error resuming abandoned cart checkout:', error);
       res.status(500).json({ error: 'Failed to resume checkout' });

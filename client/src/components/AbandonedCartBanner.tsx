@@ -15,7 +15,7 @@ interface AbandonedCart {
   createdAt: string;
 }
 
-export default function AbandonedCartBanner({ onNavigateToPayments }: { onNavigateToPayments?: () => void }) {
+export default function AbandonedCartBanner({ onNavigateToPayments, onCheckoutSessionCreated }: { onNavigateToPayments?: () => void; onCheckoutSessionCreated?: (sessionId: string) => void }) {
   const [dismissedIds, setDismissedIds] = useState<Set<number>>(new Set());
   const { toast } = useToast();
 
@@ -39,8 +39,11 @@ export default function AbandonedCartBanner({ onNavigateToPayments }: { onNaviga
         platform: Capacitor.getPlatform() === 'ios' ? 'ios' : 'web',
       });
     },
-    onSuccess: async (data: { url: string }) => {
+    onSuccess: async (data: { url: string; sessionId?: string }) => {
       if (Capacitor.isNativePlatform()) {
+        if (data.sessionId && onCheckoutSessionCreated) {
+          onCheckoutSessionCreated(data.sessionId);
+        }
         try {
           await Browser.open({
             url: data.url,

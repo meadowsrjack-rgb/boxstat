@@ -1586,6 +1586,7 @@ export default function UnifiedAccount() {
   const [selectedPricingOptionId, setSelectedPricingOptionId] = useState<string>("");
   const [selectedQuoteId, setSelectedQuoteId] = useState<string>("");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [pendingCheckoutSessionId, setPendingCheckoutSessionId] = useState<string | null>(null);
   const [isStoreItemPurchase, setIsStoreItemPurchase] = useState(false);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [signedWaivers, setSignedWaivers] = useState<Record<string, boolean>>({});
@@ -1644,16 +1645,43 @@ export default function UnifiedAccount() {
     }
   }, [setLocation]);
 
-  // Listen for in-app browser close to refresh payment data (iOS Capacitor)
+  // Listen for in-app browser close to verify payment and refresh data (iOS Capacitor)
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     
-    const handleBrowserClosed = () => {
-      // Refresh payment-related data when returning from Stripe checkout
+    const handleBrowserClosed = async () => {
+      const sessionId = pendingCheckoutSessionId;
+      if (sessionId) {
+        console.log('[iOS Payment] Browser closed, verifying session:', sessionId);
+        setPendingCheckoutSessionId(null);
+        try {
+          const response = await fetch('/api/payments/verify-session', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+            },
+            body: JSON.stringify({ sessionId }),
+          });
+          const data = await response.json();
+          if (data.success) {
+            console.log('[iOS Payment] Payment verified successfully');
+            toast({
+              title: "Payment Successful!",
+              description: "Thank you, your payment was successful!",
+            });
+          } else {
+            console.log('[iOS Payment] Payment not completed:', data.message);
+          }
+        } catch (err) {
+          console.error('[iOS Payment] Verify session error:', err);
+        }
+      }
       queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
       queryClient.invalidateQueries({ queryKey: ['/api/payments/history'] });
       queryClient.invalidateQueries({ queryKey: ['/api/account/players'] });
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/abandoned-carts'] });
     };
     
     Browser.addListener('browserFinished', handleBrowserClosed);
@@ -1661,7 +1689,7 @@ export default function UnifiedAccount() {
     return () => {
       Browser.removeAllListeners();
     };
-  }, []);
+  }, [pendingCheckoutSessionId]);
 
   // Check for payment success in URL (including iOS auth token restoration)
   useEffect(() => {
@@ -2021,7 +2049,7 @@ export default function UnifiedAccount() {
           {/* Home Tab */}
           <TabsContent value="home" className="space-y-6">
             {/* Abandoned Cart Banner */}
-            <AbandonedCartBanner onNavigateToPayments={() => setParentDashTab("payments")} />
+            <AbandonedCartBanner onNavigateToPayments={() => setParentDashTab("payments")} onCheckoutSessionCreated={(id) => setPendingCheckoutSessionId(id)} />
             {/* Player Switcher Carousel */}
             <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide" data-testid="player-switcher">
               <Button
@@ -2233,7 +2261,7 @@ export default function UnifiedAccount() {
           {/* Payments Tab - Redesigned with Category-Based Storefront */}
           <TabsContent value="payments" className="space-y-6">
             {/* Abandoned Cart Banner */}
-            <AbandonedCartBanner />
+            <AbandonedCartBanner onCheckoutSessionCreated={(id) => setPendingCheckoutSessionId(id)} />
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
@@ -3213,19 +3241,22 @@ export default function UnifiedAccount() {
                                     platform: Capacitor.getPlatform() === 'ios' ? 'ios' : 'web',
                                     couponCode: appliedCoupon?.code || undefined,
                                   },
-                                }) as { url: string };
+                                }) as { url: string; sessionId?: string };
 
                                 console.log('[Payment] Got checkout URL:', response.url);
 
                                 // Redirect to Stripe checkout
                                 if (Capacitor.isNativePlatform()) {
+                                  // Store session ID so we can verify payment when browser closes
+                                  if (response.sessionId) {
+                                    setPendingCheckoutSessionId(response.sessionId);
+                                  }
+                                  
                                   // Close drawer first to ensure clean state
                                   setPaymentDialogOpen(false);
                                   setIsProcessingPayment(false);
                                   
                                   // Small delay to let drawer close, then open in-app browser
-                                  // Success/cancel redirects use boxstat:// deep links which close the browser
-                                  // and return to the app automatically
                                   setTimeout(async () => {
                                     try {
                                       console.log('[Payment] Opening Stripe checkout in-app browser');

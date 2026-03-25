@@ -48,7 +48,12 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Client-Platform'],
 }));
 
-app.use(express.json({ limit: '10mb' }));
+app.use((req, res, next) => {
+  if (req.originalUrl === '/api/webhooks/stripe') {
+    return next();
+  }
+  express.json({ limit: '10mb' })(req, res, next);
+});
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 // Setup PostgreSQL session store for persistent sessions

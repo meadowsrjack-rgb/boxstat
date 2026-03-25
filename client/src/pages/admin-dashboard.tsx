@@ -331,7 +331,7 @@ export default function AdminDashboard() {
       <div className="scrollable-page relative z-10 bg-transparent" data-testid="admin-dashboard">
       {/* Header */}
       <div className="bg-white border-b safe-top sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Button 
@@ -363,7 +363,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-8">
         {/* Announcement Banner */}
         <AnnouncementBanner />
         

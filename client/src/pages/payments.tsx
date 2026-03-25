@@ -508,6 +508,14 @@ function EnrollmentDialog({
       const addOn = sortedStoreItems.find(s => s.id === addOnId);
       if (addOn?.price) total += addOn.price;
     }
+    if (appliedCoupon) {
+      if (appliedCoupon.discountType === 'percentage') {
+        total = total - Math.round(total * appliedCoupon.discountValue / 100);
+      } else {
+        total = total - appliedCoupon.discountValue;
+      }
+      if (total < 0) total = 0;
+    }
     return total;
   };
 

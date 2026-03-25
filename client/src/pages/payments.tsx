@@ -406,6 +406,8 @@ function EnrollmentDialog({
   isLoading,
   onCouponApplied,
   appliedCoupon,
+  error,
+  onClearError,
 }: { 
   program: Program | null; 
   children: ChildPlayer[];
@@ -416,6 +418,8 @@ function EnrollmentDialog({
   isLoading: boolean;
   onCouponApplied: (coupon: { id: number; code: string; discountType: string; discountValue: number } | null) => void;
   appliedCoupon: { id: number; code: string; discountType: string; discountValue: number } | null;
+  error: string | null;
+  onClearError: () => void;
 }) {
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
@@ -483,6 +487,7 @@ function EnrollmentDialog({
   }, [storeItems, suggestedAddOnIds, suggestedAddOns, hasSuggestedAddOns]);
   
   const handleNext = () => {
+    onClearError();
     if (hasSuggestedAddOns && storeItems.length > 0) {
       setCurrentStep(2);
     } else {
@@ -491,6 +496,7 @@ function EnrollmentDialog({
   };
   
   const handleConfirmWithAddOns = () => {
+    onClearError();
     onConfirmWithAddOns(isPerFamily ? null : selectedPlayer, selectedAddOns);
   };
   
@@ -726,6 +732,13 @@ function EnrollmentDialog({
             </div>
           )}
         </div>
+
+        {error && (
+          <Alert className="bg-red-500/10 border-red-500/20" data-testid="alert-payment-error">
+            <AlertCircle className="h-5 w-5 text-red-400" />
+            <AlertDescription className="text-white/90">{error}</AlertDescription>
+          </Alert>
+        )}
 
         <DialogFooter className="gap-2">
           {currentStep === 2 && (
@@ -991,7 +1004,7 @@ export default function PaymentsPage() {
           </Alert>
         )}
 
-        {error && (
+        {error && !selectedProgram && (
           <Alert className="bg-red-500/10 border-red-500/20" data-testid="alert-payment-error">
             <AlertCircle className="h-5 w-5 text-red-400" />
             <AlertDescription className="text-white/90">{error}</AlertDescription>
@@ -1167,12 +1180,14 @@ export default function PaymentsPage() {
           program={selectedProgram}
           children={children}
           storeItems={storeItems}
-          onClose={() => { setSelectedProgram(null); setAppliedCoupon(null); }}
+          onClose={() => { setSelectedProgram(null); setAppliedCoupon(null); setError(null); }}
           onConfirm={handleEnroll}
           onConfirmWithAddOns={handleEnrollWithAddOns}
           isLoading={loading}
           onCouponApplied={setAppliedCoupon}
           appliedCoupon={appliedCoupon}
+          error={error}
+          onClearError={() => setError(null)}
         />
       </div>
     </div>

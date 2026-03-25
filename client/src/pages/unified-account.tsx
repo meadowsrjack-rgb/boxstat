@@ -2442,14 +2442,14 @@ export default function UnifiedAccount() {
                 setCouponError("");
               }
             }}>
-              <DrawerContent className="max-h-[90vh]" data-testid="dialog-make-payment">
+              <DrawerContent className="max-h-[85vh] overflow-hidden" data-testid="dialog-make-payment">
                       <DrawerHeader>
                         <DrawerTitle>{isStoreItemPurchase ? "Purchase Item" : "Make a Payment"}</DrawerTitle>
                         <DrawerDescription>
                           {isStoreItemPurchase ? "Complete your store purchase" : "Select a program and player to enroll"}
                         </DrawerDescription>
                       </DrawerHeader>
-                      <div className="space-y-4 px-4 pb-8 overflow-y-auto">
+                      <div className="space-y-4 px-4 pb-8 overflow-y-auto flex-1 min-h-0">
                         {/* Program Selection - only show for program purchases */}
                         {!isStoreItemPurchase && (
                           <div className="space-y-2">

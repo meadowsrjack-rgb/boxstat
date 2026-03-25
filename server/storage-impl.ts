@@ -2541,6 +2541,7 @@ class MemStorage implements IStorage {
 
   // Abandoned Cart operations (MemStorage stubs)
   async createAbandonedCart(data: InsertAbandonedCart): Promise<AbandonedCart> { throw new Error("Not implemented"); }
+  async getAbandonedCartById(id: number): Promise<AbandonedCart | undefined> { return undefined; }
   async getAbandonedCartsByUser(userId: string): Promise<AbandonedCart[]> { return []; }
   async getPendingAbandonedCarts(): Promise<AbandonedCart[]> { return []; }
   async completeAbandonedCart(stripeSessionId: string): Promise<void> {}
@@ -6292,6 +6293,11 @@ class DatabaseStorage implements IStorage {
 
   async createAbandonedCart(data: InsertAbandonedCart): Promise<AbandonedCart> {
     const [cart] = await db.insert(schema.abandonedCarts).values(data).returning();
+    return cart;
+  }
+
+  async getAbandonedCartById(id: number): Promise<AbandonedCart | undefined> {
+    const [cart] = await db.select().from(schema.abandonedCarts).where(eq(schema.abandonedCarts.id, id));
     return cart;
   }
 

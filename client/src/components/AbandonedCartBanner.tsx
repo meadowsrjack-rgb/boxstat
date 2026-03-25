@@ -3,6 +3,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { ShoppingCart, X, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface AbandonedCart {
   id: number;
@@ -14,6 +15,7 @@ interface AbandonedCart {
 
 export default function AbandonedCartBanner({ onNavigateToPayments }: { onNavigateToPayments?: () => void }) {
   const [dismissedIds, setDismissedIds] = useState<Set<number>>(new Set());
+  const { toast } = useToast();
 
   const { data: carts = [] } = useQuery<AbandonedCart[]>({
     queryKey: ['/api/abandoned-carts'],
@@ -29,6 +31,22 @@ export default function AbandonedCartBanner({ onNavigateToPayments }: { onNaviga
     },
   });
 
+  const resumeMutation = useMutation({
+    mutationFn: async (cartId: number) => {
+      return await apiRequest("POST", `/api/abandoned-carts/${cartId}/resume`);
+    },
+    onSuccess: (data: { url: string }) => {
+      window.location.href = data.url;
+    },
+    onError: () => {
+      toast({
+        title: "Checkout failed",
+        description: "We couldn't resume your checkout. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const visibleCarts = carts.filter(c => !dismissedIds.has(c.id));
   if (visibleCarts.length === 0) return null;
 
@@ -38,6 +56,10 @@ export default function AbandonedCartBanner({ onNavigateToPayments }: { onNaviga
   const handleDismiss = (id: number) => {
     setDismissedIds(prev => new Set([...prev, id]));
     dismissMutation.mutate(id);
+  };
+
+  const handleCompleteCheckout = () => {
+    resumeMutation.mutate(cart.id);
   };
 
   return (
@@ -63,17 +85,16 @@ export default function AbandonedCartBanner({ onNavigateToPayments }: { onNaviga
               : cart.productName}
             {cart.amount ? ` — ${formatPrice(cart.amount)}` : ''}
           </p>
-          {onNavigateToPayments && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-2 h-8 px-3 text-amber-700 hover:text-amber-900 hover:bg-amber-100 font-medium"
-              onClick={onNavigateToPayments}
-            >
-              Complete Checkout
-              <ArrowRight className="w-3.5 h-3.5 ml-1" />
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-2 h-8 px-3 text-amber-700 hover:text-amber-900 hover:bg-amber-100 font-medium"
+            onClick={handleCompleteCheckout}
+            disabled={resumeMutation.isPending}
+          >
+            {resumeMutation.isPending ? "Loading..." : "Complete Checkout"}
+            {!resumeMutation.isPending && <ArrowRight className="w-3.5 h-3.5 ml-1" />}
+          </Button>
         </div>
       </div>
       {visibleCarts.length > 1 && (

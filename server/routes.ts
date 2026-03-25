@@ -2853,6 +2853,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/abandoned-carts/:id/resume', requireAuth, async (req: any, res) => {
+    try {
+      const cartId = parseInt(req.params.id);
+      if (isNaN(cartId)) {
+        return res.status(400).json({ error: 'Invalid cart ID' });
+      }
+
+      const cart = await storage.getAbandonedCartById(cartId);
+      if (!cart) {
+        return res.status(404).json({ error: 'Cart not found' });
+      }
+      if (cart.userId !== req.user.id) {
+        return res.status(403).json({ error: 'Not authorized' });
+      }
+
+      const orgStripe = await getStripeForOrg(req.user.organizationId);
+      if (!orgStripe) {
+        return res.status(500).json({ error: 'Stripe is not configured for this organization' });
+      }
+
+      // Try to retrieve the existing Stripe session
+      if (cart.stripeSessionId) {
+        try {
+          const existingSession = await orgStripe.checkout.sessions.retrieve(cart.stripeSessionId);
+          if (existingSession.status === 'open' && existingSession.url) {
+            return res.json({ url: existingSession.url });
+          }
+        } catch (stripeErr: any) {
+          console.warn('Could not retrieve existing Stripe session:', stripeErr.message);
+        }
+      }
+
+      // Original session expired or unavailable — create a new one
+      if (!cart.productId) {
+        return res.status(400).json({ error: 'Cannot resume checkout: missing product information' });
+      }
+
+      const program = await storage.getProgram(cart.productId);
+      if (!program || !program.price) {
+        return res.status(404).json({ error: 'Product not found or has no price' });
+      }
+
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const customerId = await getOrCreateStripeCustomer(orgStripe, user);
+      const origin = `${req.protocol}://${req.get('host')}`;
+
+      const newSession = await orgStripe.checkout.sessions.create({
+        customer: customerId,
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: { name: program.name || program.title || 'Program' },
+            unit_amount: program.price,
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        success_url: `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/unified-account?payment=canceled`,
+        metadata: {
+          type: 'package_purchase',
+          userId: req.user.id,
+          packageId: cart.productId,
+          playerId: '',
+          organizationId: req.user.organizationId,
+          addOnIds: '',
+          signedWaiverIds: '',
+          pricingOptionId: '',
+          pricingOptionName: '',
+        },
+      });
+
+      if (!newSession.url) {
+        return res.status(500).json({ error: 'Failed to create checkout session' });
+      }
+
+      res.json({ url: newSession.url });
+    } catch (error: any) {
+      console.error('Error resuming abandoned cart checkout:', error);
+      res.status(500).json({ error: 'Failed to resume checkout' });
+    }
+  });
+
   // =============================================
   // REGISTRATION ROUTES
   // =============================================

@@ -5011,7 +5011,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ['flaggedForRosterChange', 'flagReason'].includes(key)
     );
     
-    if (role !== 'admin' && !(role === 'coach' && flagOnlyUpdate)) {
+    const isAdminUser = role === 'admin' || await hasAdminProfile(req.user.id, organizationId);
+    if (!isAdminUser && !(role === 'coach' && flagOnlyUpdate)) {
       return res.status(403).json({ message: 'Only admins can update users (coaches can only flag players)' });
     }
     
@@ -10645,7 +10646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Authorization: users can view their own or admins/coaches can view any
       const isOwnProfile = requesterId === userId;
-      const isAdminOrCoach = requesterRole === 'admin' || requesterRole === 'coach';
+      const isAdminOrCoach = requesterRole === 'admin' || requesterRole === 'coach' || await hasAdminProfile(requesterId, req.user.organizationId);
       
       // Also allow parents to view their children's memberships
       const user = await storage.getUser(userId);

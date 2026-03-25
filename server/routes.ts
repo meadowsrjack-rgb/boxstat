@@ -2237,12 +2237,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Send payment confirmation notification
             try {
-              const amount = session.amount_total ? session.amount_total / 100 : 0;
+              const amountCents = session.amount_total || 0;
+              const amountDollars = amountCents / 100;
               const playerName = `${updatedPlayer.firstName || ''} ${updatedPlayer.lastName || ''}`.trim();
               
               // Notify parent/account holder
               if (accountHolderId) {
-                await pushNotifications.parentPaymentSuccessful(storage, accountHolderId, playerName, amount);
+                await pushNotifications.parentPaymentSuccessful(storage, accountHolderId, playerName, amountCents);
               }
               
               // Notify admins about new payment
@@ -2250,7 +2251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const parentName = parent ? `${parent.firstName || ''} ${parent.lastName || ''}`.trim() : 'Unknown';
               await pushNotifications.notifyAllAdmins(storage, 
                 '💰 Payment Received',
-                `${parentName} paid $${amount.toFixed(2)} for ${playerName}'s registration`
+                `${parentName} paid $${amountDollars.toFixed(2)} for ${playerName}'s registration`
               );
             } catch (notifError: any) {
               console.error('⚠️ Payment notification failed (non-fatal):', notifError.message);
@@ -2723,13 +2724,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           
           if (updatedPlayer && session.amount_total) {
-            const amount = session.amount_total / 100;
+            const amountCents = session.amount_total;
+            const amountDollars = amountCents / 100;
             const playerName = `${updatedPlayer.firstName || ''} ${updatedPlayer.lastName || ''}`.trim();
 
             await storage.createPayment({
               organizationId: updatedPlayer.organizationId,
               userId: playerId,
-              amount: session.amount_total,
+              amount: amountCents,
               currency: 'usd',
               paymentType: 'add_player',
               status: 'completed',
@@ -2742,13 +2744,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             try {
               if (accountHolderId) {
-                await pushNotifications.parentPaymentSuccessful(storage, accountHolderId, playerName, amount);
+                await pushNotifications.parentPaymentSuccessful(storage, accountHolderId, playerName, amountCents);
               }
               const parent = await storage.getUser(accountHolderId);
               const parentName = parent ? `${parent.firstName || ''} ${parent.lastName || ''}`.trim() : 'Unknown';
               await pushNotifications.notifyAllAdmins(storage,
                 '💰 Payment Received',
-                `${parentName} paid $${amount.toFixed(2)} for ${playerName}'s registration`
+                `${parentName} paid $${amountDollars.toFixed(2)} for ${playerName}'s registration`
               );
             } catch (notifError: any) {
               console.error('⚠️ Payment notification failed (non-fatal):', notifError.message);
@@ -2843,17 +2845,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`✅ Created package_purchase payment record via verify-session for user ${userId}`);
           paymentWasProcessed = true;
           
-          const amount = session.amount_total / 100;
+          const amountCents = session.amount_total;
+          const amountDollars = amountCents / 100;
           try {
             const payer = await storage.getUser(userId);
             const payerName = payer ? `${payer.firstName || ''} ${payer.lastName || ''}`.trim() : 'Unknown';
             const playerUser = playerId ? await storage.getUser(playerId) : payer;
             const playerName = playerUser ? `${playerUser.firstName || ''} ${playerUser.lastName || ''}`.trim() : payerName;
             
-            await pushNotifications.parentPaymentSuccessful(storage, userId, playerName, amount);
+            await pushNotifications.parentPaymentSuccessful(storage, userId, playerName, amountCents);
             await pushNotifications.notifyAllAdmins(storage,
               '💰 Payment Received',
-              `${payerName} paid $${amount.toFixed(2)} for ${program?.name || 'a program'}`
+              `${payerName} paid $${amountDollars.toFixed(2)} for ${program?.name || 'a program'}`
             );
           } catch (notifError: any) {
             console.error('⚠️ Payment notification failed (non-fatal):', notifError.message);

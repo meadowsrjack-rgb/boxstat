@@ -22,6 +22,7 @@ interface VersionConfig {
   appStoreUrl: string;
   updateMessage: string;
   forceUpdateMessage: string;
+  platformSupported: boolean;
 }
 
 function compareVersions(v1: string, v2: string): number {
@@ -43,8 +44,15 @@ export function UpdatePrompt() {
   const [isForceUpdate, setIsForceUpdate] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
+  const platform = Capacitor.getPlatform();
+
   const { data: versionConfig } = useQuery<VersionConfig>({
-    queryKey: ['/api/app/version'],
+    queryKey: ['/api/app/version', platform],
+    queryFn: async () => {
+      const res = await fetch(`/api/app/version?platform=${platform}`);
+      if (!res.ok) throw new Error('Failed to fetch version config');
+      return res.json();
+    },
     enabled: Capacitor.isNativePlatform(),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: true,
@@ -67,6 +75,7 @@ export function UpdatePrompt() {
 
   useEffect(() => {
     if (!currentVersion || !versionConfig || dismissed) return;
+    if (!versionConfig.platformSupported) return;
     
     const isBelowMinimum = compareVersions(currentVersion, versionConfig.minimumVersion) < 0;
     const isBelowLatest = compareVersions(currentVersion, versionConfig.latestVersion) < 0;

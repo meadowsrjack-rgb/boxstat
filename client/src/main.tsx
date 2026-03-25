@@ -104,6 +104,18 @@ async function initApp() {
 
 function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
+    if (import.meta.env.DEV) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((r) => r.unregister());
+      });
+      if ('caches' in window) {
+        caches.keys().then((names) => {
+          names.filter((n) => n.startsWith('boxstat-')).forEach((n) => caches.delete(n));
+        });
+      }
+      console.log('DEV mode: service worker unregistered, caches cleared');
+      return;
+    }
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
         .then((registration) => {

@@ -91,6 +91,7 @@ import { insertDivisionSchema, insertNotificationSchema, insertTeamSchema } from
 import { LocationSearch } from "@/components/LocationSearch";
 import AttendanceList from "@/components/AttendanceList";
 import { format } from "date-fns";
+import RevenueTrendChart from "@/components/RevenueTrendChart";
 import { TIMEZONE_OPTIONS, getBrowserTimezone, localDatetimeToUTC, utcToLocalDatetime, getTimezoneAbbreviation } from "@/lib/time";
 import EventWindowsConfigurator from "@/components/EventWindowsConfigurator";
 import type { EventWindow } from "@shared/schema";
@@ -499,127 +500,155 @@ export default function AdminDashboard() {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            {/* CRM Messages Banner */}
             <CrmMessageBanner onNavigateToCrm={() => { setCrmSubTab("messages"); setActiveTab("crm"); }} />
             <StorePurchaseBanner onNavigateToStore={() => setActiveTab("store")} />
             <EnrollmentAssignmentBanner onNavigateToUsers={() => setActiveTab("users")} />
-            {/* People */}
+
+            {/* People — Ring Charts */}
             <div>
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">People</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <StatCard
+              <div className="grid grid-cols-2 gap-4">
+                <RingStatCard
                   title="Total Accounts"
                   value={stats.totalAccounts}
-                  icon={<UserCircle className="w-6 h-6" />}
+                  total={stats.totalAccounts}
                   subtitle="Primary account holders"
                   testId="stat-total-accounts"
+                  color="#dc2626"
                 />
-                <StatCard
+                <RingStatCard
                   title="Enrolled Players"
-                  value={overviewStats ? `${overviewStats.enrolledPlayers} / ${overviewStats.totalPlayers}` : '—'}
-                  icon={<CheckCircle2 className="w-6 h-6" />}
+                  value={overviewStats?.enrolledPlayers ?? 0}
+                  total={overviewStats?.totalPlayers ?? 0}
                   subtitle={overviewStats ? `Enrolled ${overviewStats.enrolledPlayers} · Not enrolled ${overviewStats.notEnrolledPlayers}` : ''}
                   testId="stat-enrolled-players"
+                  color="#dc2626"
                 />
-                <StatCard
+              </div>
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <RingStatCard
                   title="Coaches"
                   value={overviewStats?.totalCoaches ?? stats.totalCoaches}
-                  icon={<Shield className="w-6 h-6" />}
-                  subtitle=""
+                  total={Math.max(overviewStats?.totalCoaches ?? stats.totalCoaches, 1)}
+                  subtitle="Active coaches"
                   testId="stat-total-coaches"
+                  color="#f97316"
                 />
-                <StatCard
+                <RingStatCard
                   title="Admins"
                   value={overviewStats?.totalAdmins ?? users.filter((u: any) => u.role === "admin").length}
-                  icon={<User className="w-6 h-6" />}
-                  subtitle=""
+                  total={Math.max(overviewStats?.totalAdmins ?? users.filter((u: any) => u.role === "admin").length, 1)}
+                  subtitle="Organization admins"
                   testId="stat-total-admins"
+                  color="#8b5cf6"
                 />
               </div>
             </div>
 
-            {/* Revenue */}
+            {/* Revenue — Summary Cards + Trend Chart */}
             <div>
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Revenue</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <StatCard
-                  title="This Month"
-                  value={`$${((overviewStats?.revenueThisMonth ?? 0) / 100).toFixed(2)}`}
-                  icon={<DollarSign className="w-6 h-6" />}
-                  subtitle={new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
-                  testId="stat-revenue-month"
-                />
-                <StatCard
-                  title="This Year"
-                  value={`$${((overviewStats?.revenueThisYear ?? 0) / 100).toFixed(2)}`}
-                  icon={<TrendingUp className="w-6 h-6" />}
-                  subtitle={`${new Date().getFullYear()}`}
-                  testId="stat-revenue-year"
-                />
-                <StatCard
-                  title="All-Time Revenue"
-                  value={`$${((overviewStats?.revenueTotal ?? stats.totalRevenue) / 100).toFixed(2)}`}
-                  icon={<DollarSign className="w-6 h-6" />}
-                  subtitle={`${stats.pendingPayments} pending`}
-                  testId="stat-revenue-total"
-                />
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <Card data-testid="stat-revenue-month">
+                  <CardContent className="pt-5 pb-4">
+                    <p className="text-sm font-medium text-gray-500">This Month</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1" data-testid="stat-revenue-month-value">
+                      ${((overviewStats?.revenueThisMonth ?? 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">{new Date().toLocaleString('default', { month: 'long' })}</p>
+                  </CardContent>
+                </Card>
+                <Card data-testid="stat-revenue-year">
+                  <CardContent className="pt-5 pb-4">
+                    <p className="text-sm font-medium text-gray-500">This Year</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1" data-testid="stat-revenue-year-value">
+                      ${((overviewStats?.revenueThisYear ?? 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">{new Date().getFullYear()}</p>
+                  </CardContent>
+                </Card>
+                <Card data-testid="stat-revenue-total">
+                  <CardContent className="pt-5 pb-4">
+                    <p className="text-sm font-medium text-gray-500">All-Time</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1" data-testid="stat-revenue-total-value">
+                      ${((overviewStats?.revenueTotal ?? stats.totalRevenue) / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">{stats.pendingPayments} pending</p>
+                  </CardContent>
+                </Card>
               </div>
+              <Card>
+                <CardContent className="pt-5 pb-4">
+                  <p className="text-sm font-semibold text-gray-900 mb-4">Revenue Trend</p>
+                  <RevenueTrendChart data={overviewStats?.revenueByMonth || []} />
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Events */}
+            {/* Events — Ring Charts */}
             <div>
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Events</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <StatCard
+              <div className="grid grid-cols-2 gap-4">
+                <RingStatCard
                   title="Total Events"
                   value={stats.totalEvents}
-                  icon={<Calendar className="w-6 h-6" />}
+                  total={stats.totalEvents}
                   subtitle={`${stats.upcomingEvents} upcoming`}
                   testId="stat-total-events"
+                  color="#3b82f6"
                 />
-                <StatCard
-                  title="RSVPs"
-                  value={overviewStats?.totalRsvps ?? '—'}
-                  icon={<CheckCircle2 className="w-6 h-6" />}
-                  subtitle="Total attending"
-                  testId="stat-total-rsvps"
-                />
-                <StatCard
-                  title="Check-Ins"
-                  value={overviewStats?.totalCheckins ?? '—'}
-                  icon={<Target className="w-6 h-6" />}
-                  subtitle="Total check-ins"
-                  testId="stat-total-checkins"
-                />
-                <StatCard
+                <RingStatCard
                   title="Attendance Rate"
-                  value={overviewStats && overviewStats.attendanceInvited > 0
-                    ? `${Math.round((overviewStats.attendanceActual / overviewStats.attendanceInvited) * 100)}%`
-                    : '—'}
-                  icon={<TrendingUp className="w-6 h-6" />}
-                  subtitle={overviewStats ? `${overviewStats.attendanceActual} checked in / ${overviewStats.attendanceInvited} invited` : 'Past events'}
+                  value={overviewStats?.attendanceActual ?? 0}
+                  total={overviewStats?.attendanceInvited ?? 0}
+                  subtitle={overviewStats && overviewStats.attendanceInvited > 0
+                    ? `${Math.round((overviewStats.attendanceActual / overviewStats.attendanceInvited) * 100)}% attendance`
+                    : 'No past events'}
                   testId="stat-attendance-rate"
+                  color="#10b981"
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <Card data-testid="stat-total-rsvps">
+                  <CardContent className="pt-5 pb-4">
+                    <p className="text-sm font-medium text-gray-500">RSVPs</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1" data-testid="stat-total-rsvps-value">
+                      {overviewStats?.totalRsvps ?? '—'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">Total attending</p>
+                  </CardContent>
+                </Card>
+                <Card data-testid="stat-total-checkins">
+                  <CardContent className="pt-5 pb-4">
+                    <p className="text-sm font-medium text-gray-500">Check-Ins</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1" data-testid="stat-total-checkins-value">
+                      {overviewStats?.totalCheckins ?? '—'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">Total check-ins</p>
+                  </CardContent>
+                </Card>
               </div>
             </div>
 
-            {/* Awards */}
+            {/* Awards — Ring Charts */}
             <div>
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Awards</h3>
-              <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-                <StatCard
+              <div className="grid grid-cols-2 gap-4">
+                <RingStatCard
                   title="Awards This Month"
-                  value={overviewStats?.awardsThisMonth ?? '—'}
-                  icon={<Trophy className="w-6 h-6" />}
+                  value={overviewStats?.awardsThisMonth ?? 0}
+                  total={Math.max(overviewStats?.awardsAllTime ?? 1, overviewStats?.awardsThisMonth ?? 0, 1)}
                   subtitle={new Date().toLocaleString('default', { month: 'long' })}
                   testId="stat-awards-month"
+                  color="#eab308"
                 />
-                <StatCard
+                <RingStatCard
                   title="Awards All-Time"
-                  value={overviewStats?.awardsAllTime ?? '—'}
-                  icon={<Award className="w-6 h-6" />}
+                  value={overviewStats?.awardsAllTime ?? 0}
+                  total={overviewStats?.awardsAllTime ?? 0}
                   subtitle="Total awards given"
                   testId="stat-awards-total"
+                  color="#f97316"
                 />
               </div>
             </div>
@@ -674,6 +703,46 @@ export default function AdminDashboard() {
 }
 
 // Stat Card Component
+function RingChart({ value, total, size = 80, strokeWidth = 8, color = '#dc2626' }: { value: number; total: number; size?: number; strokeWidth?: number; color?: string }) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const percentage = total > 0 ? value / total : 0;
+  const strokeDashoffset = circumference * (1 - percentage);
+  
+  return (
+    <svg width={size} height={size} className="transform -rotate-90">
+      <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#f3f4f6" strokeWidth={strokeWidth} />
+      <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke={color} strokeWidth={strokeWidth}
+        strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round"
+        className="transition-all duration-1000 ease-out" />
+    </svg>
+  );
+}
+
+function RingStatCard({ title, value, total, subtitle, testId, color = '#dc2626' }: any) {
+  return (
+    <Card data-testid={testId} className="overflow-hidden">
+      <CardContent className="pt-5 pb-4">
+        <p className="text-sm font-medium text-gray-500 mb-3">{title}</p>
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <RingChart value={value} total={total} size={72} strokeWidth={7} color={color} />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-lg font-bold text-gray-900">{value}</span>
+            </div>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-900" data-testid={`${testId}-value`}>
+              {typeof total === 'number' && total !== value ? `${value} / ${total}` : value}
+            </p>
+            {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function StatCard({ title, value, icon, subtitle, testId }: any) {
   return (
     <Card data-testid={testId}>

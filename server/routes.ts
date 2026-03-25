@@ -7090,6 +7090,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let revenueThisMonth = 0;
       let revenueThisYear = 0;
       let revenueTotal = 0;
+      const monthlyRevenue: Record<string, number> = {};
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        monthlyRevenue[key] = 0;
+      }
       for (const p of (allPayments.rows || allPayments) as any[]) {
         const amount = p.amount || 0;
         revenueTotal += amount;
@@ -7097,6 +7103,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (paidDate) {
           if (paidDate >= startOfMonth) revenueThisMonth += amount;
           if (paidDate >= startOfYear) revenueThisYear += amount;
+          const monthKey = `${paidDate.getFullYear()}-${String(paidDate.getMonth() + 1).padStart(2, '0')}`;
+          if (monthlyRevenue[monthKey] !== undefined) {
+            monthlyRevenue[monthKey] += amount;
+          }
         }
       }
 
@@ -7111,6 +7121,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalInvited = parseInt(attendanceRows[0]?.total_invited) || 0;
       const totalAttended = parseInt(attendanceRows[0]?.total_attended) || 0;
 
+      const revenueByMonth = Object.entries(monthlyRevenue).map(([month, amount]) => ({
+        month,
+        label: new Date(month + '-01').toLocaleString('default', { month: 'short' }),
+        amount,
+      }));
+
       res.json({
         enrolledPlayers: enrolledPlayerCount,
         notEnrolledPlayers: notEnrolledPlayers,
@@ -7120,6 +7136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         revenueThisMonth,
         revenueThisYear,
         revenueTotal,
+        revenueByMonth,
         totalRsvps: parseInt(rsvpRows[0]?.count) || 0,
         totalCheckins: parseInt(checkinRows[0]?.count) || 0,
         attendanceInvited: totalInvited,

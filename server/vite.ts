@@ -20,6 +20,15 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
+  app.use("/sw.js", (_req, res) => {
+    res.set("Content-Type", "application/javascript");
+    res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.send(`self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (e) => {
+  e.waitUntil(caches.keys().then(names => Promise.all(names.map(n => caches.delete(n)))).then(() => self.clients.claim()));
+});`);
+  });
+
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },

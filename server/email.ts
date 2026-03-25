@@ -289,6 +289,135 @@ ${DOMAIN}
   }
 }
 
+// ===== Payment Receipt Email =====
+
+export interface SendPaymentReceiptParams {
+  email: string;
+  firstName: string;
+  items: { name: string; amount: number }[];
+  totalAmount: number;
+  playerName?: string;
+  transactionDate?: Date;
+  organizationName?: string;
+}
+
+export async function sendPaymentReceipt({
+  email,
+  firstName,
+  items,
+  totalAmount,
+  playerName,
+  transactionDate,
+  organizationName,
+}: SendPaymentReceiptParams): Promise<{ success: boolean; error?: string }> {
+  const displayName = firstName || 'there';
+  const appUrl = `https://${DOMAIN}`;
+  const date = transactionDate || new Date();
+  const formattedDate = date.toLocaleDateString('en-US', { 
+    year: 'numeric', month: 'long', day: 'numeric' 
+  });
+  const formattedTotal = `$${(totalAmount / 100).toFixed(2)}`;
+  const orgName = organizationName || 'BoxStat';
+
+  const itemRows = items.map(item => `
+    <tr>
+      <td style="padding: 12px 0; font-size: 15px; color: #374151; border-bottom: 1px solid #f3f4f6;">${item.name}</td>
+      <td style="padding: 12px 0; font-size: 15px; color: #374151; text-align: right; border-bottom: 1px solid #f3f4f6;">$${(item.amount / 100).toFixed(2)}</td>
+    </tr>
+  `).join('');
+
+  const itemsText = items.map(item => `  ${item.name}: $${(item.amount / 100).toFixed(2)}`).join('\n');
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `Payment Receipt - ${orgName}`,
+      text: `Hi ${displayName},
+
+Thank you for your payment! Here's your receipt:
+
+Date: ${formattedDate}
+${playerName ? `Player: ${playerName}\n` : ''}
+Items:
+${itemsText}
+
+Total: ${formattedTotal}
+
+---
+BoxStat - Sports Management Platform
+${DOMAIN}
+      `,
+      html: `
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333333; background-color: #f5f5f5;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f5f5;">
+              <tr>
+                <td style="padding: 40px 20px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <tr>
+                      <td style="padding: 40px 40px 30px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
+                        <img src="https://${DOMAIN}/assets/logo" alt="BoxStat Logo" style="height: 120px; width: auto; display: block; margin: 0 auto;" />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 0 40px 10px;">
+                        <h2 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #111827; text-align: center;">Payment Receipt</h2>
+                        <p style="margin: 0; font-size: 14px; color: #6b7280; text-align: center;">${formattedDate}</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 20px 40px 30px;">
+                        <p style="margin: 0 0 20px; font-size: 16px; color: #374151;">Hi ${displayName},</p>
+                        <p style="margin: 0 0 24px; font-size: 16px; color: #374151;">Thank you for your payment${playerName ? ` for <strong>${playerName}</strong>` : ''}! Here are your details:</p>
+                        
+                        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-top: 2px solid #e5e7eb; margin-bottom: 16px;">
+                          ${itemRows}
+                        </table>
+                        
+                        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-top: 2px solid #111827; margin-top: 4px;">
+                          <tr>
+                            <td style="padding: 14px 0; font-size: 17px; font-weight: 700; color: #111827;">Total</td>
+                            <td style="padding: 14px 0; font-size: 17px; font-weight: 700; color: #111827; text-align: right;">${formattedTotal}</td>
+                          </tr>
+                        </table>
+
+                        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 24px;">
+                          <tr>
+                            <td style="text-align: center; padding: 20px 0;">
+                              <a href="${appUrl}" style="display: inline-block; background-color: #dc2626; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">View in BoxStat</a>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 8px 8px; text-align: center;">
+                        <p style="margin: 0; font-size: 14px; color: #6b7280;">&copy; ${new Date().getFullYear()} BoxStat. All rights reserved.</p>
+                        <p style="margin: 10px 0 0; font-size: 12px; color: #9ca3af;">Powered by BoxStat Sports Management</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+        </html>
+      `,
+    });
+    console.log(`📧 Payment receipt sent to ${email}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending payment receipt:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to send receipt' };
+  }
+}
+
 // ===== Notification Email =====
 
 export interface SendNotificationEmailParams {

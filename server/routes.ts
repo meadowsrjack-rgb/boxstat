@@ -524,6 +524,69 @@ function hashPassword(password: string): string {
 // Auth middleware now imported from ./auth.ts - supports both session AND JWT tokens
 const isAuthenticated = requireAuth;
 
+async function sendPaymentReceiptEmail(session: Stripe.Checkout.Session) {
+  try {
+    const userId = session.metadata?.userId || session.metadata?.accountHolderId;
+    if (!userId) return;
+    
+    const user = await storage.getUser(userId);
+    if (!user?.email) return;
+
+    const playerId = session.metadata?.playerId;
+    let playerName: string | undefined;
+    if (playerId && playerId !== userId) {
+      const player = await storage.getUser(playerId);
+      if (player) {
+        playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim() || undefined;
+      }
+    }
+
+    const lineItems = await (async () => {
+      try {
+        const orgStripe = await getStripeForOrg(user.organizationId);
+        if (!orgStripe) return null;
+        return await orgStripe.checkout.sessions.listLineItems(session.id);
+      } catch {
+        return null;
+      }
+    })();
+
+    const items: { name: string; amount: number }[] = [];
+    if (lineItems?.data?.length) {
+      for (const item of lineItems.data) {
+        items.push({
+          name: item.description || 'Item',
+          amount: item.amount_total || 0,
+        });
+      }
+    } else {
+      const packageId = session.metadata?.packageId;
+      const program = packageId ? await storage.getProgram(packageId) : null;
+      items.push({
+        name: program?.name || 'Payment',
+        amount: session.amount_total || 0,
+      });
+    }
+
+    let orgName: string | undefined;
+    try {
+      const org = await storage.getOrganization(user.organizationId);
+      orgName = org?.name || undefined;
+    } catch {}
+
+    await emailService.sendPaymentReceipt({
+      email: user.email,
+      firstName: user.firstName || '',
+      items,
+      totalAmount: session.amount_total || 0,
+      playerName,
+      organizationName: orgName,
+    });
+  } catch (err: any) {
+    console.error('⚠️ Payment receipt email failed (non-fatal):', err.message);
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   
   setAuthStorage(storage);
@@ -2277,6 +2340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error(`⚠️ Could not find player ${playerId} to update`);
           }
           
+          sendPaymentReceiptEmail(session).catch(() => {});
           return res.json({ received: true });
         }
         
@@ -2330,6 +2394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error("Error updating quote status:", quoteError);
           }
           
+          sendPaymentReceiptEmail(session).catch(() => {});
           return res.json({ received: true });
         }
         
@@ -2502,6 +2567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           
+          sendPaymentReceiptEmail(session).catch(() => {});
           return res.json({ received: true });
         }
         
@@ -2548,6 +2614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
+        sendPaymentReceiptEmail(session).catch(() => {});
         return res.json({ received: true });
       }
       
@@ -2626,6 +2693,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`✅ Session verified: ${sessionId}, payment_status: ${session.payment_status}`);
 
+      let paymentWasProcessed = false;
+
       try {
         await storage.completeAbandonedCart(session.id);
       } catch (cartError: any) {
@@ -2669,6 +2738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               programId: packageId,
             });
             console.log(`✅ Created add_player payment record via verify-session for player ${playerId}`);
+            paymentWasProcessed = true;
             
             try {
               if (accountHolderId) {
@@ -2771,6 +2841,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             stripePaymentId: session.payment_intent as string,
           });
           console.log(`✅ Created package_purchase payment record via verify-session for user ${userId}`);
+          paymentWasProcessed = true;
           
           const amount = session.amount_total / 100;
           try {
@@ -2896,6 +2967,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               stripePaymentId: session.payment_intent as string,
             });
             console.log(`✅ Created consolidated payment record via verify-session for user ${userId}`);
+            paymentWasProcessed = true;
           }
         } else {
           console.log(`ℹ️ Package selection payment already processed for session ${session.id}`);
@@ -2920,6 +2992,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      if (paymentWasProcessed) {
+        sendPaymentReceiptEmail(session).catch(() => {});
+      }
       res.json({ success: true, message: 'Payment verified and processed' });
     } catch (error: any) {
       console.error('Error verifying session:', error);

@@ -207,17 +207,19 @@ function PlatformAwareLanding() {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   
-  // Check if running in Capacitor native app (iOS/Android)
   const capacitor = (window as any).Capacitor;
   const isNativePlatform = capacitor?.isNativePlatform?.() === true;
   const platform = capacitor?.getPlatform?.();
   const isNativeByPlatform = platform === 'ios' || platform === 'android';
   const isNativeApp = isNativePlatform || (isNativeByPlatform && platform !== 'web');
   
-  // If user is logged in, redirect to dashboard
+  useEffect(() => {
+    if (!isLoading && user) {
+      setLocation("/home");
+    }
+  }, [isLoading, user, setLocation]);
+  
   if (!isLoading && user) {
-    // Redirect to the dashboard dispatcher which handles role-based routing
-    setLocation("/home");
     return null;
   }
   

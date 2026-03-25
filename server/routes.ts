@@ -3248,7 +3248,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               gender: player.gender,
               accountHolderId,
               teamAssignmentStatus: "pending",
-              paymentStatus: "pending", // Player needs to complete product selection
               hasRegistered: true,
               verified: true, // Child profiles are auto-verified through parent
               isActive: true,

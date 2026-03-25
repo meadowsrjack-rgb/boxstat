@@ -1,21 +1,25 @@
 apply plugin: 'com.android.application'
+// Add the Google Services plugin here at the top
+apply plugin: 'com.google.gms.google-services'
 
 android {
-    namespace "boxstat.app"
+    // Standardized 3-segment ID for Play Store
+    namespace "com.boxstat.app"
     compileSdk rootProject.ext.compileSdkVersion
+
     defaultConfig {
-        applicationId "boxstat.app"
+        applicationId "com.boxstat.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
         aaptOptions {
-             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
-             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+
     buildTypes {
         release {
             minifyEnabled false
@@ -36,6 +40,16 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+
+    // --- FIREBASE IMPLEMENTATION ---
+    // Import the Firebase BoM (Bill of Materials)
+    implementation platform('com.google.firebase:firebase-bom:34.11.0')
+
+    // Add Analytics and Cloud Messaging (FCM)
+    implementation 'com.google.firebase:firebase-analytics'
+    implementation 'com.google.firebase:firebase-messaging'
+    // -------------------------------
+
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
@@ -44,11 +58,13 @@ dependencies {
 
 apply from: 'capacitor.build.gradle'
 
+// You can keep or remove the 'try' block below,
+// but since you have the plugin applied at the top, this is now redundant.
 try {
     def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
-        apply plugin: 'com.google.gms.google-services'
+    if (servicesJSON.exists()) {
+        // Plugin is already applied at the top of this file
     }
 } catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+    logger.info("google-services.json check skipped")
 }

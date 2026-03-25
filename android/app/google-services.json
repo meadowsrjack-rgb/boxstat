@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "57727545465",
+    "project_id": "boxstat-4f3a5",
+    "storage_bucket": "boxstat-4f3a5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:57727545465:android:ed2fd52db53a7e8a6624a8",
+        "android_client_info": {
+          "package_name": "com.boxstat.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBsGLlCMEG4wSGdCamEiaft3le7fug-658"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

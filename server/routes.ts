@@ -2357,8 +2357,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const couponId = parseInt(session.metadata.couponId);
               const coupon = await storage.getCoupon(couponId);
               if (coupon) {
-                await storage.updateCoupon(couponId, { currentUses: (coupon.currentUses || 0) + 1 });
-                console.log(`✅ Incremented coupon ${coupon.code} usage to ${(coupon.currentUses || 0) + 1}`);
+                const newUses = (coupon.currentUses || 0) + 1;
+                const updates: any = { currentUses: newUses };
+                if (coupon.maxUses && newUses >= coupon.maxUses) {
+                  updates.isActive = false;
+                }
+                await storage.updateCoupon(couponId, updates);
+                console.log(`✅ Incremented coupon ${coupon.code} usage to ${newUses}${updates.isActive === false ? ' (auto-deactivated)' : ''}`);
               }
             } catch (couponError: any) {
               console.error("Error incrementing coupon usage:", couponError);

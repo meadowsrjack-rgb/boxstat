@@ -7965,10 +7965,11 @@ function InlineCouponSection({ programId }: { programId: string }) {
             const status = inactive ? 'Deactivated' : expired ? 'Expired' : maxedOut ? 'Used Up' : 'Active';
             const statusVariant: 'default' | 'secondary' = status === 'Active' ? 'default' : 'secondary';
 
+            const isInvalid = inactive || expired || maxedOut;
             return (
-              <div key={coupon.id} className="flex items-center justify-between bg-white rounded border px-2 py-1.5 text-sm">
+              <div key={coupon.id} className={`flex items-center justify-between rounded border px-2 py-1.5 text-sm ${isInvalid ? 'bg-gray-100 opacity-50' : 'bg-white'}`}>
                 <div className="flex items-center gap-2">
-                  <code className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono">{coupon.code}</code>
+                  <code className={`px-2 py-0.5 rounded text-xs font-mono ${isInvalid ? 'bg-gray-200 line-through' : 'bg-gray-100'}`}>{coupon.code}</code>
                   <span className="text-xs text-gray-600">
                     {coupon.discountType === 'percentage'
                       ? `${coupon.discountValue}%`

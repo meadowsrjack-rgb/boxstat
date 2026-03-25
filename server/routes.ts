@@ -1915,12 +1915,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Create Stripe Checkout Session
-      // For iOS native app, use deep links so the app can close the in-app browser
+      // For iOS native app, use web URLs with auth token so the in-app browser
+      // can redirect back and trigger payment verification
+      let iosAuthToken = '';
+      if (isNativeIOS) {
+        iosAuthToken = jwt.sign(
+          { 
+            userId: user.id, 
+            organizationId: user.organizationId, 
+            role: user.role,
+            purpose: 'stripe_success'
+          },
+          process.env.JWT_SECRET!,
+          { expiresIn: '10m' }
+        );
+      }
       const successUrl = isNativeIOS 
-        ? `boxstat://payment-success?session_id={CHECKOUT_SESSION_ID}`
+        ? `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}&auth_token=${iosAuthToken}`
         : `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl = isNativeIOS 
-        ? `boxstat://payment-canceled`
+        ? `${origin}/unified-account?payment=canceled`
         : `${origin}/unified-account?payment=canceled`;
         
       const connectInfo = await getOrgConnectInfo(req.user.organizationId);

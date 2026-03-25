@@ -1931,10 +1931,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
       const successUrl = isNativeIOS 
-        ? `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}&auth_token=${iosAuthToken}`
+        ? `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`
         : `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl = isNativeIOS 
-        ? `${origin}/unified-account?payment=canceled`
+        ? `${origin}/payment-success?canceled=true`
         : `${origin}/unified-account?payment=canceled`;
         
       const connectInfo = await getOrgConnectInfo(req.user.organizationId);
@@ -2044,9 +2044,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             transfer_data: {
               destination: connectInfo.connectedAccountId,
             },
+            receipt_email: user.email,
           };
         }
         console.log(`💳 Destination charge: ${connectInfo.connectedAccountId}, fee: 2% of ${totalAmount}`);
+      } else if (checkoutMode === 'payment') {
+        sessionParams.payment_intent_data = {
+          receipt_email: user.email,
+        };
       }
 
       const session = await orgStripe2.checkout.sessions.create(sessionParams);
@@ -2194,12 +2199,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 await storage.createPayment({
                   organizationId: updatedPlayer.organizationId,
                   userId: playerId,
-                  amount: session.amount_total, // Store in cents (Stripe convention)
+                  amount: session.amount_total,
                   currency: 'usd',
                   paymentType: 'add_player',
                   status: 'completed',
                   description: `Player Registration: ${updatedPlayer.firstName} ${updatedPlayer.lastName}`,
                   programId: packageId,
+                  stripePaymentId: session.payment_intent as string,
                 });
                 console.log(`✅ Created payment record for player ${playerId}`);
               } catch (paymentError: any) {
@@ -2590,21 +2596,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Payment success callback (for when webhooks don't fire in test mode)
-  app.post('/api/payments/verify-session', async (req: any, res) => {
+  app.post('/api/payments/verify-session', requireAuth, async (req: any, res) => {
     try {
       console.log('🔍 verify-session request body:', req.body);
-      console.log('🔍 verify-session headers:', req.headers['content-type']);
       
       const { sessionId } = req.body;
       
-      if (!sessionId || !stripe) {
-        return res.status(400).json({ error: 'Missing session ID or Stripe not configured' });
+      if (!sessionId) {
+        return res.status(400).json({ error: 'Missing session ID' });
+      }
+
+      const orgStripe = await getStripeForOrg(req.user.organizationId);
+      if (!orgStripe) {
+        return res.status(500).json({ error: 'Stripe is not configured for this organization' });
       }
 
       console.log(`🔍 Verifying checkout session: ${sessionId}`);
       
-      // Retrieve the session from Stripe
-      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      const session = await orgStripe.checkout.sessions.retrieve(sessionId);
+      
+      const sessionUserId = session.metadata?.userId || session.metadata?.accountHolderId;
+      if (sessionUserId && sessionUserId !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Not authorized to verify this session' });
+      }
       
       if (session.payment_status !== 'paid') {
         return res.json({ success: false, message: 'Payment not completed' });
@@ -2612,16 +2626,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`✅ Session verified: ${sessionId}, payment_status: ${session.payment_status}`);
 
-      // Process based on metadata type (same logic as webhook)
+      try {
+        await storage.completeAbandonedCart(session.id);
+      } catch (cartError: any) {
+        console.error('⚠️ Abandoned cart completion failed (non-fatal):', cartError.message);
+      }
+
       if (session.metadata?.type === 'add_player') {
         const playerId = session.metadata.playerId;
         const accountHolderId = session.metadata.accountHolderId;
+        const packageId = session.metadata.packageId;
         
         if (!playerId || !accountHolderId) {
           return res.status(400).json({ error: 'Missing required metadata' });
         }
         
-        // Check if payment already exists (check by stripePaymentId for webhook compatibility)
         const existingPayments = await storage.getPaymentsByUser(playerId);
         const alreadyProcessed = existingPayments.some(p => 
           p.stripePaymentId === session.payment_intent && p.status === 'completed'
@@ -2635,7 +2654,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           
           if (updatedPlayer && session.amount_total) {
-            const packageId = session.metadata.packageId;
+            const amount = session.amount_total / 100;
+            const playerName = `${updatedPlayer.firstName || ''} ${updatedPlayer.lastName || ''}`.trim();
+
             await storage.createPayment({
               organizationId: updatedPlayer.organizationId,
               userId: playerId,
@@ -2643,18 +2664,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
               currency: 'usd',
               paymentType: 'add_player',
               status: 'completed',
-              description: `Player Registration: ${updatedPlayer.firstName} ${updatedPlayer.lastName}`,
+              description: `Player Registration: ${playerName}`,
               stripePaymentId: session.payment_intent as string,
               programId: packageId,
             });
-            console.log(`✅ Created add_player payment record via callback for player ${playerId}`);
+            console.log(`✅ Created add_player payment record via verify-session for player ${playerId}`);
             
-            // Create program enrollment for the player
+            try {
+              if (accountHolderId) {
+                await pushNotifications.parentPaymentSuccessful(storage, accountHolderId, playerName, amount);
+              }
+              const parent = await storage.getUser(accountHolderId);
+              const parentName = parent ? `${parent.firstName || ''} ${parent.lastName || ''}`.trim() : 'Unknown';
+              await pushNotifications.notifyAllAdmins(storage,
+                '💰 Payment Received',
+                `${parentName} paid $${amount.toFixed(2)} for ${playerName}'s registration`
+              );
+            } catch (notifError: any) {
+              console.error('⚠️ Payment notification failed (non-fatal):', notifError.message);
+            }
+            
             if (packageId) {
               try {
                 const program = await storage.getProgram(packageId);
                 if (program) {
-                  // Check for existing enrollment
                   const existingEnrollments = await storage.getActiveEnrollmentsWithCredits(playerId);
                   const hasEnrollment = existingEnrollments.some(e => e.programId === packageId);
                   
@@ -2669,13 +2702,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       remainingCredits: program.sessionCount ?? undefined,
                       totalCredits: program.sessionCount ?? undefined,
                     });
-                    console.log(`✅ Created enrollment for player ${playerId} in program ${packageId} via callback`);
+                    console.log(`✅ Created enrollment for player ${playerId} in program ${packageId} via verify-session`);
+                    
+                    try {
+                      await evaluateAwardsForUser(playerId, storage, { category: 'store' });
+                    } catch (awardError: any) {
+                      console.error('⚠️ Award evaluation failed (non-fatal):', awardError.message);
+                    }
+
+                    try {
+                      if (program.productCategory === 'goods') {
+                        await pushNotifications.notifyAllAdmins(storage,
+                          '📦 New Store Order',
+                          `${playerName} purchased ${program.name} — dispatch required`,
+                          updatedPlayer.organizationId
+                        );
+                      } else {
+                        await pushNotifications.notifyAllAdmins(storage,
+                          '🏀 New Enrollment',
+                          `${playerName} enrolled in ${program.name} — needs team/skill level assignment`,
+                          updatedPlayer.organizationId
+                        );
+                      }
+                    } catch (notifError: any) {
+                      console.error('⚠️ Admin notification failed (non-fatal):', notifError.message);
+                    }
                   } else {
                     console.log(`ℹ️ Player ${playerId} already has enrollment for program ${packageId}`);
                   }
                 }
               } catch (enrollError: any) {
-                console.error("Error creating enrollment via callback:", enrollError);
+                console.error("Error creating enrollment via verify-session:", enrollError);
               }
             }
           }
@@ -2693,7 +2750,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: 'Missing required metadata' });
         }
         
-        // Check if payment already exists
         const existingPayments = await storage.getPaymentsByUser(userId);
         const alreadyProcessed = existingPayments.some(p => 
           p.stripePaymentId === session.payment_intent && p.status === 'completed'
@@ -2714,13 +2770,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             programId: packageId,
             stripePaymentId: session.payment_intent as string,
           });
-          console.log(`✅ Created package_purchase payment record via callback for user ${userId}`);
+          console.log(`✅ Created package_purchase payment record via verify-session for user ${userId}`);
           
-          // Create product enrollment for the player (or account holder if no player specified)
+          const amount = session.amount_total / 100;
+          try {
+            const payer = await storage.getUser(userId);
+            const payerName = payer ? `${payer.firstName || ''} ${payer.lastName || ''}`.trim() : 'Unknown';
+            const playerUser = playerId ? await storage.getUser(playerId) : payer;
+            const playerName = playerUser ? `${playerUser.firstName || ''} ${playerUser.lastName || ''}`.trim() : payerName;
+            
+            await pushNotifications.parentPaymentSuccessful(storage, userId, playerName, amount);
+            await pushNotifications.notifyAllAdmins(storage,
+              '💰 Payment Received',
+              `${payerName} paid $${amount.toFixed(2)} for ${program?.name || 'a program'}`
+            );
+          } catch (notifError: any) {
+            console.error('⚠️ Payment notification failed (non-fatal):', notifError.message);
+          }
+          
           if (program) {
             const enrollmentProfileId = playerId || userId;
             try {
-              // Calculate credits - only for Pack type products with sessionCount
               const isSubscription = program.type === 'Subscription';
               const isPack = program.type === 'Pack';
               const credits = isPack && program.sessionCount ? program.sessionCount : null;
@@ -2728,7 +2798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const now = new Date().toISOString();
               
               const enrollmentUser = await storage.getUser(enrollmentProfileId);
-              const enrollment = await storage.createEnrollment({
+              await storage.createEnrollment({
                 organizationId: enrollmentUser?.organizationId || program.organizationId || session.metadata?.organizationId || "default-org",
                 programId: packageId,
                 accountHolderId: userId,
@@ -2744,27 +2814,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 autoRenew: isSubscription,
                 metadata: {},
               });
-              console.log(`✅ Created enrollment for profile ${enrollmentProfileId} in program ${packageId} (type: ${program.type}, credits: ${credits || 'N/A'}, autoRenew: ${isSubscription})`);
+              console.log(`✅ Created enrollment via verify-session for ${enrollmentProfileId} in ${packageId}`);
               
-              // Update player's paymentStatus to 'paid' if enrolled
-              if (playerId) {
-                await storage.updateUser(playerId, { paymentStatus: 'paid' });
-                console.log(`✅ Updated paymentStatus to 'paid' for player ${playerId}`);
+              try {
+                await evaluateAwardsForUser(enrollmentProfileId, storage, { category: 'store' });
+              } catch (awardError: any) {
+                console.error('⚠️ Award evaluation failed (non-fatal):', awardError.message);
+              }
+
+              try {
+                const enrolledPlayerName = enrollmentUser ? `${enrollmentUser.firstName || ''} ${enrollmentUser.lastName || ''}`.trim() : 'A player';
+                if (program.productCategory === 'goods') {
+                  await pushNotifications.notifyAllAdmins(storage,
+                    '📦 New Store Order',
+                    `${enrolledPlayerName} purchased ${program.name} — dispatch required`,
+                    enrollmentUser?.organizationId
+                  );
+                } else {
+                  await pushNotifications.notifyAllAdmins(storage,
+                    '🏀 New Enrollment',
+                    `${enrolledPlayerName} enrolled in ${program.name} — needs team/skill level assignment`,
+                    enrollmentUser?.organizationId
+                  );
+                }
+              } catch (notifError: any) {
+                console.error('⚠️ Admin notification failed (non-fatal):', notifError.message);
               }
               
-              // Update user's stripeSubscriptionId field with the latest subscription
+              if (playerId) {
+                await storage.updateUser(playerId, { paymentStatus: 'paid' });
+              }
+              
               if (subscriptionId) {
                 const existingUser = await storage.getUser(userId);
                 if (existingUser?.stripeSubscriptionId !== subscriptionId) {
                   await storage.updateUser(userId, { stripeSubscriptionId: subscriptionId });
-                  console.log(`✅ Updated user ${userId} with stripeSubscriptionId: ${subscriptionId}`);
-                } else {
-                  console.log(`ℹ️ User ${userId} already has this stripeSubscriptionId: ${subscriptionId}`);
                 }
               }
             } catch (enrollError) {
               console.error('Error creating enrollment:', enrollError);
-              // Don't fail the whole request if enrollment creation fails
             }
           }
         } else {
@@ -2772,7 +2860,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Handle package selection flow (existing family onboarding)
       if (session.metadata?.packageSelectionIds) {
         const userId = session.metadata.userId;
         const selectionIds = session.metadata.packageSelectionIds;
@@ -2781,25 +2868,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: 'Missing required metadata for package selections' });
         }
         
-        // Check if payment already exists (check by stripePaymentId for webhook compatibility)
         const existingPayments = await storage.getPaymentsByUser(userId);
         const alreadyProcessed = existingPayments.some(p => 
           p.stripePaymentId === session.payment_intent && p.status === 'completed'
         );
         
         if (!alreadyProcessed) {
-          // Mark each package selection as paid
           const selectionIdArray = selectionIds.split(',');
           for (const selectionId of selectionIdArray) {
             try {
               await storage.markPackageSelectionPaid(selectionId.trim());
-              console.log(`✅ Marked package selection ${selectionId} as paid via callback`);
+              console.log(`✅ Marked package selection ${selectionId} as paid via verify-session`);
             } catch (err) {
               console.error(`Error marking selection ${selectionId} as paid:`, err);
             }
           }
           
-          // Create one consolidated payment record (matching webhook logic)
           if (session.amount_total) {
             await storage.createPayment({
               organizationId: session.metadata?.organizationId || "default-org",
@@ -2811,10 +2895,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
               description: `Package Selections Payment`,
               stripePaymentId: session.payment_intent as string,
             });
-            console.log(`✅ Created consolidated payment record via callback for user ${userId}`);
+            console.log(`✅ Created consolidated payment record via verify-session for user ${userId}`);
           }
         } else {
           console.log(`ℹ️ Package selection payment already processed for session ${session.id}`);
+        }
+      }
+
+      if (session.metadata?.couponId) {
+        try {
+          const couponId = parseInt(session.metadata.couponId);
+          const coupon = await storage.getCoupon(couponId);
+          if (coupon) {
+            const newUses = (coupon.currentUses || 0) + 1;
+            const updates: any = { currentUses: newUses };
+            if (coupon.maxUses && newUses >= coupon.maxUses) {
+              updates.isActive = false;
+            }
+            await storage.updateCoupon(couponId, updates);
+            console.log(`✅ Incremented coupon ${coupon.code} usage to ${newUses} via verify-session`);
+          }
+        } catch (couponError: any) {
+          console.error('⚠️ Coupon usage tracking failed (non-fatal):', couponError.message);
         }
       }
 
@@ -2921,10 +3023,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const successUrl = isNativeIOS
-        ? `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}&auth_token=${iosAuthToken}`
+        ? `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`
         : `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl = isNativeIOS
-        ? `${origin}/unified-account?payment=canceled`
+        ? `${origin}/payment-success?canceled=true`
         : `${origin}/unified-account?payment=canceled`;
 
       const newSession = await orgStripe.checkout.sessions.create({
@@ -2940,6 +3042,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mode: 'payment',
         success_url: successUrl,
         cancel_url: cancelUrl,
+        payment_intent_data: {
+          receipt_email: user.email,
+        },
         metadata: {
           type: 'package_purchase',
           userId: req.user.id,

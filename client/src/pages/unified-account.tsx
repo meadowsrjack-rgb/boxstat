@@ -1666,9 +1666,10 @@ export default function UnifiedAccount() {
           const data = await response.json();
           if (data.success) {
             console.log('[iOS Payment] Payment verified successfully');
+            setParentDashTab("payments");
             toast({
               title: "Payment Successful!",
-              description: "Thank you, your payment was successful!",
+              description: "Thank you! A receipt has been sent to your email.",
             });
           } else {
             console.log('[iOS Payment] Payment not completed:', data.message);

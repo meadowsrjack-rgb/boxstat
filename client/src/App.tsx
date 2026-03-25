@@ -59,6 +59,7 @@ import NotFound from "@/pages/not-found";
 import CreateProfile from "@/pages/create-profile";
 import SelectProfileType from "@/pages/select-profile-type";
 import PaymentsTab from "@/pages/payments";
+import PaymentSuccess from "@/pages/payment-success";
 import RegistrationStatus from "@/pages/RegistrationStatus";
 import NoProfiles from "@/pages/NoProfiles";
 import FamilyOnboarding from "@/pages/family-onboarding";
@@ -417,6 +418,7 @@ function AppRouter() {
       <Route path="/teams" component={Teams} />
       <Route path="/registration" component={RegistrationFlow} />
       <Route path="/login" component={LoginPage} />
+      <Route path="/payment-success" component={PaymentSuccess} />
       <Route path="/test-datepicker" component={TestDatePicker} />
       <Route path="/register" component={RegistrationFlow} />
       <Route path="/verify-email" component={VerifyEmail} />

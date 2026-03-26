@@ -7,7 +7,6 @@ import { useEffect } from "react";
 
 // Pages
 import Teams from "@/pages/teams";
-import PrivacySettingsPage from "@/pages/privacy";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import Landing from "@/pages/landing";
 import MarketingLanding from "@/pages/marketing-landing";
@@ -411,7 +410,6 @@ function AppRouter() {
   return (
     <Switch>
       {/* Public routes - always accessible */}
-      <Route path="/privacy" component={PrivacySettingsPage} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/support" component={SupportPage} />
       <Route path="/notifications" component={ProtectedNotificationsPage} />

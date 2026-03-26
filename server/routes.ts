@@ -6648,6 +6648,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Player not found' });
       }
 
+      // Validate that the user being assigned has the "player" role
+      if (player.role !== 'player') {
+        return res.status(400).json({ message: 'Only users with the player role can be added to a team roster' });
+      }
+
       // Get the team to verify it exists
       const team = await storage.getTeam(teamId);
       if (!team) {

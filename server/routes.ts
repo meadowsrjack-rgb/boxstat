@@ -6120,7 +6120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/teams', requireAuth, async (req: any, res) => {
     const { role } = req.user;
-    if (role !== 'admin' && role !== 'coach') {
+    if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
       return res.status(403).json({ message: 'Only admins and coaches can create teams' });
     }
     
@@ -6235,7 +6235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.patch('/api/teams/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
-    if (role !== 'admin' && role !== 'coach') {
+    if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
       return res.status(403).json({ message: 'Only admins and coaches can update teams' });
     }
     
@@ -6433,7 +6433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/teams/:teamId/roster', requireAuth, async (req: any, res) => {
     try {
       const { role, organizationId } = req.user;
-      if (role !== 'admin' && role !== 'coach') {
+      if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
         return res.status(403).json({ message: 'Only admins and coaches can update rosters' });
       }
 
@@ -8095,8 +8095,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/events', requireAuth, async (req: any, res) => {
     try {
-      const { role, id: userId } = req.user;
-      if (role !== 'admin' && role !== 'coach') {
+      const { role, id: userId, organizationId } = req.user;
+      const isAdminUser = role === 'admin' || role === 'coach' || await hasAdminProfile(userId, organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ message: 'Only admins and coaches can create events' });
       }
       
@@ -8160,7 +8161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/events/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
-      if (role !== 'admin' && role !== 'coach') {
+      if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
         return res.status(403).json({ message: 'Only admins and coaches can update events' });
       }
       
@@ -8191,7 +8192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.delete('/api/events/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
-    if (role !== 'admin' && role !== 'coach') {
+    if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
       return res.status(403).json({ message: 'Only admins and coaches can delete events' });
     }
     
@@ -9091,7 +9092,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/event-windows', requireAuth, async (req: any, res) => {
     const { role } = req.user;
-    if (role !== 'admin' && role !== 'coach') {
+    if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
       return res.status(403).json({ message: 'Only admins and coaches can create event windows' });
     }
     
@@ -9113,7 +9114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.patch('/api/event-windows/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
-    if (role !== 'admin' && role !== 'coach') {
+    if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
       return res.status(403).json({ message: 'Only admins and coaches can update event windows' });
     }
     
@@ -9129,7 +9130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.delete('/api/event-windows/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
-    if (role !== 'admin' && role !== 'coach') {
+    if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
       return res.status(403).json({ message: 'Only admins and coaches can delete event windows' });
     }
     
@@ -9145,7 +9146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/event-windows/event/:eventId', requireAuth, async (req: any, res) => {
     const { role } = req.user;
-    if (role !== 'admin' && role !== 'coach') {
+    if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
       return res.status(403).json({ message: 'Only admins and coaches can delete event windows' });
     }
     
@@ -9442,7 +9443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId } = req.params;
       const { id: currentUserId, role, organizationId } = req.user;
       
-      if (userId !== currentUserId && role !== 'admin' && role !== 'coach') {
+      if (userId !== currentUserId && role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
         return res.status(403).json({ message: 'Not authorized' });
       }
       
@@ -9490,7 +9491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId } = req.params;
       const { id: currentUserId, role, organizationId } = req.user;
       
-      if (userId !== currentUserId && role !== 'admin' && role !== 'coach') {
+      if (userId !== currentUserId && role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
         return res.status(403).json({ message: 'Not authorized' });
       }
       
@@ -9549,7 +9550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/announcements', requireAuth, async (req: any, res) => {
     const { role } = req.user;
-    if (role !== 'admin' && role !== 'coach') {
+    if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
       return res.status(403).json({ message: 'Only admins and coaches can create announcements' });
     }
     
@@ -9560,7 +9561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.patch('/api/announcements/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
-    if (role !== 'admin' && role !== 'coach') {
+    if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
       return res.status(403).json({ message: 'Only admins and coaches can update announcements' });
     }
     
@@ -9570,7 +9571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.delete('/api/announcements/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
-    if (role !== 'admin' && role !== 'coach') {
+    if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
       return res.status(403).json({ message: 'Only admins and coaches can delete announcements' });
     }
     
@@ -11339,7 +11340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/divisions', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
-      if (role !== 'admin' && role !== 'coach') {
+      if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
         return res.status(403).json({ message: 'Only admins and coaches can create divisions' });
       }
       
@@ -11355,7 +11356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/divisions/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
-      if (role !== 'admin' && role !== 'coach') {
+      if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
         return res.status(403).json({ message: 'Only admins and coaches can update divisions' });
       }
       
@@ -11441,7 +11442,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/skills', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
-      if (role !== 'admin' && role !== 'coach') {
+      if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
         return res.status(403).json({ message: 'Only admins and coaches can create skills' });
       }
       
@@ -11457,7 +11458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/skills/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
-      if (role !== 'admin' && role !== 'coach') {
+      if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
         return res.status(403).json({ message: 'Only admins and coaches can update skills' });
       }
       
@@ -11481,7 +11482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/skills/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
-      if (role !== 'admin' && role !== 'coach') {
+      if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
         return res.status(403).json({ message: 'Only admins and coaches can delete skills' });
       }
       
@@ -11531,7 +11532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/coach/evaluations', requireAuth, async (req: any, res) => {
     try {
       const { role, id: coachId, organizationId } = req.user;
-      if (role !== 'admin' && role !== 'coach') {
+      if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
         return res.status(403).json({ message: 'Only admins and coaches can create evaluations' });
       }
       
@@ -11624,7 +11625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/evaluations/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
-      if (role !== 'admin' && role !== 'coach') {
+      if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
         return res.status(403).json({ message: 'Only admins and coaches can delete evaluations' });
       }
       
@@ -11733,7 +11734,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/notifications', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
-      if (role !== 'admin' && role !== 'coach') {
+      if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
         return res.status(403).json({ message: 'Only admins and coaches can create notifications' });
       }
       
@@ -12850,7 +12851,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/badges', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
-      if (role !== 'admin' && role !== 'coach') {
+      if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
         return res.status(403).json({ message: 'Only admins and coaches can view badges' });
       }
       
@@ -13096,7 +13097,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/user-awards/organization', requireAuth, async (req: any, res) => {
     try {
       const { role, organizationId } = req.user;
-      if (role !== 'admin' && role !== 'coach') {
+      if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
         return res.status(403).json({ message: 'Only admins and coaches can view organization awards' });
       }
       
@@ -13112,7 +13113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/coach/award', requireAuth, async (req: any, res) => {
     try {
       const { role, organizationId, id: awardedById } = req.user;
-      if (role !== 'admin' && role !== 'coach') {
+      if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
         return res.status(403).json({ message: 'Only admins and coaches can award users' });
       }
       
@@ -13203,7 +13204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/user-awards', requireAuth, async (req: any, res) => {
     try {
       const { role, organizationId, id: awardedById } = req.user;
-      if (role !== 'admin' && role !== 'coach') {
+      if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
         return res.status(403).json({ message: 'Only admins and coaches can award users' });
       }
       
@@ -13264,7 +13265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/user-awards/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
-      if (role !== 'admin' && role !== 'coach') {
+      if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
         return res.status(403).json({ message: 'Only admins and coaches can delete user awards' });
       }
       
@@ -13443,7 +13444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/awards/sync/:userId', requireAuth, async (req: any, res) => {
     try {
       const { role, organizationId } = req.user;
-      if (role !== 'admin' && role !== 'coach') {
+      if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
         return res.status(403).json({ message: 'Only admins and coaches can sync awards' });
       }
       

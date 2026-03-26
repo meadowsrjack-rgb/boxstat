@@ -7562,12 +7562,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .map((t: any) => t.id);
           
           const profileMemberships = await storage.getTeamMembershipsByProfile(enrollment.profileId);
-          const hasTeam = profileMemberships.some(
+          const hasTeamMembership = profileMemberships.some(
             (m: any) => programTeamIds.some((tid: any) => String(tid) === String(m.teamId)) && m.status === 'active'
           );
           
+          const profile = await storage.getUser(enrollment.profileId);
+          let hasLegacyTeam = false;
+          if (!hasTeamMembership && profile && profile.teamId) {
+            hasLegacyTeam = programTeamIds.some((tid: any) => String(tid) === String(profile.teamId));
+          }
+          const hasTeam = hasTeamMembership || hasLegacyTeam;
+          
           if (!hasTeam) {
-            const profile = await storage.getUser(enrollment.profileId);
             const program = await storage.getProgram(enrollment.programId);
             unassigned.push({
               enrollmentId: enrollment.id,

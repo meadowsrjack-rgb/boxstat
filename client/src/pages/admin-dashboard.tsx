@@ -1378,6 +1378,17 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     if (hasActiveEnrollmentWithoutTeam) return "Pending Assignment";
     if (hasPaymentFailed) return "Payment Failed";
     if (hasLowBalance) return "Low Balance";
+    const hasActiveEnrollmentOnTeam = (() => {
+      if (user.role === "player") {
+        const hasActive = uniqueEnrollments.some((e: any) => e.profileId === user.id && e.status === 'active');
+        if (hasActive && isOnTeam(user)) return true;
+      }
+      return linkedPlayersForUser.some((player: any) => {
+        const playerHasActive = uniqueEnrollments.some((e: any) => e.profileId === player.id && e.status === 'active');
+        return playerHasActive && isOnTeam(player);
+      });
+    })();
+    if (hasActiveEnrollmentOnTeam) return "Enrolled";
     if (hasActiveSubscriber) return "Active Subscriber";
     if (hasActiveOneTime) return "Active (Program)";
     if (hasExpired) return "Expired";
@@ -2212,6 +2223,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Status</p>
                     <div className="flex flex-wrap gap-1.5">
                       {[
+                        "Enrolled",
                         "Pending Assignment",
                         "Payment Failed",
                         "Low Balance",
@@ -2514,8 +2526,14 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                             allTeamNames.push(team.name);
                           }
                         });
-                        // Linked players' teams
                         linkedPlayers.forEach((player: any) => {
+                          if (Array.isArray(player.activeTeams) && player.activeTeams.length > 0) {
+                            player.activeTeams.forEach((at: any) => {
+                              if (at.teamName && !allTeamNames.includes(at.teamName)) {
+                                allTeamNames.push(at.teamName);
+                              }
+                            });
+                          }
                           const playerTeam = teams.find((t: any) => String(t.id) === String(player.teamId));
                           if (playerTeam && !allTeamNames.includes(playerTeam.name)) {
                             allTeamNames.push(playerTeam.name);
@@ -2541,6 +2559,9 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                         const status = deriveUserStatus(user);
                         if (status === "Pending Assignment") {
                           return <Badge className="bg-amber-500 text-white hover:bg-amber-600 whitespace-nowrap">Pending Assignment</Badge>;
+                        }
+                        if (status === "Enrolled") {
+                          return <Badge className="bg-green-600 text-white hover:bg-green-700 whitespace-nowrap">Enrolled</Badge>;
                         }
                         if (status === "Payment Failed") {
                           return <Badge className="bg-red-600 text-white hover:bg-red-700 whitespace-nowrap">Payment Failed</Badge>;

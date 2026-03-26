@@ -1008,11 +1008,12 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
 
   const createUser = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/users", { 
+      const res = await apiRequest("POST", "/api/users", { 
         ...data, 
         organizationId: organization.id,
         isActive: data.isActive ?? true
       });
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
@@ -1222,19 +1223,22 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
             verified: false,
           });
           
-          if (programId && res?.id) {
-            await apiRequest('PATCH', `/api/users/${res.id}`, {
-              enrollmentsToAdd: [programId],
-              ...(teamId ? { teamIds: [teamId] } : {}),
-              ...(startDate || endDate ? {
-                newEnrollmentDates: {
-                  [programId]: {
-                    startDate: startDate || undefined,
-                    endDate: endDate || undefined,
+          if (programId) {
+            const newUser = await res.json();
+            if (newUser?.id) {
+              await apiRequest('PATCH', `/api/users/${newUser.id}`, {
+                enrollmentsToAdd: [programId],
+                ...(teamId ? { teamIds: [teamId] } : {}),
+                ...(startDate || endDate ? {
+                  newEnrollmentDates: {
+                    [programId]: {
+                      startDate: startDate || undefined,
+                      endDate: endDate || undefined,
+                    }
                   }
-                }
-              } : {}),
-            });
+                } : {}),
+              });
+            }
           }
           
           successCount++;
@@ -2317,7 +2321,10 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   <Button 
                     type="button" 
                     className="w-full" 
-                    onClick={() => updateUser.mutate(editingUser)}
+                    onClick={() => {
+                      const { id, firstName, lastName, email, phoneNumber, role, teamId, teamIds, division, dateOfBirth, position, heightIn, notes, isActive, pendingEnrollments, enrollmentsToAdd, enrollmentsToRemove, enrollmentUpdates, newEnrollmentDates } = editingUser;
+                      updateUser.mutate({ id, firstName, lastName, email, phoneNumber, role, teamId, teamIds, division, dateOfBirth, position, heightIn, notes, isActive, pendingEnrollments, enrollmentsToAdd, enrollmentsToRemove, enrollmentUpdates, newEnrollmentDates });
+                    }}
                     disabled={updateUser.isPending}
                     data-testid="button-submit-edit-user"
                   >

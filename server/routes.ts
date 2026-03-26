@@ -5683,6 +5683,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     delete updateData.newEnrollmentDates;
     delete updateData.pendingEnrollments;
     delete updateData.activeTeams;
+    delete updateData.teamIds;
+    delete updateData.statusTag;
+    delete updateData.remainingCredits;
+    delete updateData.lowBalance;
     
     // Sync userType with role to ensure consistency
     if (updateData.role) {

@@ -3315,7 +3315,7 @@ class DatabaseStorage implements IStorage {
       position: updates.position,
       passcode: updates.passcode,
       password: updates.password,
-      teamId: updates.teamId ? parseInt(updates.teamId) : undefined,
+      teamId: updates.teamId !== undefined ? (updates.teamId ? parseInt(updates.teamId) : null) : undefined,
       parentId: updates.accountHolderId,
       accountHolderId: updates.accountHolderId,
       isActive: updates.isActive,

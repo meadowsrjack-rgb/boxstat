@@ -5632,9 +5632,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
     
-    // Clean up enrollment-related fields from updateData before saving to users table
+    if (updateData.enrollmentUpdates && typeof updateData.enrollmentUpdates === 'object') {
+      for (const [enrollmentId, updates] of Object.entries(updateData.enrollmentUpdates)) {
+        const numericId = parseInt(String(enrollmentId), 10);
+        if (!isNaN(numericId)) {
+          const updateFields: any = {};
+          const u = updates as any;
+          if (u.endDate !== undefined) updateFields.endDate = u.endDate ? new Date(u.endDate) : null;
+          if (u.startDate !== undefined) updateFields.startDate = u.startDate ? new Date(u.startDate) : null;
+          if (Object.keys(updateFields).length > 0) {
+            updateFields.updatedAt = new Date();
+            await db.update(productEnrollments)
+              .set(updateFields)
+              .where(
+                and(
+                  eq(productEnrollments.id, numericId),
+                  eq(productEnrollments.profileId, userId)
+                )
+              );
+            console.log(`[PATCH] Updated enrollment ${numericId} dates for user ${userId}:`, updateFields);
+          }
+        }
+      }
+    }
+
+    if (updateData.newEnrollmentDates && typeof updateData.newEnrollmentDates === 'object') {
+      for (const [programId, dates] of Object.entries(updateData.newEnrollmentDates)) {
+        const d = dates as any;
+        const updateFields: any = {};
+        if (d.startDate) updateFields.startDate = new Date(d.startDate);
+        if (d.endDate) updateFields.endDate = new Date(d.endDate);
+        if (Object.keys(updateFields).length > 0) {
+          updateFields.updatedAt = new Date();
+          await db.update(productEnrollments)
+            .set(updateFields)
+            .where(
+              and(
+                eq(productEnrollments.profileId, userId),
+                eq(productEnrollments.programId, programId),
+                eq(productEnrollments.status, 'active')
+              )
+            );
+        }
+      }
+    }
+
     delete updateData.enrollmentsToRemove;
     delete updateData.enrollmentsToAdd;
+    delete updateData.enrollmentUpdates;
+    delete updateData.newEnrollmentDates;
     delete updateData.pendingEnrollments;
     delete updateData.activeTeams;
     
@@ -11026,10 +11072,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           subgroupLabel: product?.subgroupLabel || 'Team',
           rosterVisibility: product?.rosterVisibility || 'members',
           chatMode: product?.chatMode || 'two_way',
-          // Enrollment details
           status: enrollment.status,
+          startDate: enrollment.startDate,
+          endDate: enrollment.endDate,
+          autoRenew: enrollment.autoRenew,
+          stripeSubscriptionId: enrollment.stripeSubscriptionId,
           remainingCredits: enrollment.remainingCredits,
           totalCredits: enrollment.totalCredits,
+          selectedPricingOptionId: enrollment.selectedPricingOptionId,
+          pricingAmount: (() => {
+            if (!product?.pricingOptions || !enrollment.selectedPricingOptionId) return null;
+            const options = Array.isArray(product.pricingOptions) ? product.pricingOptions : [];
+            const selected = options.find((o: any) => o.id === enrollment.selectedPricingOptionId);
+            return selected?.price || null;
+          })(),
+          pricingOptionName: (() => {
+            if (!product?.pricingOptions || !enrollment.selectedPricingOptionId) return null;
+            const options = Array.isArray(product.pricingOptions) ? product.pricingOptions : [];
+            const selected = options.find((o: any) => o.id === enrollment.selectedPricingOptionId);
+            return selected?.name || null;
+          })(),
           // Team/group assignments within this program, with member data
           teams: await Promise.all(programTeams.map(async ({ membership, team }) => {
             // Get members for this team

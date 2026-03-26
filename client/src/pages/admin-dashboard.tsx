@@ -939,6 +939,7 @@ function RecentTransactionsCard({ payments, users, programs }: any) {
 function UsersTab({ users, teams, programs, divisions, organization, enrollments }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newUserExtras, setNewUserExtras] = useState({ programId: '', teamId: '', startDate: '', endDate: '' });
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [viewingUser, setViewingUser] = useState<any>(null);
@@ -1141,7 +1142,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   });
 
   const downloadUserTemplate = () => {
-    const csvContent = "First name,Last name,Email,Phone,Role,Status,Team\nJohn,Doe,player@example.com,555-0100,player,active,Thunder U12\nJane,Smith,coach@example.com,555-0101,coach,active,\nBob,Johnson,parent@example.com,555-0102,parent,active,";
+    const csvContent = "First name,Last name,Email,Phone,Role,Status,Team,Program,Start Date,End Date\nJohn,Doe,player@example.com,555-0100,player,active,Thunder U12,Skills Academy,2025-01-15,2025-06-30\nJane,Smith,coach@example.com,555-0101,coach,active,,,,\nBob,Johnson,parent@example.com,555-0102,parent,active,,Youth Club,2025-03-01,2025-12-31";
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1185,7 +1186,6 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
           userData[header] = values[index] || '';
         });
         
-        // Map CSV column names to our data model (matching template: First name,Last name,Email,Phone,Role,Status,Team)
         const firstName = userData['first name'] || userData['firstname'] || '';
         const lastName = userData['last name'] || userData['lastname'] || '';
         const email = userData['email'] || '';
@@ -1193,18 +1193,24 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
         const role = userData['role'] || 'player';
         const status = userData['status'] || 'active';
         const teamName = userData['team'] || '';
+        const programName = userData['program'] || '';
+        const startDate = userData['start date'] || userData['startdate'] || userData['enrolled'] || '';
+        const endDate = userData['end date'] || userData['enddate'] || '';
         
-        // Find team by name if provided
         let teamId = undefined;
         if (teamName) {
           const team = teams.find((t: any) => t.name.toLowerCase() === teamName.toLowerCase());
-          if (team) {
-            teamId = team.id;
-          }
+          if (team) teamId = team.id;
+        }
+        
+        let programId = undefined;
+        if (programName) {
+          const program = programs?.find((p: any) => p.name.toLowerCase() === programName.toLowerCase() && p.productCategory === 'program');
+          if (program) programId = program.id;
         }
         
         try {
-          await apiRequest("POST", "/api/users", {
+          const res = await apiRequest("POST", "/api/users", {
             organizationId: organization.id,
             email: email,
             firstName: firstName,
@@ -1215,6 +1221,22 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
             isActive: status.toLowerCase() === 'active',
             verified: false,
           });
+          
+          if (programId && res?.id) {
+            await apiRequest('PATCH', `/api/users/${res.id}`, {
+              enrollmentsToAdd: [programId],
+              ...(teamId ? { teamIds: [teamId] } : {}),
+              ...(startDate || endDate ? {
+                newEnrollmentDates: {
+                  [programId]: {
+                    startDate: startDate || undefined,
+                    endDate: endDate || undefined,
+                  }
+                }
+              } : {}),
+            });
+          }
+          
           successCount++;
         } catch (error) {
           console.error(`Failed to create user ${email}:`, error);
@@ -1479,18 +1501,47 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
             <Download className="w-4 h-4" />
           </Button>
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) setNewUserExtras({ programId: '', teamId: '', startDate: '', endDate: '' });
+          }}>
             <DialogTrigger asChild>
               <Button size="icon" title="Add User" data-testid="button-add-new-user">
                 <Plus className="w-4 h-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-[95vw] w-full">
+            <DialogContent className="max-w-lg w-full max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New User</DialogTitle>
               </DialogHeader>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit((data) => createUser.mutate(data))} className="space-y-4">
+                <form onSubmit={form.handleSubmit((data) => {
+                  createUser.mutate(data, {
+                    onSuccess: async (newUser: any) => {
+                      if (newUserExtras.programId && newUser?.id) {
+                        try {
+                          await apiRequest('PATCH', `/api/users/${newUser.id}`, {
+                            enrollmentsToAdd: [newUserExtras.programId],
+                            ...(newUserExtras.teamId ? { teamIds: [parseInt(newUserExtras.teamId)] } : {}),
+                            ...(newUserExtras.startDate || newUserExtras.endDate ? {
+                              newEnrollmentDates: {
+                                [newUserExtras.programId]: {
+                                  startDate: newUserExtras.startDate || undefined,
+                                  endDate: newUserExtras.endDate || undefined,
+                                }
+                              }
+                            } : {}),
+                          });
+                          queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+                        } catch (e) {
+                          console.error('Failed to set enrollment details:', e);
+                          toast({ title: "User created but enrollment setup failed", variant: "destructive" });
+                        }
+                      }
+                      setNewUserExtras({ programId: '', teamId: '', startDate: '', endDate: '' });
+                    }
+                  });
+                })} className="space-y-4">
                   <FormField
                     control={form.control}
                     name="email"
@@ -1568,6 +1619,61 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       </FormItem>
                     )}
                   />
+
+                  <div className="border-t pt-3 space-y-3">
+                    <p className="text-sm font-medium text-gray-700">Program & Team Assignment (Optional)</p>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Program</label>
+                      <Select value={newUserExtras.programId} onValueChange={(v) => setNewUserExtras({ ...newUserExtras, programId: v, teamId: '' })}>
+                        <SelectTrigger className="text-sm">
+                          <SelectValue placeholder="Select program..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {programs?.filter((p: any) => p.productCategory === 'program').map((p: any) => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {newUserExtras.programId && (
+                      <>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Team</label>
+                          <Select value={newUserExtras.teamId} onValueChange={(v) => setNewUserExtras({ ...newUserExtras, teamId: v })}>
+                            <SelectTrigger className="text-sm">
+                              <SelectValue placeholder="Select team..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {teams?.filter((t: any) => t.programId === newUserExtras.programId).map((t: any) => (
+                                <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block">Start Date</label>
+                            <Input
+                              type="date"
+                              className="text-sm"
+                              value={newUserExtras.startDate}
+                              onChange={(e) => setNewUserExtras({ ...newUserExtras, startDate: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block">End Date</label>
+                            <Input
+                              type="date"
+                              className="text-sm"
+                              value={newUserExtras.endDate}
+                              onChange={(e) => setNewUserExtras({ ...newUserExtras, endDate: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
                   <Button type="submit" className="w-full" disabled={createUser.isPending} data-testid="button-submit-user">
                     {createUser.isPending ? "Creating..." : "Create User"}
                   </Button>
@@ -1693,33 +1799,127 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                               <p className="text-xs font-semibold text-blue-700 mb-2">Program Enrollments ({programEnrollments.length}):</p>
                               <div className="space-y-1">
                                 {programEnrollments.map((enrollment: any) => (
-                                  <div key={enrollment.enrollmentId} className="flex items-center justify-between bg-white border border-blue-100 rounded px-2 py-1.5">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-sm font-medium">{enrollment.programName}</span>
-                                      {enrollment.teams?.length > 0 && (
-                                        <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
-                                          {enrollment.teams.length} team{enrollment.teams.length > 1 ? 's' : ''}
-                                        </span>
-                                      )}
+                                  <div key={enrollment.enrollmentId} className="bg-white border border-blue-100 rounded px-3 py-2">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium">{enrollment.programName}</span>
+                                        {enrollment.teams?.length > 0 && (
+                                          <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+                                            {enrollment.teams.length} team{enrollment.teams.length > 1 ? 's' : ''}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs text-blue-600 capitalize">{enrollment.status}</span>
+                                        <button
+                                          type="button"
+                                          className="text-red-500 hover:text-red-700 text-sm font-medium px-1"
+                                          onClick={() => {
+                                            setEditingUser({
+                                              ...editingUser,
+                                              enrollmentsToRemove: [...(editingUser.enrollmentsToRemove || []), enrollment.enrollmentId],
+                                              pendingEnrollments: (editingUser.pendingEnrollments || programEnrollments).filter((e: any) => e.enrollmentId !== enrollment.enrollmentId)
+                                            });
+                                          }}
+                                          data-testid={`button-remove-enrollment-${enrollment.enrollmentId}`}
+                                        >
+                                          Remove
+                                        </button>
+                                      </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs text-blue-600 capitalize">{enrollment.status}</span>
-                                      <button
-                                        type="button"
-                                        className="text-red-500 hover:text-red-700 text-sm font-medium px-1"
-                                        onClick={() => {
-                                          // Mark enrollment for removal in local state
-                                          setEditingUser({
-                                            ...editingUser,
-                                            enrollmentsToRemove: [...(editingUser.enrollmentsToRemove || []), enrollment.enrollmentId],
-                                            pendingEnrollments: (editingUser.pendingEnrollments || programEnrollments).filter((e: any) => e.enrollmentId !== enrollment.enrollmentId)
-                                          });
-                                        }}
-                                        data-testid={`button-remove-enrollment-${enrollment.enrollmentId}`}
-                                      >
-                                        Remove
-                                      </button>
-                                    </div>
+                                    {!enrollment.isNew && (
+                                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 pt-2 border-t border-blue-50">
+                                        <div>
+                                          <label className="text-[10px] text-gray-500 uppercase">Enrolled</label>
+                                          <p className="text-xs text-gray-700">
+                                            {enrollment.startDate ? new Date(enrollment.startDate).toLocaleDateString() : '—'}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <label className="text-[10px] text-gray-500 uppercase">End Date</label>
+                                          <input
+                                            type="date"
+                                            className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-full"
+                                            value={enrollment.endDate ? new Date(enrollment.endDate).toISOString().split('T')[0] : ''}
+                                            onChange={(e) => {
+                                              const updated = (editingUser.pendingEnrollments || programEnrollments).map((en: any) =>
+                                                en.enrollmentId === enrollment.enrollmentId
+                                                  ? { ...en, endDate: e.target.value ? new Date(e.target.value).toISOString() : null }
+                                                  : en
+                                              );
+                                              setEditingUser({
+                                                ...editingUser,
+                                                pendingEnrollments: updated,
+                                                enrollmentUpdates: {
+                                                  ...(editingUser.enrollmentUpdates || {}),
+                                                  [enrollment.enrollmentId]: {
+                                                    ...(editingUser.enrollmentUpdates?.[enrollment.enrollmentId] || {}),
+                                                    endDate: e.target.value ? new Date(e.target.value).toISOString() : null
+                                                  }
+                                                }
+                                              });
+                                            }}
+                                          />
+                                        </div>
+                                        {enrollment.pricingAmount && (
+                                          <div>
+                                            <label className="text-[10px] text-gray-500 uppercase">Amount</label>
+                                            <p className="text-xs text-gray-700">
+                                              ${(enrollment.pricingAmount / 100).toFixed(2)}
+                                              {enrollment.pricingOptionName && <span className="text-gray-400 ml-1">({enrollment.pricingOptionName})</span>}
+                                            </p>
+                                          </div>
+                                        )}
+                                        {enrollment.stripeSubscriptionId && (
+                                          <div>
+                                            <label className="text-[10px] text-gray-500 uppercase">Billing</label>
+                                            <p className="text-xs text-gray-700">
+                                              Recurring {enrollment.autoRenew ? '(auto-renew)' : ''}
+                                            </p>
+                                          </div>
+                                        )}
+                                        {enrollment.remainingCredits != null && (
+                                          <div>
+                                            <label className="text-[10px] text-gray-500 uppercase">Credits</label>
+                                            <p className="text-xs text-gray-700">
+                                              {enrollment.remainingCredits}{enrollment.totalCredits ? ` / ${enrollment.totalCredits}` : ''}
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                    {enrollment.isNew && (
+                                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 pt-2 border-t border-blue-50">
+                                        <div>
+                                          <label className="text-[10px] text-gray-500 uppercase">Start Date</label>
+                                          <input
+                                            type="date"
+                                            className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-full"
+                                            value={enrollment.startDate || new Date().toISOString().split('T')[0]}
+                                            onChange={(e) => {
+                                              const updated = (editingUser.pendingEnrollments || programEnrollments).map((en: any) =>
+                                                en.enrollmentId === enrollment.enrollmentId ? { ...en, startDate: e.target.value } : en
+                                              );
+                                              setEditingUser({ ...editingUser, pendingEnrollments: updated });
+                                            }}
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="text-[10px] text-gray-500 uppercase">End Date</label>
+                                          <input
+                                            type="date"
+                                            className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-full"
+                                            value={enrollment.endDate || ''}
+                                            onChange={(e) => {
+                                              const updated = (editingUser.pendingEnrollments || programEnrollments).map((en: any) =>
+                                                en.enrollmentId === enrollment.enrollmentId ? { ...en, endDate: e.target.value } : en
+                                              );
+                                              setEditingUser({ ...editingUser, pendingEnrollments: updated });
+                                            }}
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
                               </div>

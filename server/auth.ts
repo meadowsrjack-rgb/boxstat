@@ -141,16 +141,46 @@ export const requireJwt: RequestHandler = requireAuth;
 
 export const isAuthenticated: RequestHandler = requireAuth;
 
-export const isAdmin: RequestHandler = (req: any, res, next) => {
-  if (!req.user || req.user.role !== 'admin') {
+export const isAdmin: RequestHandler = async (req: any, res, next) => {
+  if (!req.user) {
     return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
   }
-  next();
+  if (req.user.role === 'admin') {
+    return next();
+  }
+  if (storageRef) {
+    try {
+      const currentUser = await storageRef.getUser(req.user.id);
+      if (currentUser?.email) {
+        const allUsers = await storageRef.getUsersByOrganization(req.user.organizationId);
+        const hasAdmin = allUsers.some((u: any) => u.email === currentUser.email && u.role === 'admin');
+        if (hasAdmin) {
+          return next();
+        }
+      }
+    } catch (e) {}
+  }
+  return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
 };
 
-export const isCoachOrAdmin: RequestHandler = (req: any, res, next) => {
-  if (!req.user || (req.user.role !== 'coach' && req.user.role !== 'admin')) {
+export const isCoachOrAdmin: RequestHandler = async (req: any, res, next) => {
+  if (!req.user) {
     return res.status(403).json({ error: 'Access denied. Coach or admin privileges required.' });
   }
-  next();
+  if (req.user.role === 'coach' || req.user.role === 'admin') {
+    return next();
+  }
+  if (storageRef) {
+    try {
+      const currentUser = await storageRef.getUser(req.user.id);
+      if (currentUser?.email) {
+        const allUsers = await storageRef.getUsersByOrganization(req.user.organizationId);
+        const hasRole = allUsers.some((u: any) => u.email === currentUser.email && (u.role === 'admin' || u.role === 'coach'));
+        if (hasRole) {
+          return next();
+        }
+      }
+    } catch (e) {}
+  }
+  return res.status(403).json({ error: 'Access denied. Coach or admin privileges required.' });
 };

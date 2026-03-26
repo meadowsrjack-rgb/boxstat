@@ -985,7 +985,7 @@ function RosterTab({
   // Show team list if no team is selected
   if (!selectedTeamId) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 bg-gray-50 min-h-screen">
         <Button 
           variant="outline"
           onClick={() => setShowLeadEvaluation(true)}
@@ -1037,7 +1037,7 @@ function RosterTab({
   const selectedTeam = assignedTeams.find(t => t.id === selectedTeamId);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-gray-50 min-h-screen">
       {/* Team Header */}
       <div>
         <Button

@@ -9285,6 +9285,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
   const [deleteConfirmProgram, setDeleteConfirmProgram] = useState<any>(null);
   const [selectedProgramIds, setSelectedProgramIds] = useState<Set<string>>(new Set());
   const [availabilitySlots, setAvailabilitySlots] = useState<{dayOfWeek: number, startTime: string, endTime: string}[]>([]);
+  const [expandedPricingOptions, setExpandedPricingOptions] = useState<Set<string>>(new Set());
   const tableRef = useDragScroll();
 
   const toggleProgramActive = useMutation({
@@ -9568,10 +9569,13 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       displayCategory: program.displayCategory || "general",
       iconName: program.iconName || "",
       coverImageUrl: program.coverImageUrl || "",
-      pricingOptions: program.pricingOptions || [],
+      pricingOptions: (program.pricingOptions || []).map((opt: any) =>
+        opt.id ? opt : { ...opt, id: `opt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` }
+      ),
       scheduleRequestEnabled: program.scheduleRequestEnabled || false,
       sessionLengthMinutes: program.sessionLengthMinutes,
     });
+    setExpandedPricingOptions(new Set());
     setIsDialogOpen(true);
   };
 
@@ -9580,6 +9584,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
     if (!open) {
       setEditingProgram(null);
       setSelectedAddOns([]);
+      setExpandedPricingOptions(new Set());
       form.reset({
         organizationId: organization?.id || "",
         name: "",
@@ -10542,10 +10547,11 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                           size="sm"
                           onClick={() => {
                             const current = form.getValues("pricingOptions") || [];
+                            const newId = `opt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                             form.setValue("pricingOptions", [
                               ...current,
                               {
-                                id: `opt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                                id: newId,
                                 name: "",
                                 price: 0,
                                 optionType: "one_time",
@@ -10554,6 +10560,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                 isDefault: current.length === 0,
                               }
                             ]);
+                            setExpandedPricingOptions(prev => new Set([...prev, newId]));
                           }}
                           data-testid="button-add-pricing-option"
                         >
@@ -10564,23 +10571,60 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                       
                       {(form.watch("pricingOptions") || []).length > 0 && (
                         <div className="space-y-3">
-                          {(form.watch("pricingOptions") || []).map((option: any, index: number) => (
-                            <div key={option.id} className="border rounded-md p-3 bg-gray-50">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-medium text-gray-600">Option {index + 1}</span>
+                          {(form.watch("pricingOptions") || []).map((option: any, index: number) => {
+                            const isExpanded = expandedPricingOptions.has(option.id);
+                            const toggleExpanded = () => {
+                              setExpandedPricingOptions(prev => {
+                                const next = new Set(prev);
+                                if (next.has(option.id)) {
+                                  next.delete(option.id);
+                                } else {
+                                  next.add(option.id);
+                                }
+                                return next;
+                              });
+                            };
+                            const typeLabel = option.optionType === "credit_pack" ? "Credit Pack"
+                              : option.optionType === "subscription" ? "Subscription"
+                              : "One-Time";
+                            const displayName = option.name || `Option ${index + 1}`;
+                            const displayPrice = option.price > 0 ? `$${(option.price / 100).toFixed(2)}` : "No price set";
+                            return (
+                            <div key={option.id} className="border rounded-md bg-gray-50 overflow-hidden">
+                              <div
+                                className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-100 transition-colors"
+                                onClick={toggleExpanded}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <ChevronDown className={`h-4 w-4 text-gray-500 flex-shrink-0 transition-transform duration-200 ${isExpanded ? "" : "-rotate-90"}`} />
+                                  <span className="text-sm font-medium text-gray-800 truncate">{displayName}</span>
+                                  <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded flex-shrink-0">{typeLabel}</span>
+                                  <span className="text-xs text-gray-500 flex-shrink-0">{displayPrice}</span>
+                                </div>
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     const current = form.getValues("pricingOptions") || [];
+                                    const removedId = current[index]?.id;
                                     form.setValue("pricingOptions", current.filter((_: any, i: number) => i !== index));
+                                    if (removedId) {
+                                      setExpandedPricingOptions(prev => {
+                                        const next = new Set(prev);
+                                        next.delete(removedId);
+                                        return next;
+                                      });
+                                    }
                                   }}
                                   data-testid={`button-remove-option-${index}`}
                                 >
                                   <Trash2 className="h-4 w-4 text-red-500" />
                                 </Button>
                               </div>
+                              {isExpanded && (
+                              <div className="border-t px-3 pb-3 pt-2">
                               <div className="grid grid-cols-2 gap-2">
                                 <div className="col-span-2">
                                   <label className="text-xs font-medium">Type</label>
@@ -11025,8 +11069,11 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                   )}
                                 </div>
                               </div>
+                              </div>
+                              )}
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>

@@ -7546,54 +7546,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // 4. Unassigned players (enrolled in program with teams but not on any team)
-      const orgTeams = await storage.getTeamsByOrganization(organizationId);
-      const programsWithTeams = new Set(orgTeams.filter((t: any) => t.active && t.programId).map((t: any) => t.programId));
-      
-      if (programsWithTeams.size > 0) {
-        const unassigned: any[] = [];
-        
-        for (const enrollment of allEnrollments) {
-          if (enrollment.status !== 'active' || !enrollment.profileId) continue;
-          if (!programsWithTeams.has(enrollment.programId)) continue;
-          
-          const programTeamIds = orgTeams
-            .filter((t: any) => t.active && t.programId === enrollment.programId)
-            .map((t: any) => t.id);
-          
-          const profileMemberships = await storage.getTeamMembershipsByProfile(enrollment.profileId);
-          const hasTeamMembership = profileMemberships.some(
-            (m: any) => programTeamIds.some((tid: any) => String(tid) === String(m.teamId)) && m.status === 'active'
-          );
-          
-          const profile = await storage.getUser(enrollment.profileId);
-          let hasLegacyTeam = false;
-          if (!hasTeamMembership && profile && profile.teamId) {
-            hasLegacyTeam = programTeamIds.some((tid: any) => String(tid) === String(profile.teamId));
-          }
-          const hasTeam = hasTeamMembership || hasLegacyTeam;
-          
-          if (!hasTeam) {
-            const program = await storage.getProgram(enrollment.programId);
-            unassigned.push({
-              enrollmentId: enrollment.id,
-              profileId: enrollment.profileId,
-              profileName: profile ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : 'Unknown',
-              programName: program?.name || 'Unknown Program',
-            });
-          }
-        }
-        
-        if (unassigned.length > 0) {
-          alerts.push({
-            type: 'unassigned_players',
-            count: unassigned.length,
-            message: `${unassigned.length} player${unassigned.length > 1 ? 's' : ''} not assigned to a team`,
-            details: unassigned,
-          });
-        }
-      }
-
       res.json(alerts);
     } catch (error: any) {
       console.error('Error fetching admin alerts:', error);

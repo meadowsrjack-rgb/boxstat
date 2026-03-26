@@ -245,7 +245,7 @@ export default function AdminDashboard() {
     } catch { return new Set(); }
   });
   const [completingAlerts, setCompletingAlerts] = useState<Set<string>>(new Set());
-  const visibleAlerts = adminAlerts.filter((a: any) => !dismissedAlerts.has(a.type));
+  const visibleAlerts = adminAlerts.filter((a: any) => !dismissedAlerts.has(a.type) && a.type !== 'unassigned_players');
 
   const handleDismissAlert = (alertType: string) => {
     setCompletingAlerts(prev => new Set([...prev, alertType]));
@@ -376,7 +376,6 @@ export default function AdminDashboard() {
                 low_credits: { icon: CreditCard, bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-800', tab: 'programs' },
                 payment_overdue: { icon: DollarSign, bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-800', tab: 'users' },
                 pending_requests: { icon: Clock, bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', tab: 'events' },
-                unassigned_players: { icon: UsersRound, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800', tab: 'users' },
               };
               const config = alertConfig[alert.type] || { icon: AlertCircle, bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-800', tab: 'overview' };
               const Icon = config.icon;
@@ -425,12 +424,6 @@ export default function AdminDashboard() {
                           {alert.type === 'pending_requests' && alert.details?.length > 0 && (
                             <p className="text-xs text-blue-600 mt-0.5 truncate">
                               {alert.details.slice(0, 3).map((d: any) => d.requestedFor).join(', ')}
-                              {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
-                            </p>
-                          )}
-                          {alert.type === 'unassigned_players' && alert.details?.length > 0 && (
-                            <p className="text-xs text-amber-600 mt-0.5 truncate">
-                              {alert.details.slice(0, 3).map((d: any) => `${d.profileName} (${d.programName})`).join(', ')}
                               {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
                             </p>
                           )}

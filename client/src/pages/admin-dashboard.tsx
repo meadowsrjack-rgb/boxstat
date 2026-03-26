@@ -939,7 +939,7 @@ function RecentTransactionsCard({ payments, users, programs }: any) {
 function UsersTab({ users, teams, programs, divisions, organization, enrollments }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newUserExtras, setNewUserExtras] = useState({ programId: '', teamId: '', startDate: '', endDate: '' });
+  const [newUserExtras, setNewUserExtras] = useState<any>({ programId: '', teamId: '', startDate: '', endDate: '', enrollments: [] });
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [viewingUser, setViewingUser] = useState<any>(null);
@@ -1507,7 +1507,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
           
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
-            if (!open) setNewUserExtras({ programId: '', teamId: '', startDate: '', endDate: '' });
+            if (!open) setNewUserExtras({ programId: '', teamId: '', startDate: '', endDate: '', enrollments: [] });
           }}>
             <DialogTrigger asChild>
               <Button size="icon" title="Add User" data-testid="button-add-new-user">
@@ -1520,21 +1520,26 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit((data) => {
+                  const enrollments = newUserExtras.enrollments || [];
                   createUser.mutate(data, {
                     onSuccess: async (newUser: any) => {
-                      if (newUserExtras.programId && newUser?.id) {
+                      if (enrollments.length > 0 && newUser?.id) {
                         try {
+                          const enrollmentsToAdd = enrollments.map((e: any) => e.programId);
+                          const teamIds = enrollments.filter((e: any) => e.teamIds?.length).flatMap((e: any) => e.teamIds);
+                          const newEnrollmentDates: any = {};
+                          enrollments.forEach((e: any) => {
+                            if (e.startDate || e.endDate) {
+                              newEnrollmentDates[e.programId] = {
+                                startDate: e.startDate || undefined,
+                                endDate: e.endDate || undefined,
+                              };
+                            }
+                          });
                           await apiRequest('PATCH', `/api/users/${newUser.id}`, {
-                            enrollmentsToAdd: [newUserExtras.programId],
-                            ...(newUserExtras.teamId ? { teamIds: [parseInt(newUserExtras.teamId)] } : {}),
-                            ...(newUserExtras.startDate || newUserExtras.endDate ? {
-                              newEnrollmentDates: {
-                                [newUserExtras.programId]: {
-                                  startDate: newUserExtras.startDate || undefined,
-                                  endDate: newUserExtras.endDate || undefined,
-                                }
-                              }
-                            } : {}),
+                            enrollmentsToAdd,
+                            ...(teamIds.length > 0 ? { teamIds } : {}),
+                            ...(Object.keys(newEnrollmentDates).length > 0 ? { newEnrollmentDates } : {}),
                           });
                           queryClient.invalidateQueries({ queryKey: ['/api/users'] });
                         } catch (e) {
@@ -1542,46 +1547,10 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                           toast({ title: "User created but enrollment setup failed", variant: "destructive" });
                         }
                       }
-                      setNewUserExtras({ programId: '', teamId: '', startDate: '', endDate: '' });
+                      setNewUserExtras({ programId: '', teamId: '', startDate: '', endDate: '', enrollments: [] });
                     }
                   });
                 })} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="email" data-testid="input-user-email" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="role"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Role</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-user-role">
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="player">Player</SelectItem>
-                            <SelectItem value="coach">Coach</SelectItem>
-                            <SelectItem value="parent">Parent</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -1612,10 +1581,23 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   </div>
                   <FormField
                     control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="email" data-testid="input-user-email" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
                     name="phoneNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone Number (Optional)</FormLabel>
+                        <FormLabel>Phone</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-user-phone" />
                         </FormControl>
@@ -1623,59 +1605,166 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       </FormItem>
                     )}
                   />
-
-                  <div className="border-t pt-3 space-y-3">
-                    <p className="text-sm font-medium text-gray-700">Program & Team Assignment (Optional)</p>
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1 block">Program</label>
-                      <Select value={newUserExtras.programId} onValueChange={(v) => setNewUserExtras({ ...newUserExtras, programId: v, teamId: '' })}>
-                        <SelectTrigger className="text-sm">
-                          <SelectValue placeholder="Select program..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {programs?.filter((p: any) => p.productCategory === 'program').map((p: any) => (
-                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {newUserExtras.programId && (
-                      <>
-                        <div>
-                          <label className="text-xs text-gray-500 mb-1 block">Team</label>
-                          <Select value={newUserExtras.teamId} onValueChange={(v) => setNewUserExtras({ ...newUserExtras, teamId: v })}>
-                            <SelectTrigger className="text-sm">
-                              <SelectValue placeholder="Select team..." />
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-user-role">
+                              <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
-                              {teams?.filter((t: any) => t.programId === newUserExtras.programId).map((t: any) => (
-                                <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="text-xs text-gray-500 mb-1 block">Start Date</label>
-                            <Input
-                              type="date"
-                              className="text-sm"
-                              value={newUserExtras.startDate}
-                              onChange={(e) => setNewUserExtras({ ...newUserExtras, startDate: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs text-gray-500 mb-1 block">End Date</label>
-                            <Input
-                              type="date"
-                              className="text-sm"
-                              value={newUserExtras.endDate}
-                              onChange={(e) => setNewUserExtras({ ...newUserExtras, endDate: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                      </>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="coach">Coach</SelectItem>
+                            <SelectItem value="parent">Parent</SelectItem>
+                            <SelectItem value="player">Player</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
                     )}
+                  />
+                  <div className="space-y-2">
+                    <Label>Club</Label>
+                    <Input value={organization?.name || ""} disabled />
+                  </div>
+
+                  <div className="space-y-4">
+                    <Label>Program & Team Assignments</Label>
+                    
+                    {(newUserExtras.enrollments || []).length > 0 && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                        <p className="text-xs font-semibold text-blue-700 mb-2">Program Enrollments ({(newUserExtras.enrollments || []).length}):</p>
+                        <div className="space-y-1">
+                          {(newUserExtras.enrollments || []).map((enrollment: any) => {
+                            const program = programs?.find((p: any) => p.id === enrollment.programId);
+                            const programTeams = teams?.filter((t: any) => t.programId === enrollment.programId) || [];
+                            return (
+                              <div key={enrollment.programId} className="bg-white border border-blue-100 rounded px-3 py-2">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-sm font-medium">{program?.name || enrollment.programId}</span>
+                                  <button
+                                    type="button"
+                                    className="text-red-500 hover:text-red-700 text-sm font-medium px-1"
+                                    onClick={() => {
+                                      setNewUserExtras({
+                                        ...newUserExtras,
+                                        enrollments: (newUserExtras.enrollments || []).filter((e: any) => e.programId !== enrollment.programId)
+                                      });
+                                    }}
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 pt-2 border-t border-blue-50">
+                                  <div>
+                                    <label className="text-[10px] text-gray-500 uppercase">Start Date</label>
+                                    <input
+                                      type="date"
+                                      className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-full"
+                                      value={enrollment.startDate || ''}
+                                      onChange={(e) => {
+                                        const updated = (newUserExtras.enrollments || []).map((en: any) =>
+                                          en.programId === enrollment.programId ? { ...en, startDate: e.target.value } : en
+                                        );
+                                        setNewUserExtras({ ...newUserExtras, enrollments: updated });
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] text-gray-500 uppercase">End Date</label>
+                                    <input
+                                      type="date"
+                                      className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-full"
+                                      value={enrollment.endDate || ''}
+                                      onChange={(e) => {
+                                        const updated = (newUserExtras.enrollments || []).map((en: any) =>
+                                          en.programId === enrollment.programId ? { ...en, endDate: e.target.value } : en
+                                        );
+                                        setNewUserExtras({ ...newUserExtras, enrollments: updated });
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                                {programTeams.length > 0 && (
+                                  <div className="mt-2 pt-2 border-t border-blue-50">
+                                    <label className="text-[10px] text-gray-500 uppercase mb-1 block">Team Assignment</label>
+                                    <div className="space-y-1">
+                                      {programTeams.map((team: any) => {
+                                        const isChecked = (enrollment.teamIds || []).includes(team.id);
+                                        return (
+                                          <div key={team.id} className="flex items-center space-x-2 pl-1">
+                                            <Checkbox
+                                              id={`new-team-${enrollment.programId}-${team.id}`}
+                                              checked={isChecked}
+                                              onCheckedChange={(checked) => {
+                                                const newTeamIds = checked
+                                                  ? [...(enrollment.teamIds || []), team.id]
+                                                  : (enrollment.teamIds || []).filter((id: number) => id !== team.id);
+                                                const updated = (newUserExtras.enrollments || []).map((en: any) =>
+                                                  en.programId === enrollment.programId ? { ...en, teamIds: newTeamIds } : en
+                                                );
+                                                setNewUserExtras({ ...newUserExtras, enrollments: updated });
+                                              }}
+                                            />
+                                            <label htmlFor={`new-team-${enrollment.programId}-${team.id}`} className="text-sm leading-none cursor-pointer">
+                                              {team.name}
+                                            </label>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <p className="text-xs font-semibold text-gray-600 mb-2">Enroll in Program:</p>
+                      <div className="border rounded-md max-h-32 overflow-y-auto">
+                        {programs?.filter((p: any) =>
+                          p.productCategory === 'program' &&
+                          !(newUserExtras.enrollments || []).some((e: any) => e.programId === p.id)
+                        ).map((program: any) => (
+                          <div key={program.id} className="flex items-center justify-between px-3 py-2 border-b last:border-b-0 hover:bg-gray-50">
+                            <span className="text-sm">{program.name}</span>
+                            <button
+                              type="button"
+                              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                              onClick={() => {
+                                setNewUserExtras({
+                                  ...newUserExtras,
+                                  enrollments: [...(newUserExtras.enrollments || []), {
+                                    programId: program.id,
+                                    teamIds: [],
+                                    startDate: new Date().toISOString().split('T')[0],
+                                    endDate: '',
+                                  }]
+                                });
+                              }}
+                            >
+                              + Enroll
+                            </button>
+                          </div>
+                        ))}
+                        {programs?.filter((p: any) =>
+                          p.productCategory === 'program' &&
+                          !(newUserExtras.enrollments || []).some((e: any) => e.programId === p.id)
+                        ).length === 0 && (
+                          <p className="text-xs text-gray-500 px-3 py-2">
+                            {(newUserExtras.enrollments || []).length > 0 ? 'Already enrolled in all available programs' : 'No programs available'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   <Button type="submit" className="w-full" disabled={createUser.isPending} data-testid="button-submit-user">

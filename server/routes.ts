@@ -11,6 +11,7 @@ import searchRoutes from "./routes/search";
 import privacyRoutes from "./routes/privacy";
 import { setupNotificationRoutes } from "./routes/notifications";
 import { setupAdminNotificationRoutes } from "./routes/adminNotifications";
+import { adminNotificationService } from "./services/adminNotificationService";
 import { requireAuth, optionalAuth, isAdmin, isCoachOrAdmin, setAuthStorage } from "./auth";
 import multer from "multer";
 import jwt from "jsonwebtoken";
@@ -14580,6 +14581,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         repliedBy: req.user.id,
         repliedAt: new Date().toISOString(),
       });
+
+      try {
+        if (parentMsg.senderId && parentMsg.senderId !== req.user.id) {
+          await adminNotificationService.createNotification({
+            organizationId: req.user.organizationId,
+            types: ['message'],
+            title: '💬 New Reply from Staff',
+            message: `${senderName} replied to your message`,
+            recipientTarget: 'users',
+            recipientUserIds: [parentMsg.senderId],
+            deliveryChannels: ['in_app', 'push'],
+            sentBy: req.user.id,
+            status: 'sent',
+          });
+        }
+      } catch (notifError: any) {
+        console.error('⚠️ Contact management reply notification failed (non-fatal):', notifError.message);
+      }
+
       res.json(reply);
     } catch (error: any) {
       console.error('Error sending reply:', error);

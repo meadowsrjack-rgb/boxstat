@@ -1244,11 +1244,17 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
               <p className="text-center text-gray-500 py-8">No messages yet. Start the conversation!</p>
             ) : (
               currentMessages.map((msg: any) => {
-                const isOwn = msg.senderId === userId;
+                const isAdminReply = activeChat?.type === 'management' && msg.isAdmin;
+                const isOwn = isAdminReply ? false : (msg.senderId === userId);
                 return (
                   <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[80%] rounded-lg px-3 py-2 ${isOwn ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-900'}`}>
-                      {!isOwn && msg.sender && (
+                      {isAdminReply && (
+                        <div className="text-xs font-medium mb-1 text-red-600">
+                          {msg.senderName || 'Admin'}
+                        </div>
+                      )}
+                      {!isOwn && !isAdminReply && msg.sender && (
                         <div className="text-xs font-medium mb-1 opacity-70">
                           {msg.sender?.firstName} {msg.sender?.lastName}
                         </div>

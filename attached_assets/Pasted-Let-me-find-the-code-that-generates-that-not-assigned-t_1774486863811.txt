@@ -1,0 +1,23 @@
+Let me find the code that generates that "not assigned to a team" alert:
+
+Now let me find where this unassigned_players alert data is computed:
+
+The alert comes from the backend. Let me find the API:
+
+I see the logic. It checks if a player is enrolled in a program that has teams, then checks if that player has an active team membership for a team in that same program. Let me check getTeamMembershipsByProfile to see what it returns:
+
+Let me check the DB implementation:
+
+Now I see the full picture. The getTeamMembershipsByProfile query only joins through the teamMemberships table. But users can also be assigned to teams via a legacy teamId field on the user record. The alert code at line 7563-7566 only checks teamMemberships, not the legacy teamId. Let me verify:
+
+Those players all have active team memberships. The problem must be that the alert is checking memberships against the wrong program's teams. Let me look more closely:
+
+All three players have active team memberships for the correct program. The enrollment program_id matches the team's program_id. So the alert code should NOT be flagging them. Let me check what's actually happening — maybe there are multiple enrollments for these players:
+
+Only one enrollment each. The data looks correct — they DO have the right team memberships. The issue must be in the alert code's comparison logic. Let me look more closely at the comparison:
+
+I see it — the comparison programTeamIds.includes(m.teamId). The programTeamIds comes from t.id (team ID), and m.teamId comes from getTeamMembershipsByProfile. There could be a type mismatch — one might be a number and the other a string. Let me verify:
+
+Both are integers at DB level, but the Drizzle result might return the teamId from getTeamMembershipsByProfile in a different format. Let me check what that function actually returns:
+
+Now I see the issue. The getTeamMembershipsByProfile already filters by status = 'active', but the alert code at line 7565 also checks m.status === 'active'. That shouldn't be a problem though. Let me check if there's a type issue with how programTeamIds are compared. The teams from getTeamsByOrganization return t.id which might be a number, but the membership's teamId might also be a number. Let me look more carefully at how getTeamsByOrganization returns data:

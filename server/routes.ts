@@ -7562,7 +7562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           const profileMemberships = await storage.getTeamMembershipsByProfile(enrollment.profileId);
           const hasTeam = profileMemberships.some(
-            (m: any) => programTeamIds.includes(m.teamId) && m.status === 'active'
+            (m: any) => programTeamIds.some((tid: any) => String(tid) === String(m.teamId)) && m.status === 'active'
           );
           
           if (!hasTeam) {

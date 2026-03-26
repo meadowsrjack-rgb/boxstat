@@ -2465,9 +2465,42 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                     <TableCell data-testid={`text-players-${user.id}`}>
                       {linkedPlayers.length > 0 ? (
                         <div className="flex flex-col gap-0.5">
-                          {linkedPlayers.slice(0, 3).map((p: any) => (
-                            <span key={p.id} className="text-xs text-gray-600">{p.firstName} {p.lastName}</span>
-                          ))}
+                          {linkedPlayers.slice(0, 3).map((p: any) => {
+                            const playerEnrollments = enrollments.filter((e: any) => e.profileId === p.id);
+                            const isOnTeam = p.teamId || (Array.isArray(p.teamIds) && p.teamIds.length > 0) || (Array.isArray(p.activeTeams) && p.activeTeams.length > 0);
+                            const now = new Date();
+                            const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+                            const hasPaymentFailed = playerEnrollments.some((e: any) => e.status === 'payment_failed' || e.paymentStatus === 'failed');
+                            const hasActiveWithoutTeam = playerEnrollments.some((e: any) => e.status === 'active') && !isOnTeam && teams.length > 0;
+                            const hasLowBalance = playerEnrollments.some((e: any) => {
+                              if (e.status !== 'active' || !e.endDate) return false;
+                              const endDate = new Date(e.endDate);
+                              return endDate <= threeDaysFromNow && endDate > now;
+                            });
+                            const hasActiveOnTeam = playerEnrollments.some((e: any) => e.status === 'active') && !!isOnTeam;
+                            const hasActiveSubscriber = playerEnrollments.some((e: any) => e.status === 'active' && e.stripeSubscriptionId);
+                            const hasActiveOneTime = playerEnrollments.some((e: any) => e.status === 'active' && !e.stripeSubscriptionId);
+                            const hasExpired = playerEnrollments.some((e: any) => e.status === 'expired' || e.status === 'cancelled');
+                            let playerStatus = "No Enrollment";
+                            if (hasActiveWithoutTeam) playerStatus = "Pending Assignment";
+                            else if (hasPaymentFailed) playerStatus = "Payment Failed";
+                            else if (hasLowBalance) playerStatus = "Low Balance";
+                            else if (hasActiveOnTeam) playerStatus = "Enrolled";
+                            else if (hasActiveSubscriber) playerStatus = "Active Subscriber";
+                            else if (hasActiveOneTime) playerStatus = "Active (Program)";
+                            else if (hasExpired) playerStatus = "Expired";
+                            const playerNameColor =
+                              playerStatus === "Enrolled" || playerStatus === "Active Subscriber" ? "text-green-600" :
+                              playerStatus === "Active (Program)" ? "text-green-500" :
+                              playerStatus === "Pending Assignment" ? "text-amber-500" :
+                              playerStatus === "Payment Failed" ? "text-red-600" :
+                              playerStatus === "Low Balance" ? "text-yellow-600" :
+                              playerStatus === "Expired" ? "text-gray-500" :
+                              "text-gray-600";
+                            return (
+                              <span key={p.id} className={`text-xs ${playerNameColor}`}>{p.firstName} {p.lastName}</span>
+                            );
+                          })}
                           {linkedPlayers.length > 3 && (
                             <span className="text-xs text-gray-400">+{linkedPlayers.length - 3} more</span>
                           )}

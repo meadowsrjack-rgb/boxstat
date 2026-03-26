@@ -1632,12 +1632,20 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   
                   <div className="space-y-2">
                     <Label data-testid="label-edit-role">Role</Label>
-                    <div className="flex items-center h-10 px-3 rounded-md border bg-gray-50">
-                      <Badge variant="secondary" className="capitalize" data-testid="badge-edit-role">
-                        {editingUser.role || "player"}
-                      </Badge>
-                      <span className="ml-2 text-xs text-gray-400">Use "Add Role" in user details to manage roles</span>
-                    </div>
+                    <Select
+                      value={editingUser.role || "player"}
+                      onValueChange={(value) => setEditingUser({...editingUser, role: value})}
+                    >
+                      <SelectTrigger data-testid="select-edit-role">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="coach">Coach</SelectItem>
+                        <SelectItem value="parent">Parent</SelectItem>
+                        <SelectItem value="player">Player</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   
                   <div className="space-y-2">

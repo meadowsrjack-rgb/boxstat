@@ -204,10 +204,14 @@ async function getStripeForOrg(organizationId: string): Promise<Stripe | null> {
 }
 
 async function getOrCreateStripeCustomer(stripeInstance: Stripe, user: any): Promise<string> {
+  const fullName = [user.firstName, user.lastName].filter((v) => typeof v === 'string' && v.trim()).join(' ').trim();
   let stripeCustomerId = user.stripeCustomerId;
   if (stripeCustomerId) {
     try {
-      await stripeInstance.customers.retrieve(stripeCustomerId);
+      const existingCustomer = await stripeInstance.customers.retrieve(stripeCustomerId) as Stripe.Customer;
+      if (!existingCustomer.name && fullName) {
+        await stripeInstance.customers.update(stripeCustomerId, { name: fullName });
+      }
       return stripeCustomerId;
     } catch (err: any) {
       if (err?.statusCode === 404 || err?.code === 'resource_missing') {
@@ -221,6 +225,7 @@ async function getOrCreateStripeCustomer(stripeInstance: Stripe, user: any): Pro
   if (!stripeCustomerId) {
     const customer = await stripeInstance.customers.create({
       email: user.email,
+      name: fullName || undefined,
       metadata: { userId: user.id },
     });
     stripeCustomerId = customer.id;

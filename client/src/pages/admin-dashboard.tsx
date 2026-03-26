@@ -7,6 +7,7 @@ import EnrollmentAssignmentBanner from "@/components/EnrollmentAssignmentBanner"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BanterLoader } from "@/components/BanterLoader";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -79,6 +80,7 @@ import {
   UsersRound,
   Ticket,
   Copy,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -958,6 +960,9 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   const [selectedRoleToAdd, setSelectedRoleToAdd] = useState<string>("");
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<any>(null);
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [filterRoles, setFilterRoles] = useState<Set<string>>(new Set());
+  const [filterStatuses, setFilterStatuses] = useState<Set<string>>(new Set());
+  const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
   const tableRef = useDragScroll();
 
   // Fetch user evaluations - only when viewing user in performance tab
@@ -1325,17 +1330,86 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     return 0;
   }) : users;
 
-  // Filter users based on search term
-  const filteredUsers = userSearchTerm.trim() ? sortedUsers.filter((user: any) => {
-    const searchLower = userSearchTerm.toLowerCase();
-    const fullName = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase();
-    return (
-      fullName.includes(searchLower) ||
-      (user.email && user.email.toLowerCase().includes(searchLower)) ||
-      (user.role && user.role.toLowerCase().includes(searchLower)) ||
-      (user.phoneNumber && user.phoneNumber.includes(searchLower))
+  // Helper: derive enrollment status label for a user
+  const deriveUserStatus = (user: any): string => {
+    const now = new Date();
+    const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const linkedPlayersForUser = users.filter((u: any) =>
+      u.accountHolderId === user.id || u.parentId === user.id
     );
-  }) : sortedUsers;
+    const allRelevantEnrollments: any[] = [];
+    const userEnrollments = enrollments.filter((e: any) =>
+      e.accountHolderId === user.id || e.profileId === user.id
+    );
+    allRelevantEnrollments.push(...userEnrollments);
+    linkedPlayersForUser.forEach((player: any) => {
+      const playerEnrollments = enrollments.filter((e: any) => e.profileId === player.id);
+      allRelevantEnrollments.push(...playerEnrollments);
+    });
+    const uniqueEnrollments = allRelevantEnrollments.filter((e, i, arr) =>
+      arr.findIndex(x => x.id === e.id) === i
+    );
+    const isOnTeam = (u: any) =>
+      u.teamId || (Array.isArray(u.teamIds) && u.teamIds.length > 0) || (Array.isArray(u.activeTeams) && u.activeTeams.length > 0);
+    const hasActiveEnrollmentWithoutTeam = teams.length > 0 ? (() => {
+      if (user.role === "player") {
+        const hasActiveEnrollment = uniqueEnrollments.some((e: any) =>
+          e.profileId === user.id && e.status === 'active'
+        );
+        if (hasActiveEnrollment && !isOnTeam(user)) return true;
+      }
+      return linkedPlayersForUser.some((player: any) => {
+        const playerHasActive = uniqueEnrollments.some((e: any) =>
+          e.profileId === player.id && e.status === 'active'
+        );
+        return playerHasActive && !isOnTeam(player);
+      });
+    })() : false;
+    const hasPaymentFailed = uniqueEnrollments.some((e: any) =>
+      e.status === 'payment_failed' || e.paymentStatus === 'failed'
+    );
+    const hasLowBalance = uniqueEnrollments.some((e: any) => {
+      if (e.status !== 'active' || !e.endDate) return false;
+      const endDate = new Date(e.endDate);
+      return endDate <= threeDaysFromNow && endDate > now;
+    });
+    const hasActiveSubscriber = uniqueEnrollments.some((e: any) =>
+      e.status === 'active' && e.stripeSubscriptionId
+    );
+    const hasActiveOneTime = uniqueEnrollments.some((e: any) =>
+      e.status === 'active' && !e.stripeSubscriptionId
+    );
+    const hasExpired = uniqueEnrollments.some((e: any) =>
+      e.status === 'expired' || e.status === 'cancelled'
+    );
+    if (hasActiveEnrollmentWithoutTeam) return "Pending Assignment";
+    if (hasPaymentFailed) return "Payment Failed";
+    if (hasLowBalance) return "Low Balance";
+    if (hasActiveSubscriber) return "Active Subscriber";
+    if (hasActiveOneTime) return "Active (Program)";
+    if (hasExpired) return "Expired";
+    return "No Enrollment";
+  };
+
+  // Filter users based on search term, role, and status filters
+  const filteredUsers = sortedUsers.filter((user: any) => {
+    if (userSearchTerm.trim()) {
+      const searchLower = userSearchTerm.toLowerCase();
+      const fullName = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase();
+      const matchesSearch =
+        fullName.includes(searchLower) ||
+        (user.email && user.email.toLowerCase().includes(searchLower)) ||
+        (user.role && user.role.toLowerCase().includes(searchLower)) ||
+        (user.phoneNumber && user.phoneNumber.includes(searchLower));
+      if (!matchesSearch) return false;
+    }
+    if (filterRoles.size > 0 && !filterRoles.has(user.role)) return false;
+    if (filterStatuses.size > 0) {
+      const status = deriveUserStatus(user);
+      if (!filterStatuses.has(status)) return false;
+    }
+    return true;
+  });
 
 
   const downloadUsersData = () => {
@@ -2076,17 +2150,143 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
         )}
         {/* Search bar */}
         <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search by name, email, role, or phone..."
-              value={userSearchTerm}
-              onChange={(e) => setUserSearchTerm(e.target.value)}
-              className="pl-10"
-              data-testid="input-search-users"
-            />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search by name, email, role, or phone..."
+                value={userSearchTerm}
+                onChange={(e) => setUserSearchTerm(e.target.value)}
+                className="pl-10"
+                data-testid="input-search-users"
+              />
+            </div>
+            <Popover open={filterPopoverOpen} onOpenChange={setFilterPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={`flex items-center gap-1.5 shrink-0 ${(filterRoles.size > 0 || filterStatuses.size > 0) ? 'border-blue-500 text-blue-600 bg-blue-50' : ''}`}
+                  data-testid="button-filter-users"
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Filter
+                  {(filterRoles.size + filterStatuses.size) > 0 && (
+                    <span className="ml-1 bg-blue-500 text-white rounded-full text-xs w-4 h-4 flex items-center justify-center font-medium">
+                      {filterRoles.size + filterStatuses.size}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-4" align="end">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-sm">Filters</h4>
+                    {(filterRoles.size > 0 || filterStatuses.size > 0) && (
+                      <button
+                        className="text-xs text-blue-600 hover:underline"
+                        onClick={() => { setFilterRoles(new Set()); setFilterStatuses(new Set()); }}
+                      >
+                        Clear all
+                      </button>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Role</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {["player", "parent", "coach", "admin"].map((role) => (
+                        <button
+                          key={role}
+                          onClick={() => {
+                            setFilterRoles(prev => {
+                              const next = new Set(prev);
+                              if (next.has(role)) next.delete(role); else next.add(role);
+                              return next;
+                            });
+                          }}
+                          className={`px-2 py-1 rounded-full text-xs font-medium border transition-colors capitalize ${
+                            filterRoles.has(role)
+                              ? 'bg-blue-500 text-white border-blue-500'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                          }`}
+                        >
+                          {role}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Status</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        "Pending Assignment",
+                        "Payment Failed",
+                        "Low Balance",
+                        "Active Subscriber",
+                        "Active (Program)",
+                        "Expired",
+                        "No Enrollment",
+                      ].map((status) => (
+                        <button
+                          key={status}
+                          onClick={() => {
+                            setFilterStatuses(prev => {
+                              const next = new Set(prev);
+                              if (next.has(status)) next.delete(status); else next.add(status);
+                              return next;
+                            });
+                          }}
+                          className={`px-2 py-1 rounded-full text-xs font-medium border transition-colors ${
+                            filterStatuses.has(status)
+                              ? 'bg-blue-500 text-white border-blue-500'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                          }`}
+                        >
+                          {status}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
-          {userSearchTerm && (
+          {/* Active filter chips */}
+          {(filterRoles.size > 0 || filterStatuses.size > 0) && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {Array.from(filterRoles).map((role) => (
+                <span key={role} className="flex items-center gap-1 bg-blue-100 text-blue-700 rounded-full px-2 py-0.5 text-xs font-medium capitalize">
+                  {role}
+                  <button
+                    onClick={() => setFilterRoles(prev => { const next = new Set(prev); next.delete(role); return next; })}
+                    className="ml-0.5 hover:text-blue-900"
+                    aria-label={`Remove ${role} filter`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              {Array.from(filterStatuses).map((status) => (
+                <span key={status} className="flex items-center gap-1 bg-blue-100 text-blue-700 rounded-full px-2 py-0.5 text-xs font-medium">
+                  {status}
+                  <button
+                    onClick={() => setFilterStatuses(prev => { const next = new Set(prev); next.delete(status); return next; })}
+                    className="ml-0.5 hover:text-blue-900"
+                    aria-label={`Remove ${status} filter`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              <button
+                onClick={() => { setFilterRoles(new Set()); setFilterStatuses(new Set()); }}
+                className="text-xs text-gray-500 hover:text-gray-700 underline ml-1"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+          {(userSearchTerm || filterRoles.size > 0 || filterStatuses.size > 0) && (
             <p className="text-xs text-gray-500 mt-1">
               Showing {filteredUsers.length} of {users.length} users
             </p>
@@ -2345,134 +2545,26 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                     </TableCell>
                     <TableCell data-testid={`text-status-${user.id}`}>
                       {(() => {
-                        const now = new Date();
-                        const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-                        
-                        // Get all enrollments for this user and their linked players
-                        const allRelevantEnrollments: any[] = [];
-                        
-                        // User's own enrollments
-                        const userEnrollments = enrollments.filter((e: any) => 
-                          e.accountHolderId === user.id || e.profileId === user.id
-                        );
-                        allRelevantEnrollments.push(...userEnrollments);
-                        
-                        // Linked players' enrollments
-                        linkedPlayers.forEach((player: any) => {
-                          const playerEnrollments = enrollments.filter((e: any) => 
-                            e.profileId === player.id
-                          );
-                          allRelevantEnrollments.push(...playerEnrollments);
-                        });
-                        
-                        // Get unique enrollments
-                        const uniqueEnrollments = allRelevantEnrollments.filter((e, i, arr) => 
-                          arr.findIndex(x => x.id === e.id) === i
-                        );
-                        
-                        // Check for players without teams (Pending Assignment)
-                        // Only show if teams actually exist in the organization
-                        // Check legacy teamId, teamIds, AND activeTeams from team_memberships table
-                        const hasActiveEnrollmentWithoutTeam = teams.length > 0 ? (() => {
-                          const isOnTeam = (u: any) => u.teamId || (Array.isArray(u.teamIds) && u.teamIds.length > 0) || (Array.isArray(u.activeTeams) && u.activeTeams.length > 0);
-                          if (user.role === "player") {
-                            const hasActiveEnrollment = uniqueEnrollments.some((e: any) => 
-                              e.profileId === user.id && e.status === 'active'
-                            );
-                            if (hasActiveEnrollment && !isOnTeam(user)) return true;
-                          }
-                          return linkedPlayers.some((player: any) => {
-                            const playerHasActive = uniqueEnrollments.some((e: any) => 
-                              e.profileId === player.id && e.status === 'active'
-                            );
-                            return playerHasActive && !isOnTeam(player);
-                          });
-                        })() : false;
-                        
-                        // Check for payment failed (check status field)
-                        const hasPaymentFailed = uniqueEnrollments.some((e: any) => 
-                          e.status === 'payment_failed' || e.paymentStatus === 'failed'
-                        );
-                        
-                        // Check for low balance (expiring within 3 days)
-                        const hasLowBalance = uniqueEnrollments.some((e: any) => {
-                          if (e.status !== 'active' || !e.endDate) return false;
-                          const endDate = new Date(e.endDate);
-                          return endDate <= threeDaysFromNow && endDate > now;
-                        });
-                        
-                        // Check for active subscriber (has stripeSubscriptionId)
-                        const hasActiveSubscriber = uniqueEnrollments.some((e: any) => 
-                          e.status === 'active' && e.stripeSubscriptionId
-                        );
-                        
-                        // Check for active one-time (active without subscription)
-                        const hasActiveOneTime = uniqueEnrollments.some((e: any) => 
-                          e.status === 'active' && !e.stripeSubscriptionId
-                        );
-                        
-                        // Check for expired
-                        const hasExpired = uniqueEnrollments.some((e: any) => 
-                          e.status === 'expired' || e.status === 'cancelled'
-                        );
-                        
-                        // Determine badge based on priority
-                        // Priority: Pending Assignment > Payment Failed > Low Balance > Active Subscriber > Active (Program) > Expired > No Enrollment
-                        
-                        if (hasActiveEnrollmentWithoutTeam) {
-                          return (
-                            <Badge className="bg-amber-500 text-white hover:bg-amber-600 whitespace-nowrap">
-                              Pending Assignment
-                            </Badge>
-                          );
+                        const status = deriveUserStatus(user);
+                        if (status === "Pending Assignment") {
+                          return <Badge className="bg-amber-500 text-white hover:bg-amber-600 whitespace-nowrap">Pending Assignment</Badge>;
                         }
-                        
-                        if (hasPaymentFailed) {
-                          return (
-                            <Badge className="bg-red-600 text-white hover:bg-red-700 whitespace-nowrap">
-                              Payment Failed
-                            </Badge>
-                          );
+                        if (status === "Payment Failed") {
+                          return <Badge className="bg-red-600 text-white hover:bg-red-700 whitespace-nowrap">Payment Failed</Badge>;
                         }
-                        
-                        if (hasLowBalance) {
-                          return (
-                            <Badge className="bg-yellow-400 text-yellow-900 hover:bg-yellow-500 whitespace-nowrap">
-                              Low Balance
-                            </Badge>
-                          );
+                        if (status === "Low Balance") {
+                          return <Badge className="bg-yellow-400 text-yellow-900 hover:bg-yellow-500 whitespace-nowrap">Low Balance</Badge>;
                         }
-                        
-                        if (hasActiveSubscriber) {
-                          return (
-                            <Badge className="bg-green-600 text-white hover:bg-green-700 whitespace-nowrap">
-                              Active Subscriber
-                            </Badge>
-                          );
+                        if (status === "Active Subscriber") {
+                          return <Badge className="bg-green-600 text-white hover:bg-green-700 whitespace-nowrap">Active Subscriber</Badge>;
                         }
-                        
-                        if (hasActiveOneTime) {
-                          return (
-                            <Badge className="bg-green-400 text-green-900 hover:bg-green-500 whitespace-nowrap">
-                              Active (Program)
-                            </Badge>
-                          );
+                        if (status === "Active (Program)") {
+                          return <Badge className="bg-green-400 text-green-900 hover:bg-green-500 whitespace-nowrap">Active (Program)</Badge>;
                         }
-                        
-                        if (hasExpired) {
-                          return (
-                            <Badge className="bg-gray-500 text-white hover:bg-gray-600 whitespace-nowrap">
-                              Expired
-                            </Badge>
-                          );
+                        if (status === "Expired") {
+                          return <Badge className="bg-gray-500 text-white hover:bg-gray-600 whitespace-nowrap">Expired</Badge>;
                         }
-                        
-                        // No enrollment
-                        return (
-                          <Badge className="bg-gray-200 text-gray-600 hover:bg-gray-300 whitespace-nowrap">
-                            No Enrollment
-                          </Badge>
-                        );
+                        return <Badge className="bg-gray-200 text-gray-600 hover:bg-gray-300 whitespace-nowrap">No Enrollment</Badge>;
                       })()}
                     </TableCell>
                     <TableCell>

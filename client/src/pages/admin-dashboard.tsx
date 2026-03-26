@@ -1388,9 +1388,9 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
         return playerHasActive && isOnTeam(player);
       });
     })();
-    if (hasActiveEnrollmentOnTeam) return "Enrolled";
+    if (hasActiveEnrollmentOnTeam) return "Active Program";
     if (hasActiveSubscriber) return "Active Subscriber";
-    if (hasActiveOneTime) return "Active (Program)";
+    if (hasActiveOneTime) return "Active Program";
     if (hasExpired) return "Expired";
     return "No Enrollment";
   };
@@ -2223,12 +2223,11 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Status</p>
                     <div className="flex flex-wrap gap-1.5">
                       {[
-                        "Enrolled",
+                        "Active Program",
                         "Pending Assignment",
                         "Payment Failed",
                         "Low Balance",
                         "Active Subscriber",
-                        "Active (Program)",
                         "Expired",
                         "No Enrollment",
                       ].map((status) => (
@@ -2485,13 +2484,12 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                             if (hasActiveWithoutTeam) playerStatus = "Pending Assignment";
                             else if (hasPaymentFailed) playerStatus = "Payment Failed";
                             else if (hasLowBalance) playerStatus = "Low Balance";
-                            else if (hasActiveOnTeam) playerStatus = "Enrolled";
+                            else if (hasActiveOnTeam) playerStatus = "Active Program";
                             else if (hasActiveSubscriber) playerStatus = "Active Subscriber";
-                            else if (hasActiveOneTime) playerStatus = "Active (Program)";
+                            else if (hasActiveOneTime) playerStatus = "Active Program";
                             else if (hasExpired) playerStatus = "Expired";
                             const playerNameColor =
-                              playerStatus === "Enrolled" || playerStatus === "Active Subscriber" ? "text-green-600" :
-                              playerStatus === "Active (Program)" ? "text-green-500" :
+                              playerStatus === "Active Program" || playerStatus === "Active Subscriber" ? "text-green-600" :
                               playerStatus === "Pending Assignment" ? "text-amber-500" :
                               playerStatus === "Payment Failed" ? "text-red-600" :
                               playerStatus === "Low Balance" ? "text-yellow-600" :
@@ -2593,8 +2591,8 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                         if (status === "Pending Assignment") {
                           return <Badge className="bg-amber-500 text-white hover:bg-amber-600 whitespace-nowrap">Pending Assignment</Badge>;
                         }
-                        if (status === "Enrolled") {
-                          return <Badge className="bg-green-600 text-white hover:bg-green-700 whitespace-nowrap">Enrolled</Badge>;
+                        if (status === "Active Program") {
+                          return <Badge className="bg-green-600 text-white hover:bg-green-700 whitespace-nowrap">Active Program</Badge>;
                         }
                         if (status === "Payment Failed") {
                           return <Badge className="bg-red-600 text-white hover:bg-red-700 whitespace-nowrap">Payment Failed</Badge>;
@@ -2604,9 +2602,6 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                         }
                         if (status === "Active Subscriber") {
                           return <Badge className="bg-green-600 text-white hover:bg-green-700 whitespace-nowrap">Active Subscriber</Badge>;
-                        }
-                        if (status === "Active (Program)") {
-                          return <Badge className="bg-green-400 text-green-900 hover:bg-green-500 whitespace-nowrap">Active (Program)</Badge>;
                         }
                         if (status === "Expired") {
                           return <Badge className="bg-gray-500 text-white hover:bg-gray-600 whitespace-nowrap">Expired</Badge>;

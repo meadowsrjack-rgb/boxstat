@@ -82,7 +82,7 @@ import {
   Copy,
   SlidersHorizontal,
 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -940,6 +940,9 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newUserExtras, setNewUserExtras] = useState<any>({ programId: '', teamId: '', startDate: '', endDate: '', enrollments: [] });
+  const [parentSearchQuery, setParentSearchQuery] = useState('');
+  const [parentSearchOpen, setParentSearchOpen] = useState(false);
+  const [selectedParentId, setSelectedParentId] = useState<string>('');
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [viewingUser, setViewingUser] = useState<any>(null);
@@ -992,6 +995,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     firstName: z.string().min(1),
     lastName: z.string().min(1),
     phoneNumber: z.string().optional(),
+    accountHolderId: z.string().optional(),
   });
 
   const form = useForm({
@@ -1006,13 +1010,29 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     },
   });
 
+  const filteredParentAccounts = useMemo(() => {
+    return (users || [])
+      .filter((u: any) => u.role === 'parent' && !u.accountHolderId)
+      .filter((u: any) => {
+        if (!parentSearchQuery) return true;
+        const q = parentSearchQuery.toLowerCase();
+        return (
+          u.firstName?.toLowerCase().includes(q) ||
+          u.lastName?.toLowerCase().includes(q) ||
+          u.email?.toLowerCase().includes(q)
+        );
+      });
+  }, [users, parentSearchQuery]);
+
   const createUser = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/users", { 
+      const payload: any = { 
         ...data, 
         organizationId: organization.id,
         isActive: data.isActive ?? true
-      });
+      };
+      if (!payload.accountHolderId) delete payload.accountHolderId;
+      const res = await apiRequest("POST", "/api/users", payload);
       return await res.json();
     },
     onSuccess: () => {
@@ -1020,6 +1040,8 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
       toast({ title: "User created successfully" });
       setIsDialogOpen(false);
       form.reset();
+      setSelectedParentId('');
+      setParentSearchQuery('');
     },
     onError: () => {
       toast({ title: "Failed to create user", variant: "destructive" });
@@ -1507,7 +1529,13 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
           
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
-            if (!open) setNewUserExtras({ programId: '', teamId: '', startDate: '', endDate: '', enrollments: [] });
+            if (!open) {
+              setNewUserExtras({ programId: '', teamId: '', startDate: '', endDate: '', enrollments: [] });
+              setSelectedParentId('');
+              setParentSearchQuery('');
+              setParentSearchOpen(false);
+              form.setValue('accountHolderId', undefined);
+            }
           }}>
             <DialogTrigger asChild>
               <Button size="icon" title="Add User" data-testid="button-add-new-user">
@@ -1628,6 +1656,72 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       </FormItem>
                     )}
                   />
+                  <div className="space-y-2">
+                    <Label>Link to Parent Account <span className="text-gray-400 font-normal">(optional)</span></Label>
+                    <Popover open={parentSearchOpen} onOpenChange={setParentSearchOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full justify-between font-normal"
+                        >
+                          {selectedParentId
+                            ? (() => {
+                                const p = users?.find((u: any) => u.id === selectedParentId);
+                                return p ? `${p.firstName} ${p.lastName} (${p.email})` : 'Select a parent...';
+                              })()
+                            : 'Search for a parent account...'}
+                          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-2" align="start">
+                        <div className="mb-2">
+                          <Input
+                            placeholder="Search by name or email..."
+                            value={parentSearchQuery}
+                            onChange={(e) => setParentSearchQuery(e.target.value)}
+                            className="h-8 text-sm"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="max-h-48 overflow-y-auto space-y-0.5">
+                          {selectedParentId && (
+                            <button
+                              type="button"
+                              className="w-full text-left px-2 py-1.5 rounded text-sm text-gray-500 hover:bg-gray-100"
+                              onClick={() => {
+                                setSelectedParentId('');
+                                form.setValue('accountHolderId', undefined);
+                                setParentSearchOpen(false);
+                              }}
+                            >
+                              Clear selection
+                            </button>
+                          )}
+                          {filteredParentAccounts.slice(0, 20).map((u: any) => (
+                              <button
+                                key={u.id}
+                                type="button"
+                                className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 flex items-center justify-between ${selectedParentId === u.id ? 'bg-blue-50 text-blue-700' : ''}`}
+                                onClick={() => {
+                                  setSelectedParentId(u.id);
+                                  form.setValue('accountHolderId', u.id);
+                                  setParentSearchOpen(false);
+                                  setParentSearchQuery('');
+                                }}
+                              >
+                                <span>{u.firstName} {u.lastName} <span className="text-gray-400">{u.email}</span></span>
+                                {selectedParentId === u.id && <Check className="h-4 w-4 text-blue-600" />}
+                              </button>
+                            ))}
+                          {filteredParentAccounts.length === 0 && (
+                            <p className="text-xs text-gray-400 px-2 py-2">No parent accounts found</p>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
                   <div className="space-y-2">
                     <Label>Club</Label>
                     <Input value={organization?.name || ""} disabled />

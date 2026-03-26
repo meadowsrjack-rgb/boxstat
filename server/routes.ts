@@ -5314,6 +5314,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     const userData = insertUserSchema.parse(req.body);
+    // Normalize empty accountHolderId to undefined so standalone accounts aren't
+    // accidentally linked (null vs empty string distinction matters for queries)
+    if (!userData.accountHolderId) userData.accountHolderId = undefined;
+    // Validate accountHolderId when provided: must be a parent-role account holder
+    // in the same organization to prevent cross-tenant linking
+    if (userData.accountHolderId) {
+      const parentAccount = await storage.getUser(userData.accountHolderId);
+      if (!parentAccount) {
+        return res.status(400).json({ message: 'Parent account not found' });
+      }
+      if (parentAccount.organizationId !== userData.organizationId) {
+        return res.status(400).json({ message: 'Parent account does not belong to this organization' });
+      }
+      if (parentAccount.role !== 'parent') {
+        return res.status(400).json({ message: 'Linked account must be a parent-role user' });
+      }
+      if (parentAccount.accountHolderId) {
+        return res.status(400).json({ message: 'Linked account must be a top-level account holder' });
+      }
+    }
     // Admin-created users are automatically verified so they can use magic link login
     userData.verified = true;
     const user = await storage.createUser(userData);

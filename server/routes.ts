@@ -7576,6 +7576,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(allEvents);
     }
     
+    // Parent-role users who also have an admin profile should see all events when not in a parent context
+    if (role !== 'admin' && !childProfileId && context !== 'parent') {
+      const isAdmin = await hasAdminProfile(userId, organizationId);
+      if (isAdmin) {
+        console.log('  Parent role with admin profile viewing admin dashboard - showing all events');
+        return res.json(allEvents);
+      }
+    }
+    
     // For admins in parent context (unified account page), aggregate events for all linked players
     if (role === 'admin' && !childProfileId && context === 'parent') {
       console.log('  Admin in parent context - aggregating events for linked players');
@@ -7673,6 +7682,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Admins see all events ONLY when viewing their own dashboard (not a child's)
     if (role === 'admin' && !childProfileId) {
       return res.json(allEvents);
+    }
+    
+    // Parent-role users who also have an admin profile should see all upcoming events when not in a child context
+    if (role !== 'admin' && !childProfileId) {
+      const isAdmin = await hasAdminProfile(userId, organizationId);
+      if (isAdmin) {
+        return res.json(allEvents);
+      }
     }
     
     // Get user's event scope (teams, divisions, programs, target user ID)

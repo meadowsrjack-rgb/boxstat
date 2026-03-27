@@ -19,8 +19,7 @@ import {
   CreditCard,
   Star,
   Clock,
-  X,
-  ExternalLink
+  X
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -89,13 +88,6 @@ export default function NotificationDetailDialog({
   onMarkAsRead
 }: NotificationDetailDialogProps) {
   if (!notification) return null;
-
-  const handleActionClick = () => {
-    if (notification.actionUrl) {
-      window.location.href = notification.actionUrl;
-      onOpenChange(false);
-    }
-  };
 
   const handleMarkAsRead = () => {
     if (!notification.isRead && onMarkAsRead) {
@@ -170,18 +162,8 @@ export default function NotificationDetailDialog({
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 pt-2">
-            {notification.actionUrl && (
-              <Button
-                onClick={handleActionClick}
-                className="flex-1"
-                data-testid="button-notification-action"
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Take Action
-              </Button>
-            )}
             <Button
-              variant={notification.actionUrl ? "ghost" : "default"}
+              variant="default"
               onClick={() => onOpenChange(false)}
               data-testid="button-close-dialog"
             >

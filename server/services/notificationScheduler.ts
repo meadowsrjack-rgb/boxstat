@@ -5,8 +5,9 @@ import { pushNotifications } from './pushNotificationHelper';
 import { analyzePlayerAttendance, getOrgPlayers, getTeamCoachIds, getOrgAdminIds } from './attendanceTracker';
 import type { Event } from '@shared/schema';
 import { db } from '../db';
-import { notifications, notificationRecipients } from '@shared/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { notifications, notificationRecipients, productEnrollments, products, users } from '@shared/schema';
+import { eq, and, sql, lte, gte, gt, inArray } from 'drizzle-orm';
+import { adminNotificationService } from './adminNotificationService';
 
 export class NotificationScheduler {
   private jobs: Map<string, cron.ScheduledTask> = new Map();
@@ -111,11 +112,25 @@ export class NotificationScheduler {
       scheduled: false
     });
 
+    const enrollmentExpiryJob = cron.schedule('0 6 * * *', async () => {
+      await this.processEnrollmentExpiry();
+    }, {
+      scheduled: false
+    });
+
+    const enrollmentExpiryWarningsJob = cron.schedule('0 9 * * *', async () => {
+      await this.processEnrollmentExpiryWarnings();
+    }, {
+      scheduled: false
+    });
+
     this.jobs.set('eventReminders', eventReminderJob);
     this.jobs.set('checkinAvailable', checkinAvailableJob);
     this.jobs.set('rsvpClosing', rsvpClosingJob);
     this.jobs.set('attendanceNotifications', attendanceNotificationsJob);
     this.jobs.set('abandonedCartReminders', abandonedCartRemindersJob);
+    this.jobs.set('enrollmentExpiry', enrollmentExpiryJob);
+    this.jobs.set('enrollmentExpiryWarnings', enrollmentExpiryWarningsJob);
 
     // Start all jobs
     this.jobs.forEach((job, name) => {
@@ -685,6 +700,273 @@ export class NotificationScheduler {
       }
     } catch (error) {
       console.error('Error processing abandoned cart reminders:', error);
+    }
+  }
+
+  private async processEnrollmentExpiry() {
+    try {
+      console.log('[Enrollment Expiry] Checking for expired enrollments...');
+      const now = new Date();
+
+      const expiredEnrollments = await db.select({
+        enrollment: productEnrollments,
+        programName: products.name,
+        profileFirstName: users.firstName,
+        profileLastName: users.lastName,
+        profileEmail: users.email,
+      })
+        .from(productEnrollments)
+        .leftJoin(products, eq(productEnrollments.programId, products.id))
+        .leftJoin(users, eq(productEnrollments.profileId, users.id))
+        .where(
+          and(
+            eq(productEnrollments.status, 'active'),
+            lte(productEnrollments.endDate, now.toISOString())
+          )
+        );
+
+      console.log(`[Enrollment Expiry] Found ${expiredEnrollments.length} expired enrollments`);
+
+      for (const row of expiredEnrollments) {
+        try {
+          await db.update(productEnrollments)
+            .set({ status: 'expired', updatedAt: now.toISOString() })
+            .where(eq(productEnrollments.id, row.enrollment.id));
+
+          const orgId = row.enrollment.organizationId;
+          const programName = row.programName || 'Unknown Program';
+          const userName = `${row.profileFirstName || ''} ${row.profileLastName || ''}`.trim() || 'A member';
+
+          const userTargetIds = [row.enrollment.profileId, row.enrollment.accountHolderId].filter(Boolean) as string[];
+          const uniqueUserIds = [...new Set(userTargetIds)];
+
+          if (uniqueUserIds.length > 0) {
+            try {
+              await adminNotificationService.createNotification({
+                organizationId: orgId,
+                types: ['notification'],
+                title: `${programName} Enrollment Expired`,
+                message: `Your enrollment in ${programName} has expired. To continue, please re-enroll through the app.`,
+                recipientTarget: 'users',
+                recipientUserIds: uniqueUserIds,
+                deliveryChannels: ['in_app', 'push'],
+                sentBy: 'system',
+                status: 'sent',
+              });
+            } catch (notifError) {
+              console.error(`[Enrollment Expiry] Failed to notify user for enrollment ${row.enrollment.id}:`, notifError);
+            }
+          }
+
+          const adminIds = await getOrgAdminIds(orgId);
+          if (adminIds.length > 0) {
+            try {
+              await adminNotificationService.createNotification({
+                organizationId: orgId,
+                types: ['notification'],
+                title: `Enrollment Expired: ${userName}`,
+                message: `${userName}'s enrollment in ${programName} has expired and they have been automatically unenrolled.`,
+                recipientTarget: 'users',
+                recipientUserIds: adminIds,
+                deliveryChannels: ['in_app', 'push'],
+                sentBy: 'system',
+                status: 'sent',
+              });
+            } catch (notifError) {
+              console.error(`[Enrollment Expiry] Failed to notify admins for enrollment ${row.enrollment.id}:`, notifError);
+            }
+          }
+
+          console.log(`[Enrollment Expiry] Expired enrollment ${row.enrollment.id} for ${userName} in ${programName}`);
+        } catch (enrollError) {
+          console.error(`[Enrollment Expiry] Error processing enrollment ${row.enrollment.id}:`, enrollError);
+        }
+      }
+    } catch (error) {
+      console.error('[Enrollment Expiry] Error:', error);
+    }
+  }
+
+  private async processEnrollmentExpiryWarnings() {
+    try {
+      console.log('[Enrollment Expiry Warnings] Checking for upcoming expirations...');
+      const now = new Date();
+      const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+      const soonExpiringEnrollments = await db.select({
+        enrollment: productEnrollments,
+        programName: products.name,
+        profileFirstName: users.firstName,
+        profileLastName: users.lastName,
+      })
+        .from(productEnrollments)
+        .leftJoin(products, eq(productEnrollments.programId, products.id))
+        .leftJoin(users, eq(productEnrollments.profileId, users.id))
+        .where(
+          and(
+            eq(productEnrollments.status, 'active'),
+            lte(productEnrollments.endDate, sevenDaysFromNow.toISOString()),
+            gt(productEnrollments.endDate, now.toISOString())
+          )
+        );
+
+      console.log(`[Enrollment Expiry Warnings] Found ${soonExpiringEnrollments.length} enrollments expiring within 7 days`);
+
+      for (const row of soonExpiringEnrollments) {
+        try {
+          const endDate = new Date(row.enrollment.endDate!);
+          const daysUntilExpiry = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+          if (daysUntilExpiry !== 7 && daysUntilExpiry !== 1) continue;
+
+          const orgId = row.enrollment.organizationId;
+          const programName = row.programName || 'Unknown Program';
+          const userName = `${row.profileFirstName || ''} ${row.profileLastName || ''}`.trim() || 'A member';
+          const dedupTitle = `expiry-${row.enrollment.id}-${daysUntilExpiry}d`;
+
+          const existing = await db.select({ id: notifications.id })
+            .from(notifications)
+            .where(
+              and(
+                eq(notifications.organizationId, orgId),
+                eq(notifications.title, dedupTitle)
+              )
+            )
+            .limit(1);
+
+          if (existing.length > 0) continue;
+
+          const userTargetIds = [row.enrollment.profileId, row.enrollment.accountHolderId].filter(Boolean) as string[];
+          const uniqueUserIds = [...new Set(userTargetIds)];
+
+          if (uniqueUserIds.length > 0) {
+            try {
+              await adminNotificationService.createNotification({
+                organizationId: orgId,
+                types: ['notification'],
+                title: `${programName} Expiring in ${daysUntilExpiry} Day${daysUntilExpiry > 1 ? 's' : ''}`,
+                message: daysUntilExpiry === 1
+                  ? `Your enrollment in ${programName} expires tomorrow. Renew now to avoid losing access.`
+                  : `Your enrollment in ${programName} expires in ${daysUntilExpiry} days. Renew soon to maintain your access.`,
+                recipientTarget: 'users',
+                recipientUserIds: uniqueUserIds,
+                deliveryChannels: ['in_app', 'push'],
+                sentBy: 'system',
+                status: 'sent',
+              });
+            } catch (notifError) {
+              console.error(`[Enrollment Expiry Warnings] Failed to notify user for enrollment ${row.enrollment.id}:`, notifError);
+            }
+          }
+
+          const adminIds = await getOrgAdminIds(orgId);
+          if (adminIds.length > 0) {
+            try {
+              await adminNotificationService.createNotification({
+                organizationId: orgId,
+                types: ['notification'],
+                title: `Enrollment Expiring: ${userName}`,
+                message: `${userName}'s enrollment in ${programName} expires in ${daysUntilExpiry} day${daysUntilExpiry > 1 ? 's' : ''}.`,
+                recipientTarget: 'users',
+                recipientUserIds: adminIds,
+                deliveryChannels: ['in_app', 'push'],
+                sentBy: 'system',
+                status: 'sent',
+              });
+            } catch (notifError) {
+              console.error(`[Enrollment Expiry Warnings] Failed to notify admins:`, notifError);
+            }
+          }
+
+          console.log(`[Enrollment Expiry Warnings] Sent ${daysUntilExpiry}-day warning for ${userName} in ${programName}`);
+        } catch (rowError) {
+          console.error(`[Enrollment Expiry Warnings] Error processing enrollment ${row.enrollment.id}:`, rowError);
+        }
+      }
+
+      console.log('[Enrollment Expiry Warnings] Checking for low credit warnings...');
+      const lowCreditEnrollments = await db.select({
+        enrollment: productEnrollments,
+        programName: products.name,
+        profileFirstName: users.firstName,
+        profileLastName: users.lastName,
+      })
+        .from(productEnrollments)
+        .leftJoin(products, eq(productEnrollments.programId, products.id))
+        .leftJoin(users, eq(productEnrollments.profileId, users.id))
+        .where(
+          and(
+            eq(productEnrollments.status, 'active'),
+            lte(productEnrollments.remainingCredits, 2),
+            gt(productEnrollments.remainingCredits, 0)
+          )
+        );
+
+      for (const row of lowCreditEnrollments) {
+        try {
+          const orgId = row.enrollment.organizationId;
+          const programName = row.programName || 'Unknown Program';
+          const userName = `${row.profileFirstName || ''} ${row.profileLastName || ''}`.trim() || 'A member';
+          const remaining = row.enrollment.remainingCredits;
+          const dedupTitle = `low-credits-${row.enrollment.id}-${remaining}`;
+
+          const existing = await db.select({ id: notifications.id })
+            .from(notifications)
+            .where(
+              and(
+                eq(notifications.organizationId, orgId),
+                eq(notifications.title, dedupTitle)
+              )
+            )
+            .limit(1);
+
+          if (existing.length > 0) continue;
+
+          const userTargetIds = [row.enrollment.profileId, row.enrollment.accountHolderId].filter(Boolean) as string[];
+          const uniqueUserIds = [...new Set(userTargetIds)];
+
+          if (uniqueUserIds.length > 0) {
+            try {
+              await adminNotificationService.createNotification({
+                organizationId: orgId,
+                types: ['notification'],
+                title: `Low Credits: ${programName}`,
+                message: `You have ${remaining} credit${remaining !== 1 ? 's' : ''} remaining for ${programName}. Purchase more to continue attending sessions.`,
+                recipientTarget: 'users',
+                recipientUserIds: uniqueUserIds,
+                deliveryChannels: ['in_app', 'push'],
+                sentBy: 'system',
+                status: 'sent',
+              });
+            } catch (notifError) {
+              console.error(`[Low Credits] Failed to notify user:`, notifError);
+            }
+          }
+
+          const adminIds = await getOrgAdminIds(orgId);
+          if (adminIds.length > 0) {
+            try {
+              await adminNotificationService.createNotification({
+                organizationId: orgId,
+                types: ['notification'],
+                title: `Low Credits: ${userName}`,
+                message: `${userName} has ${remaining} credit${remaining !== 1 ? 's' : ''} remaining for ${programName}.`,
+                recipientTarget: 'users',
+                recipientUserIds: adminIds,
+                deliveryChannels: ['in_app'],
+                sentBy: 'system',
+                status: 'sent',
+              });
+            } catch (notifError) {
+              console.error(`[Low Credits] Failed to notify admins:`, notifError);
+            }
+          }
+        } catch (rowError) {
+          console.error(`[Low Credits] Error:`, rowError);
+        }
+      }
+    } catch (error) {
+      console.error('[Enrollment Expiry Warnings] Error:', error);
     }
   }
 

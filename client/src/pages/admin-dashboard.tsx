@@ -1244,7 +1244,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
         
         let programId = undefined;
         if (programName) {
-          const program = programs?.find((p: any) => p.name.toLowerCase() === programName.toLowerCase() && p.productCategory === 'program');
+          const program = programs?.find((p: any) => p.name.toLowerCase() === programName.toLowerCase() && p.productCategory === 'service');
           if (program) programId = program.id;
         }
         
@@ -2001,7 +2001,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       <p className="text-xs font-semibold text-gray-600 mb-2">Enroll in Program:</p>
                       <div className="border rounded-md max-h-32 overflow-y-auto">
                         {programs?.filter((p: any) =>
-                          p.productCategory === 'program' &&
+                          p.productCategory === 'service' &&
                           !(newUserExtras.enrollments || []).some((e: any) => e.programId === p.id)
                         ).map((program: any) => (
                           <div key={program.id} className="flex items-center justify-between px-3 py-2 border-b last:border-b-0 hover:bg-gray-50">
@@ -2026,7 +2026,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                           </div>
                         ))}
                         {programs?.filter((p: any) =>
-                          p.productCategory === 'program' &&
+                          p.productCategory === 'service' &&
                           !(newUserExtras.enrollments || []).some((e: any) => e.programId === p.id)
                         ).length === 0 && (
                           <p className="text-xs text-gray-500 px-3 py-2">
@@ -2374,7 +2374,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                             <p className="text-xs font-semibold text-gray-600 mb-2">Enroll in Program:</p>
                             <div className="border rounded-md max-h-32 overflow-y-auto">
                               {programs?.filter((p: any) => 
-                                p.productCategory === 'program' && 
+                                p.productCategory === 'service' && 
                                 !(editingUser.pendingEnrollments || programEnrollments).some((e: any) => e.programId === p.id)
                               ).map((program: any) => (
                                 <div key={program.id} className="flex items-center justify-between px-3 py-2 border-b last:border-b-0 hover:bg-gray-50">
@@ -2405,7 +2405,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                 </div>
                               ))}
                               {programs?.filter((p: any) => 
-                                p.productCategory === 'program' && 
+                                p.productCategory === 'service' && 
                                 !(editingUser.pendingEnrollments || programEnrollments).some((e: any) => e.programId === p.id)
                               ).length === 0 && (
                                 <p className="text-xs text-gray-500 px-3 py-2">Already enrolled in all available programs</p>

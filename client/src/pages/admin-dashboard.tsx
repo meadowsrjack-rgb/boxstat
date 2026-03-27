@@ -999,6 +999,12 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     lastName: z.string().min(1),
     phoneNumber: z.string().optional(),
     accountHolderId: z.string().optional(),
+    dateOfBirth: z.string().optional(),
+    position: z.string().optional(),
+    heightIn: z.number().optional().nullable(),
+    division: z.string().optional(),
+    notes: z.string().optional(),
+    isActive: z.boolean().optional(),
   });
 
   const form = useForm({
@@ -1010,8 +1016,15 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
       lastName: "",
       phoneNumber: "",
       isActive: true,
+      dateOfBirth: "",
+      position: "",
+      heightIn: null as number | null,
+      division: "",
+      notes: "",
     },
   });
+
+  const [showCreateDobPicker, setShowCreateDobPicker] = useState(false);
 
   const filteredParentAccounts = useMemo(() => {
     return (users || [])
@@ -1537,6 +1550,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
               setSelectedParentId('');
               setParentSearchQuery('');
               setParentSearchOpen(false);
+              setShowCreateDobPicker(false);
               form.setValue('accountHolderId', undefined);
             }
           }}>
@@ -1728,6 +1742,165 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   <div className="space-y-2">
                     <Label>Club</Label>
                     <Input value={organization?.name || ""} disabled />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="dateOfBirth"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date of Birth</FormLabel>
+                        <FormControl>
+                          <button
+                            type="button"
+                            onClick={() => setShowCreateDobPicker(true)}
+                            className="w-full h-10 px-3 bg-white border border-gray-300 rounded-md flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+                          >
+                            <span className={field.value ? "text-gray-900" : "text-gray-400"}>
+                              {field.value ? new Date(field.value).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : "Select date"}
+                            </span>
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                          </button>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Dialog open={showCreateDobPicker} onOpenChange={setShowCreateDobPicker}>
+                    <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
+                      <DialogHeader>
+                        <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
+                      </DialogHeader>
+                      <div className="py-4 flex justify-center date-wheel-picker-dark">
+                        <DateScrollPicker
+                          defaultYear={form.getValues('dateOfBirth') ? new Date(form.getValues('dateOfBirth')).getFullYear() : 2010}
+                          defaultMonth={(form.getValues('dateOfBirth') ? new Date(form.getValues('dateOfBirth')).getMonth() : 0) + 1}
+                          defaultDay={form.getValues('dateOfBirth') ? new Date(form.getValues('dateOfBirth')).getDate() : 1}
+                          startYear={1950}
+                          endYear={new Date().getFullYear()}
+                          dateTimeFormatOptions={{ month: 'short' }}
+                          highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
+                          onDateChange={(date: Date) => {
+                            form.setValue('dateOfBirth', date.toISOString().split('T')[0]);
+                          }}
+                        />
+                      </div>
+                      <div className="flex gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1 border-gray-600 text-gray-600 hover:bg-gray-800"
+                          onClick={() => setShowCreateDobPicker(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                          onClick={() => setShowCreateDobPicker(false)}
+                        >
+                          Confirm
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+                  {form.watch('role') !== 'coach' && (
+                    <FormField
+                      control={form.control}
+                      name="position"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Position</FormLabel>
+                          <Select
+                            value={field.value || "none"}
+                            onValueChange={(value) => field.onChange(value === "none" ? "" : value)}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select position" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              <SelectItem value="PG">PG - Point Guard</SelectItem>
+                              <SelectItem value="SG">SG - Shooting Guard</SelectItem>
+                              <SelectItem value="SF">SF - Small Forward</SelectItem>
+                              <SelectItem value="PF">PF - Power Forward</SelectItem>
+                              <SelectItem value="C">C - Center</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {form.watch('role') !== 'coach' && (
+                    <FormField
+                      control={form.control}
+                      name="heightIn"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Height (inches)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="e.g., 72 for 6'0&quot;"
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {form.watch('role') !== 'coach' && (
+                    <FormField
+                      control={form.control}
+                      name="division"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Division</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="e.g., U10, U12, Varsity"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  <FormField
+                    control={form.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Admin Notes</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Internal notes (not visible to user)..."
+                            rows={3}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="create-active"
+                      checked={form.watch('isActive') !== false}
+                      onCheckedChange={(checked) => form.setValue('isActive', checked)}
+                    />
+                    <Label htmlFor="create-active">Active</Label>
                   </div>
 
                   <div className="space-y-4">

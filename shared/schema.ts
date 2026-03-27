@@ -136,6 +136,9 @@ export interface User {
   teamId?: string;
   jerseyNumber?: number;
   position?: string;
+  heightIn?: number;
+  notes?: string;
+  division?: string;
   program?: string; // Configurable, set by organization
   
   // Performance metrics
@@ -229,6 +232,7 @@ export const users = pgTable("users", {
   height: varchar(),
   bio: text(),
   notes: text(),
+  division: varchar("division"),
   aauMembershipId: varchar("aau_membership_id"),
   postalCode: varchar("postal_code"),
   state: varchar(),
@@ -1265,6 +1269,9 @@ export const insertUserSchema = z.object({
   teamId: z.string().optional(),
   jerseyNumber: z.number().optional(),
   position: z.string().optional(),
+  heightIn: z.number().optional().nullable(),
+  notes: z.string().optional(),
+  division: z.string().optional(),
   rating: z.number().optional(),
   awardsCount: z.number().optional(),
   stripeCustomerId: z.string().optional(),

@@ -3401,6 +3401,7 @@ class DatabaseStorage implements IStorage {
       email: updates.email,
       profileImageUrl: updates.profileImageUrl,
       role: updates.role,
+      userType: updates.userType || updates.role,
       dateOfBirth: updates.dateOfBirth,
       phoneNumber: updates.phoneNumber,
       address: updates.address,

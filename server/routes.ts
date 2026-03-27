@@ -5376,8 +5376,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(403).json({ message: 'Only admins can update users (coaches can only flag players)' });
     }
     
-    delete updateData.role;
-    delete updateData.userType;
+    if (updateData.role) {
+      updateData.userType = updateData.role;
+    } else {
+      delete updateData.role;
+      delete updateData.userType;
+    }
     delete updateData.accountHolderId;
     delete updateData.organizationId;
     

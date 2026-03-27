@@ -2099,22 +2099,102 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                     />
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <Label data-testid="label-edit-role">Role</Label>
-                    <Select
-                      value={editingUser.role || "player"}
-                      onValueChange={(value) => setEditingUser({...editingUser, role: value})}
-                    >
-                      <SelectTrigger data-testid="select-edit-role">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="coach">Coach</SelectItem>
-                        <SelectItem value="parent">Parent</SelectItem>
-                        <SelectItem value="player">Player</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={editingUser.role || "player"}
+                        onValueChange={(value) => setEditingUser({...editingUser, role: value})}
+                      >
+                        <SelectTrigger data-testid="select-edit-role" className="flex-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="coach">Coach</SelectItem>
+                          <SelectItem value="parent">Parent</SelectItem>
+                          <SelectItem value="player">Player</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p className="text-xs text-gray-500">Changing the role updates this profile's current role.</p>
+
+                    {(() => {
+                      const accountHolderId = editingUser.accountHolderId || editingUser.id;
+                      const otherProfiles = (users || []).filter((u: any) =>
+                        (u.id === accountHolderId || u.accountHolderId === accountHolderId) && u.id !== editingUser.id
+                      );
+                      const allProfileRoles = [editingUser, ...otherProfiles].map((u: any) => u.role);
+                      const availableRoles = ['player', 'parent', 'coach', 'admin'].filter(r => !allProfileRoles.includes(r));
+
+                      return (
+                        <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
+                          <p className="text-xs font-semibold text-gray-600">Account Profiles</p>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 bg-white border rounded px-2 py-1.5">
+                              <Badge className={`text-[10px] px-1.5 ${
+                                editingUser.role === 'admin' ? 'bg-red-100 text-red-700 border-red-200' :
+                                editingUser.role === 'coach' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                                editingUser.role === 'parent' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                                'bg-green-100 text-green-700 border-green-200'
+                              }`}>
+                                {editingUser.role}
+                              </Badge>
+                              <span className="text-sm">{editingUser.firstName} {editingUser.lastName}</span>
+                              <span className="text-[10px] text-gray-400 ml-auto">current</span>
+                            </div>
+                            {otherProfiles.map((profile: any) => (
+                              <div key={profile.id} className="flex items-center gap-2 bg-white border rounded px-2 py-1.5">
+                                <Badge variant="outline" className={`text-[10px] px-1.5 ${
+                                  profile.role === 'admin' ? 'bg-red-50 text-red-600 border-red-200' :
+                                  profile.role === 'coach' ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                                  profile.role === 'parent' ? 'bg-purple-50 text-purple-600 border-purple-200' :
+                                  'bg-green-50 text-green-600 border-green-200'
+                                }`}>
+                                  {profile.role}
+                                </Badge>
+                                <span className="text-sm text-gray-600">{profile.firstName} {profile.lastName}</span>
+                                <span className={`text-[10px] ml-auto ${profile.isActive !== false ? 'text-green-500' : 'text-gray-400'}`}>
+                                  {profile.isActive !== false ? 'active' : 'inactive'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+
+                          {availableRoles.length > 0 && (
+                            <div className="pt-2 border-t border-gray-200">
+                              <p className="text-[10px] text-gray-500 mb-1.5">Add a new role profile (creates a separate user record with same email):</p>
+                              <div className="flex gap-1.5 flex-wrap">
+                                {availableRoles.map(role => (
+                                  <Button
+                                    key={role}
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs h-7 capitalize"
+                                    disabled={addRole.isPending}
+                                    onClick={() => {
+                                      if (confirm(`Create a new ${role} profile for ${editingUser.firstName} ${editingUser.lastName}?`)) {
+                                        addRole.mutate({
+                                          userId: accountHolderId,
+                                          role,
+                                          firstName: editingUser.firstName,
+                                          lastName: editingUser.lastName,
+                                        });
+                                      }
+                                    }}
+                                    data-testid={`button-add-role-${role}`}
+                                  >
+                                    <UserPlus className="w-3 h-3 mr-1" />
+                                    + {role}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                   
                   <div className="space-y-2">

@@ -1559,7 +1559,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                 <Plus className="w-4 h-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg w-full max-h-[85vh] overflow-y-auto">
+            <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New User</DialogTitle>
               </DialogHeader>

@@ -391,7 +391,7 @@
     overscroll-behavior: none;
     overscroll-behavior-y: none;
     z-index: 1;
-    background-color: #000000;
+    background-color: transparent;
   }
   
   /* iOS auth page fix - fixed positioning for auth pages to prevent white bleed on keyboard close */

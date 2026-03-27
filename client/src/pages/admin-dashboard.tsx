@@ -322,9 +322,8 @@ export default function AdminDashboard() {
   if (isLoading) {
     return (
       <>
-        <div className="ios-full-bleed" />
-        <div className="fixed inset-0 w-full h-full bg-white z-0 pointer-events-none" />
-        <div className="ios-fixed-page relative z-10 w-full bg-transparent flex items-center justify-center" data-testid="loading-admin-dashboard">
+        <div className="ios-full-bleed" style={{ backgroundColor: '#ffffff' }} />
+        <div className="ios-fixed-page relative z-10 w-full flex items-center justify-center" style={{ backgroundColor: '#ffffff' }} data-testid="loading-admin-dashboard">
           <BanterLoader />
         </div>
       </>
@@ -333,9 +332,8 @@ export default function AdminDashboard() {
 
   return (
     <>
-      <div className="ios-full-bleed" />
-      <div className="fixed inset-0 w-full h-full bg-gray-50 z-0 pointer-events-none" />
-      <div className="scrollable-page relative z-10 bg-transparent" data-testid="admin-dashboard">
+      <div className="ios-full-bleed" style={{ backgroundColor: '#f9fafb' }} />
+      <div className="scrollable-page relative z-10" style={{ backgroundColor: '#f9fafb' }} data-testid="admin-dashboard">
       {/* Header */}
       <div className="bg-white border-b safe-top sticky top-0 z-50">
         <div className="mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-6">

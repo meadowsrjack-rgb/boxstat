@@ -1971,9 +1971,8 @@ export default function UnifiedAccount() {
   if (playersLoading) {
     return (
       <>
-        <div className="ios-full-bleed" />
-        <div className="fixed inset-0 w-full h-full bg-white z-0 pointer-events-none" />
-        <div className="ios-fixed-page relative z-10 w-full bg-transparent flex items-center justify-center">
+        <div className="ios-full-bleed" style={{ backgroundColor: '#ffffff' }} />
+        <div className="ios-fixed-page relative z-10 w-full flex items-center justify-center" style={{ backgroundColor: '#ffffff' }}>
           <BanterLoader />
         </div>
       </>
@@ -1982,9 +1981,8 @@ export default function UnifiedAccount() {
 
   return (
     <>
-      <div className="ios-full-bleed" />
-      <div className="fixed inset-0 w-full h-full bg-gray-50 z-0 pointer-events-none" />
-      <div className="scrollable-page relative z-10 bg-transparent">
+      <div className="ios-full-bleed" style={{ backgroundColor: '#f9fafb' }} />
+      <div className="scrollable-page relative z-10" style={{ backgroundColor: '#f9fafb' }}>
       {/* Header */}
       <div className="bg-white border-b safe-top sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

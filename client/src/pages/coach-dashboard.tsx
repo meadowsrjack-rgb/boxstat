@@ -468,9 +468,8 @@ export default function CoachDashboard() {
 
   return (
     <>
-      <div className="ios-full-bleed" />
-      <div className="fixed inset-0 w-full h-full bg-gray-50 z-0 pointer-events-none" />
-      <div className="scrollable-page relative z-10 bg-transparent">
+      <div className="ios-full-bleed" style={{ backgroundColor: '#f9fafb' }} />
+      <div className="scrollable-page relative z-10" style={{ backgroundColor: '#f9fafb' }}>
       {/* Top Bar */}
       <header className="bg-white shadow-sm safe-top sticky top-0 z-50">
         <div className="max-w-md md:max-w-2xl lg:max-w-4xl mx-auto px-4 py-3">

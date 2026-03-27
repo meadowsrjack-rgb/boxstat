@@ -4738,8 +4738,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const requestingUserId = req.user.id;
       const targetUserId = req.query.profileId || req.body.profileId || requestingUserId;
-      const filename = req.file.filename;
-      const imageUrl = `/uploads/${filename}`;
       
       // Authorization: parent can update their children, or user can update self
       const requestingUser = await storage.getUser(requestingUserId);
@@ -4758,19 +4756,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isAdmin = requestingUser?.role === 'admin';
       
       if (!isParentOfChild && !isUpdatingSelf && !isAdmin) {
-        // Delete uploaded file on authorization failure
         if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
           fs.unlinkSync(uploadedFilePath);
         }
         return res.status(403).json({ error: 'Not authorized to update this profile' });
       }
       
-      // Update user's profile image
-      await storage.updateUser(targetUserId, { profileImageUrl: imageUrl });
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
+      
+      const fileBuffer = fs.readFileSync(uploadedFilePath!);
+      const uploadResponse = await fetch(uploadURL, {
+        method: 'PUT',
+        body: fileBuffer,
+        headers: {
+          'Content-Type': req.file.mimetype || 'image/jpeg',
+        },
+      });
+      
+      if (!uploadResponse.ok) {
+        throw new Error(`Failed to upload to object storage: ${uploadResponse.status}`);
+      }
+      
+      await objectStorageService.trySetObjectEntityAclPolicy(objectPath, {
+        owner: targetUserId,
+        visibility: 'public',
+      });
+      
+      if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+        fs.unlinkSync(uploadedFilePath);
+      }
+      
+      await storage.updateUser(targetUserId, { profileImageUrl: objectPath });
       
       res.json({ 
         success: true, 
-        imageUrl,
+        imageUrl: objectPath,
         message: 'Profile photo uploaded successfully' 
       });
     } catch (error: any) {

@@ -12,7 +12,9 @@ import {
   MessageCircle,
   Crown,
   Clock,
-  ChevronUp
+  ChevronUp,
+  Pin,
+  VolumeX,
 } from "lucide-react";
 
 interface TeamChatProps {
@@ -30,6 +32,7 @@ interface TeamMessageWithSender {
   senderId: string;
   content: string;
   messageType: string;
+  isPinned?: boolean;
   createdAt: string | Date;
   sender: {
     id: string;
@@ -52,6 +55,27 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
+
+  // Check if the effective sender (currentProfileId or current user) is muted in this channel
+  const { data: muteStatus } = useQuery<{ muted: boolean }>({
+    queryKey: ['/api/teams', teamId, 'mute-status', channel, currentProfileId],
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const profileParam = currentProfileId ? `&profileId=${encodeURIComponent(currentProfileId)}` : '';
+      const response = await fetch(`/api/teams/${teamId}/mute-status?channel=${channel}${profileParam}`, {
+        credentials: 'include',
+        headers,
+      });
+      if (!response.ok) return { muted: false };
+      return response.json();
+    },
+    enabled: !!teamId && !!user,
+    refetchInterval: 30000,
+  });
+
+  const isMuted = muteStatus?.muted ?? false;
 
   const { data: allMessages = [], isLoading } = useQuery<TeamMessageWithSender[]>({
     queryKey: ['/api/teams', teamId, 'messages', channel],
@@ -112,9 +136,10 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        // Only update if message is for this team AND this channel
-        if (data.type === 'new_team_message' && data.teamId === teamId && 
-            (data.channel === channel || (!data.channel && channel === 'players'))) {
+        const isThisChannel = data.teamId === teamId && (data.channel === channel || (!data.channel && channel === 'players'));
+        
+        // New message
+        if (data.type === 'new_team_message' && isThisChannel) {
           const newMsg = data.message;
           queryClient.setQueryData<TeamMessageWithSender[]>(
             ['/api/teams', teamId, 'messages', channel], 
@@ -124,6 +149,27 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
               if (messageExists) return oldMessages;
               return [...oldMessages, newMsg];
             }
+          );
+        }
+
+        // Message pinned/unpinned
+        if (data.type === 'message_pinned' && isThisChannel) {
+          queryClient.setQueryData<TeamMessageWithSender[]>(
+            ['/api/teams', teamId, 'messages', channel],
+            (oldMessages) => {
+              if (!oldMessages) return oldMessages;
+              return oldMessages.map(msg =>
+                msg.id === data.messageId ? { ...msg, isPinned: data.isPinned } : msg
+              );
+            }
+          );
+        }
+
+        // Channel cleared
+        if (data.type === 'channel_cleared' && isThisChannel) {
+          queryClient.setQueryData<TeamMessageWithSender[]>(
+            ['/api/teams', teamId, 'messages', channel],
+            []
           );
         }
       } catch (error) {
@@ -203,8 +249,25 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
     return user?.id === senderIdStr || currentProfileId === senderIdStr;
   };
 
+  const pinnedMessages = allMessages.filter(m => m.isPinned);
+
   return (
     <div className={className}>
+      {/* Pinned messages section */}
+      {pinnedMessages.length > 0 && (
+        <div className="mb-3 bg-yellow-50 border border-yellow-200 rounded-xl p-3">
+          <div className="flex items-center gap-1 text-xs font-semibold text-yellow-700 mb-2">
+            <Pin className="h-3 w-3" />
+            Pinned Messages
+          </div>
+          {pinnedMessages.map(msg => (
+            <div key={msg.id} className="text-xs text-yellow-800 py-1 border-b border-yellow-100 last:border-0">
+              <span className="font-medium">{getSenderName(msg.sender)}:</span> {msg.content}
+            </div>
+          ))}
+        </div>
+      )}
+
       <div 
         ref={scrollContainerRef}
         className="h-72 overflow-y-auto bg-gray-50 rounded-xl p-4"
@@ -274,6 +337,12 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
                             Coach
                           </Badge>
                         )}
+                        {message.isPinned && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 bg-yellow-50 text-yellow-600 border-yellow-200">
+                            <Pin className="h-2 w-2 mr-0.5" />
+                            Pinned
+                          </Badge>
+                        )}
                       </div>
                     )}
                     
@@ -281,6 +350,8 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
                       className={`px-3 py-2 rounded-2xl text-sm ${
                         isOwn
                           ? 'bg-red-600 text-white rounded-br-sm'
+                          : message.isPinned
+                          ? 'bg-yellow-100 text-gray-900 rounded-bl-sm shadow-sm border border-yellow-200'
                           : 'bg-white text-gray-900 rounded-bl-sm shadow-sm'
                       }`}
                     >
@@ -302,30 +373,39 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
 
       {/* Message input - hidden in readOnly mode (announcements only) */}
       {!readOnly && (
-        <div className="flex items-center gap-2 mt-3">
-          <Input
-            type="text"
-            placeholder="Type a message..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            disabled={sendMessageMutation.isPending || !user}
-            className="flex-1 bg-white rounded-full px-4"
-            data-testid="input-message"
-          />
-          <Button
-            onClick={handleSendMessage}
-            disabled={!newMessage.trim() || sendMessageMutation.isPending || !user}
-            size="icon"
-            className="bg-red-600 hover:bg-red-700 rounded-full h-10 w-10"
-            data-testid="button-send-message"
-          >
-            {sendMessageMutation.isPending ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
+        <div className="mt-3">
+          {isMuted ? (
+            <div className="flex items-center gap-2 px-4 py-3 bg-orange-50 border border-orange-200 rounded-xl text-sm text-orange-700">
+              <VolumeX className="h-4 w-4 flex-shrink-0" />
+              <span>You are muted in this channel and cannot send messages.</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Input
+                type="text"
+                placeholder="Type a message..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={sendMessageMutation.isPending || !user}
+                className="flex-1 bg-white rounded-full px-4"
+                data-testid="input-message"
+              />
+              <Button
+                onClick={handleSendMessage}
+                disabled={!newMessage.trim() || sendMessageMutation.isPending || !user}
+                size="icon"
+                className="bg-red-600 hover:bg-red-700 rounded-full h-10 w-10"
+                data-testid="button-send-message"
+              >
+                {sendMessageMutation.isPending ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       )}
       

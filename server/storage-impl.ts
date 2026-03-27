@@ -86,6 +86,9 @@ import {
   type Coupon,
   type InsertCoupon,
   coupons,
+  type ChatMute,
+  type InsertChatMute,
+  chatMutes,
 } from "@shared/schema";
 
 // =============================================
@@ -187,6 +190,14 @@ export interface IStorage {
   getMessagesByTeam(teamId: string, channel?: string): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
   deleteMessage(messageId: number): Promise<void>;
+  pinMessage(messageId: number, isPinned: boolean): Promise<void>;
+  clearChannelMessages(teamId: number, channel: string): Promise<void>;
+
+  // Chat mute operations
+  muteUser(data: InsertChatMute): Promise<ChatMute>;
+  unmuteUser(userId: string, teamId: number, channel: string): Promise<void>;
+  getMutedUsers(teamId: number, channel: string): Promise<ChatMute[]>;
+  isUserMuted(userId: string, teamId: number, channel: string): Promise<boolean>;
   
   // Payment operations
   getPayment(id: string): Promise<Payment | undefined>;
@@ -419,6 +430,8 @@ class MemStorage implements IStorage {
   private userAwards: Map<string, UserAward> = new Map();
   private announcements: Map<string, Announcement> = new Map();
   private messages: Map<string, Message> = new Map();
+  private chatMutesStore: Map<number, ChatMute> = new Map();
+  private nextChatMuteId = 1;
   private payments: Map<string, Payment> = new Map();
   private programs: Map<string, Program> = new Map();
   private waivers: Map<string, Waiver> = new Map();
@@ -1493,6 +1506,53 @@ class MemStorage implements IStorage {
   
   async deleteMessage(messageId: number): Promise<void> {
     this.messages.delete(messageId);
+  }
+
+  async pinMessage(messageId: number, isPinned: boolean): Promise<void> {
+    const msg = this.messages.get(messageId.toString());
+    if (msg) {
+      msg.isPinned = isPinned;
+      this.messages.set(messageId.toString(), msg);
+    }
+  }
+
+  async clearChannelMessages(teamId: number, channel: string): Promise<void> {
+    for (const [key, msg] of this.messages.entries()) {
+      if (msg.teamId === teamId.toString() && (msg.chatChannel === channel || (!msg.chatChannel && channel === 'players'))) {
+        this.messages.delete(key);
+      }
+    }
+  }
+
+  async muteUser(data: InsertChatMute): Promise<ChatMute> {
+    // Upsert: if already muted, overwrite existing entry to prevent duplicates
+    for (const [id, mute] of this.chatMutesStore.entries()) {
+      if (mute.userId === data.userId && mute.teamId === data.teamId && mute.channel === data.channel) {
+        const updated: ChatMute = { id, userId: data.userId, teamId: data.teamId, channel: data.channel, mutedBy: data.mutedBy, createdAt: new Date().toISOString() };
+        this.chatMutesStore.set(id, updated);
+        return updated;
+      }
+    }
+    const id = this.nextChatMuteId++;
+    const mute: ChatMute = { id, userId: data.userId, teamId: data.teamId, channel: data.channel, mutedBy: data.mutedBy, createdAt: new Date().toISOString() };
+    this.chatMutesStore.set(id, mute);
+    return mute;
+  }
+
+  async unmuteUser(userId: string, teamId: number, channel: string): Promise<void> {
+    for (const [id, mute] of this.chatMutesStore.entries()) {
+      if (mute.userId === userId && mute.teamId === teamId && mute.channel === channel) {
+        this.chatMutesStore.delete(id);
+      }
+    }
+  }
+
+  async getMutedUsers(teamId: number, channel: string): Promise<ChatMute[]> {
+    return Array.from(this.chatMutesStore.values()).filter(m => m.teamId === teamId && m.channel === channel);
+  }
+
+  async isUserMuted(userId: string, teamId: number, channel: string): Promise<boolean> {
+    return Array.from(this.chatMutesStore.values()).some(m => m.userId === userId && m.teamId === teamId && m.channel === channel);
   }
   
   // Payment operations
@@ -4161,6 +4221,65 @@ class DatabaseStorage implements IStorage {
     await db.delete(schema.messages).where(eq(schema.messages.id, messageId));
   }
 
+  async pinMessage(messageId: number, isPinned: boolean): Promise<void> {
+    await db.update(schema.messages).set({ isPinned }).where(eq(schema.messages.id, messageId));
+  }
+
+  async clearChannelMessages(teamId: number, channel: string): Promise<void> {
+    await db.delete(schema.messages).where(
+      and(
+        eq(schema.messages.teamId, teamId),
+        or(
+          eq(schema.messages.chatChannel, channel),
+          and(isNull(schema.messages.chatChannel), eq(channel, 'players'))
+        )
+      )
+    );
+  }
+
+  async muteUser(data: InsertChatMute): Promise<ChatMute> {
+    const results = await db.insert(schema.chatMutes).values({
+      userId: data.userId,
+      teamId: data.teamId,
+      channel: data.channel,
+      mutedBy: data.mutedBy,
+    }).onConflictDoUpdate({
+      target: [schema.chatMutes.userId, schema.chatMutes.teamId, schema.chatMutes.channel],
+      set: { mutedBy: data.mutedBy, createdAt: new Date().toISOString() },
+    }).returning();
+    return results[0];
+  }
+
+  async unmuteUser(userId: string, teamId: number, channel: string): Promise<void> {
+    await db.delete(schema.chatMutes).where(
+      and(
+        eq(schema.chatMutes.userId, userId),
+        eq(schema.chatMutes.teamId, teamId),
+        eq(schema.chatMutes.channel, channel)
+      )
+    );
+  }
+
+  async getMutedUsers(teamId: number, channel: string): Promise<ChatMute[]> {
+    return await db.select().from(schema.chatMutes).where(
+      and(
+        eq(schema.chatMutes.teamId, teamId),
+        eq(schema.chatMutes.channel, channel)
+      )
+    );
+  }
+
+  async isUserMuted(userId: string, teamId: number, channel: string): Promise<boolean> {
+    const results = await db.select().from(schema.chatMutes).where(
+      and(
+        eq(schema.chatMutes.userId, userId),
+        eq(schema.chatMutes.teamId, teamId),
+        eq(schema.chatMutes.channel, channel)
+      )
+    );
+    return results.length > 0;
+  }
+
   // Payment operations
   async getPayment(id: string): Promise<Payment | undefined> {
     const paymentId = parseInt(id);
@@ -5697,6 +5816,8 @@ class DatabaseStorage implements IStorage {
       senderId: dbMessage.senderId,
       content: dbMessage.content,
       messageType: (dbMessage.messageType || 'text') as "text" | "system",
+      chatChannel: dbMessage.chatChannel,
+      isPinned: dbMessage.isPinned ?? false,
       createdAt: new Date(dbMessage.createdAt),
     };
   }
@@ -5711,6 +5832,8 @@ class DatabaseStorage implements IStorage {
       senderId: message.senderId,
       content: message.content,
       messageType: (message.messageType || 'text') as "text" | "system",
+      chatChannel: message.chatChannel,
+      isPinned: message.isPinned ?? false,
       createdAt: new Date(message.createdAt),
     };
     

@@ -81,6 +81,11 @@ import {
   Ticket,
   Copy,
   SlidersHorizontal,
+  Pin,
+  PinOff,
+  VolumeX,
+  Volume2,
+  Eraser,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -15971,6 +15976,7 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
   const [messagesFilter, setMessagesFilter] = useState<'users' | 'teams'>('users');
   const [selectedTeamChat, setSelectedTeamChat] = useState<{ teamId: number; channel: 'players' | 'parents'; teamName: string } | null>(null);
   const [teamChatMessage, setTeamChatMessage] = useState("");
+  const [clearChannelConfirm, setClearChannelConfirm] = useState(false);
 
   // Fetch CRM leads
   const { data: leads = [], refetch: refetchLeads } = useQuery<any[]>({
@@ -16013,6 +16019,78 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
     },
     onError: () => {
       toast({ title: "Failed to send message", variant: "destructive" });
+    },
+  });
+
+  // Fetch muted users for selected team channel
+  const { data: mutedUsers = [], refetch: refetchMutedUsers } = useQuery<any[]>({
+    queryKey: ['/api/teams', selectedTeamChat?.teamId, 'mutes', selectedTeamChat?.channel],
+    queryFn: async () => {
+      if (!selectedTeamChat) return [];
+      const res = await fetch(`/api/teams/${selectedTeamChat.teamId}/mutes?channel=${selectedTeamChat.channel}`, {
+        credentials: 'include',
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken') || ''}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch muted users');
+      return res.json();
+    },
+    enabled: !!selectedTeamChat,
+  });
+
+  // Pin/unpin message mutation
+  const pinMessageMutation = useMutation({
+    mutationFn: async ({ messageId, isPinned }: { messageId: number; isPinned: boolean }) => {
+      return apiRequest(`/api/messages/${messageId}/pin`, { method: 'PATCH', data: { isPinned } });
+    },
+    onSuccess: () => {
+      refetchTeamChatMessages();
+      toast({ title: "Message updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update message", variant: "destructive" });
+    },
+  });
+
+  // Clear channel mutation
+  const clearChannelMutation = useMutation({
+    mutationFn: async ({ teamId, channel }: { teamId: number; channel: string }) => {
+      return apiRequest(`/api/messages/team/${teamId}/channel/${channel}`, { method: 'DELETE' });
+    },
+    onSuccess: () => {
+      refetchTeamChatMessages();
+      setClearChannelConfirm(false);
+      toast({ title: "Channel cleared" });
+    },
+    onError: () => {
+      toast({ title: "Failed to clear channel", variant: "destructive" });
+    },
+  });
+
+  // Mute user mutation
+  const muteUserMutation = useMutation({
+    mutationFn: async ({ userId, teamId, channel }: { userId: string; teamId: number; channel: string }) => {
+      return apiRequest(`/api/teams/${teamId}/mute`, { method: 'POST', data: { userId, channel } });
+    },
+    onSuccess: () => {
+      refetchMutedUsers();
+      toast({ title: "User muted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to mute user", variant: "destructive" });
+    },
+  });
+
+  // Unmute user mutation
+  const unmuteUserMutation = useMutation({
+    mutationFn: async ({ userId, teamId, channel }: { userId: string; teamId: number; channel: string }) => {
+      return apiRequest(`/api/teams/${teamId}/mute`, { method: 'DELETE', data: { userId, channel } });
+    },
+    onSuccess: () => {
+      refetchMutedUsers();
+      toast({ title: "User unmuted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to unmute user", variant: "destructive" });
     },
   });
 
@@ -16368,6 +16446,7 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
                     <div className="border rounded-lg p-4">
                       {selectedTeamChat ? (
                         <div className="space-y-4">
+                          {/* Channel header with Clear All button */}
                           <div className="border-b pb-2 flex justify-between items-center">
                             <div>
                               <h4 className="font-medium">{selectedTeamChat.teamName}</h4>
@@ -16375,7 +16454,63 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
                                 {selectedTeamChat.channel === 'players' ? 'Player Channel' : 'Parent Channel'}
                               </Badge>
                             </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 border-red-300 hover:bg-red-50"
+                              onClick={() => setClearChannelConfirm(true)}
+                              data-testid="button-clear-channel"
+                            >
+                              <Eraser className="w-3 h-3 mr-1" />
+                              Clear All
+                            </Button>
                           </div>
+
+                          {/* Pinned messages */}
+                          {teamChatMessages.some((m: any) => m.isPinned) && (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                              <div className="flex items-center gap-1 text-xs font-semibold text-yellow-700 mb-2">
+                                <Pin className="w-3 h-3" />
+                                Pinned Messages
+                              </div>
+                              {teamChatMessages.filter((m: any) => m.isPinned).map((msg: any) => (
+                                <div key={msg.id} className="text-sm text-yellow-800 py-1 border-b border-yellow-200 last:border-0">
+                                  <span className="font-medium">{msg.sender ? `${msg.sender.firstName} ${msg.sender.lastName}` : 'Unknown'}:</span> {msg.content}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Muted users */}
+                          {mutedUsers.length > 0 && (
+                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                              <div className="flex items-center gap-1 text-xs font-semibold text-orange-700 mb-2">
+                                <VolumeX className="w-3 h-3" />
+                                Muted Users
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {mutedUsers.map((mute: any) => {
+                                  const user = (users || []).find((u: any) => u.id === mute.userId)
+                                    || teams.flatMap((t: any) => t.players || []).find((p: any) => p.id === mute.userId);
+                                  const label = user ? `${user.firstName} ${user.lastName}` : mute.userId;
+                                  return (
+                                    <div key={mute.id} className="flex items-center gap-1 bg-orange-100 rounded px-2 py-1 text-xs">
+                                      <span>{label}</span>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-4 w-4 p-0 hover:bg-orange-200"
+                                        onClick={() => unmuteUserMutation.mutate({ userId: mute.userId, teamId: selectedTeamChat.teamId, channel: selectedTeamChat.channel })}
+                                        data-testid={`button-unmute-${mute.userId}`}
+                                      >
+                                        <Volume2 className="w-3 h-3 text-orange-700" />
+                                      </Button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
                           
                           <div className="space-y-3 max-h-64 overflow-y-auto">
                             {teamChatMessages.length === 0 ? (
@@ -16383,31 +16518,75 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
                                 No messages in this channel yet.
                               </div>
                             ) : (
-                              teamChatMessages.map((msg: any) => (
-                                <div key={msg.id} className="bg-gray-100 rounded-lg p-3 group relative">
-                                  <div className="flex justify-between items-start">
-                                    <div className="font-medium text-sm">
-                                      {msg.sender ? `${msg.sender.firstName} ${msg.sender.lastName}` : 'Unknown'}
+                              teamChatMessages.map((msg: any) => {
+                                const isMuted = mutedUsers.some((m: any) => m.userId === msg.senderId);
+                                return (
+                                  <div key={msg.id} className={`rounded-lg p-3 group relative ${msg.isPinned ? 'bg-yellow-50 border border-yellow-200' : 'bg-gray-100'}`}>
+                                    <div className="flex justify-between items-start">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium text-sm">
+                                          {msg.sender ? `${msg.sender.firstName} ${msg.sender.lastName}` : 'Unknown'}
+                                        </span>
+                                        {isMuted && (
+                                          <Badge variant="outline" className="text-[10px] px-1 py-0 bg-orange-50 text-orange-700 border-orange-200">
+                                            <VolumeX className="w-2 h-2 mr-0.5" /> Muted
+                                          </Badge>
+                                        )}
+                                        {msg.isPinned && (
+                                          <Badge variant="outline" className="text-[10px] px-1 py-0 bg-yellow-50 text-yellow-700 border-yellow-200">
+                                            <Pin className="w-2 h-2 mr-0.5" /> Pinned
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-xs text-gray-500">
+                                          {new Date(msg.createdAt).toLocaleString()}
+                                        </span>
+                                        {/* Pin/unpin button */}
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 text-yellow-600 hover:text-yellow-800"
+                                          onClick={() => pinMessageMutation.mutate({ messageId: parseInt(msg.id), isPinned: !msg.isPinned })}
+                                          disabled={pinMessageMutation.isPending}
+                                          title={msg.isPinned ? "Unpin message" : "Pin message"}
+                                          data-testid={`button-pin-message-${msg.id}`}
+                                        >
+                                          {msg.isPinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
+                                        </Button>
+                                        {/* Mute/unmute sender button - always available when senderId exists */}
+                                        {msg.senderId && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 text-orange-500 hover:text-orange-700"
+                                            onClick={() => isMuted
+                                              ? unmuteUserMutation.mutate({ userId: msg.senderId, teamId: selectedTeamChat.teamId, channel: selectedTeamChat.channel })
+                                              : muteUserMutation.mutate({ userId: msg.senderId, teamId: selectedTeamChat.teamId, channel: selectedTeamChat.channel })
+                                            }
+                                            title={isMuted ? "Unmute user" : "Mute user"}
+                                            data-testid={`button-mute-${msg.senderId}`}
+                                          >
+                                            {isMuted ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+                                          </Button>
+                                        )}
+                                        {/* Delete button */}
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                          onClick={() => deleteMessageMutation.mutate(msg.id)}
+                                          disabled={deleteMessageMutation.isPending}
+                                          data-testid={`button-delete-message-${msg.id}`}
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </Button>
+                                      </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs text-gray-500">
-                                        {new Date(msg.createdAt).toLocaleString()}
-                                      </span>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                                        onClick={() => deleteMessageMutation.mutate(msg.id)}
-                                        disabled={deleteMessageMutation.isPending}
-                                        data-testid={`button-delete-message-${msg.id}`}
-                                      >
-                                        <Trash2 className="w-3 h-3" />
-                                      </Button>
-                                    </div>
+                                    <p className="text-sm mt-1">{msg.content}</p>
                                   </div>
-                                  <p className="text-sm mt-1">{msg.content}</p>
-                                </div>
-                              ))
+                                );
+                              })
                             )}
                           </div>
 
@@ -16442,6 +16621,28 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
         )}
 
       </CardContent>
+
+      {/* Clear Channel Confirmation Dialog */}
+      <AlertDialog open={clearChannelConfirm} onOpenChange={setClearChannelConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear All Messages</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete all messages in the {selectedTeamChat?.teamName} {selectedTeamChat?.channel === 'players' ? 'Player' : 'Parent'} channel? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => selectedTeamChat && clearChannelMutation.mutate({ teamId: selectedTeamChat.teamId, channel: selectedTeamChat.channel })}
+              data-testid="button-confirm-clear-channel"
+            >
+              Clear All Messages
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Add Lead Dialog */}
       <Dialog open={isAddLeadOpen} onOpenChange={setIsAddLeadOpen}>

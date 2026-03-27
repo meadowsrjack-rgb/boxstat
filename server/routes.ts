@@ -46,7 +46,7 @@ import { notificationService } from "./services/notificationService";
 import { analyzePlayerAttendance, getTeamCoachIds, getOrgAdminIds, triggerRealTimeAttendanceNotifications } from "./services/attendanceTracker";
 import { db } from "./db";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
-import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards, platformSettings, organizations, attendances, rsvpResponses, contactManagementMessages, payments } from "@shared/schema";
+import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards, platformSettings, organizations, attendances, rsvpResponses, contactManagementMessages, payments, messages as messagesTable } from "@shared/schema";
 import { eq, and, or, sql, desc, inArray, gte, count } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;
@@ -9655,8 +9655,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/teams/:teamId/messages', requireAuth, async (req: any, res) => {
     const { message, messageType = 'text', profileId, channel = 'players' } = req.body;
-    
-    // Security: Validate that profileId belongs to authenticated user or is the user themselves
+    const teamId = parseInt(req.params.teamId);
+
+    if (!['players', 'parents'].includes(channel)) {
+      return res.status(400).json({ error: 'Invalid channel' });
+    }
+
+    // Security: Resolve effective sender (profile or authenticated user) first
     let validatedSenderId = req.user.id;
     if (profileId) {
       // Check if profileId is the authenticated user
@@ -9671,6 +9676,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         // If not valid, fall back to req.user.id (don't allow spoofing)
       }
+    }
+
+    // Check if the effective sender is muted in this channel
+    const isMuted = await storage.isUserMuted(validatedSenderId, teamId, channel);
+    if (isMuted) {
+      return res.status(403).json({ error: 'You are muted in this channel' });
     }
     
     const messageData = {
@@ -9720,6 +9731,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Legacy route (kept for backwards compatibility)
   app.post('/api/messages', requireAuth, async (req: any, res) => {
     const messageData = insertMessageSchema.parse(req.body);
+    
+    // Check if user is muted in this channel
+    if (messageData.teamId) {
+      const teamId = parseInt(messageData.teamId);
+      const channel = messageData.chatChannel || 'players';
+      const isMuted = await storage.isUserMuted(req.user.id, teamId, channel);
+      if (isMuted) {
+        return res.status(403).json({ error: 'You are muted in this channel' });
+      }
+    }
+    
     const message = await storage.createMessage(messageData);
     
     // Broadcast to WebSocket clients if available
@@ -9756,7 +9778,175 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to delete message' });
     }
   });
-  
+
+  // Pin/unpin a message (admin only)
+  app.patch('/api/messages/:messageId/pin', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ error: 'Only administrators can pin messages' });
+      }
+      const messageId = parseInt(req.params.messageId);
+      if (isNaN(messageId)) {
+        return res.status(400).json({ error: 'Invalid message ID' });
+      }
+      const { isPinned } = req.body;
+      // Look up message server-side before updating so broadcast uses verified metadata
+      const [msgRecord] = await db.select({ teamId: messagesTable.teamId, chatChannel: messagesTable.chatChannel })
+        .from(messagesTable)
+        .where(eq(messagesTable.id, messageId))
+        .limit(1);
+      if (!msgRecord) {
+        return res.status(404).json({ error: 'Message not found' });
+      }
+      await storage.pinMessage(messageId, !!isPinned);
+      // Broadcast to WebSocket clients so active chat sessions update immediately
+      if (wss) {
+        const broadcastChannel = msgRecord.chatChannel ?? 'players';
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({ type: 'message_pinned', teamId: msgRecord.teamId, channel: broadcastChannel, messageId, isPinned: !!isPinned }));
+          }
+        });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error pinning message:', error);
+      res.status(500).json({ error: 'Failed to pin message' });
+    }
+  });
+
+  // Clear all messages in a team channel (admin only)
+  app.delete('/api/messages/team/:teamId/channel/:channel', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ error: 'Only administrators can clear channels' });
+      }
+      const teamId = parseInt(req.params.teamId);
+      const { channel } = req.params;
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: 'Invalid team ID' });
+      }
+      if (!['players', 'parents'].includes(channel)) {
+        return res.status(400).json({ error: 'Invalid channel' });
+      }
+      await storage.clearChannelMessages(teamId, channel);
+      // Broadcast to WebSocket clients so active chat sessions update immediately
+      if (wss) {
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({ type: 'channel_cleared', teamId, channel }));
+          }
+        });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error clearing channel:', error);
+      res.status(500).json({ error: 'Failed to clear channel' });
+    }
+  });
+
+  // Mute a user in a team channel (admin only)
+  app.post('/api/teams/:teamId/mute', requireAuth, async (req: any, res) => {
+    try {
+      const { role, id: adminId } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ error: 'Only administrators can mute users' });
+      }
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: 'Invalid team ID' });
+      }
+      const { userId, channel } = req.body;
+      if (!userId || !['players', 'parents'].includes(channel)) {
+        return res.status(400).json({ error: 'userId and valid channel are required' });
+      }
+      const mute = await storage.muteUser({ userId, teamId, channel, mutedBy: adminId });
+      res.json(mute);
+    } catch (error: any) {
+      console.error('Error muting user:', error);
+      res.status(500).json({ error: 'Failed to mute user' });
+    }
+  });
+
+  // Unmute a user in a team channel (admin only)
+  app.delete('/api/teams/:teamId/mute', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ error: 'Only administrators can unmute users' });
+      }
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: 'Invalid team ID' });
+      }
+      const { userId, channel } = req.body;
+      if (!userId || !['players', 'parents'].includes(channel)) {
+        return res.status(400).json({ error: 'userId and valid channel are required' });
+      }
+      await storage.unmuteUser(userId, teamId, channel);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error unmuting user:', error);
+      res.status(500).json({ error: 'Failed to unmute user' });
+    }
+  });
+
+  // Get muted users for a team channel (admin only)
+  app.get('/api/teams/:teamId/mutes', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ error: 'Only administrators can view mutes' });
+      }
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: 'Invalid team ID' });
+      }
+      const { channel } = req.query;
+      if (!channel || !['players', 'parents'].includes(channel as string)) {
+        return res.status(400).json({ error: 'Valid channel query param required' });
+      }
+      const mutes = await storage.getMutedUsers(teamId, channel as string);
+      res.json(mutes);
+    } catch (error: any) {
+      console.error('Error fetching mutes:', error);
+      res.status(500).json({ error: 'Failed to fetch mutes' });
+    }
+  });
+
+  // Check if current user (or a profile) is muted in a channel
+  app.get('/api/teams/:teamId/mute-status', requireAuth, async (req: any, res) => {
+    try {
+      const { id: authUserId } = req.user;
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: 'Invalid team ID' });
+      }
+      const { channel, profileId } = req.query;
+      if (!channel || !['players', 'parents'].includes(channel as string)) {
+        return res.status(400).json({ error: 'Valid channel query param required' });
+      }
+      // Resolve effective sender: if profileId is provided and belongs to this user, use it
+      let effectiveSenderId = authUserId;
+      if (profileId && profileId !== authUserId) {
+        const accountProfiles = await storage.getAccountProfiles(authUserId) || [];
+        const isValid = accountProfiles.some((p: any) => p.id === profileId);
+        if (isValid) {
+          effectiveSenderId = profileId as string;
+        }
+      } else if (profileId === authUserId) {
+        effectiveSenderId = profileId as string;
+      }
+      const muted = await storage.isUserMuted(effectiveSenderId, teamId, channel as string);
+      res.json({ muted });
+    } catch (error: any) {
+      console.error('Error checking mute status:', error);
+      res.status(500).json({ error: 'Failed to check mute status' });
+    }
+  });
+
   // =============================================
   // PAYMENT ROUTES
   // =============================================

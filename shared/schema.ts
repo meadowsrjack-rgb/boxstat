@@ -838,8 +838,21 @@ export const messages = pgTable("messages", {
   messageType: varchar("message_type").default('text'),
   chatChannel: varchar("chat_channel").default('players'), // 'players' for player chat, 'parents' for parent chat
   isModerated: boolean("is_moderated").default(false),
+  isPinned: boolean("is_pinned").default(false),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
+
+// Chat mutes table - tracks which users are muted in which team channel
+export const chatMutes = pgTable("chat_mutes", {
+  id: serial().primaryKey().notNull(),
+  userId: varchar("user_id").notNull(),
+  teamId: integer("team_id").notNull(),
+  channel: varchar("channel").notNull(), // 'players' or 'parents'
+  mutedBy: varchar("muted_by").notNull(), // admin user id
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => ({
+  userTeamChannelUnique: unique("chat_mutes_user_team_channel_unique").on(table.userId, table.teamId, table.channel),
+}));
 
 // Payments table
 export const payments = pgTable("payments", {
@@ -1635,6 +1648,7 @@ export interface Message {
   content: string;
   messageType: "text" | "system";
   chatChannel?: "players" | "parents"; // 'players' for player chat, 'parents' for parent chat
+  isPinned?: boolean;
   createdAt: Date;
   sender?: {
     id: string;
@@ -1643,6 +1657,15 @@ export interface Message {
     profileImageUrl: string;
     userType: string;
   };
+}
+
+export type ChatMute = typeof chatMutes.$inferSelect;
+
+export interface InsertChatMute {
+  userId: string;
+  teamId: number;
+  channel: string;
+  mutedBy: string;
 }
 
 export const insertMessageSchema = z.object({

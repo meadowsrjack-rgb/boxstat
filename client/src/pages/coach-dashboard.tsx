@@ -473,7 +473,7 @@ export default function CoachDashboard() {
       <div className="scrollable-page relative z-10 bg-transparent">
       {/* Top Bar */}
       <header className="bg-white shadow-sm safe-top sticky top-0 z-50">
-        <div className="max-w-md mx-auto px-4 py-3">
+        <div className="max-w-md md:max-w-2xl lg:max-w-4xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-1">
             <Button
               variant="ghost"
@@ -503,7 +503,7 @@ export default function CoachDashboard() {
       </header>
 
       {/* Main */}
-      <main className="max-w-md mx-auto">
+      <main className="max-w-md md:max-w-2xl lg:max-w-4xl mx-auto">
         {/* Announcement Banner */}
         <div className="px-6 pt-4">
           <AnnouncementBanner />
@@ -589,7 +589,8 @@ export default function CoachDashboard() {
           {activeTab === "calendar" && (
             <div className="-mx-6">
               {/* Event Summaries - moved above calendar */}
-              <div className="px-6 py-6 space-y-4">
+              <div className="px-6 py-6">
+                <div className="md:grid md:grid-cols-2 md:gap-6 space-y-4 md:space-y-0">
                 <section className="space-y-2">
                   <h3 className="text-lg font-bold text-gray-900">Today</h3>
                   {todayEvents.length ? (
@@ -664,6 +665,7 @@ export default function CoachDashboard() {
                     </div>
                   )}
                 </section>
+                </div>
               </div>
 
               {/* Calendar component - moved below events */}

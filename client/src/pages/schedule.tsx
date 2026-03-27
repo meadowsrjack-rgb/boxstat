@@ -164,7 +164,7 @@ export default function SchedulePage() {
 
   return (
     <div className="min-h-screen-safe bg-white safe-bottom p-5">
-      <div className="max-w-sm mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden">
+      <div className="max-w-sm md:max-w-2xl lg:max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="bg-white text-gray-900 px-5 py-4 text-center border-b border-gray-200 safe-top">
           <div className="flex items-center justify-between mb-2">

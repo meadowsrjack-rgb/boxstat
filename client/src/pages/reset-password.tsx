@@ -132,7 +132,7 @@ export default function ResetPasswordPage() {
         </div>
 
         <div className="flex flex-col justify-center min-h-full px-8 py-16 safe-top">
-        <div className="w-full max-w-sm mx-auto space-y-8">
+        <div className="w-full max-w-sm md:max-w-md mx-auto space-y-8">
           {!isValidToken && !resetSuccess ? (
             <div className="text-center space-y-6">
               <div className="w-20 h-20 mx-auto rounded-full bg-red-500/20 flex items-center justify-center">

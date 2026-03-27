@@ -73,7 +73,7 @@ export default function SetPassword() {
       <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-black z-0 pointer-events-none" />
       
       <div className="ios-fixed-page relative z-10 w-full bg-transparent flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-md md:max-w-lg">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">

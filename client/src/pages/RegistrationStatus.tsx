@@ -46,7 +46,7 @@ export default function RegistrationStatus() {
   if (!account) {
     return (
       <div className="min-h-screen-safe bg-gray-50 safe-bottom flex items-center justify-center">
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-md md:max-w-lg">
           <CardContent className="p-6 text-center">
             <AlertTriangle className="w-12 h-12 text-red-600 mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2">Account Not Found</h2>

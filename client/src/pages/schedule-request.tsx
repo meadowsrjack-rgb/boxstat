@@ -100,7 +100,7 @@ export default function ScheduleRequest() {
   if (booked) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md text-center">
+        <Card className="w-full max-w-md md:max-w-lg text-center">
           <CardContent className="pt-8 pb-8 space-y-4">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
               <Check className="w-8 h-8 text-green-600" />

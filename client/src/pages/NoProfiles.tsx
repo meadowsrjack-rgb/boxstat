@@ -26,7 +26,7 @@ export default function NoProfiles() {
 
   return (
     <div className="min-h-screen-safe bg-gray-50 safe-bottom flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md md:max-w-lg">
         <CardHeader className="text-center">
           <div className="mx-auto w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
             <AlertCircle className="w-6 h-6 text-yellow-600" />

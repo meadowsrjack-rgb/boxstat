@@ -37,7 +37,7 @@ export default function SupportPage() {
         </div>
 
         <div className="max-w-5xl mx-auto px-4 pb-16">
-          <div className="grid gap-6 md:grid-cols-1 max-w-md mx-auto mb-16">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-16">
             <Card className="bg-white/5 border-white/10 hover:bg-white/[0.08] transition-colors" data-testid="card-email-support">
               <CardHeader>
                 <div className="flex items-center gap-3">

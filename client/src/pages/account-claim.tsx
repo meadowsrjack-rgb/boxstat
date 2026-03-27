@@ -106,7 +106,7 @@ export default function AccountClaim() {
 
   return (
     <div className="min-h-screen-safe bg-gradient-to-br from-red-50 to-gray-100 safe-bottom flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md md:max-w-lg">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
             <BoxStatLogo variant="auto" className="h-16 w-auto" />

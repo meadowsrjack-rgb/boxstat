@@ -97,7 +97,7 @@ export default function PhotoUploadPage() {
 
   return (
     <div className="min-h-screen-safe bg-gradient-to-br from-gray-900 to-gray-800 safe-bottom p-4">
-      <div className="max-w-md mx-auto">
+      <div className="max-w-md md:max-w-lg mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <Button

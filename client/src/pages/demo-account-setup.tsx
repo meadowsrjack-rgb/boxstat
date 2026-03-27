@@ -34,7 +34,7 @@ export default function DemoAccountSetup() {
     <div className="scrollable-page bg-gray-50 safe-bottom">
       {/* Header */}
       <div className="bg-white border-b">
-        <div className="max-w-md mx-auto px-6 py-4">
+        <div className="max-w-md md:max-w-2xl mx-auto px-6 py-4">
           <div className="flex items-center gap-4">
             {step > 1 && (
               <button
@@ -53,7 +53,7 @@ export default function DemoAccountSetup() {
         </div>
       </div>
 
-      <main className="max-w-md mx-auto p-6">
+      <main className="max-w-md md:max-w-2xl mx-auto p-6">
         {step === 1 ? (
           /* Account Type Selection */
           <div className="space-y-6">

@@ -33,7 +33,7 @@ export default function SelectProfileType() {
         background: `radial-gradient(1200px 600px at 50% -10%, rgba(59,130,246,0.15), transparent 60%), #000`,
       }}
     >
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md md:max-w-lg">
         {/* Header */}
         <div className="text-center mb-12">
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">

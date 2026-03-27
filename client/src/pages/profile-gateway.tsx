@@ -188,7 +188,7 @@ export default function ProfileGateway() {
           paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))',
         }}
       >
-        <div className="max-w-md mx-auto pt-4 pb-8">
+        <div className="max-w-md md:max-w-2xl mx-auto pt-4 pb-8">
           <div className="text-center mb-10">
             <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-who-is-watching">Whose ball?</h1>
           </div>

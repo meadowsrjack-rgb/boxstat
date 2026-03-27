@@ -21,7 +21,7 @@ export default function PaymentSuccess() {
   if (isCanceled) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center p-6">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-md md:max-w-lg">
           <div className="mx-auto w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
             <XCircle className="w-12 h-12 text-gray-400" />
           </div>
@@ -41,7 +41,7 @@ export default function PaymentSuccess() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center p-6">
-      <div className="text-center max-w-md">
+      <div className="text-center max-w-md md:max-w-lg">
         <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
           <CheckCircle className="w-12 h-12 text-green-600" />
         </div>

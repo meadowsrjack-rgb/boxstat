@@ -280,7 +280,7 @@ export default function RegistrationFlow() {
             paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))',
           }}
         >
-        <div className="w-full max-w-lg mx-auto flex-1 flex flex-col">
+        <div className="w-full max-w-lg md:max-w-xl mx-auto flex-1 flex flex-col">
           {/* Progress Bar */}
           <div className="flex items-center justify-between mb-8 pt-8">
             <div className="flex gap-2 flex-1">

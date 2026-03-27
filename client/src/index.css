@@ -429,6 +429,46 @@
     background-color: #000000;
   }
 
+  /* Sidebar-aware page layout: when sidebar is shown (body has .has-sidebar),
+     offset content on md+ screens to account for the sidebar width.
+     - Fixed-position pages (.scrollable-page, .ios-fixed-page) get left/width adjusted.
+     - Regular-flow pages get padding-left on the body so content clears the sidebar. */
+  @media (min-width: 768px) {
+    body.has-sidebar {
+      padding-left: 224px;
+    }
+    body.has-sidebar .scrollable-page {
+      left: 224px;
+      width: calc(100vw - 224px);
+    }
+    body.has-sidebar .ios-fixed-page {
+      left: 224px;
+      width: calc(100vw - 224px);
+    }
+    body.has-sidebar .ios-full-bleed {
+      left: calc(224px - env(safe-area-inset-left, 0px));
+      width: calc(100vw - 224px + env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    body.has-sidebar {
+      padding-left: 256px;
+    }
+    body.has-sidebar .scrollable-page {
+      left: 256px;
+      width: calc(100vw - 256px);
+    }
+    body.has-sidebar .ios-fixed-page {
+      left: 256px;
+      width: calc(100vw - 256px);
+    }
+    body.has-sidebar .ios-full-bleed {
+      left: calc(256px - env(safe-area-inset-left, 0px));
+      width: calc(100vw - 256px + env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px));
+    }
+  }
+
   /* Mobile-first responsive utilities */
   .mobile-container {
     @apply max-w-md mx-auto px-6;

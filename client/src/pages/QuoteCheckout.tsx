@@ -109,7 +109,7 @@ export default function QuoteCheckout() {
   if (error || !quote) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Card className="w-full max-w-md mx-4">
+        <Card className="w-full max-w-md md:max-w-lg mx-4">
           <CardContent className="pt-6 text-center">
             <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
             <h2 className="text-xl font-bold mb-2">Quote Not Found</h2>
@@ -126,7 +126,7 @@ export default function QuoteCheckout() {
   if (quote.status === 'completed') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Card className="w-full max-w-md mx-4">
+        <Card className="w-full max-w-md md:max-w-lg mx-4">
           <CardContent className="pt-6 text-center">
             <CheckCircle2 className="w-12 h-12 mx-auto mb-4 text-green-500" />
             <h2 className="text-xl font-bold mb-2">Already Completed</h2>
@@ -143,7 +143,7 @@ export default function QuoteCheckout() {
   if (quote.status === 'expired') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Card className="w-full max-w-md mx-4">
+        <Card className="w-full max-w-md md:max-w-lg mx-4">
           <CardContent className="pt-6 text-center">
             <AlertCircle className="w-12 h-12 mx-auto mb-4 text-yellow-500" />
             <h2 className="text-xl font-bold mb-2">Quote Expired</h2>

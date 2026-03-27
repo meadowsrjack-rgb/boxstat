@@ -74,7 +74,7 @@ export default function VerifyEmail() {
 
       {/* Main Content Wrapper */}
       <div className="ios-fixed-page relative z-10 w-full bg-transparent flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md md:max-w-lg">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             {status === "loading" && <Loader2 className="h-16 w-16 text-blue-600 animate-spin" data-testid="icon-loading" />}

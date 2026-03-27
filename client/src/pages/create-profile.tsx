@@ -220,7 +220,7 @@ export default function CreateProfile() {
         background: `radial-gradient(1200px 600px at 50% -10%, rgba(216,36,40,0.15), transparent 60%), #000`,
       }}
     >
-      <div className="max-w-md mx-auto">
+      <div className="max-w-md md:max-w-lg mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <button

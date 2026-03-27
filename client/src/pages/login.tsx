@@ -200,7 +200,7 @@ export default function LoginPage() {
           paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))',
         }}
       >
-        <div className="w-full max-w-sm mx-auto space-y-8">
+        <div className="w-full max-w-sm md:max-w-md mx-auto space-y-8">
           <div className="space-y-3">
             <h1 className="text-4xl font-bold text-white tracking-tight">
               Welcome Back

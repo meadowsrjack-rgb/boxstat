@@ -181,7 +181,7 @@ export default function PlayerCalendar({
     if (!open) return null;
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-[1px] z-50 grid place-items-center p-4">
-        <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl p-5">
+        <div className="w-full max-w-sm md:max-w-md rounded-2xl bg-white shadow-xl p-5">
           <div className="text-base font-bold">{title}</div>
           <div className="text-sm text-gray-600 mt-1">{body}</div>
           <div className="mt-4 flex justify-end">

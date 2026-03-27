@@ -64,7 +64,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         <div className="flex flex-col justify-center min-h-full px-8 py-16 safe-top">
-        <div className="w-full max-w-sm mx-auto space-y-8">
+        <div className="w-full max-w-sm md:max-w-md mx-auto space-y-8">
           {!emailSent ? (
             <>
               <div className="space-y-3">

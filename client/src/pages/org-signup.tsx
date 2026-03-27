@@ -172,7 +172,7 @@ export default function OrgSignup() {
           <img src={darkThemeLogo} alt="BoxStat" className="w-[140px] h-auto" />
         </button>
 
-        <div className="w-full max-w-md px-6">
+        <div className="w-full max-w-md md:max-w-lg px-6">
 
           <div className="flex items-center justify-center gap-2 mb-8">
             {[1, 2, 3, 4].map((step) => (

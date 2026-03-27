@@ -1,188 +1,181 @@
+import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
   Home,
   Calendar,
-  Users,
-  MessageCircle,
   Trophy,
   CreditCard,
   Settings,
   HelpCircle,
-  Volleyball,
-  QrCode,
-  Dumbbell,
+  Star,
   Bell,
-  User
+  LogOut,
+  ChevronRight,
+  Dumbbell,
+  Search,
+  Shield,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import BoxStatLogo from "@/components/boxstat-logo";
+import type { SelectUser } from "@shared/schema";
+
+type NavItem = {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  badge?: string | null;
+};
+
+const playerNavItems: NavItem[] = [
+  { href: "/player-dashboard", icon: Home, label: "Home" },
+  { href: "/schedule", icon: Calendar, label: "Schedule" },
+  { href: "/trophies-badges", icon: Trophy, label: "Trophies & Badges" },
+  { href: "/skills", icon: Star, label: "My Skills" },
+  { href: "/training", icon: Dumbbell, label: "Training" },
+  { href: "/notifications", icon: Bell, label: "Notifications" },
+  { href: "/player-settings", icon: Settings, label: "Settings" },
+];
+
+const coachNavItems: NavItem[] = [
+  { href: "/coach-dashboard", icon: Home, label: "Dashboard" },
+  { href: "/search", icon: Search, label: "Player Search" },
+  { href: "/schedule", icon: Calendar, label: "Schedule" },
+  { href: "/notifications", icon: Bell, label: "Notifications" },
+  { href: "/coach-settings", icon: Settings, label: "Settings" },
+];
+
+const adminNavItems: NavItem[] = [
+  { href: "/admin", icon: Shield, label: "Admin Dashboard" },
+  { href: "/search", icon: Search, label: "Player Search" },
+  { href: "/notifications", icon: Bell, label: "Notifications" },
+  { href: "/settings", icon: Settings, label: "Settings" },
+];
+
+const parentNavItems: NavItem[] = [
+  { href: "/home", icon: Home, label: "Dashboard" },
+  { href: "/schedule", icon: Calendar, label: "Schedule" },
+  { href: "/notifications", icon: Bell, label: "Notifications" },
+  { href: "/payments", icon: CreditCard, label: "Payments" },
+  { href: "/parent-settings", icon: Settings, label: "Settings" },
+];
+
+function getNavItems(userType: string | null): NavItem[] {
+  if (userType === "admin") return adminNavItems;
+  if (userType === "coach") return coachNavItems;
+  if (userType === "player") return playerNavItems;
+  return parentNavItems;
+}
+
+function getSettingsHref(userType: string | null): string {
+  if (userType === "player") return "/player-settings";
+  if (userType === "coach") return "/coach-settings";
+  if (userType === "admin") return "/settings";
+  return "/parent-settings";
+}
 
 export default function Sidebar() {
   const { user } = useAuth();
   const [location] = useLocation();
 
+  useEffect(() => {
+    if (user) {
+      document.body.classList.add("has-sidebar");
+    } else {
+      document.body.classList.remove("has-sidebar");
+    }
+    return () => {
+      document.body.classList.remove("has-sidebar");
+    };
+  }, [user]);
+
   if (!user) {
     return null;
   }
 
-  const isPlayer = user.userType === "player";
-  const isParent = user.userType === "parent";
-  const isAdmin = user.userType === "admin";
+  const typedUser = user as SelectUser;
+  const userType = typedUser.userType ?? null;
+  const navItems = getNavItems(userType);
+  const settingsHref = getSettingsHref(userType);
+  const firstName = typedUser.firstName ?? "";
+  const lastName = typedUser.lastName ?? "";
+  const initials = `${firstName[0] ?? ""}${lastName[0] ?? ""}`.toUpperCase();
 
-  const parentNavItems = [
-    { href: "/", icon: Home, label: "Dashboard", badge: null },
-    { href: "/schedule", icon: Calendar, label: "Schedule", badge: null },
-    { href: "/team", icon: Users, label: "Team", badge: null },
-    { href: "/chat", icon: MessageCircle, label: "Messages", badge: "2" },
-    { href: "/settings", icon: Settings, label: "Settings", badge: null },
-  ];
-
-  const playerNavItems = [
-    { href: "/", icon: Home, label: "Home", badge: null },
-    { href: "/checkin", icon: QrCode, label: "Check-In", badge: null },
-    { href: "/team", icon: Users, label: "My Team", badge: null },
-    { href: "/drills", icon: Dumbbell, label: "Drills", badge: null },
-    { href: "/chat", icon: MessageCircle, label: "Team Chat", badge: "2" },
-    { href: "/badges", icon: Trophy, label: "My Badges", badge: null },
-  ];
-
-  const adminNavItems = [
-    { href: "/admin", icon: Settings, label: "Dashboard", badge: null },
-    { href: "/admin/users", icon: Users, label: "Users", badge: null },
-    { href: "/admin/teams", icon: Volleyball, label: "Teams", badge: null },
-    { href: "/admin/events", icon: Calendar, label: "Events", badge: null },
-    { href: "/admin/payments", icon: CreditCard, label: "Payments", badge: null },
-    { href: "/admin/announcements", icon: Bell, label: "Announcements", badge: null },
-  ];
-
-  const getNavItems = () => {
-    if (isAdmin) return adminNavItems;
-    if (isPlayer) return playerNavItems;
-    return parentNavItems;
-  };
-
-  const navItems = getNavItems();
+  const isActive = (href: string) =>
+    location === href || (href !== "/" && location.startsWith(href));
 
   return (
-    <div className={`w-64 h-screen ${isPlayer ? 'bg-gradient-to-b from-green-500 to-blue-600' : 'bg-white'} shadow-lg flex flex-col`}>
-      {/* Header */}
-      <div className={`p-6 border-b ${isPlayer ? 'border-white/20' : 'border-gray-200'}`}>
-        <div className="flex items-center space-x-3">
-          <div className={`w-10 h-10 ${isPlayer ? 'bg-white/20' : 'bg-primary'} rounded-full flex items-center justify-center`}>
-            <Volleyball className={`h-6 w-6 ${isPlayer ? 'text-white' : 'text-white'}`} />
+    <aside className="hidden md:flex w-56 lg:w-64 h-full flex-col bg-gray-950 border-r border-white/10 fixed left-0 top-0 bottom-0 z-40 overflow-y-auto">
+      <div className="p-5 border-b border-white/10 shrink-0">
+        <Link href="/home">
+          <div className="flex items-center gap-3 cursor-pointer">
+            <BoxStatLogo variant="dark" className="h-8 w-auto" />
           </div>
-          <div>
-            <h1 className={`text-lg font-bold ${isPlayer ? 'text-white' : 'text-gray-900'}`}>
-              BoxStat
-            </h1>
-            <p className={`text-sm ${isPlayer ? 'text-white/80' : 'text-gray-500'}`}>
-              {isAdmin ? 'Admin Panel' : isPlayer ? 'Player Dashboard' : 'Parent Portal'}
-            </p>
-          </div>
-        </div>
+        </Link>
       </div>
 
-      {/* User Info */}
-      <div className={`p-4 border-b ${isPlayer ? 'border-white/20' : 'border-gray-200'}`}>
-        <div className="flex items-center space-x-3">
-          <img 
-            src={user.profileImageUrl || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=40&h=40"} 
-            alt="Profile" 
-            className="w-10 h-10 rounded-full object-cover"
-          />
-          <div className="flex-1 min-w-0">
-            <p className={`font-medium truncate ${isPlayer ? 'text-white' : 'text-gray-900'}`} data-testid="text-sidebar-greeting">
-              Hey, {user.firstName}
-            </p>
-            <div className="flex items-center space-x-2">
-              <Badge 
-                variant={isPlayer ? "secondary" : "outline"} 
-                className={`text-xs ${isPlayer ? 'bg-white/20 text-white border-white/30' : ''}`}
-              >
-                {user.userType}
-              </Badge>
-              {isPlayer && (
-                <div className="flex items-center space-x-1">
-                  <Trophy className="h-3 w-3 text-yellow-300" />
-                  <span className="text-xs text-yellow-300">5</span>
-                </div>
-              )}
+      <div className="p-4 border-b border-white/10 shrink-0">
+        <Link href={settingsHref}>
+          <div className="flex items-center gap-3 cursor-pointer group">
+            <Avatar className="h-9 w-9 ring-2 ring-white/20">
+              <AvatarImage src={typedUser.profileImageUrl ?? undefined} alt={firstName} />
+              <AvatarFallback className="bg-red-600 text-white text-sm font-bold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white truncate">
+                {firstName} {lastName}
+              </p>
+              <p className="text-xs text-white/50 capitalize">{userType ?? "user"}</p>
             </div>
+            <ChevronRight className="h-4 w-4 text-white/30 group-hover:text-white/60 transition-colors" />
           </div>
-        </div>
+        </Link>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-3 space-y-1">
         {navItems.map((item) => {
-          const isActive = location === item.href;
           const Icon = item.icon;
-          
+          const active = isActive(item.href);
           return (
             <Link key={item.href} href={item.href}>
-              <Button
-                variant={isActive ? "default" : "ghost"}
-                className={`w-full justify-start space-x-3 ${
-                  isPlayer 
-                    ? isActive 
-                      ? 'bg-white/20 text-white hover:bg-white/30' 
-                      : 'text-white/80 hover:text-white hover:bg-white/10'
-                    : isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+              <div
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${
+                  active
+                    ? "bg-red-600 text-white"
+                    : "text-white/70 hover:text-white hover:bg-white/10"
                 }`}
               >
-                <Icon className="h-5 w-5" />
-                <span className="flex-1 text-left">{item.label}</span>
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="text-sm font-medium flex-1">{item.label}</span>
                 {item.badge && (
-                  <Badge 
-                    variant="secondary" 
-                    className={`text-xs ${
-                      isPlayer 
-                        ? 'bg-red-500 text-white' 
-                        : 'bg-red-500 text-white'
-                    }`}
-                  >
+                  <Badge className="bg-red-500 text-white text-xs px-1.5 py-0.5 min-w-[18px] text-center">
                     {item.badge}
                   </Badge>
                 )}
-              </Button>
+              </div>
             </Link>
           );
         })}
       </nav>
 
-      {/* Footer */}
-      <div className={`p-4 border-t ${isPlayer ? 'border-white/20' : 'border-gray-200'}`}>
-        <div className="space-y-2">
-          <Button 
-            variant="ghost" 
-            className={`w-full justify-start space-x-3 ${
-              isPlayer 
-                ? 'text-white/80 hover:text-white hover:bg-white/10' 
-                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
-            }`}
-          >
-            <HelpCircle className="h-5 w-5" />
-            <span>Help & Support</span>
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            className={`w-full justify-start space-x-3 ${
-              isPlayer 
-                ? 'text-white/80 hover:text-white hover:bg-white/10' 
-                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
-            }`}
-            onClick={() => window.location.href = '/api/logout'}
-          >
-            <User className="h-5 w-5" />
-            <span>Sign Out</span>
-          </Button>
-        </div>
+      <div className="p-3 border-t border-white/10 space-y-1 shrink-0">
+        <Link href="/support">
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-white/60 hover:text-white hover:bg-white/10 transition-colors">
+            <HelpCircle className="h-4 w-4 shrink-0" />
+            <span className="text-sm font-medium">Support</span>
+          </div>
+        </Link>
+        <button
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+          onClick={() => (window.location.href = "/api/logout")}
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          <span className="text-sm font-medium">Sign Out</span>
+        </button>
       </div>
-    </div>
+    </aside>
   );
 }

@@ -5879,6 +5879,14 @@ class DatabaseStorage implements IStorage {
         profileImageUrl: user.profileImageUrl || '',
         userType: user.role || user.userType || 'player',
       };
+    } else {
+      baseMessage.sender = {
+        id: message.senderId || 'unknown',
+        firstName: 'Deleted',
+        lastName: 'User',
+        profileImageUrl: '',
+        userType: 'player',
+      };
     }
     
     return baseMessage as Message;

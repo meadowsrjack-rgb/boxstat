@@ -220,11 +220,13 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
     }
   };
 
-  const getSenderInitials = (sender: TeamMessageWithSender['sender']) => {
+  const getSenderInitials = (sender: TeamMessageWithSender['sender'] | null | undefined) => {
+    if (!sender) return '??';
     return `${sender.firstName?.charAt(0) || ''}${sender.lastName?.charAt(0) || ''}`.toUpperCase();
   };
 
-  const getSenderName = (sender: TeamMessageWithSender['sender']) => {
+  const getSenderName = (sender: TeamMessageWithSender['sender'] | null | undefined) => {
+    if (!sender) return 'Unknown User';
     return `${sender.firstName || ''} ${sender.lastName || ''}`.trim() || 'Unknown User';
   };
 

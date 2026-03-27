@@ -78,7 +78,7 @@ type Profile = {
 };
 import PhotoUpload from "@/pages/photo-upload";
 import SupportPage from "@/pages/support";
-import NotificationsPage from "@/pages/notifications-page";
+
 import Logout from "@/pages/logout";
 import { BanterLoader } from "@/components/BanterLoader";
 
@@ -145,7 +145,6 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 }
 
 // Create protected route wrappers as proper components (not anonymous functions)
-const ProtectedNotificationsPage = () => <ProtectedRoute component={NotificationsPage} />;
 const ProtectedUnifiedAccount = () => <ProtectedRoute component={UnifiedAccount} />;
 const ProtectedProfileGateway = () => <ProtectedRoute component={ProfileGateway} />;
 const ProtectedClaimSubscription = () => <ProtectedRoute component={ClaimSubscription} />;
@@ -414,7 +413,7 @@ function AppRouter() {
       {/* Public routes - always accessible */}
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/support" component={SupportPage} />
-      <Route path="/notifications" component={ProtectedNotificationsPage} />
+
       <Route path="/teams" component={Teams} />
       <Route path="/registration" component={RegistrationFlow} />
       <Route path="/login" component={LoginPage} />

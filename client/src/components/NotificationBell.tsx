@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from "date-fns";
-import { useLocation } from "wouter";
 import NotificationDetailDialog from "@/components/NotificationDetailDialog";
 
 interface NotificationItem {
@@ -28,7 +27,6 @@ interface NotificationItem {
 
 export function NotificationBell() {
   const { user } = useAuth();
-  const [, setLocation] = useLocation();
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<any>(null);
@@ -62,15 +60,6 @@ export function NotificationBell() {
     },
   });
 
-  const markAllAsRead = useMutation({
-    mutationFn: async () => {
-      return await apiRequest("POST", `/api/notifications/mark-all-read`, {});
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications/feed", profileId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-    },
-  });
 
   const handlePopoverChange = async (open: boolean) => {
     setPopoverOpen(open);
@@ -124,16 +113,6 @@ export function NotificationBell() {
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-sm">Notifications</h3>
-            {unreadCount > 0 && (
-              <button
-                onClick={() => markAllAsRead.mutate()}
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
-                disabled={markAllAsRead.isPending}
-              >
-                <CheckCheck className="w-3.5 h-3.5" />
-                Mark all read
-              </button>
-            )}
           </div>
 
           <ScrollArea className="h-[300px]">
@@ -174,17 +153,6 @@ export function NotificationBell() {
             )}
           </ScrollArea>
 
-          {feed.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full"
-              onClick={() => setLocation("/notifications")}
-              data-testid="button-view-all-notifications"
-            >
-              View all notifications
-            </Button>
-          )}
         </div>
       </PopoverContent>
     </Popover>

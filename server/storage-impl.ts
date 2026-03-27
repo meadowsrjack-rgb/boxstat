@@ -1155,7 +1155,7 @@ class MemStorage implements IStorage {
   
   async getTeamsByCoach(coachId: string): Promise<Team[]> {
     return Array.from(this.teams.values()).filter(team => 
-      team.coachId === coachId || team.assistantCoachIds?.includes(coachId)
+      team.coachId === coachId || team.headCoachIds?.includes(coachId) || team.assistantCoachIds?.includes(coachId)
     );
   }
   
@@ -1175,6 +1175,7 @@ class MemStorage implements IStorage {
       programType: team.programType,
       divisionId: team.divisionId,
       coachId: team.coachId,
+      headCoachIds: team.headCoachIds ?? [],
       assistantCoachIds: team.assistantCoachIds ?? [],
       season: team.season,
       organization: team.organization,
@@ -3561,6 +3562,7 @@ class DatabaseStorage implements IStorage {
     const legacyResults = await db.select().from(schema.teams).where(
       or(
         eq(schema.teams.coachId, coachId),
+        sql`${coachId} = ANY(${schema.teams.headCoachIds})`,
         sql`${coachId} = ANY(${schema.teams.assistantCoachIds})`
       )
     );
@@ -3632,6 +3634,7 @@ class DatabaseStorage implements IStorage {
       programType: team.programType,
       divisionId: team.divisionId,
       coachId: team.coachId && team.coachId.trim() !== '' ? team.coachId : null,
+      headCoachIds: team.headCoachIds ?? [],
       assistantCoachIds: team.assistantCoachIds ?? [],
       season: team.season,
       organization: team.organization,
@@ -3657,6 +3660,7 @@ class DatabaseStorage implements IStorage {
       programType: updates.programType,
       divisionId: updates.divisionId,
       coachId: updates.coachId !== undefined ? (updates.coachId && updates.coachId.trim() !== '' ? updates.coachId : null) : undefined,
+      headCoachIds: updates.headCoachIds,
       assistantCoachIds: updates.assistantCoachIds,
       season: updates.season,
       organization: updates.organization,
@@ -5746,6 +5750,7 @@ class DatabaseStorage implements IStorage {
       programType: dbTeam.programType,
       divisionId: dbTeam.divisionId,
       coachId: dbTeam.coachId,
+      headCoachIds: dbTeam.headCoachIds || [],
       assistantCoachIds: dbTeam.assistantCoachIds || [],
       season: dbTeam.season,
       organization: dbTeam.organization,

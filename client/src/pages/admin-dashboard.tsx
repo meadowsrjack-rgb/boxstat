@@ -3798,6 +3798,7 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
   const [deleteConfirmTeam, setDeleteConfirmTeam] = useState<any>(null);
   const [teamRoster, setTeamRoster] = useState<string[]>([]);
   const [rosterLoading, setRosterLoading] = useState(false);
+  const [rosterSearch, setRosterSearch] = useState('');
   const tableRef = useDragScroll();
 
   const coaches = users.filter((u: any) => u.role === "coach");
@@ -3829,6 +3830,7 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
       programType: "",
       divisionId: undefined as number | undefined,
       coachId: "",
+      headCoachIds: [] as string[],
       assistantCoachIds: [] as string[],
       season: "",
       organization: "",
@@ -3844,7 +3846,8 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
     mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/teams", { 
         ...data, 
-        organizationId: organization.id
+        organizationId: organization.id,
+        coachId: data.headCoachIds?.[0] || data.coachId || null,
       });
     },
     onSuccess: () => {
@@ -3873,7 +3876,11 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
 
   const updateTeam = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
-      return await apiRequest("PATCH", `/api/teams/${id}`, data);
+      const payload = { ...data };
+      if (payload.headCoachIds?.length) {
+        payload.coachId = payload.headCoachIds[0];
+      }
+      return await apiRequest("PATCH", `/api/teams/${id}`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
@@ -4135,28 +4142,39 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
 
                     <FormField
                       control={form.control}
-                      name="coachId"
+                      name="headCoachIds"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Head Coach</FormLabel>
-                          <Select 
-                            onValueChange={(value) => field.onChange(value === "none" ? undefined : value)} 
-                            value={field.value || "none"}
-                          >
-                            <FormControl>
-                              <SelectTrigger data-testid="select-team-coach">
-                                <SelectValue placeholder="Select a coach" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="none">None</SelectItem>
-                              {coaches.map((coach: any) => (
-                                <SelectItem key={coach.id} value={coach.id}>
-                                  {coach.firstName} {coach.lastName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormLabel>Head Coach(es)</FormLabel>
+                          <FormDescription>Select one or more head coaches</FormDescription>
+                          <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2" data-testid="checkbox-group-head-coaches">
+                            {coaches.length === 0 ? (
+                              <p className="text-sm text-gray-500">No coaches available</p>
+                            ) : (
+                              coaches.map((coach: any) => {
+                                const currentValue = field.value || [];
+                                const isChecked = Array.isArray(currentValue) && currentValue.includes(coach.id);
+                                return (
+                                  <div key={coach.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      checked={isChecked}
+                                      onCheckedChange={(checked) => {
+                                        if (checked) {
+                                          field.onChange([...currentValue, coach.id]);
+                                        } else {
+                                          field.onChange(currentValue.filter((id: string) => id !== coach.id));
+                                        }
+                                      }}
+                                      data-testid={`checkbox-head-coach-${coach.id}`}
+                                    />
+                                    <Label className="text-sm font-normal cursor-pointer">
+                                      {coach.firstName} {coach.lastName}
+                                    </Label>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -4374,27 +4392,41 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="edit-team-coachId">Head Coach</Label>
-                      <Select
-                        value={editingTeam.coachId || "none"}
-                        onValueChange={(value) => setEditingTeam({...editingTeam, coachId: value === "none" ? null : value})}
-                      >
-                        <SelectTrigger id="edit-team-coachId" data-testid="select-edit-team-coachId">
-                          <SelectValue placeholder="Select a coach" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {coaches.map((coach: any) => (
-                            <SelectItem key={coach.id} value={coach.id}>
-                              {coach.firstName} {coach.lastName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label>Head Coach(es)</Label>
+                      <p className="text-xs text-gray-500">Select one or more head coaches</p>
+                      <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2" data-testid="checkbox-group-edit-head-coaches">
+                        {coaches.length === 0 ? (
+                          <p className="text-sm text-gray-500">No coaches available</p>
+                        ) : (
+                          coaches.map((coach: any) => {
+                            const headIds = editingTeam.headCoachIds || (editingTeam.coachId ? [editingTeam.coachId] : []);
+                            return (
+                              <div key={coach.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                  checked={headIds.includes(coach.id)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setEditingTeam({...editingTeam, headCoachIds: [...headIds, coach.id], coachId: headIds[0] || coach.id});
+                                    } else {
+                                      const newIds = headIds.filter((id: string) => id !== coach.id);
+                                      setEditingTeam({...editingTeam, headCoachIds: newIds, coachId: newIds[0] || null});
+                                    }
+                                  }}
+                                  data-testid={`checkbox-edit-head-coach-${coach.id}`}
+                                />
+                                <Label className="text-sm font-normal cursor-pointer">
+                                  {coach.firstName} {coach.lastName}
+                                </Label>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="edit-team-assistant-coaches">Assistant Coaches</Label>
+                      <Label>Assistant Coaches</Label>
+                      <p className="text-xs text-gray-500">Select assistant coaches for this team</p>
                       <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2" data-testid="checkbox-group-edit-assistant-coaches">
                         {coaches.length === 0 ? (
                           <p className="text-sm text-gray-500">No coaches available</p>
@@ -4605,7 +4637,7 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
                   <TableHead>Team Name</TableHead>
                   <TableHead>Program</TableHead>
                   <TableHead>Division</TableHead>
-                  <TableHead>Coach</TableHead>
+                  <TableHead>Coaches</TableHead>
                   <TableHead>Roster</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
@@ -4634,7 +4666,34 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
                         {division?.name || "-"}
                       </TableCell>
                       <TableCell data-testid={`text-coach-${team.id}`}>
-                        {coach ? `${coach.firstName} ${coach.lastName}` : "Unassigned"}
+                        {(() => {
+                          const headIds = team.headCoachIds?.length ? team.headCoachIds : (team.coachId ? [team.coachId] : []);
+                          const assistantIds = team.assistantCoachIds || [];
+                          const allCoachIds = [...new Set([...headIds, ...assistantIds])];
+                          if (allCoachIds.length === 0) return <span className="text-gray-400">Unassigned</span>;
+                          return (
+                            <div className="space-y-1">
+                              {headIds.map((id: string) => {
+                                const c = users.find((u: any) => u.id === id);
+                                return c ? (
+                                  <div key={id} className="flex items-center gap-1">
+                                    <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] px-1">HC</Badge>
+                                    <span className="text-xs">{c.firstName} {c.lastName}</span>
+                                  </div>
+                                ) : null;
+                              })}
+                              {assistantIds.filter((id: string) => !headIds.includes(id)).map((id: string) => {
+                                const c = users.find((u: any) => u.id === id);
+                                return c ? (
+                                  <div key={id} className="flex items-center gap-1">
+                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] px-1">AC</Badge>
+                                    <span className="text-xs">{c.firstName} {c.lastName}</span>
+                                  </div>
+                                ) : null;
+                              })}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell data-testid={`text-roster-${team.id}`}>
                         {team.rosterCount || 0}
@@ -4686,7 +4745,7 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
       </Card>
       {/* Roster Management Dialog */}
       {selectedTeam && (
-        <Dialog open={!!selectedTeam} onOpenChange={() => setSelectedTeam(null)}>
+        <Dialog open={!!selectedTeam} onOpenChange={() => { setSelectedTeam(null); setRosterSearch(''); }}>
           <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Manage Roster - {selectedTeam.name}</DialogTitle>
@@ -4695,73 +4754,150 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
               </CardDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="max-h-96 overflow-y-auto border rounded-lg p-4">
+              {/* Coaching Staff Summary */}
+              <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
+                <p className="text-sm font-medium text-gray-700">Coaching Staff</p>
+                <div className="flex flex-wrap gap-2">
+                  {(() => {
+                    const headIds = selectedTeam.headCoachIds?.length ? selectedTeam.headCoachIds : (selectedTeam.coachId ? [selectedTeam.coachId] : []);
+                    const assistantIds = selectedTeam.assistantCoachIds || [];
+                    if (headIds.length === 0 && assistantIds.length === 0) {
+                      return <span className="text-xs text-gray-400">No coaches assigned</span>;
+                    }
+                    return (
+                      <>
+                        {headIds.map((id: string) => {
+                          const c = users.find((u: any) => u.id === id);
+                          return c ? (
+                            <Badge key={id} className="bg-red-100 text-red-700 border-red-200">
+                              HC: {c.firstName} {c.lastName}
+                            </Badge>
+                          ) : null;
+                        })}
+                        {assistantIds.filter((id: string) => !headIds.includes(id)).map((id: string) => {
+                          const c = users.find((u: any) => u.id === id);
+                          return c ? (
+                            <Badge key={id} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              AC: {c.firstName} {c.lastName}
+                            </Badge>
+                          ) : null;
+                        })}
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Search */}
+              <Input
+                placeholder="Search players by name..."
+                value={rosterSearch}
+                onChange={(e) => setRosterSearch(e.target.value)}
+                data-testid="input-roster-search"
+              />
+
+              {/* Current Roster */}
+              {(() => {
+                const rosterPlayers = players.filter((p: any) => {
+                  const userTeamIds = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
+                  return userTeamIds.includes(selectedTeam.id) || p.teamId === selectedTeam.id;
+                });
+                return rosterPlayers.length > 0 ? (
+                  <div className="border rounded-lg p-3 bg-green-50">
+                    <p className="text-xs font-semibold text-green-700 mb-2">Current Roster ({rosterPlayers.length} players)</p>
+                    <div className="flex flex-wrap gap-1">
+                      {rosterPlayers.map((player: any) => (
+                        <div key={player.id} className="inline-flex items-center gap-1 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                          <span>{player.firstName} {player.lastName}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
+              <div className="max-h-72 overflow-y-auto border rounded-lg">
                 {players.length === 0 ? (
                   <p className="text-sm text-gray-500 text-center py-8">No players available</p>
                 ) : (
-                  players.map((player: any) => {
-                    const isOnTeam = player.teamId === selectedTeam.id;
-                    return (
-                      <div 
-                        key={player.id} 
-                        className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded border-b last:border-b-0"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Checkbox 
-                            checked={isOnTeam}
-                            onCheckedChange={async (checked) => {
-                              try {
-                                if (checked) {
-                                  await apiRequest("POST", `/api/teams/${selectedTeam.id}/assign-player`, {
-                                    playerId: player.id
-                                  });
-                                } else {
-                                  await apiRequest("POST", `/api/teams/${selectedTeam.id}/remove-player`, {
-                                    playerId: player.id
-                                  });
-                                }
-                                queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-                                queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-                                queryClient.invalidateQueries({ queryKey: ["/api/users", player.id, "team"] });
-                                queryClient.invalidateQueries({ queryKey: ["/api/users", player.id, "teams"] });
-                                queryClient.invalidateQueries({ queryKey: ["/api/users", player.id, "program-memberships"] });
-                                queryClient.invalidateQueries({ queryKey: [`/api/profile/${player.id}`] });
-                                queryClient.invalidateQueries({ queryKey: ["/api/profile", player.id] });
-                                toast({ 
-                                  title: checked 
-                                    ? `Added ${player.firstName} ${player.lastName} to ${selectedTeam.name}`
-                                    : `Removed ${player.firstName} ${player.lastName} from ${selectedTeam.name}`
-                                });
-                              } catch (error) {
-                                toast({ 
-                                  title: "Failed to update player assignment",
-                                  variant: "destructive"
-                                });
-                              }
-                            }}
-                            data-testid={`checkbox-player-${player.id}`}
-                          />
-                          <div>
-                            <p className="font-medium">{player.firstName} {player.lastName}</p>
-                            {player.teamId && player.teamId !== selectedTeam.id && (
-                              <p className="text-xs text-gray-500">
-                                Currently on: {teams.find((t: any) => t.id === player.teamId)?.name || "Unknown Team"}
-                              </p>
+                  (() => {
+                    const filteredPlayers = rosterSearch.trim()
+                      ? players.filter((p: any) => `${p.firstName} ${p.lastName}`.toLowerCase().includes(rosterSearch.toLowerCase()))
+                      : players;
+                    return filteredPlayers.length === 0 ? (
+                      <p className="text-sm text-gray-500 text-center py-4">No players match your search</p>
+                    ) : (
+                      filteredPlayers.map((player: any) => {
+                        const userTeamIds = Array.isArray(player.teamIds) ? player.teamIds : player.teamId ? [player.teamId] : [];
+                        const isOnTeam = userTeamIds.includes(selectedTeam.id) || player.teamId === selectedTeam.id;
+                        return (
+                          <div 
+                            key={player.id} 
+                            className={`flex items-center justify-between p-3 hover:bg-gray-50 border-b last:border-b-0 ${isOnTeam ? 'bg-green-50' : ''}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Checkbox 
+                                checked={isOnTeam}
+                                onCheckedChange={async (checked) => {
+                                  try {
+                                    if (checked) {
+                                      await apiRequest("POST", `/api/teams/${selectedTeam.id}/assign-player`, {
+                                        playerId: player.id
+                                      });
+                                    } else {
+                                      await apiRequest("POST", `/api/teams/${selectedTeam.id}/remove-player`, {
+                                        playerId: player.id
+                                      });
+                                    }
+                                    queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+                                    queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+                                    queryClient.invalidateQueries({ queryKey: ["/api/users", player.id, "team"] });
+                                    queryClient.invalidateQueries({ queryKey: ["/api/users", player.id, "teams"] });
+                                    queryClient.invalidateQueries({ queryKey: ["/api/users", player.id, "program-memberships"] });
+                                    queryClient.invalidateQueries({ queryKey: [`/api/profile/${player.id}`] });
+                                    queryClient.invalidateQueries({ queryKey: ["/api/profile", player.id] });
+                                    toast({ 
+                                      title: checked 
+                                        ? `Added ${player.firstName} ${player.lastName} to ${selectedTeam.name}`
+                                        : `Removed ${player.firstName} ${player.lastName} from ${selectedTeam.name}`
+                                    });
+                                  } catch (error) {
+                                    toast({ 
+                                      title: "Failed to update player assignment",
+                                      variant: "destructive"
+                                    });
+                                  }
+                                }}
+                                data-testid={`checkbox-player-${player.id}`}
+                              />
+                              <div>
+                                <p className={`text-sm ${isOnTeam ? 'font-medium text-green-700' : ''}`}>{player.firstName} {player.lastName}</p>
+                                {player.email && <p className="text-xs text-gray-400">{player.email}</p>}
+                                {player.teamId && player.teamId !== selectedTeam.id && (
+                                  <p className="text-xs text-gray-500">
+                                    Also on: {teams.find((t: any) => t.id === player.teamId)?.name || "Unknown Team"}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            {isOnTeam && (
+                              <Badge variant="default" className="bg-green-100 text-green-700 border-green-200">
+                                On Team
+                              </Badge>
                             )}
                           </div>
-                        </div>
-                        {isOnTeam && (
-                          <Badge variant="default" className="bg-green-100 text-green-700 border-green-200">
-                            On Team
-                          </Badge>
-                        )}
-                      </div>
+                        );
+                      })
                     );
-                  })
+                  })()
                 )}
               </div>
               <div className="text-sm text-gray-600">
-                <strong>Roster Count:</strong> {players.filter((p: any) => p.teamId === selectedTeam.id).length} players
+                <strong>Roster Count:</strong> {players.filter((p: any) => {
+                  const userTeamIds = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
+                  return userTeamIds.includes(selectedTeam.id) || p.teamId === selectedTeam.id;
+                }).length} players
+                {selectedTeam.rosterSize > 0 && <span className="text-gray-400"> / {selectedTeam.rosterSize} max</span>}
               </div>
             </div>
           </DialogContent>

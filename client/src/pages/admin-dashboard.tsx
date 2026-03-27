@@ -4822,6 +4822,12 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
   const [locationType, setLocationType] = useState<'physical' | 'online'>('physical');
   const [editLocationType, setEditLocationType] = useState<'physical' | 'online'>('physical');
   const [editEventWindows, setEditEventWindows] = useState<Partial<EventWindow>[]>([]);
+  const [editIsRecurring, setEditIsRecurring] = useState(false);
+  const [editRecurrenceFrequency, setEditRecurrenceFrequency] = useState<'daily' | 'weekly' | 'biweekly' | 'monthly'>('weekly');
+  const [editRecurrenceCount, setEditRecurrenceCount] = useState(4);
+  const [editRecurrenceDays, setEditRecurrenceDays] = useState<number[]>([]);
+  const [editRecurrenceEndType, setEditRecurrenceEndType] = useState<'count' | 'date'>('count');
+  const [editRecurrenceEndDate, setEditRecurrenceEndDate] = useState<string>('');
   const [selectedEventIds, setSelectedEventIds] = useState<Set<number>>(new Set());
   
   // Multi-select state for event targeting
@@ -5990,7 +5996,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
 
           {/* Edit Event Dialog */}
           {editingEvent && (
-            <Dialog open={!!editingEvent} onOpenChange={(open) => !open && setEditingEvent(null)}>
+            <Dialog open={!!editingEvent} onOpenChange={(open) => { if (!open) { setEditingEvent(null); setEditIsRecurring(false); setEditRecurrenceFrequency('weekly'); setEditRecurrenceCount(4); setEditRecurrenceDays([]); setEditRecurrenceEndType('count'); setEditRecurrenceEndDate(''); }}}>
               <DialogContent className="max-w-[95vw] w-full">
                 <DialogHeader>
                   <DialogTitle>Edit Event</DialogTitle>
@@ -6323,6 +6329,138 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                     </div>
                   </div>
                   
+                  {/* Recurring Event Options */}
+                  <div className="border rounded-lg p-4 space-y-3 bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="edit-recurring-toggle"
+                        checked={editIsRecurring}
+                        onCheckedChange={setEditIsRecurring}
+                        data-testid="switch-edit-recurring"
+                      />
+                      <Label htmlFor="edit-recurring-toggle" className="font-medium cursor-pointer">
+                        Create additional recurring events
+                      </Label>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {editIsRecurring 
+                        ? "This will update the current event AND create additional recurring copies" 
+                        : "Enable to generate recurring copies of this event"}
+                    </p>
+                    
+                    {editIsRecurring && (
+                      <div className="space-y-4 pt-2">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Frequency</Label>
+                            <Select
+                              value={editRecurrenceFrequency}
+                              onValueChange={(value: 'daily' | 'weekly' | 'biweekly' | 'monthly') => {
+                                setEditRecurrenceFrequency(value);
+                                if (value !== 'weekly' && value !== 'biweekly') {
+                                  setEditRecurrenceDays([]);
+                                }
+                              }}
+                            >
+                              <SelectTrigger data-testid="select-edit-recurrence-frequency">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="daily">Daily</SelectItem>
+                                <SelectItem value="weekly">Weekly</SelectItem>
+                                <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
+                                <SelectItem value="monthly">Monthly</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Ends</Label>
+                            <Select
+                              value={editRecurrenceEndType}
+                              onValueChange={(value: 'count' | 'date') => setEditRecurrenceEndType(value)}
+                            >
+                              <SelectTrigger data-testid="select-edit-recurrence-end-type">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="count">After # of events</SelectItem>
+                                <SelectItem value="date">On specific date</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        
+                        {(editRecurrenceFrequency === 'weekly' || editRecurrenceFrequency === 'biweekly') && (
+                          <div className="space-y-2">
+                            <Label>Repeat On</Label>
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                { day: 0, label: 'Sun' },
+                                { day: 1, label: 'Mon' },
+                                { day: 2, label: 'Tue' },
+                                { day: 3, label: 'Wed' },
+                                { day: 4, label: 'Thu' },
+                                { day: 5, label: 'Fri' },
+                                { day: 6, label: 'Sat' },
+                              ].map(({ day, label }) => (
+                                <Button
+                                  key={day}
+                                  type="button"
+                                  variant={editRecurrenceDays.includes(day) ? "default" : "outline"}
+                                  size="sm"
+                                  className={`w-12 ${editRecurrenceDays.includes(day) ? 'bg-red-600 hover:bg-red-700' : ''}`}
+                                  onClick={() => {
+                                    if (editRecurrenceDays.includes(day)) {
+                                      setEditRecurrenceDays(editRecurrenceDays.filter(d => d !== day));
+                                    } else {
+                                      setEditRecurrenceDays([...editRecurrenceDays, day]);
+                                    }
+                                  }}
+                                  data-testid={`btn-edit-day-${label.toLowerCase()}`}
+                                >
+                                  {label}
+                                </Button>
+                              ))}
+                            </div>
+                            <p className="text-xs text-gray-500">Select which days of the week this event repeats</p>
+                          </div>
+                        )}
+                        
+                        {editRecurrenceEndType === 'count' ? (
+                          <div className="space-y-2">
+                            <Label>Number of Additional Events</Label>
+                            <Select
+                              value={String(editRecurrenceCount)}
+                              onValueChange={(value) => setEditRecurrenceCount(parseInt(value))}
+                            >
+                              <SelectTrigger data-testid="select-edit-recurrence-count">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {[2, 3, 4, 5, 6, 7, 8, 10, 12, 16, 20, 24, 30, 40, 52].map((count) => (
+                                  <SelectItem key={count} value={String(count)}>
+                                    {count} events
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <Label>End Date</Label>
+                            <Input
+                              type="date"
+                              value={editRecurrenceEndDate}
+                              onChange={(e) => setEditRecurrenceEndDate(e.target.value)}
+                              data-testid="input-edit-recurrence-end-date"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="border-t pt-4">
                     <EventWindowsConfigurator
                       eventStartTime={editingEvent.startTime ? new Date(editingEvent.startTime) : undefined}
@@ -6334,18 +6472,106 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                   <Button
                     type="button"
                     className="w-full"
-                    onClick={() => {
+                    onClick={async () => {
+                      if (editIsRecurring) {
+                        if ((editRecurrenceFrequency === 'weekly' || editRecurrenceFrequency === 'biweekly') && editRecurrenceDays.length === 0) {
+                          toast({ title: "Please select at least one day of the week", variant: "destructive" });
+                          return;
+                        }
+                        if (editRecurrenceEndType === 'date' && !editRecurrenceEndDate) {
+                          toast({ title: "Please select an end date for recurring events", variant: "destructive" });
+                          return;
+                        }
+                      }
+
                       const updatedData = {
                         ...editingEvent,
                         startTime: editingEvent.startTime && !editingEvent.startTime.endsWith('Z') ? new Date(editingEvent.startTime).toISOString() : editingEvent.startTime,
                         endTime: editingEvent.endTime && !editingEvent.endTime.endsWith('Z') ? new Date(editingEvent.endTime).toISOString() : editingEvent.endTime,
                       };
-                      updateEvent.mutate(updatedData);
+                      
+                      try {
+                        await updateEvent.mutateAsync(updatedData);
+                      } catch (e) {
+                        return;
+                      }
+
+                      if (editIsRecurring) {
+                        const startDate = new Date(updatedData.startTime);
+                        const endDate = new Date(updatedData.endTime);
+                        const durationMs = endDate.getTime() - startDate.getTime();
+                        
+                        let endLimit: Date | null = null;
+                        if (editRecurrenceEndType === 'date' && editRecurrenceEndDate) {
+                          const [year, month, day] = editRecurrenceEndDate.split('-').map(Number);
+                          endLimit = new Date(year, month - 1, day, 23, 59, 59);
+                        }
+                        const maxCount = editRecurrenceEndType === 'count' ? editRecurrenceCount : 1000;
+                        
+                        const eventsToCreate: any[] = [];
+                        let currentStart = new Date(startDate);
+                        let count = 0;
+
+                        if ((editRecurrenceFrequency === 'weekly' || editRecurrenceFrequency === 'biweekly') && editRecurrenceDays.length > 0) {
+                          const weekInterval = editRecurrenceFrequency === 'biweekly' ? 2 : 1;
+                          let weekStart = new Date(currentStart);
+                          weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+                          
+                          while (count < maxCount) {
+                            if (endLimit && weekStart > endLimit) break;
+                            for (const dayOfWeek of editRecurrenceDays.sort((a: number, b: number) => a - b)) {
+                              if (count >= maxCount) break;
+                              const eventDate = new Date(weekStart);
+                              eventDate.setDate(eventDate.getDate() + dayOfWeek);
+                              eventDate.setHours(startDate.getHours(), startDate.getMinutes(), 0, 0);
+                              if (endLimit && eventDate > endLimit) continue;
+                              if (eventDate > startDate) {
+                                const newEnd = new Date(eventDate.getTime() + durationMs);
+                                eventsToCreate.push({ ...updatedData, id: undefined, startTime: eventDate.toISOString(), endTime: newEnd.toISOString() });
+                                count++;
+                              }
+                            }
+                            weekStart.setDate(weekStart.getDate() + (7 * weekInterval));
+                          }
+                        } else {
+                          while (count < maxCount) {
+                            if (editRecurrenceFrequency === 'daily') {
+                              currentStart.setDate(currentStart.getDate() + 1);
+                            } else if (editRecurrenceFrequency === 'weekly') {
+                              currentStart.setDate(currentStart.getDate() + 7);
+                            } else if (editRecurrenceFrequency === 'biweekly') {
+                              currentStart.setDate(currentStart.getDate() + 14);
+                            } else if (editRecurrenceFrequency === 'monthly') {
+                              currentStart.setMonth(currentStart.getMonth() + 1);
+                            }
+                            if (endLimit && currentStart > endLimit) break;
+                            const newEnd = new Date(currentStart.getTime() + durationMs);
+                            eventsToCreate.push({ ...updatedData, id: undefined, startTime: new Date(currentStart).toISOString(), endTime: newEnd.toISOString() });
+                            count++;
+                          }
+                        }
+
+                        for (const evt of eventsToCreate) {
+                          try {
+                            await apiRequest("POST", "/api/events", evt);
+                          } catch (e) {
+                            console.error('Failed to create recurring event:', e);
+                          }
+                        }
+                        queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+                        toast({ title: `Created ${eventsToCreate.length} additional recurring event(s)` });
+                        setEditIsRecurring(false);
+                        setEditRecurrenceFrequency('weekly');
+                        setEditRecurrenceCount(4);
+                        setEditRecurrenceDays([]);
+                        setEditRecurrenceEndType('count');
+                        setEditRecurrenceEndDate('');
+                      }
                     }}
                     disabled={updateEvent.isPending || !editingEvent.title?.trim() || !editingEvent.startTime || !editingEvent.endTime || !editingEvent.location?.trim()}
                     data-testid="button-submit-edit-event"
                   >
-                    {updateEvent.isPending ? "Updating..." : "Update Event"}
+                    {updateEvent.isPending ? "Updating..." : editIsRecurring ? "Update & Create Recurring" : "Update Event"}
                   </Button>
                 </div>
               )}

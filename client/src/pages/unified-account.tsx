@@ -1891,19 +1891,20 @@ export default function UnifiedAccount() {
   
   const isConfirmedEvent = (e: any) => !(e.scheduleRequestSource && e.status === 'pending');
 
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 2);
+  tomorrow.setHours(0, 0, 0, 0);
+
   const upcomingEvents = filterEventsByPlayer(events)
     .filter((e: any) => {
+      const startTime = new Date(e.startTime);
       const endTime = new Date(e.endTime || e.startTime);
-      return endTime > now && isConfirmedEvent(e);
+      return endTime > now && startTime < tomorrow && isConfirmedEvent(e);
     })
-    .slice(0, 3);
+    .sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+    .slice(0, 4);
 
-  const allUpcomingEvents = filterEventsByPlayer(events)
-    .filter((e: any) => {
-      const endTime = new Date(e.endTime || e.startTime);
-      return endTime > now && isConfirmedEvent(e);
-    })
-    .sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+  const allUpcomingEvents = upcomingEvents;
 
   const pendingPayments = payments.filter((p: any) => p.status === "pending");
   const nextPaymentDue = pendingPayments.length > 0 ? pendingPayments[0] : null;
@@ -2184,7 +2185,7 @@ export default function UnifiedAccount() {
 
             {/* Upcoming Events Section */}
             <div>
-              <h2 className="text-2xl font-bold mb-4">Upcoming Events</h2>
+              <h2 className="text-2xl font-bold mb-4">Today & Tomorrow</h2>
               {eventsLoading ? (
                 <div className="flex justify-center py-8" data-testid="loading-events">
                   <BanterLoader />
@@ -2193,13 +2194,13 @@ export default function UnifiedAccount() {
                 <Card>
                   <CardContent className="p-8 text-center">
                     <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <h3 className="text-lg font-semibold mb-2">No Upcoming Events</h3>
-                    <p className="text-gray-600">There are no upcoming events scheduled at this time</p>
+                    <h3 className="text-lg font-semibold mb-2">No Events</h3>
+                    <p className="text-gray-600">No events scheduled for today or tomorrow</p>
                   </CardContent>
                 </Card>
               ) : (
                 <div className="space-y-4">
-                  {allUpcomingEvents.slice(0, 5).map((event: any) => (
+                  {allUpcomingEvents.map((event: any) => (
                     <Card 
                       key={event.id} 
                       className="cursor-pointer hover:border-red-500 transition-colors" 

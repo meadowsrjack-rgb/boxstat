@@ -14889,6 +14889,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/contact-management/admin-initiate", requireAuth, async (req: any, res) => {
+    try {
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const { recipientUserId, message } = req.body;
+      if (!recipientUserId || !message?.trim()) {
+        return res.status(400).json({ error: "recipientUserId and message are required" });
+      }
+      const recipient = await storage.getUser(recipientUserId);
+      if (!recipient) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const admin = await storage.getUser(req.user.id);
+      const adminName = admin ? `${admin.firstName} ${admin.lastName}` : 'Admin';
+
+      const msg = await storage.createContactManagementMessage({
+        organizationId: req.user.organizationId,
+        senderId: recipientUserId,
+        senderName: `${recipient.firstName} ${recipient.lastName}`,
+        senderEmail: recipient.email || null,
+        message: `[From Staff] ${message}`,
+        isAdmin: true,
+      });
+
+      try {
+        await adminNotificationService.createNotification({
+          organizationId: req.user.organizationId,
+          types: ['message'],
+          title: '💬 New Message from Staff',
+          message: `${adminName}: ${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`,
+          recipientTarget: 'users',
+          recipientUserIds: [recipientUserId],
+          deliveryChannels: ['in_app', 'push'],
+          sentBy: req.user.id,
+          status: 'sent',
+        });
+      } catch (notifError: any) {
+        console.error('⚠️ Admin-initiated message notification failed (non-fatal):', notifError.message);
+      }
+
+      res.json(msg);
+    } catch (error: any) {
+      console.error('Error creating admin-initiated message:', error);
+      res.status(500).json({ error: "Failed to send message" });
+    }
+  });
+
   // =============================================
   // SCHEDULE REQUEST & AVAILABILITY ROUTES
   // =============================================

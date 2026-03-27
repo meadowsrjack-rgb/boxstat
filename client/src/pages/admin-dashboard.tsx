@@ -16335,6 +16335,10 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
   const [selectedTeamChat, setSelectedTeamChat] = useState<{ teamId: number; channel: 'players' | 'parents'; teamName: string } | null>(null);
   const [teamChatMessage, setTeamChatMessage] = useState("");
   const [clearChannelConfirm, setClearChannelConfirm] = useState(false);
+  const [isNewMessageOpen, setIsNewMessageOpen] = useState(false);
+  const [newMessageRecipient, setNewMessageRecipient] = useState<string>('');
+  const [newMessageText, setNewMessageText] = useState('');
+  const [newMessageSearch, setNewMessageSearch] = useState('');
 
   // Fetch CRM leads
   const { data: leads = [], refetch: refetchLeads } = useQuery<any[]>({
@@ -16513,6 +16517,23 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
     },
   });
 
+  const sendNewMessageMutation = useMutation({
+    mutationFn: async ({ recipientUserId, message }: { recipientUserId: string; message: string }) => {
+      return apiRequest('/api/contact-management/admin-initiate', { method: 'POST', data: { recipientUserId, message } });
+    },
+    onSuccess: () => {
+      refetchMessages();
+      setNewMessageText('');
+      setNewMessageRecipient('');
+      setNewMessageSearch('');
+      setIsNewMessageOpen(false);
+      toast({ title: "Message sent successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to send message", variant: "destructive" });
+    },
+  });
+
   // Lead form
   const leadForm = useForm({
     defaultValues: {
@@ -16669,7 +16690,88 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
             {/* Single Users Messages */}
             {messagesFilter === 'users' && (
               <>
-                <h3 className="font-medium">Contact Management Messages</h3>
+                <div className="flex justify-between items-center">
+                  <h3 className="font-medium">Contact Management Messages</h3>
+                  <Dialog open={isNewMessageOpen} onOpenChange={(open) => { setIsNewMessageOpen(open); if (!open) { setNewMessageRecipient(''); setNewMessageText(''); setNewMessageSearch(''); } }}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" data-testid="button-new-message">
+                        <Plus className="w-4 h-4 mr-2" />
+                        New Message
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Send Message to User</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Select User</Label>
+                          <Input
+                            placeholder="Search by name or email..."
+                            value={newMessageSearch}
+                            onChange={(e) => setNewMessageSearch(e.target.value)}
+                            data-testid="input-new-message-search"
+                          />
+                          {newMessageSearch.trim() && (
+                            <div className="border rounded-md max-h-40 overflow-y-auto">
+                              {users
+                                .filter((u: any) => {
+                                  const search = newMessageSearch.toLowerCase();
+                                  return (
+                                    `${u.firstName} ${u.lastName}`.toLowerCase().includes(search) ||
+                                    (u.email && u.email.toLowerCase().includes(search))
+                                  );
+                                })
+                                .slice(0, 10)
+                                .map((u: any) => (
+                                  <div
+                                    key={u.id}
+                                    className={`p-2 text-sm cursor-pointer hover:bg-gray-100 ${newMessageRecipient === u.id ? 'bg-blue-50 font-medium' : ''}`}
+                                    onClick={() => {
+                                      setNewMessageRecipient(u.id);
+                                      setNewMessageSearch(`${u.firstName} ${u.lastName}`);
+                                    }}
+                                    data-testid={`new-msg-user-${u.id}`}
+                                  >
+                                    <div>{u.firstName} {u.lastName}</div>
+                                    <div className="text-xs text-gray-500">{u.email} ({u.role})</div>
+                                  </div>
+                                ))
+                              }
+                              {users.filter((u: any) => {
+                                const search = newMessageSearch.toLowerCase();
+                                return `${u.firstName} ${u.lastName}`.toLowerCase().includes(search) || (u.email && u.email.toLowerCase().includes(search));
+                              }).length === 0 && (
+                                <div className="p-2 text-sm text-gray-500">No users found</div>
+                              )}
+                            </div>
+                          )}
+                          {newMessageRecipient && !newMessageSearch.trim() && (
+                            <p className="text-xs text-green-600">User selected</p>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Message</Label>
+                          <Textarea
+                            placeholder="Type your message..."
+                            value={newMessageText}
+                            onChange={(e) => setNewMessageText(e.target.value)}
+                            rows={4}
+                            data-testid="input-new-message-text"
+                          />
+                        </div>
+                        <Button
+                          className="w-full"
+                          onClick={() => sendNewMessageMutation.mutate({ recipientUserId: newMessageRecipient, message: newMessageText })}
+                          disabled={!newMessageRecipient || !newMessageText.trim() || sendNewMessageMutation.isPending}
+                          data-testid="button-send-new-message"
+                        >
+                          {sendNewMessageMutation.isPending ? 'Sending...' : 'Send Message'}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
                 
                 {contactMessages.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">

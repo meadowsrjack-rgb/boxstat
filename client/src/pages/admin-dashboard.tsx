@@ -16196,7 +16196,7 @@ function MigrationsTab({ organization, users }: any) {
 
 // Communications Tab - combines Notifications and CRM
 function CommunicationsTab({ notifications, users, teams, divisions, organization, initialCrmSubTab }: any) {
-  const [activeSection, setActiveSection] = useState<'notifications' | 'leads' | 'messages'>(initialCrmSubTab || 'notifications');
+  const [activeSection, setActiveSection] = useState<'notifications' | 'messages'>(initialCrmSubTab === 'messages' ? 'messages' : 'notifications');
 
   return (
     <div className="space-y-4">
@@ -16209,15 +16209,6 @@ function CommunicationsTab({ notifications, users, teams, divisions, organizatio
         >
           <Bell className="w-4 h-4 mr-2" />
           Notifications
-        </Button>
-        <Button
-          variant={activeSection === 'leads' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setActiveSection('leads')}
-          data-testid="button-comms-leads"
-        >
-          <Headphones className="w-4 h-4 mr-2" />
-          CRM Leads
         </Button>
         <Button
           variant={activeSection === 'messages' ? 'default' : 'outline'}
@@ -16233,8 +16224,8 @@ function CommunicationsTab({ notifications, users, teams, divisions, organizatio
       {activeSection === 'notifications' && (
         <NotificationsTab notifications={notifications} users={users} teams={teams} divisions={divisions} organization={organization} />
       )}
-      {(activeSection === 'leads' || activeSection === 'messages') && (
-        <CRMTab organization={organization} users={users} teams={teams} initialSubTab={activeSection} key={activeSection} />
+      {activeSection === 'messages' && (
+        <CRMTab organization={organization} users={users} teams={teams} initialSubTab="messages" />
       )}
     </div>
   );

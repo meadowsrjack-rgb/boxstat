@@ -465,6 +465,10 @@ export default function AdminDashboard() {
                 <Layers className="w-4 h-4 mr-2" />
                 Programs
               </TabsTrigger>
+              <TabsTrigger value="teams" data-testid="tab-teams" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+                <Users className="w-4 h-4 mr-2" />
+                Teams
+              </TabsTrigger>
               <TabsTrigger value="events" data-testid="tab-events" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Calendar className="w-4 h-4 mr-2" />
                 Events
@@ -481,24 +485,20 @@ export default function AdminDashboard() {
                 <FileText className="w-4 h-4 mr-2" />
                 Waivers
               </TabsTrigger>
-              <TabsTrigger value="notifications" data-testid="tab-notifications" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+              <TabsTrigger value="communications" data-testid="tab-communications" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Bell className="w-4 h-4 mr-2" />
-                Notifications
+                Communications
               </TabsTrigger>
               <TabsTrigger value="migrations" data-testid="tab-migrations" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <ArrowLeftRight className="w-4 h-4 mr-2" />
                 Migrations
-              </TabsTrigger>
-              <TabsTrigger value="crm" data-testid="tab-crm" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <Headphones className="w-4 h-4 mr-2" />
-                CRM
               </TabsTrigger>
             </TabsList>
           </div>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <CrmMessageBanner onNavigateToCrm={() => { setCrmSubTab("messages"); setActiveTab("crm"); }} />
+            <CrmMessageBanner onNavigateToCrm={() => { setCrmSubTab("messages"); setActiveTab("communications"); }} />
             <StorePurchaseBanner onNavigateToStore={() => setActiveTab("store")} />
             <EnrollmentAssignmentBanner onNavigateToUsers={() => setActiveTab("users")} />
 
@@ -662,6 +662,10 @@ export default function AdminDashboard() {
             <ProgramsTab programs={programs} teams={teams} organization={organization} />
           </TabsContent>
 
+          <TabsContent value="teams">
+            <TeamsByProgramTab programs={programs} teams={teams} organization={organization} />
+          </TabsContent>
+
           <TabsContent value="events">
             <EventsTab events={events} teams={teams} programs={programs} organization={organization} currentUser={currentUser} users={users} />
           </TabsContent>
@@ -678,8 +682,8 @@ export default function AdminDashboard() {
             <WaiversTab organization={organization} />
           </TabsContent>
 
-          <TabsContent value="notifications">
-            <NotificationsTab notifications={notifications} users={users} teams={teams} divisions={divisions} organization={organization} />
+          <TabsContent value="communications">
+            <CommunicationsTab notifications={notifications} users={users} teams={teams} divisions={divisions} organization={organization} initialCrmSubTab={crmSubTab} />
           </TabsContent>
 
           <TabsContent value="settings">
@@ -688,10 +692,6 @@ export default function AdminDashboard() {
 
           <TabsContent value="migrations">
             <MigrationsTab organization={organization} users={users} />
-          </TabsContent>
-
-          <TabsContent value="crm">
-            <CRMTab organization={organization} users={users} teams={teams} initialSubTab={crmSubTab} key={crmSubTab || 'default'} />
           </TabsContent>
         </Tabs>
       </div>
@@ -11861,8 +11861,8 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                   return `$${(cents / 100).toFixed(2)}`;
                 };
                 return (
-                  <TableRow key={program.id} data-testid={`row-program-${program.id}`} className="cursor-pointer hover:bg-gray-50" onClick={() => handleViewProgram(program.id)}>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
+                  <TableRow key={program.id} data-testid={`row-program-${program.id}`}>
+                    <TableCell>
                       <Checkbox 
                         checked={selectedProgramIds.has(program.id)}
                         onCheckedChange={() => toggleProgramSelection(program.id)}
@@ -11871,7 +11871,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                     </TableCell>
                     <TableCell className="font-medium" data-testid={`text-program-name-${program.id}`}>
                       <div>
-                        <div className="text-blue-600 hover:underline">{program.name}</div>
+                        <div className="text-gray-900">{program.name}</div>
                         {program.description && (
                           <div className="text-xs text-gray-500 truncate max-w-[200px]">{program.description}</div>
                         )}
@@ -15958,6 +15958,142 @@ function MigrationsTab({ organization, users }: any) {
         </AlertDialogContent>
       </AlertDialog>
     </Card>
+  );
+}
+
+// Communications Tab - combines Notifications and CRM
+function CommunicationsTab({ notifications, users, teams, divisions, organization, initialCrmSubTab }: any) {
+  const [activeSection, setActiveSection] = useState<'notifications' | 'leads' | 'messages'>(initialCrmSubTab || 'notifications');
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          variant={activeSection === 'notifications' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setActiveSection('notifications')}
+          data-testid="button-comms-notifications"
+        >
+          <Bell className="w-4 h-4 mr-2" />
+          Notifications
+        </Button>
+        <Button
+          variant={activeSection === 'leads' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setActiveSection('leads')}
+          data-testid="button-comms-leads"
+        >
+          <Headphones className="w-4 h-4 mr-2" />
+          CRM Leads
+        </Button>
+        <Button
+          variant={activeSection === 'messages' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setActiveSection('messages')}
+          data-testid="button-comms-messages"
+        >
+          <MessageSquare className="w-4 h-4 mr-2" />
+          Messages
+        </Button>
+      </div>
+
+      {activeSection === 'notifications' && (
+        <NotificationsTab notifications={notifications} users={users} teams={teams} divisions={divisions} organization={organization} />
+      )}
+      {(activeSection === 'leads' || activeSection === 'messages') && (
+        <CRMTab organization={organization} users={users} teams={teams} initialSubTab={activeSection} key={activeSection} />
+      )}
+    </div>
+  );
+}
+
+// Teams By Program Tab - shows teams grouped by program
+function TeamsByProgramTab({ programs: allPrograms, teams, organization }: any) {
+  const programs = allPrograms.filter((p: any) => p.productCategory === 'service' || !p.productCategory);
+  
+  const getTeamsForProgram = (programId: string) => {
+    return teams.filter((t: any) => String(t.programId) === String(programId));
+  };
+
+  const unassignedTeams = teams.filter((t: any) => !t.programId || !programs.some((p: any) => String(p.id) === String(t.programId)));
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-gray-900">Teams by Program</h2>
+        <Badge variant="outline">{teams.length} total teams</Badge>
+      </div>
+
+      {programs.map((program: any) => {
+        const programTeams = getTeamsForProgram(program.id);
+        if (programTeams.length === 0) return null;
+        return (
+          <Card key={program.id}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Layers className="w-4 h-4 text-red-600" />
+                <h3 className="font-semibold text-gray-900">{program.name}</h3>
+                <Badge variant="secondary" className="text-xs">{programTeams.length} team{programTeams.length !== 1 ? 's' : ''}</Badge>
+              </div>
+              <div className="space-y-2">
+                {programTeams.map((team: any) => (
+                  <div key={team.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Users className="w-4 h-4 text-gray-500" />
+                      <div>
+                        <div className="font-medium text-gray-900">{team.name}</div>
+                        {team.ageGroup && <div className="text-xs text-gray-500">{team.ageGroup}</div>}
+                      </div>
+                    </div>
+                    {team.coachName && (
+                      <div className="text-sm text-gray-500">Coach: {team.coachName}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+
+      {unassignedTeams.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Users className="w-4 h-4 text-gray-400" />
+              <h3 className="font-semibold text-gray-500">Unassigned Teams</h3>
+              <Badge variant="secondary" className="text-xs">{unassignedTeams.length}</Badge>
+            </div>
+            <div className="space-y-2">
+              {unassignedTeams.map((team: any) => (
+                <div key={team.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Users className="w-4 h-4 text-gray-500" />
+                    <div>
+                      <div className="font-medium text-gray-900">{team.name}</div>
+                      {team.ageGroup && <div className="text-xs text-gray-500">{team.ageGroup}</div>}
+                    </div>
+                  </div>
+                  {team.coachName && (
+                    <div className="text-sm text-gray-500">Coach: {team.coachName}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {teams.length === 0 && (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <h3 className="text-lg font-semibold mb-2">No Teams Yet</h3>
+            <p className="text-gray-600">Teams will appear here once created and assigned to programs.</p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
 

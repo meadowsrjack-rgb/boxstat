@@ -99,7 +99,7 @@ export default function ScheduleRequest() {
 
   if (booked) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 safe-top">
         <Card className="w-full max-w-md md:max-w-lg text-center">
           <CardContent className="pt-8 pb-8 space-y-4">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
@@ -142,7 +142,7 @@ export default function ScheduleRequest() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 safe-top">
       <div className="sticky top-0 z-10 bg-white border-b px-4 py-3 flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1 as any)}>
           <ArrowLeft className="w-5 h-5" />

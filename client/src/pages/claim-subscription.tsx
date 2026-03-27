@@ -189,7 +189,7 @@ export default function ClaimSubscriptionPage() {
 
   if (loadingMigrations) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-red-50 to-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-b from-red-50 to-white flex items-center justify-center p-4 safe-top">
         <Card className="w-full max-w-2xl">
           <CardContent className="py-12 text-center">
             <div className="animate-spin w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full mx-auto mb-4"></div>
@@ -207,7 +207,7 @@ export default function ClaimSubscriptionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-red-50 to-white p-4">
+    <div className="min-h-screen bg-gradient-to-b from-red-50 to-white p-4 safe-top">
       <div className="max-w-3xl mx-auto">
         <Card className="mb-6">
           <CardHeader className="text-center">

@@ -5856,7 +5856,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                     <div className="space-y-2">
                       <Label>Select Teams</Label>
                       <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                        {teams.filter((t: any) => t.active).map((team: any) => (
+                        {teams.map((team: any) => (
                           <div key={team.id} className="flex items-center space-x-2">
                             <Checkbox
                               checked={selectedTeams.includes(String(team.id))}
@@ -6164,7 +6164,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                     <div className="space-y-2">
                       <Label>Select Teams</Label>
                       <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                        {teams.filter((t: any) => t.active).map((team: any) => (
+                        {teams.map((team: any) => (
                           <div key={team.id} className="flex items-center space-x-2">
                             <Checkbox
                               checked={(editingEvent.targetIds || []).includes(String(team.id))}

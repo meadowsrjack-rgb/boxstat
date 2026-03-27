@@ -16786,7 +16786,7 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Team/Channel list */}
                     <div className="border rounded-lg p-4 space-y-2 max-h-96 overflow-y-auto">
-                      {teams.filter((t: any) => t.active).map((team: any) => (
+                      {teams.map((team: any) => (
                         <div key={team.id} className="space-y-1">
                           <div className="font-medium text-sm px-2 pt-2">{team.name}</div>
                           <div

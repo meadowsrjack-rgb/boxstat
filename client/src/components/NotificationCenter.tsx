@@ -122,7 +122,7 @@ export default function NotificationCenter() {
   const markAsReadMutation = useMutation({
     mutationFn: (notificationId: number) =>
       apiRequest(`/api/notifications/${notificationId}/read`, {
-        method: 'POST',
+        method: 'PATCH',
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
@@ -140,7 +140,7 @@ export default function NotificationCenter() {
   // Mark all as read
   const markAllAsReadMutation = useMutation({
     mutationFn: () =>
-      apiRequest('/api/notifications/read-all', {
+      apiRequest('/api/notifications/mark-all-read', {
         method: 'POST',
       }),
     onSuccess: () => {

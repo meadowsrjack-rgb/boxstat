@@ -4,7 +4,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
-import Sidebar from "@/components/layout/sidebar";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Pages
@@ -409,20 +408,8 @@ function AppRouter() {
     return <OrgSignup />;
   }
 
-  // Public-only paths where sidebar should never appear
-  const noSidebarPaths = ['/', '/app', '/login', '/register', '/registration', '/signup',
-    '/forgot-password', '/reset-password', '/set-password', '/verify-email',
-    '/magic-link-login', '/logout', '/privacy-policy'];
-  const isNoSidebarPath = noSidebarPaths.some(p => currentPath === p) ||
-    currentPath.startsWith('/checkout/') ||
-    currentPath.startsWith('/org-signup');
-
-  // Paths that are public but may benefit from sidebar if logged in
-  const showSidebar = !!user && !isNoSidebarPath;
-
   return (
     <>
-      {showSidebar && <Sidebar />}
     <Switch>
       {/* Public routes - always accessible */}
       <Route path="/privacy-policy" component={PrivacyPolicy} />

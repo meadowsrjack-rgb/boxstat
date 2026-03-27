@@ -8006,9 +8006,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       teamUsers.forEach((user: any) => teamMemberIds.add(user.id));
       const eventTeam = await storage.getTeam(String(event.teamId));
       if (eventTeam) {
-        if (eventTeam.coachId) teamMemberIds.add(eventTeam.coachId);
+        if (eventTeam.coachId) teamMemberIds.add(String(eventTeam.coachId));
         if ((eventTeam as any).assistantCoachIds?.length) {
-          (eventTeam as any).assistantCoachIds.forEach((id: string) => teamMemberIds.add(id));
+          (eventTeam as any).assistantCoachIds.forEach((id: any) => teamMemberIds.add(String(id)));
         }
       }
     }
@@ -8026,9 +8026,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         const teamObj = allTeams.find((t: any) => String(t.id) === String(teamId));
         if (teamObj) {
-          if (teamObj.coachId) targetedTeamMemberIds.add(teamObj.coachId);
+          if (teamObj.coachId) targetedTeamMemberIds.add(String(teamObj.coachId));
           if (teamObj.assistantCoachIds?.length) {
-            teamObj.assistantCoachIds.forEach((id: string) => targetedTeamMemberIds.add(id));
+            teamObj.assistantCoachIds.forEach((id: any) => targetedTeamMemberIds.add(String(id)));
           }
         }
       }

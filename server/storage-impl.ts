@@ -1014,7 +1014,28 @@ class MemStorage implements IStorage {
   }
   
   async getUsersByTeam(teamId: string): Promise<User[]> {
-    return Array.from(this.users.values()).filter(user => user.teamId === teamId);
+    const teamIdNum = parseInt(teamId);
+    const team = this.teams.get(teamIdNum);
+
+    // Collect all user IDs: legacy teamId field + coach/assistant coach assignments
+    const userIds = new Set<string>();
+
+    // Legacy: users with teamId set
+    for (const user of this.users.values()) {
+      if (String(user.teamId) === teamId) {
+        userIds.add(user.id);
+      }
+    }
+
+    // Include coaches assigned via team record
+    if (team) {
+      if (team.coachId) userIds.add(String(team.coachId));
+      if (team.assistantCoachIds?.length) {
+        team.assistantCoachIds.forEach((id: string) => userIds.add(String(id)));
+      }
+    }
+
+    return Array.from(this.users.values()).filter(user => userIds.has(user.id));
   }
   
   async getUsersByRole(organizationId: string, role: string): Promise<User[]> {
@@ -3223,17 +3244,30 @@ class DatabaseStorage implements IStorage {
       );
     
     // Also get users from legacy teamId field
-    const legacyResults = await db.select().from(schema.users).where(
+    const legacyResults = await db.select({ id: schema.users.id }).from(schema.users).where(
       and(
         eq(schema.users.teamId, teamIdNum),
         eq(schema.users.isActive, true)
       )
     );
+
+    // Also include coaches assigned via teams.coachId / teams.assistantCoachIds
+    const teamRecord = await db.select({
+      coachId: schema.teams.coachId,
+      assistantCoachIds: schema.teams.assistantCoachIds,
+    }).from(schema.teams).where(eq(schema.teams.id, teamIdNum)).limit(1);
     
-    // Combine user IDs from both sources
+    // Combine user IDs from all sources
     const allUserIds = new Set<string>();
     membershipUserIds.forEach(m => allUserIds.add(m.profileId));
     legacyResults.forEach(u => allUserIds.add(u.id));
+    if (teamRecord.length > 0) {
+      const { coachId, assistantCoachIds } = teamRecord[0];
+      if (coachId) allUserIds.add(String(coachId));
+      if (assistantCoachIds?.length) {
+        assistantCoachIds.forEach((id: string) => allUserIds.add(String(id)));
+      }
+    }
     
     if (allUserIds.size === 0) return [];
     

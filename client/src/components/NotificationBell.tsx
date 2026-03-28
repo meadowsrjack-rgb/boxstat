@@ -40,7 +40,12 @@ export function NotificationBell() {
       const url = profileId 
         ? `/api/notifications/feed?profileId=${profileId}`
         : "/api/notifications/feed";
-      const response = await fetch(url, { credentials: "include" });
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      const response = await fetch(url, { credentials: "include", headers });
       if (!response.ok) throw new Error("Failed to fetch notifications");
       return response.json();
     },
@@ -53,7 +58,7 @@ export function NotificationBell() {
 
   const markAsRead = useMutation({
     mutationFn: async (recipientId: number) => {
-      return await apiRequest("POST", `/api/notifications/${recipientId}/mark-read`, {});
+      return await apiRequest("POST", `/api/notifications/${recipientId}/mark-read`, { profileId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/feed", profileId] });

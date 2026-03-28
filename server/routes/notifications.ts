@@ -403,7 +403,7 @@ export function setupNotificationRoutes(app: Express) {
   app.post('/api/notifications/:id/mark-read', requireAuth, async (req: any, res) => {
     try {
       const recipientId = parseInt(req.params.id);
-      const userId = req.user.id;
+      const profileId = req.body?.profileId || req.user.id;
 
       if (isNaN(recipientId)) {
         return res.status(400).json({ error: 'Invalid notification ID' });
@@ -420,7 +420,7 @@ export function setupNotificationRoutes(app: Express) {
         })
         .where(and(
           eq(notificationRecipients.id, recipientId),
-          eq(notificationRecipients.userId, userId)
+          eq(notificationRecipients.userId, profileId)
         ))
         .returning({ id: notificationRecipients.id });
 

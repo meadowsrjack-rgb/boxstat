@@ -12911,7 +12911,8 @@ function DivisionsTab({ divisions, teams, organization }: any) {
 }
 
 // Messages Tab Component (formerly Notifications)
-function NotificationsTab({ notifications, users, teams, divisions, organization }: any) {
+function NotificationsTab({ notifications: allNotifications, users, teams, divisions, organization }: any) {
+  const notifications = (allNotifications || []).filter((n: any) => !n.types?.includes('message'));
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [scheduleType, setScheduleType] = useState<'immediate' | 'scheduled' | 'recurring'>('immediate');
@@ -13173,8 +13174,8 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Notifications</CardTitle>
-          <CardDescription>Send and manage notifications</CardDescription>
+          <CardTitle>Announcements</CardTitle>
+          <CardDescription>Send and manage announcements</CardDescription>
         </div>
         <div className="flex gap-2">
           <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
@@ -13215,7 +13216,7 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
             </DialogTrigger>
           <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create New Notification</DialogTitle>
+              <DialogTitle>Create New Announcement</DialogTitle>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit((data) => createMessage.mutate(data))} className="space-y-4">
@@ -16626,7 +16627,7 @@ function CommunicationsTab({ notifications, users, teams, divisions, organizatio
           data-testid="button-comms-notifications"
         >
           <Bell className="w-4 h-4 mr-2" />
-          Notifications
+          Announcements
         </Button>
         <Button
           variant={activeSection === 'messages' ? 'default' : 'outline'}

@@ -14910,12 +14910,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const admin = await storage.getUser(req.user.id);
       const adminName = admin ? `${admin.firstName} ${admin.lastName}` : 'Admin';
 
-      const msg = await storage.createContactManagementMessage({
+      const recipientName = `${recipient.firstName} ${recipient.lastName}`;
+      const existingMessages = await storage.getContactManagementMessagesBySender(recipientUserId);
+      const existingThread = existingMessages.find((m: any) => !m.parentMessageId);
+
+      let parentMessageId: number;
+
+      if (existingThread) {
+        parentMessageId = existingThread.id;
+      } else {
+        const threadStarter = await storage.createContactManagementMessage({
+          organizationId: req.user.organizationId,
+          senderId: recipientUserId,
+          senderName: recipientName,
+          senderEmail: recipient.email || null,
+          message: `Conversation with ${recipientName}`,
+          isAdmin: false,
+        });
+        parentMessageId = threadStarter.id;
+      }
+
+      const reply = await storage.createContactManagementMessage({
         organizationId: req.user.organizationId,
-        senderId: recipientUserId,
-        senderName: `${recipient.firstName} ${recipient.lastName}`,
-        senderEmail: recipient.email || null,
-        message: `[From Staff] ${message}`,
+        senderId: req.user.id,
+        senderName: adminName,
+        senderEmail: admin?.email || null,
+        message,
+        parentMessageId,
         isAdmin: true,
       });
 
@@ -14923,7 +14944,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await adminNotificationService.createNotification({
           organizationId: req.user.organizationId,
           types: ['message'],
-          title: '💬 New Message from Staff',
+          title: 'New Message from Staff',
           message: `${adminName}: ${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`,
           recipientTarget: 'users',
           recipientUserIds: [recipientUserId],
@@ -14935,7 +14956,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('⚠️ Admin-initiated message notification failed (non-fatal):', notifError.message);
       }
 
-      res.json(msg);
+      res.json(reply);
     } catch (error: any) {
       console.error('Error creating admin-initiated message:', error);
       res.status(500).json({ error: "Failed to send message" });

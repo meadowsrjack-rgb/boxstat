@@ -215,17 +215,21 @@ export class AdminNotificationService {
 
       console.log(`[Admin Notification Create] ✅ Notification created with ID: ${created.id}`);
 
-      // Create notification_recipients records
-      const recipientRecords = resolution.userIds.map(userId => ({
-        notificationId: created.id,
-        userId,
-        isRead: false,
-        deliveryStatus: {}
-      }));
+      const hasInApp = notification.deliveryChannels?.includes('in_app');
+      if (hasInApp) {
+        const recipientRecords = resolution.userIds.map(userId => ({
+          notificationId: created.id,
+          userId,
+          isRead: false,
+          deliveryStatus: {}
+        }));
 
-      console.log(`[Admin Notification Create] Creating ${recipientRecords.length} recipient record(s)...`);
-      await db.insert(notificationRecipients).values(recipientRecords);
-      console.log(`[Admin Notification Create] ✅ Recipient records created`);
+        console.log(`[Admin Notification Create] Creating ${recipientRecords.length} recipient record(s)...`);
+        await db.insert(notificationRecipients).values(recipientRecords);
+        console.log(`[Admin Notification Create] ✅ Recipient records created`);
+      } else {
+        console.log(`[Admin Notification Create] ⏭️ Skipping in-app recipient records (push-only notification)`);
+      }
 
       // Send notifications through each channel
       console.log(`[Admin Notification Create] 🚀 Starting delivery through channels:`, notification.deliveryChannels);

@@ -14040,7 +14040,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: `${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`,
           recipientTarget: 'roles',
           recipientRoles: ['admin'],
-          deliveryChannels: ['in_app', 'push'],
+          deliveryChannels: ['push'],
           sentBy: req.user.id,
           status: 'sent',
         }, { url: '/admin-dashboard?tab=communications&subtab=messages' });
@@ -14889,7 +14889,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             message: `${senderName} replied to your message`,
             recipientTarget: 'users',
             recipientUserIds: [parentMsg.senderId],
-            deliveryChannels: ['in_app', 'push'],
+            deliveryChannels: ['push'],
             sentBy: req.user.id,
             status: 'sent',
           }, { url: targetUrl });
@@ -14966,7 +14966,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: `${adminName}: ${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`,
           recipientTarget: 'users',
           recipientUserIds: [recipientUserId],
-          deliveryChannels: ['in_app', 'push'],
+          deliveryChannels: ['push'],
           sentBy: req.user.id,
           status: 'sent',
         }, { url: targetUrl });

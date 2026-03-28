@@ -1132,10 +1132,8 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
     enabled: activeChat?.type === 'coach' && !!activeChat?.coachId && !!userId,
   });
 
-  // Fetch contact management messages
   const { data: myContactMessages = [] } = useQuery<any[]>({
     queryKey: ['/api/contact-management/my-messages'],
-    enabled: activeChat?.type === 'management',
   });
 
   // Send team message mutation (parent channel)
@@ -1206,7 +1204,10 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
   };
 
   const managementMessages = activeChat?.type === 'management'
-    ? myContactMessages.flatMap((msg: any) => [msg, ...(msg.replies || [])])
+    ? myContactMessages.flatMap((msg: any) => {
+        const threadMessages = [msg, ...(msg.replies || [])];
+        return threadMessages.filter((m: any) => !m.message?.startsWith('Conversation with ') || m.isAdmin);
+      })
     : [];
 
   const currentMessages = activeChat?.type === 'team' ? teamMessages :
@@ -1307,12 +1308,19 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
         <CardContent>
           <Button
             variant="outline"
-            className="w-full justify-start gap-2"
+            className="w-full justify-between"
             onClick={() => setActiveChat({ type: 'management' })}
             data-testid="button-contact-management"
           >
-            <MessageSquare className="w-4 h-4 text-red-600" />
-            Send a message to management
+            <span className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-red-600" />
+              {myContactMessages.length > 0 ? 'View messages' : 'Send a message to management'}
+            </span>
+            {myContactMessages.some((msg: any) => (msg.replies || []).some((r: any) => r.isAdmin)) && (
+              <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">
+                {myContactMessages.reduce((count: number, msg: any) => count + (msg.replies || []).filter((r: any) => r.isAdmin).length, 0)}
+              </span>
+            )}
           </Button>
         </CardContent>
       </Card>

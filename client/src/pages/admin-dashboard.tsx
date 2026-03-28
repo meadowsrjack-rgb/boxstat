@@ -630,7 +630,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="teams">
-            <TeamsByProgramTab programs={programs} teams={teams} organization={organization} />
+            <TeamsByProgramTab programs={programs} teams={teams} organization={organization} onTeamClick={(team: any) => { setActiveTab('people'); }} />
           </TabsContent>
 
           <TabsContent value="events">
@@ -16651,7 +16651,7 @@ function CommunicationsTab({ notifications, users, teams, divisions, organizatio
 }
 
 // Teams By Program Tab - shows teams grouped by program
-function TeamsByProgramTab({ programs: allPrograms, teams, organization }: any) {
+function TeamsByProgramTab({ programs: allPrograms, teams, organization, onTeamClick }: any) {
   const programs = allPrograms.filter((p: any) => p.productCategory === 'service' || !p.productCategory);
   
   const getTeamsForProgram = (programId: string) => {
@@ -16680,7 +16680,11 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization }: any) 
               </div>
               <div className="space-y-2">
                 {programTeams.map((team: any) => (
-                  <div key={team.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div 
+                    key={team.id} 
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => onTeamClick?.(team)}
+                  >
                     <div className="flex items-center gap-3">
                       <Users className="w-4 h-4 text-gray-500" />
                       <div>
@@ -16688,9 +16692,12 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization }: any) 
                         {team.ageGroup && <div className="text-xs text-gray-500">{team.ageGroup}</div>}
                       </div>
                     </div>
-                    {team.coachName && (
-                      <div className="text-sm text-gray-500">Coach: {team.coachName}</div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {team.coachName && (
+                        <div className="text-sm text-gray-500">Coach: {team.coachName}</div>
+                      )}
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -16709,7 +16716,11 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization }: any) 
             </div>
             <div className="space-y-2">
               {unassignedTeams.map((team: any) => (
-                <div key={team.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div 
+                  key={team.id} 
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => onTeamClick?.(team)}
+                >
                   <div className="flex items-center gap-3">
                     <Users className="w-4 h-4 text-gray-500" />
                     <div>
@@ -16717,9 +16728,12 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization }: any) 
                       {team.ageGroup && <div className="text-xs text-gray-500">{team.ageGroup}</div>}
                     </div>
                   </div>
-                  {team.coachName && (
-                    <div className="text-sm text-gray-500">Coach: {team.coachName}</div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {team.coachName && (
+                      <div className="text-sm text-gray-500">Coach: {team.coachName}</div>
+                    )}
+                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                  </div>
                 </div>
               ))}
             </div>

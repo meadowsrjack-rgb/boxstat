@@ -14031,13 +14031,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message,
       });
       
-      // Notify all admins about new contact message
       try {
-        await pushNotifications.notifyAllAdmins(
-          storage,
-          "💬 New Contact Message",
-          `${senderName}: ${message.substring(0, 50)}${message.length > 50 ? '...' : ''}`
-        );
+        await adminNotificationService.createNotification({
+          organizationId: req.user.organizationId,
+          types: ['message'],
+          title: `New message from ${senderName}`,
+          message: `${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`,
+          recipientTarget: 'roles',
+          recipientRoles: ['admin'],
+          deliveryChannels: ['in_app', 'push'],
+          sentBy: req.user.id,
+          status: 'sent',
+        }, { url: '/admin-dashboard?tab=communications&subtab=messages' });
       } catch (notifyError) {
         console.error('Error sending admin contact notification:', notifyError);
       }
@@ -14870,17 +14875,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       try {
         if (parentMsg.senderId && parentMsg.senderId !== req.user.id) {
+          const org = await storage.getOrganization(req.user.organizationId);
+          const orgName = org?.name || 'Your Organization';
+          const recipientUser = await storage.getUser(parentMsg.senderId);
+          const recipientRole = recipientUser?.role || 'parent';
+          const targetUrl = recipientRole === 'admin' ? '/admin-dashboard?tab=communications&subtab=messages' : '/home?tab=messages';
+
           await adminNotificationService.createNotification({
             organizationId: req.user.organizationId,
             types: ['message'],
-            title: '💬 New Reply from Staff',
+            title: `New message from ${orgName}`,
             message: `${senderName} replied to your message`,
             recipientTarget: 'users',
             recipientUserIds: [parentMsg.senderId],
             deliveryChannels: ['in_app', 'push'],
             sentBy: req.user.id,
             status: 'sent',
-          });
+          }, { url: targetUrl });
         }
       } catch (notifError: any) {
         console.error('⚠️ Contact management reply notification failed (non-fatal):', notifError.message);
@@ -14910,6 +14921,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const admin = await storage.getUser(req.user.id);
       const adminName = admin ? `${admin.firstName} ${admin.lastName}` : 'Admin';
 
+      const org = await storage.getOrganization(req.user.organizationId);
+      const orgName = org?.name || 'Your Organization';
       const recipientName = `${recipient.firstName} ${recipient.lastName}`;
       const existingMessages = await storage.getContactManagementMessagesBySender(recipientUserId);
       const existingThread = existingMessages.find((m: any) => !m.parentMessageId);
@@ -14941,17 +14954,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       try {
+        const recipientUser = await storage.getUser(recipientUserId);
+        const recipientRole = recipientUser?.role || 'parent';
+        const targetUrl = recipientRole === 'admin' ? '/admin-dashboard?tab=communications&subtab=messages' : '/home?tab=messages';
+
         await adminNotificationService.createNotification({
           organizationId: req.user.organizationId,
           types: ['message'],
-          title: 'New Message from Staff',
+          title: `New message from ${orgName}`,
           message: `${adminName}: ${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`,
           recipientTarget: 'users',
           recipientUserIds: [recipientUserId],
           deliveryChannels: ['in_app', 'push'],
           sentBy: req.user.id,
           status: 'sent',
-        });
+        }, { url: targetUrl });
       } catch (notifError: any) {
         console.error('⚠️ Admin-initiated message notification failed (non-fatal):', notifError.message);
       }

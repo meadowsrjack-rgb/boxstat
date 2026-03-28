@@ -115,11 +115,16 @@ export const initPushNotifications = async () => {
     console.log('[Push Notification] Data:', notification.data);
   });
 
-  // Notification tap listener
   await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
     console.log('[Push Notification] 👆 User tapped notification');
     console.log('[Push Notification] Action:', notification.actionId);
     console.log('[Push Notification] Data:', notification.notification.data);
+
+    const data = notification.notification.data;
+    if (data?.url) {
+      console.log('[Push Notification] Navigating to:', data.url);
+      window.location.href = data.url;
+    }
   });
 
   console.log('[Push Init] ✅ All push notification listeners initialized successfully');

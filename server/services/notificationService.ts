@@ -196,7 +196,7 @@ export class NotificationService {
 
   // ===== Notification Creation and Delivery =====
   
-  async sendPushNotification(notificationId: number, userId: string, title: string, message: string, collapseKey?: string): Promise<void> {
+  async sendPushNotification(notificationId: number, userId: string, title: string, message: string, collapseKey?: string, customData?: Record<string, any>): Promise<void> {
     const startTime = Date.now();
     console.log(`[Push Send] ========================================`);
     console.log(`[Push Send] 🚀 START push notification #${notificationId} to user ${userId}`);
@@ -357,16 +357,19 @@ export class NotificationService {
         return;
       }
 
+      const pushData = {
+        notificationId,
+        url: customData?.url || '/home',
+        ...customData,
+      };
+
       const payload = JSON.stringify({
         title,
         body: message,
         icon: '/icons/icon-192x192.png',
         badge: '/icons/badge-72x72.png',
         tag: collapseKey || `notification-${notificationId}`,
-        data: {
-          notificationId,
-          url: '/notifications'
-        },
+        data: pushData,
         actions: [
           { action: 'view', title: 'View' },
           { action: 'dismiss', title: 'Dismiss' }
@@ -478,6 +481,7 @@ export class NotificationService {
               title: title,
               body: message,
               collapseId: collapseKey,
+              data: pushData,
             });
             
             console.log(`[Push Send] APNs Results: ${apnsResult.successCount} succeeded, ${apnsResult.failureCount} failed`);

@@ -175,7 +175,14 @@ export default function AdminDashboard() {
     return 'overview';
   };
   const [activeTab, setActiveTabState] = useState(getInitialTab);
-  const [crmSubTab, setCrmSubTab] = useState<string | null>(null);
+  const getInitialCrmSubTab = () => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('subtab') || null;
+    }
+    return null;
+  };
+  const [crmSubTab, setCrmSubTab] = useState<string | null>(getInitialCrmSubTab);
   const setActiveTab = (tab: string) => {
     setActiveTabState(tab);
     const url = new URL(window.location.href);

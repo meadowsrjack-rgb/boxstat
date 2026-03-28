@@ -1213,6 +1213,15 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
   const currentMessages = activeChat?.type === 'team' ? teamMessages :
     activeChat?.type === 'coach' ? coachMessages : managementMessages;
 
+  const sortedMessages = [...currentMessages].sort(
+    (a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+  }, [sortedMessages.length, activeChat]);
+
   if (activeChat) {
     // Chat view
     return (
@@ -1241,10 +1250,10 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
         <CardContent className="p-0">
           {/* Messages */}
           <div className="h-80 overflow-y-auto p-4 space-y-3">
-            {currentMessages.length === 0 ? (
+            {sortedMessages.length === 0 ? (
               <p className="text-center text-gray-500 py-8">No messages yet. Start the conversation!</p>
             ) : (
-              currentMessages.map((msg: any) => {
+              sortedMessages.map((msg: any) => {
                 const isAdminReply = activeChat?.type === 'management' && msg.isAdmin;
                 const isOwn = isAdminReply ? false : (msg.senderId === userId);
                 return (
@@ -1269,6 +1278,7 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
                 );
               })
             )}
+            <div ref={messagesEndRef} />
           </div>
           {/* Input */}
           <div className="border-t p-3 flex gap-2">

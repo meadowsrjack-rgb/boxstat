@@ -7553,6 +7553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalPlayers,
         totalAdmins: orgUsers.filter(u => u.role === 'admin').length,
         totalCoaches: orgUsers.filter(u => u.role === 'coach').length,
+        totalParents: orgUsers.filter(u => u.role === 'parent').length,
         revenueThisMonth,
         revenueThisYear,
         revenueTotal,

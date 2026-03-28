@@ -6727,8 +6727,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { playerId, role: memberRole = 'player' } = req.body;
       const { role } = req.user;
 
-      // Only coaches and admins can assign players
-      if (role !== 'coach' && role !== 'admin') {
+      const isAdminUser = role === 'admin' || role === 'coach' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ message: 'Only coaches and admins can assign players' });
       }
 
@@ -6852,8 +6852,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { playerId } = req.body;
       const { role, organizationId } = req.user;
 
-      // Only coaches and admins can remove players
-      if (role !== 'coach' && role !== 'admin') {
+      const isAdminUser = role === 'admin' || role === 'coach' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
         return res.status(403).json({ message: 'Only coaches and admins can remove players' });
       }
 

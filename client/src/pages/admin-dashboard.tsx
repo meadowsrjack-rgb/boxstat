@@ -16655,8 +16655,10 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
   const { toast } = useToast();
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [rosterSearch, setRosterSearch] = useState('');
+  const [manageTab, setManageTab] = useState<'roster' | 'coaches'>('roster');
   const programs = allPrograms.filter((p: any) => p.productCategory === 'service' || !p.productCategory);
   const players = (users || []).filter((u: any) => u.role === 'player');
+  const coaches = (users || []).filter((u: any) => u.role === 'coach');
   
   const getTeamsForProgram = (programId: string) => {
     return teams.filter((t: any) => String(t.programId) === String(programId));
@@ -16738,136 +16740,326 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
       )}
 
       {selectedTeam && (
-        <Dialog open={!!selectedTeam} onOpenChange={() => { setSelectedTeam(null); setRosterSearch(''); }}>
+        <Dialog open={!!selectedTeam} onOpenChange={() => { setSelectedTeam(null); setRosterSearch(''); setManageTab('roster'); }}>
           <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Manage Roster - {selectedTeam.name}</DialogTitle>
+              <DialogTitle>Manage Team - {selectedTeam.name}</DialogTitle>
               <CardDescription>
-                Select or deselect players to add or remove them from this team
+                Manage players and coaching staff for this team
               </CardDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
-                <p className="text-sm font-medium text-gray-700">Coaching Staff</p>
-                <div className="flex flex-wrap gap-2">
-                  {(() => {
-                    const headIds = selectedTeam.headCoachIds?.length ? selectedTeam.headCoachIds : (selectedTeam.coachId ? [selectedTeam.coachId] : []);
-                    const assistantIds = selectedTeam.assistantCoachIds || [];
-                    if (headIds.length === 0 && assistantIds.length === 0) {
-                      return <span className="text-xs text-gray-400">No coaches assigned</span>;
-                    }
-                    return (
-                      <>
-                        {headIds.map((id: string) => {
-                          const c = (users || []).find((u: any) => u.id === id);
-                          return c ? (
-                            <Badge key={id} className="bg-red-100 text-red-700 border-red-200">
-                              HC: {c.firstName} {c.lastName}
-                            </Badge>
-                          ) : null;
-                        })}
-                        {assistantIds.filter((id: string) => !headIds.includes(id)).map((id: string) => {
-                          const c = (users || []).find((u: any) => u.id === id);
-                          return c ? (
-                            <Badge key={id} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                              AC: {c.firstName} {c.lastName}
-                            </Badge>
-                          ) : null;
-                        })}
-                      </>
-                    );
-                  })()}
-                </div>
+              <div className="flex gap-2 border-b">
+                <button
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${manageTab === 'roster' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                  onClick={() => setManageTab('roster')}
+                >
+                  Players
+                </button>
+                <button
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${manageTab === 'coaches' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                  onClick={() => setManageTab('coaches')}
+                >
+                  Coaches
+                </button>
               </div>
 
-              <Input
-                placeholder="Search players by name..."
-                value={rosterSearch}
-                onChange={(e) => setRosterSearch(e.target.value)}
-              />
-
-              {(() => {
-                const rosterPlayers = players.filter((p: any) => {
-                  const userTeamIds = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
-                  return userTeamIds.includes(selectedTeam.id) || p.teamId === selectedTeam.id;
-                });
-                return rosterPlayers.length > 0 ? (
-                  <div className="border rounded-lg p-3 bg-green-50">
-                    <p className="text-xs font-semibold text-green-700 mb-2">Current Roster ({rosterPlayers.length} players)</p>
-                    <div className="flex flex-wrap gap-1">
-                      {rosterPlayers.map((player: any) => (
-                        <div key={player.id} className="inline-flex items-center gap-1 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                          <span>{player.firstName} {player.lastName}</span>
-                        </div>
-                      ))}
+              {manageTab === 'coaches' && (
+                <div className="space-y-4">
+                  <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
+                    <p className="text-sm font-medium text-gray-700">Current Coaching Staff</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(() => {
+                        const headIds = selectedTeam.headCoachIds?.length ? selectedTeam.headCoachIds : (selectedTeam.coachId ? [selectedTeam.coachId] : []);
+                        const assistantIds = selectedTeam.assistantCoachIds || [];
+                        if (headIds.length === 0 && assistantIds.length === 0) {
+                          return <span className="text-xs text-gray-400">No coaches assigned</span>;
+                        }
+                        return (
+                          <>
+                            {headIds.map((id: string) => {
+                              const c = (users || []).find((u: any) => u.id === id);
+                              return c ? (
+                                <Badge key={id} className="bg-red-100 text-red-700 border-red-200">
+                                  HC: {c.firstName} {c.lastName}
+                                </Badge>
+                              ) : null;
+                            })}
+                            {assistantIds.filter((id: string) => !headIds.includes(id)).map((id: string) => {
+                              const c = (users || []).find((u: any) => u.id === id);
+                              return c ? (
+                                <Badge key={id} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                  AC: {c.firstName} {c.lastName}
+                                </Badge>
+                              ) : null;
+                            })}
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
-                ) : null;
-              })()}
 
-              <div className="max-h-72 overflow-y-auto border rounded-lg">
-                {players.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-8">No players available</p>
-                ) : (
-                  (() => {
-                    const filteredPlayers = rosterSearch.trim()
-                      ? players.filter((p: any) => `${p.firstName} ${p.lastName}`.toLowerCase().includes(rosterSearch.toLowerCase()))
-                      : players;
-                    return filteredPlayers.length === 0 ? (
-                      <p className="text-sm text-gray-500 text-center py-4">No players match your search</p>
+                  <Input
+                    placeholder="Search coaches by name..."
+                    value={rosterSearch}
+                    onChange={(e) => setRosterSearch(e.target.value)}
+                  />
+
+                  <div className="max-h-72 overflow-y-auto border rounded-lg">
+                    {coaches.length === 0 ? (
+                      <p className="text-sm text-gray-500 text-center py-8">No coaches available</p>
                     ) : (
-                      filteredPlayers.map((player: any) => {
-                        const userTeamIds = Array.isArray(player.teamIds) ? player.teamIds : player.teamId ? [player.teamId] : [];
-                        const isOnTeam = userTeamIds.includes(selectedTeam.id) || player.teamId === selectedTeam.id;
-                        return (
-                          <div 
-                            key={player.id} 
-                            className={`flex items-center justify-between p-3 hover:bg-gray-50 border-b last:border-b-0 ${isOnTeam ? 'bg-green-50' : ''}`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <Checkbox 
-                                checked={isOnTeam}
-                                onCheckedChange={async (checked) => {
-                                  try {
-                                    if (checked) {
-                                      await apiRequest("POST", `/api/teams/${selectedTeam.id}/assign-player`, { playerId: player.id });
-                                    } else {
-                                      await apiRequest("POST", `/api/teams/${selectedTeam.id}/remove-player`, { playerId: player.id });
-                                    }
-                                    queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-                                    queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-                                    toast({ 
-                                      title: checked 
-                                        ? `Added ${player.firstName} ${player.lastName} to ${selectedTeam.name}`
-                                        : `Removed ${player.firstName} ${player.lastName} from ${selectedTeam.name}`
-                                    });
-                                  } catch (error) {
-                                    toast({ title: "Failed to update player assignment", variant: "destructive" });
-                                  }
-                                }}
-                              />
-                              <div>
-                                <p className={`text-sm ${isOnTeam ? 'font-medium text-green-700' : ''}`}>{player.firstName} {player.lastName}</p>
-                                {player.email && <p className="text-xs text-gray-400">{player.email}</p>}
+                      (() => {
+                        const filteredCoaches = rosterSearch.trim()
+                          ? coaches.filter((c: any) => `${c.firstName} ${c.lastName}`.toLowerCase().includes(rosterSearch.toLowerCase()))
+                          : coaches;
+                        return filteredCoaches.length === 0 ? (
+                          <p className="text-sm text-gray-500 text-center py-4">No coaches match your search</p>
+                        ) : (
+                          filteredCoaches.map((coach: any) => {
+                            const headIds = selectedTeam.headCoachIds?.length ? selectedTeam.headCoachIds : (selectedTeam.coachId ? [selectedTeam.coachId] : []);
+                            const assistantIds = selectedTeam.assistantCoachIds || [];
+                            const isHead = headIds.includes(coach.id);
+                            const isAssistant = assistantIds.includes(coach.id);
+                            const isAssigned = isHead || isAssistant;
+                            return (
+                              <div 
+                                key={coach.id} 
+                                className={`flex items-center justify-between p-3 hover:bg-gray-50 border-b last:border-b-0 ${isAssigned ? 'bg-blue-50' : ''}`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Checkbox 
+                                    checked={isAssigned}
+                                    onCheckedChange={async (checked) => {
+                                      try {
+                                        const currentHeadIds = selectedTeam.headCoachIds?.length ? [...selectedTeam.headCoachIds] : (selectedTeam.coachId ? [selectedTeam.coachId] : []);
+                                        const currentAssistantIds = [...(selectedTeam.assistantCoachIds || [])];
+                                        
+                                        if (checked) {
+                                          if (!currentAssistantIds.includes(coach.id) && !currentHeadIds.includes(coach.id)) {
+                                            currentAssistantIds.push(coach.id);
+                                          }
+                                        } else {
+                                          const headIdx = currentHeadIds.indexOf(coach.id);
+                                          if (headIdx !== -1) currentHeadIds.splice(headIdx, 1);
+                                          const asstIdx = currentAssistantIds.indexOf(coach.id);
+                                          if (asstIdx !== -1) currentAssistantIds.splice(asstIdx, 1);
+                                        }
+                                        
+                                        await apiRequest("PATCH", `/api/teams/${selectedTeam.id}`, {
+                                          headCoachIds: currentHeadIds,
+                                          assistantCoachIds: currentAssistantIds,
+                                          coachId: currentHeadIds[0] || null,
+                                        });
+                                        
+                                        setSelectedTeam((prev: any) => ({
+                                          ...prev,
+                                          headCoachIds: currentHeadIds,
+                                          assistantCoachIds: currentAssistantIds,
+                                          coachId: currentHeadIds[0] || null,
+                                        }));
+                                        
+                                        queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+                                        toast({ 
+                                          title: checked 
+                                            ? `Added ${coach.firstName} ${coach.lastName} as coach`
+                                            : `Removed ${coach.firstName} ${coach.lastName} from coaching staff`
+                                        });
+                                      } catch (error) {
+                                        toast({ title: "Failed to update coaching staff", variant: "destructive" });
+                                      }
+                                    }}
+                                  />
+                                  <div>
+                                    <p className={`text-sm ${isAssigned ? 'font-medium text-blue-700' : ''}`}>{coach.firstName} {coach.lastName}</p>
+                                    {coach.email && <p className="text-xs text-gray-400">{coach.email}</p>}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {isAssigned && (
+                                    <Select
+                                      value={isHead ? 'head' : 'assistant'}
+                                      onValueChange={async (val) => {
+                                        try {
+                                          const currentHeadIds = selectedTeam.headCoachIds?.length ? [...selectedTeam.headCoachIds] : (selectedTeam.coachId ? [selectedTeam.coachId] : []);
+                                          const currentAssistantIds = [...(selectedTeam.assistantCoachIds || [])];
+                                          
+                                          const hIdx = currentHeadIds.indexOf(coach.id);
+                                          if (hIdx !== -1) currentHeadIds.splice(hIdx, 1);
+                                          const aIdx = currentAssistantIds.indexOf(coach.id);
+                                          if (aIdx !== -1) currentAssistantIds.splice(aIdx, 1);
+                                          
+                                          if (val === 'head') {
+                                            currentHeadIds.push(coach.id);
+                                          } else {
+                                            currentAssistantIds.push(coach.id);
+                                          }
+                                          
+                                          await apiRequest("PATCH", `/api/teams/${selectedTeam.id}`, {
+                                            headCoachIds: currentHeadIds,
+                                            assistantCoachIds: currentAssistantIds,
+                                            coachId: currentHeadIds[0] || null,
+                                          });
+                                          
+                                          setSelectedTeam((prev: any) => ({
+                                            ...prev,
+                                            headCoachIds: currentHeadIds,
+                                            assistantCoachIds: currentAssistantIds,
+                                            coachId: currentHeadIds[0] || null,
+                                          }));
+                                          
+                                          queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+                                          toast({ title: `Updated ${coach.firstName} ${coach.lastName} to ${val === 'head' ? 'Head Coach' : 'Assistant Coach'}` });
+                                        } catch (error) {
+                                          toast({ title: "Failed to update coach role", variant: "destructive" });
+                                        }
+                                      }}
+                                    >
+                                      <SelectTrigger className="w-32 h-8 text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="head">Head Coach</SelectItem>
+                                        <SelectItem value="assistant">Assistant</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                            {isOnTeam && (
-                              <Badge variant="default" className="bg-green-100 text-green-700 border-green-200">On Team</Badge>
-                            )}
-                          </div>
+                            );
+                          })
                         );
-                      })
-                    );
-                  })()
-                )}
-              </div>
-              <div className="text-sm text-gray-600">
-                <strong>Roster Count:</strong> {players.filter((p: any) => {
-                  const userTeamIds = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
-                  return userTeamIds.includes(selectedTeam.id) || p.teamId === selectedTeam.id;
-                }).length} players
-                {selectedTeam.rosterSize > 0 && <span className="text-gray-400"> / {selectedTeam.rosterSize} max</span>}
-              </div>
+                      })()
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {manageTab === 'roster' && (
+                <div className="space-y-4">
+                  <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
+                    <p className="text-sm font-medium text-gray-700">Coaching Staff</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(() => {
+                        const headIds = selectedTeam.headCoachIds?.length ? selectedTeam.headCoachIds : (selectedTeam.coachId ? [selectedTeam.coachId] : []);
+                        const assistantIds = selectedTeam.assistantCoachIds || [];
+                        if (headIds.length === 0 && assistantIds.length === 0) {
+                          return <span className="text-xs text-gray-400">No coaches assigned</span>;
+                        }
+                        return (
+                          <>
+                            {headIds.map((id: string) => {
+                              const c = (users || []).find((u: any) => u.id === id);
+                              return c ? (
+                                <Badge key={id} className="bg-red-100 text-red-700 border-red-200">
+                                  HC: {c.firstName} {c.lastName}
+                                </Badge>
+                              ) : null;
+                            })}
+                            {assistantIds.filter((id: string) => !headIds.includes(id)).map((id: string) => {
+                              const c = (users || []).find((u: any) => u.id === id);
+                              return c ? (
+                                <Badge key={id} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                  AC: {c.firstName} {c.lastName}
+                                </Badge>
+                              ) : null;
+                            })}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  <Input
+                    placeholder="Search players by name..."
+                    value={rosterSearch}
+                    onChange={(e) => setRosterSearch(e.target.value)}
+                  />
+
+                  {(() => {
+                    const rosterPlayers = players.filter((p: any) => {
+                      const userTeamIds = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
+                      return userTeamIds.includes(selectedTeam.id) || p.teamId === selectedTeam.id;
+                    });
+                    return rosterPlayers.length > 0 ? (
+                      <div className="border rounded-lg p-3 bg-green-50">
+                        <p className="text-xs font-semibold text-green-700 mb-2">Current Roster ({rosterPlayers.length} players)</p>
+                        <div className="flex flex-wrap gap-1">
+                          {rosterPlayers.map((player: any) => (
+                            <div key={player.id} className="inline-flex items-center gap-1 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                              <span>{player.firstName} {player.lastName}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+
+                  <div className="max-h-72 overflow-y-auto border rounded-lg">
+                    {players.length === 0 ? (
+                      <p className="text-sm text-gray-500 text-center py-8">No players available</p>
+                    ) : (
+                      (() => {
+                        const filteredPlayers = rosterSearch.trim()
+                          ? players.filter((p: any) => `${p.firstName} ${p.lastName}`.toLowerCase().includes(rosterSearch.toLowerCase()))
+                          : players;
+                        return filteredPlayers.length === 0 ? (
+                          <p className="text-sm text-gray-500 text-center py-4">No players match your search</p>
+                        ) : (
+                          filteredPlayers.map((player: any) => {
+                            const userTeamIds = Array.isArray(player.teamIds) ? player.teamIds : player.teamId ? [player.teamId] : [];
+                            const isOnTeam = userTeamIds.includes(selectedTeam.id) || player.teamId === selectedTeam.id;
+                            return (
+                              <div 
+                                key={player.id} 
+                                className={`flex items-center justify-between p-3 hover:bg-gray-50 border-b last:border-b-0 ${isOnTeam ? 'bg-green-50' : ''}`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Checkbox 
+                                    checked={isOnTeam}
+                                    onCheckedChange={async (checked) => {
+                                      try {
+                                        if (checked) {
+                                          await apiRequest("POST", `/api/teams/${selectedTeam.id}/assign-player`, { playerId: player.id });
+                                        } else {
+                                          await apiRequest("POST", `/api/teams/${selectedTeam.id}/remove-player`, { playerId: player.id });
+                                        }
+                                        queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+                                        queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+                                        toast({ 
+                                          title: checked 
+                                            ? `Added ${player.firstName} ${player.lastName} to ${selectedTeam.name}`
+                                            : `Removed ${player.firstName} ${player.lastName} from ${selectedTeam.name}`
+                                        });
+                                      } catch (error) {
+                                        toast({ title: "Failed to update player assignment", variant: "destructive" });
+                                      }
+                                    }}
+                                  />
+                                  <div>
+                                    <p className={`text-sm ${isOnTeam ? 'font-medium text-green-700' : ''}`}>{player.firstName} {player.lastName}</p>
+                                    {player.email && <p className="text-xs text-gray-400">{player.email}</p>}
+                                  </div>
+                                </div>
+                                {isOnTeam && (
+                                  <Badge variant="default" className="bg-green-100 text-green-700 border-green-200">On Team</Badge>
+                                )}
+                              </div>
+                            );
+                          })
+                        );
+                      })()
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    <strong>Roster Count:</strong> {players.filter((p: any) => {
+                      const userTeamIds = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
+                      return userTeamIds.includes(selectedTeam.id) || p.teamId === selectedTeam.id;
+                    }).length} players
+                    {selectedTeam.rosterSize > 0 && <span className="text-gray-400"> / {selectedTeam.rosterSize} max</span>}
+                  </div>
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>

@@ -6370,17 +6370,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Always ensure head coach membership is active if there is a coachId
     // This runs on EVERY team update to ensure consistency
     if (finalCoachId) {
-      await db.insert(teamMemberships)
-        .values({
-          teamId,
-          profileId: finalCoachId,
-          role: 'coach',
-          status: 'active',
-        })
-        .onConflictDoUpdate({
-          target: [teamMemberships.teamId, teamMemberships.profileId],
-          set: { status: 'active', role: 'coach' },
-        });
+      try {
+        await db.insert(teamMemberships)
+          .values({
+            teamId,
+            profileId: finalCoachId,
+            role: 'coach',
+            status: 'active',
+          })
+          .onConflictDoUpdate({
+            target: [teamMemberships.teamId, teamMemberships.profileId],
+            set: { status: 'active', role: 'coach' },
+          });
+      } catch (e: any) {
+        console.warn(`Skipping coach membership sync for ${finalCoachId}: ${e.message}`);
+      }
     }
     
     // Handle assistant coach changes only when assistantCoachIds is in the payload
@@ -6390,17 +6394,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Upsert ALL assistants in the final array (reactivates previously inactive ones)
       for (const assistantId of finalAssistantIds) {
-        await db.insert(teamMemberships)
-          .values({
-            teamId,
-            profileId: assistantId,
-            role: 'assistant_coach',
-            status: 'active',
-          })
-          .onConflictDoUpdate({
-            target: [teamMemberships.teamId, teamMemberships.profileId],
-            set: { status: 'active', role: 'assistant_coach' },
-          });
+        try {
+          await db.insert(teamMemberships)
+            .values({
+              teamId,
+              profileId: assistantId,
+              role: 'assistant_coach',
+              status: 'active',
+            })
+            .onConflictDoUpdate({
+              target: [teamMemberships.teamId, teamMemberships.profileId],
+              set: { status: 'active', role: 'assistant_coach' },
+            });
+        } catch (e: any) {
+          console.warn(`Skipping assistant coach membership sync for ${assistantId}: ${e.message}`);
+        }
       }
       
       // Mark removed assistants as inactive

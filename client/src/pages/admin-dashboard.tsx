@@ -630,7 +630,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="teams">
-            <TeamsByProgramTab programs={programs} teams={teams} organization={organization} onTeamClick={(team: any) => { setActiveTab('people'); }} />
+            <TeamsByProgramTab programs={programs} teams={teams} organization={organization} onTeamClick={(team: any) => { setActiveTab('users'); }} />
           </TabsContent>
 
           <TabsContent value="events">

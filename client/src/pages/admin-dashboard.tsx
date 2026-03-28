@@ -16974,7 +16974,7 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Headphones className="w-5 h-5" />
-          Customer Relationship Management
+          Communications
         </CardTitle>
         <CardDescription>Manage leads and customer communications</CardDescription>
       </CardHeader>

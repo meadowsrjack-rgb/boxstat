@@ -52,8 +52,8 @@ export function NotificationBell() {
   const unreadCount = feed.filter(n => !n.isRead).length;
 
   const markAsRead = useMutation({
-    mutationFn: async (notificationId: number) => {
-      return await apiRequest("PATCH", `/api/notifications/${notificationId}/read`, {});
+    mutationFn: async (recipientId: number) => {
+      return await apiRequest("POST", `/api/notifications/${recipientId}/mark-read`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/feed", profileId] });
@@ -83,7 +83,7 @@ export function NotificationBell() {
     setPopoverOpen(false);
     
     if (!notification.isRead) {
-      await markAsRead.mutateAsync(notification.id);
+      await markAsRead.mutateAsync(notification.recipientId);
     }
   };
 

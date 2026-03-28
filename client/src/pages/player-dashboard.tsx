@@ -1449,87 +1449,93 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 </div>
               )}
 
-              {/* UYP Ranking Percentile */}
-              <div className="px-2">
-                <div className="max-w-[340px] mx-auto">
-                  <SkillBar 
-                    label="OVR"  
-                    value={overallSkillScore} 
-                    onClick={() => setLocation("/skills")} 
-                  />
+              {/* OVR + Trophies: side-by-side on md+ */}
+              <div className="md:flex md:items-center md:gap-8 md:px-6 md:py-4">
+                {/* UYP Ranking Percentile */}
+                <div className="px-2 md:flex-1">
+                  <div className="max-w-[340px] md:max-w-none mx-auto">
+                    <SkillBar 
+                      label="OVR"  
+                      value={overallSkillScore} 
+                      onClick={() => setLocation("/skills")} 
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* Trophies & Badges */}
-              <div className="p-2 mb-3">
-                <div 
-                  className="cursor-pointer" 
-                  onClick={() => setLocation("/trophies-badges")}
-                  data-testid="trophy-rings-clickable"
-                >
-                  <UypTrophyRings data={ringsData} size={109} stroke={8} />
-                </div>
-                <div className="flex items-center justify-center pt-2">
-                  <button 
-                    className="text-[10px] text-gray-400 hover:opacity-70 transition-opacity"
+                {/* Trophies & Badges */}
+                <div className="p-2 mb-3 md:mb-0 md:flex-1">
+                  <div 
+                    className="cursor-pointer" 
                     onClick={() => setLocation("/trophies-badges")}
+                    data-testid="trophy-rings-clickable"
                   >
-                    View all
-                  </button>
-                </div>
-              </div>
-
-              {/* Season Stats (Coming Soon) */}
-              <div className="px-4 mt-2">
-                <div className="border-t border-gray-100 pt-3">
-                  <div className="flex items-center gap-2 px-1 mb-1">
-                    <span className="text-sm font-medium text-gray-700">Season Stats</span>
-                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-red-100 text-red-600">Coming Soon</span>
+                    <UypTrophyRings data={ringsData} size={109} stroke={8} />
                   </div>
-                  <div className="grid grid-cols-4 gap-0 px-2 pb-2">
-                    {[
-                      { label: "PPG", value: "—" },
-                      { label: "RPG", value: "—" },
-                      { label: "APG", value: "—" },
-                      { label: "FG%", value: "—" },
-                    ].map((stat) => (
-                      <div key={stat.label} className="flex flex-col items-center py-2">
-                        <span className="text-xl font-bold text-gray-900">{stat.value}</span>
-                        <span className="text-[11px] font-medium text-gray-500">{stat.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-center gap-1 pb-2">
-                    <span className="text-[10px] text-gray-400">2025-26</span>
-                    <ChevronDown className="h-3 w-3 text-gray-400" />
+                  <div className="flex items-center justify-center pt-2">
+                    <button 
+                      className="text-[10px] text-gray-400 hover:opacity-70 transition-opacity"
+                      onClick={() => setLocation("/trophies-badges")}
+                    >
+                      View all
+                    </button>
                   </div>
                 </div>
               </div>
 
-              {/* Highlights (Coming Soon) */}
-              <div className="px-4 mt-2 pb-4">
-                <div className="border-t border-gray-100 pt-3">
-                  <div className="flex items-center gap-2 px-1 mb-2">
-                    <span className="text-sm font-medium text-gray-700">Highlights</span>
-                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-red-100 text-red-600">Coming Soon</span>
-                  </div>
-                  <div className="flex gap-2.5 overflow-x-auto pb-1 px-1" style={{ scrollbarWidth: 'none' }}>
-                    {[
-                      { title: "Game-Winning 3PT", subtitle: "vs. Eagles" },
-                      { title: "Crossover to Assist", subtitle: "vs. Hawks" },
-                      { title: "Defense Lockdown", subtitle: "vs. Lions" },
-                    ].map((clip) => (
-                      <div key={clip.title} className="flex-shrink-0 w-[130px]">
-                        <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-video flex items-center justify-center">
-                          <div className="absolute inset-0 bg-gradient-to-br from-gray-700 to-gray-900" />
-                          <div className="relative z-10 w-8 h-8 rounded-full bg-red-600/90 flex items-center justify-center">
-                            <Play className="h-4 w-4 text-white fill-white ml-0.5" />
-                          </div>
+              {/* Stats + Highlights: side-by-side on md+ */}
+              <div className="md:grid md:grid-cols-2 md:gap-6 md:px-6">
+                {/* Season Stats (Coming Soon) */}
+                <div className="px-4 md:px-0 mt-2">
+                  <div className="border-t border-gray-100 pt-3">
+                    <div className="flex items-center gap-2 px-1 mb-1">
+                      <span className="text-sm font-medium text-gray-700">Season Stats</span>
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-red-100 text-red-600">Coming Soon</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-0 px-2 pb-2">
+                      {[
+                        { label: "PPG", value: "—" },
+                        { label: "RPG", value: "—" },
+                        { label: "APG", value: "—" },
+                        { label: "FG%", value: "—" },
+                      ].map((stat) => (
+                        <div key={stat.label} className="flex flex-col items-center py-2">
+                          <span className="text-xl md:text-2xl font-bold text-gray-900">{stat.value}</span>
+                          <span className="text-[11px] md:text-xs font-medium text-gray-500">{stat.label}</span>
                         </div>
-                        <p className="text-[11px] font-medium text-gray-900 mt-1.5 leading-tight truncate">{clip.title}</p>
-                        <p className="text-[10px] text-gray-400 truncate">{clip.subtitle}</p>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-center gap-1 pb-2">
+                      <span className="text-[10px] text-gray-400">2025-26</span>
+                      <ChevronDown className="h-3 w-3 text-gray-400" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Highlights (Coming Soon) */}
+                <div className="px-4 md:px-0 mt-2 pb-4">
+                  <div className="border-t md:border-t-0 border-gray-100 pt-3">
+                    <div className="flex items-center gap-2 px-1 mb-2">
+                      <span className="text-sm font-medium text-gray-700">Highlights</span>
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-red-100 text-red-600">Coming Soon</span>
+                    </div>
+                    <div className="flex gap-2.5 overflow-x-auto pb-1 px-1 md:grid md:grid-cols-3 md:gap-4" style={{ scrollbarWidth: 'none' }}>
+                      {[
+                        { title: "Game-Winning 3PT", subtitle: "vs. Eagles" },
+                        { title: "Crossover to Assist", subtitle: "vs. Hawks" },
+                        { title: "Defense Lockdown", subtitle: "vs. Lions" },
+                      ].map((clip) => (
+                        <div key={clip.title} className="flex-shrink-0 w-[130px] md:w-auto">
+                          <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-video flex items-center justify-center">
+                            <div className="absolute inset-0 bg-gradient-to-br from-gray-700 to-gray-900" />
+                            <div className="relative z-10 w-8 h-8 rounded-full bg-red-600/90 flex items-center justify-center">
+                              <Play className="h-4 w-4 text-white fill-white ml-0.5" />
+                            </div>
+                          </div>
+                          <p className="text-[11px] md:text-xs font-medium text-gray-900 mt-1.5 leading-tight truncate">{clip.title}</p>
+                          <p className="text-[10px] md:text-[11px] text-gray-400 truncate">{clip.subtitle}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>

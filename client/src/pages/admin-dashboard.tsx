@@ -16666,27 +16666,41 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
 
   const unassignedTeams = teams.filter((t: any) => !t.programId || !programs.some((p: any) => String(p.id) === String(t.programId)));
 
-  const renderTeamRow = (team: any) => (
-    <div 
-      key={team.id} 
-      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
-      onClick={() => { setSelectedTeam(team); setRosterSearch(''); }}
-    >
-      <div className="flex items-center gap-3">
-        <Users className="w-4 h-4 text-gray-500" />
-        <div>
-          <div className="font-medium text-gray-900">{team.name}</div>
-          {team.ageGroup && <div className="text-xs text-gray-500">{team.ageGroup}</div>}
+  const renderTeamRow = (team: any) => {
+    const rosterCount = players.filter((p: any) => {
+      const ids = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
+      return ids.includes(team.id) || p.teamId === team.id;
+    }).length;
+    const headIds = team.headCoachIds?.length ? team.headCoachIds : (team.coachId ? [team.coachId] : []);
+    const assistantIds = (team.assistantCoachIds || []).filter((id: string) => !headIds.includes(id));
+    const allCoachIds = [...headIds, ...assistantIds];
+    const coachNames = allCoachIds.map((id: string) => {
+      const c = (users || []).find((u: any) => u.id === id);
+      return c ? `${c.firstName} ${c.lastName}` : null;
+    }).filter(Boolean);
+
+    return (
+      <div 
+        key={team.id} 
+        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+        onClick={() => { setSelectedTeam(team); setRosterSearch(''); }}
+      >
+        <div className="flex items-center gap-3">
+          <Users className="w-4 h-4 text-gray-500" />
+          <div>
+            <div className="font-medium text-gray-900">{team.name}</div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+              <span className="text-xs text-gray-500">{rosterCount} player{rosterCount !== 1 ? 's' : ''}</span>
+              {coachNames.length > 0 && (
+                <span className="text-xs text-gray-500">{coachNames.join(', ')}</span>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
-      <div className="flex items-center gap-2">
-        {team.coachName && (
-          <div className="text-sm text-gray-500 hidden sm:block">Coach: {team.coachName}</div>
-        )}
         <ChevronRight className="w-4 h-4 text-gray-400" />
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6">

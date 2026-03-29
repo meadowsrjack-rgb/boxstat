@@ -2053,9 +2053,9 @@ function SubgroupCard({
                     const memberName = member.name || 'Unknown';
                     const initials = memberName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
                     const isCoach = member.role === 'coach' || member.role === 'head_coach' || member.role === 'assistant_coach';
+                    const isParent = member.role === 'parent';
                     
-                    // Skip coaches in member list (already shown above)
-                    if (isCoach) return null;
+                    if (isCoach || isParent) return null;
                     
                     return (
                       <div 

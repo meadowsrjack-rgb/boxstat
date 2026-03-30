@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueries } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { authPersistence } from "@/services/authPersistence";
 import CrmMessageBanner from "@/components/CrmMessageBanner";
@@ -1093,6 +1093,22 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   const { data: editingUserProgramMemberships = [] } = useQuery<any[]>({
     queryKey: ["/api/users", editingUser?.id, "program-memberships"],
     enabled: !!editingUser?.id,
+  });
+
+  // Find child players linked to the parent being edited (available from users list)
+  const editingParentChildren = editingUser?.role === 'parent'
+    ? (users || []).filter((u: any) =>
+        (u.parentId === editingUser.id || u.accountHolderId === editingUser.id) &&
+        u.role === 'player'
+      )
+    : [];
+
+  // Fetch program memberships for each child player using useQueries (safe for dynamic arrays)
+  const childProgramMembershipQueries = useQueries({
+    queries: editingParentChildren.map((child: any) => ({
+      queryKey: ["/api/users", child.id, "program-memberships"],
+      enabled: editingUser?.role === 'parent' && !!child.id,
+    })),
   });
 
   const createUserSchema = z.object({
@@ -2312,7 +2328,90 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   
                   <div className="space-y-4">
                     <Label data-testid="label-edit-assignments">Program & Team Assignments</Label>
-                    {(() => {
+                    {editingUser.role === 'parent' ? (
+                      /* Parent read-only view: show children's assignments */
+                      <div className="space-y-3" data-testid="parent-assignments-view">
+                        <div className="bg-purple-50 border border-purple-200 rounded-md p-3">
+                          <p className="text-sm text-purple-700 font-medium">Parent assignments are managed through their children's profiles.</p>
+                          <p className="text-xs text-purple-600 mt-1">Parents are automatically added to teams when their child player is assigned to a team.</p>
+                        </div>
+
+                        {/* Show parent's own program enrollments (read-only, no remove/add controls) */}
+                        {(editingUserProgramMemberships || []).length > 0 && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-md p-3" data-testid="parent-program-enrollments">
+                            <p className="text-xs font-semibold text-blue-700 mb-2">Parent's Program Enrollments ({editingUserProgramMemberships.length}) — read only:</p>
+                            <div className="space-y-1">
+                              {editingUserProgramMemberships.map((enrollment: any) => (
+                                <div key={enrollment.enrollmentId} className="bg-white border border-blue-100 rounded px-3 py-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium">{enrollment.programName}</span>
+                                    <span className="text-xs text-blue-600 capitalize">{enrollment.status}</span>
+                                  </div>
+                                  {enrollment.teams?.length > 0 && (
+                                    <p className="text-xs text-gray-500 mt-0.5">{enrollment.teams.length} team{enrollment.teams.length > 1 ? 's' : ''}</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Children's assignments */}
+                        <div>
+                          <p className="text-xs font-semibold text-gray-600 mb-2">Children's Assignments:</p>
+                          {editingParentChildren.length === 0 ? (
+                            <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
+                              <p className="text-sm text-gray-500">No linked child players found for this parent.</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {editingParentChildren.map((child: any, idx: number) => {
+                                const childMemberships: any[] = (childProgramMembershipQueries[idx]?.data as any[]) || [];
+                                const childActiveTeams: any[] = child.activeTeams || [];
+                                return (
+                                  <div key={child.id} className="border border-gray-200 rounded-md p-3 bg-gray-50">
+                                    <p className="text-sm font-semibold text-gray-700 mb-2">
+                                      {child.firstName} {child.lastName}
+                                    </p>
+                                    {childMemberships.length > 0 ? (
+                                      <div className="mb-2">
+                                        <p className="text-[10px] text-gray-500 uppercase mb-1">Program Enrollments</p>
+                                        <div className="space-y-1">
+                                          {childMemberships.map((enrollment: any) => (
+                                            <div key={enrollment.enrollmentId} className="bg-white border border-blue-100 rounded px-2 py-1.5 flex items-center justify-between">
+                                              <span className="text-xs font-medium">{enrollment.programName}</span>
+                                              <span className="text-[10px] text-blue-600 capitalize">{enrollment.status}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <p className="text-xs text-gray-400 mb-2">No program enrollments</p>
+                                    )}
+                                    {childActiveTeams.length > 0 ? (
+                                      <div>
+                                        <p className="text-[10px] text-gray-500 uppercase mb-1">Team Assignments</p>
+                                        <div className="flex flex-wrap gap-1">
+                                          {childActiveTeams.map((team: any) => (
+                                            <span key={team.teamId} className="text-xs bg-green-100 text-green-700 border border-green-200 rounded px-2 py-0.5">
+                                              {team.teamName}
+                                              {team.programName && <span className="text-green-500 ml-1">({team.programName})</span>}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <p className="text-xs text-gray-400">Not assigned to any teams</p>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                    (() => {
                       // Use teamIds from the user data (now populated from active team memberships)
                       const teamIds = Array.isArray(editingUser.teamIds) ? editingUser.teamIds : 
                                      editingUser.teamId ? [editingUser.teamId] : [];
@@ -2679,7 +2778,8 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                           </div>
                         </div>
                       );
-                    })()}
+                    })()
+                    )}
                   </div>
                   
                   {editingUser.role !== 'coach' && (

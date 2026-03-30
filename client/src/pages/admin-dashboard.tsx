@@ -7039,7 +7039,9 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                         id="edit-event-startTime"
                         type="datetime-local"
                         defaultValue={editingEvent.startTime ? utcToLocalDatetime(
-                          typeof editingEvent.startTime === 'string' && editingEvent.startTime.includes('T') ? editingEvent.startTime : new Date(editingEvent.startTime).toISOString(),
+                          typeof editingEvent.startTime === 'string' && !editingEvent.startTime.includes('T') && !editingEvent.startTime.includes('Z') && !editingEvent.startTime.match(/[+-]\d{2}:/)
+                            ? editingEvent.startTime.replace(' ', 'T') + 'Z'
+                            : editingEvent.startTime,
                           editingEvent.timezone || 'America/Los_Angeles'
                         ) : ""}
                         onChange={(e) => setEditingEvent({...editingEvent, startTime: e.target.value})}
@@ -7052,7 +7054,9 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                         id="edit-event-endTime"
                         type="datetime-local"
                         defaultValue={editingEvent.endTime ? utcToLocalDatetime(
-                          typeof editingEvent.endTime === 'string' && editingEvent.endTime.includes('T') ? editingEvent.endTime : new Date(editingEvent.endTime).toISOString(),
+                          typeof editingEvent.endTime === 'string' && !editingEvent.endTime.includes('T') && !editingEvent.endTime.includes('Z') && !editingEvent.endTime.match(/[+-]\d{2}:/)
+                            ? editingEvent.endTime.replace(' ', 'T') + 'Z'
+                            : editingEvent.endTime,
                           editingEvent.timezone || 'America/Los_Angeles'
                         ) : ""}
                         onChange={(e) => setEditingEvent({...editingEvent, endTime: e.target.value})}
@@ -7341,13 +7345,13 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                         data-testid="switch-edit-recurring"
                       />
                       <Label htmlFor="edit-recurring-toggle" className="font-medium cursor-pointer">
-                        Create additional recurring events
+                        {editingEvent?.isRecurring ? "Recurring event settings" : "Create additional recurring events"}
                       </Label>
                     </div>
                     <p className="text-xs text-gray-500">
-                      {editIsRecurring 
-                        ? "This will update the current event AND create additional recurring copies" 
-                        : "Enable to generate recurring copies of this event"}
+                      {editingEvent?.isRecurring
+                        ? (editIsRecurring ? "Update recurrence settings and generate new copies from this event" : "Disable to remove recurrence settings from this event")
+                        : (editIsRecurring ? "This will update the current event AND create additional recurring copies" : "Enable to generate recurring copies of this event")}
                     </p>
                     
                     {editIsRecurring && (
@@ -7486,10 +7490,26 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                         }
                       }
 
+                      // Normalize a possibly-naive DB timestamp string to a proper UTC ISO string
+                      const normalizeToUTC = (t: string | null | undefined): string | null => {
+                        if (!t) return null;
+                        if (t.includes('Z') || t.match(/[+-]\d{2}:/)) return t;
+                        if (!t.includes('T')) return t.replace(' ', 'T') + 'Z';
+                        return t;
+                      };
+
+                      // Build recurrence end date as end-of-day UTC
+                      const recurrenceEndDateISO = editIsRecurring && editRecurrenceEndType === 'date' && editRecurrenceEndDate
+                        ? editRecurrenceEndDate + 'T23:59:59Z'
+                        : null;
+
                       const updatedData = {
                         ...editingEvent,
-                        startTime: editingEvent.startTime && !editingEvent.startTime.endsWith('Z') ? new Date(editingEvent.startTime).toISOString() : editingEvent.startTime,
-                        endTime: editingEvent.endTime && !editingEvent.endTime.endsWith('Z') ? new Date(editingEvent.endTime).toISOString() : editingEvent.endTime,
+                        startTime: normalizeToUTC(editingEvent.startTime) ?? editingEvent.startTime,
+                        endTime: normalizeToUTC(editingEvent.endTime) ?? editingEvent.endTime,
+                        isRecurring: editIsRecurring,
+                        recurringType: editIsRecurring ? editRecurrenceFrequency : null,
+                        recurringEndDate: editIsRecurring ? recurrenceEndDateISO : null,
                       };
                       
                       try {
@@ -7830,6 +7850,53 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                           }
                           
                           setEditLocationType(eventToEdit.location === 'Online' ? 'online' : 'physical');
+                          
+                          // Pre-populate recurring fields if event is already recurring
+                          if (event.isRecurring) {
+                            setEditIsRecurring(true);
+                            const freq = (event.recurringType && ['daily', 'weekly', 'biweekly', 'monthly'].includes(event.recurringType))
+                              ? event.recurringType as 'daily' | 'weekly' | 'biweekly' | 'monthly'
+                              : 'weekly';
+                            setEditRecurrenceFrequency(freq);
+                            // Derive recurrence days from the event's start time day-of-week
+                            // using the event's local timezone (schema doesn't store recurring days)
+                            if (freq === 'weekly' || freq === 'biweekly') {
+                              const startStr = event.startTime;
+                              const startDate = typeof startStr === 'string' && !startStr.includes('T') && !startStr.includes('Z')
+                                ? new Date(startStr.replace(' ', 'T') + 'Z')
+                                : new Date(startStr);
+                              let dayOfWeek: number[] = [];
+                              if (!isNaN(startDate.getTime())) {
+                                const tz = event.timezone || 'America/Los_Angeles';
+                                const localDayStr = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' }).format(startDate);
+                                const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+                                const d = dayMap[localDayStr];
+                                dayOfWeek = d !== undefined ? [d] : [];
+                              }
+                              setEditRecurrenceDays(dayOfWeek);
+                            } else {
+                              setEditRecurrenceDays([]);
+                            }
+                            setEditRecurrenceCount(4);
+                            if (event.recurringEndDate) {
+                              setEditRecurrenceEndType('date');
+                              const endDateStr = typeof event.recurringEndDate === 'string' && !event.recurringEndDate.includes('T')
+                                ? event.recurringEndDate.split(' ')[0]
+                                : event.recurringEndDate.split('T')[0];
+                              setEditRecurrenceEndDate(endDateStr);
+                            } else {
+                              setEditRecurrenceEndType('count');
+                              setEditRecurrenceEndDate('');
+                            }
+                          } else {
+                            setEditIsRecurring(false);
+                            setEditRecurrenceFrequency('weekly');
+                            setEditRecurrenceCount(4);
+                            setEditRecurrenceDays([]);
+                            setEditRecurrenceEndType('count');
+                            setEditRecurrenceEndDate('');
+                          }
+                          
                           setEditingEvent(eventToEdit);
                         }}
                         data-testid={`button-edit-event-${event.id}`}

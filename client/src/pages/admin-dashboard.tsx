@@ -13089,11 +13089,10 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
   });
 
   const recipientTarget = form.watch("recipientTarget");
-  const deliveryChannels = form.watch("deliveryChannels") || [];
-  const isPushSelected = deliveryChannels.includes("push");
+  const formTypes = form.watch("types") || [];
+  const isEmailTypeSelected = formTypes.includes("email");
   
-  // Filter users to only show accounts with emails when push is selected
-  const filteredUsersForNotification = isPushSelected 
+  const filteredUsersForNotification = isEmailTypeSelected 
     ? users.filter((u: any) => u.email && u.email.trim() !== '')
     : users;
 
@@ -13125,6 +13124,8 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
           ? new Date(scheduledAt).toISOString() 
           : undefined;
         
+        const campaignChannels = ["in_app", "push"];
+        if ((data.types || []).includes("email")) campaignChannels.push("email");
         const campaignData = {
           title: data.title,
           message: data.message,
@@ -13134,7 +13135,7 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
           recipientRoles: data.recipientRoles,
           recipientTeamIds: data.recipientTeamIds,
           recipientDivisionIds: data.recipientDivisionIds,
-          deliveryChannels: data.deliveryChannels,
+          deliveryChannels: campaignChannels,
           scheduleType,
           scheduledAt: scheduledAtISO,
           recurrenceFrequency: scheduleType === 'recurring' ? recurrenceFrequency : undefined,
@@ -13146,8 +13147,11 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
       }
       
       // For immediate messages, use the regular notification API
+      const computedChannels = ["in_app", "push"];
+      if ((data.types || []).includes("email")) computedChannels.push("email");
       const notificationData = {
         ...data,
+        deliveryChannels: computedChannels,
         sentBy: currentUser?.id || data.sentBy,
         organizationId: organization?.id || data.organizationId,
       };
@@ -13401,23 +13405,23 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
                         </div>
                         <div className="flex items-center gap-2">
                           <Checkbox
-                            id="type-notification"
-                            checked={field.value?.includes("notification")}
+                            id="type-email"
+                            checked={field.value?.includes("email")}
                             onCheckedChange={(checked) => {
                               const current = field.value || [];
                               if (checked) {
-                                field.onChange([...current, "notification"]);
+                                field.onChange([...current, "email"]);
                               } else {
-                                field.onChange(current.filter((t: string) => t !== "notification"));
+                                field.onChange(current.filter((t: string) => t !== "email"));
                               }
                             }}
-                            data-testid="checkbox-type-notification"
+                            data-testid="checkbox-type-email"
                           />
                           <label
-                            htmlFor="type-notification"
+                            htmlFor="type-email"
                             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                           >
-                            Notification
+                            Email
                           </label>
                         </div>
                       </div>
@@ -13441,20 +13445,15 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="everyone">Everyone</SelectItem>
-                          <SelectItem value="users">{isPushSelected ? "Specific Accounts (with email)" : "Specific Users"}</SelectItem>
+                          <SelectItem value="users">{isEmailTypeSelected ? "Specific Accounts (with email)" : "Specific Users"}</SelectItem>
                           <SelectItem value="roles">Roles</SelectItem>
                           <SelectItem value="teams">Teams</SelectItem>
                           <SelectItem value="divisions">Divisions</SelectItem>
                         </SelectContent>
                       </Select>
-                      {isPushSelected && (
+                      {isEmailTypeSelected && (
                         <p className="text-sm text-blue-600 bg-blue-50 p-2 rounded-md mt-2">
-                          Push notifications are email-based. Only accounts with email addresses are shown. Notifications will be sent to all devices registered under the recipient's email.
-                        </p>
-                      )}
-                      {!isPushSelected && recipientTarget === "users" && (
-                        <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded-md mt-2">
-                          In-app notifications will appear in the selected user's dashboard notification center.
+                          Email type selected. Only accounts with email addresses are shown.
                         </p>
                       )}
                       <FormMessage />
@@ -13468,7 +13467,7 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
                     name="recipientUserIds"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{isPushSelected ? "Select Accounts" : "Select Users"}</FormLabel>
+                        <FormLabel>{isEmailTypeSelected ? "Select Accounts" : "Select Users"}</FormLabel>
                         <Input
                           placeholder="Search by name, email, or role..."
                           value={notificationUserSearch}
@@ -13478,8 +13477,8 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
                         <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
                           {notificationVisibleUsers.length === 0 ? (
                             <p className="text-sm text-gray-500 italic">
-                              {isPushSelected 
-                                ? "No accounts with email addresses found. Push notifications require accounts with email."
+                              {isEmailTypeSelected 
+                                ? "No accounts with email addresses found. Email type requires accounts with email."
                                 : "No users found."}
                             </p>
                           ) : (
@@ -13505,7 +13504,7 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
                           )}
                         </div>
                         <p className="text-sm text-gray-500 mt-1">
-                          Selected: {field.value?.length || 0} {isPushSelected ? "account(s)" : "user(s)"}
+                          Selected: {field.value?.length || 0} {isEmailTypeSelected ? "account(s)" : "user(s)"}
                         </p>
                         <FormMessage />
                       </FormItem>
@@ -13612,67 +13611,6 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
                   />
                 )}
 
-                <FormField
-                  control={form.control}
-                  name="deliveryChannels"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Delivery Channels</FormLabel>
-                      <div className="border rounded-md p-4 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={field.value?.includes("in_app")}
-                            onCheckedChange={(checked) => {
-                              const current = field.value || [];
-                              if (checked) {
-                                field.onChange([...current, "in_app"]);
-                              } else {
-                                field.onChange(current.filter((ch: string) => ch !== "in_app"));
-                              }
-                            }}
-                            data-testid="checkbox-channel-in-app"
-                          />
-                          <span className="text-sm">In-App</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={field.value?.includes("email")}
-                            onCheckedChange={(checked) => {
-                              const current = field.value || [];
-                              if (checked) {
-                                field.onChange([...current, "email"]);
-                              } else {
-                                field.onChange(current.filter((ch: string) => ch !== "email"));
-                              }
-                            }}
-                            data-testid="checkbox-channel-email"
-                          />
-                          <span className="text-sm">Email</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={field.value?.includes("push")}
-                            onCheckedChange={(checked) => {
-                              const current = field.value || [];
-                              if (checked) {
-                                field.onChange([...current, "push"]);
-                              } else {
-                                field.onChange(current.filter((ch: string) => ch !== "push"));
-                              }
-                            }}
-                            data-testid="checkbox-channel-push"
-                          />
-                          <span className="text-sm">Push</span>
-                        </div>
-                      </div>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Selected: {field.value?.length || 0} channel(s)
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
                 <div className="border-t pt-4">
                   <FormLabel className="text-base font-semibold">Scheduling</FormLabel>
                   <div className="mt-3 space-y-3">
@@ -17253,12 +17191,11 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
   });
 
   const newMsgRecipientTarget = newMsgForm.watch("recipientTarget");
-  const newMsgDeliveryChannels = newMsgForm.watch("deliveryChannels") || [];
-  const newMsgIsPushSelected = newMsgDeliveryChannels.includes("push");
   const newMsgTypes = newMsgForm.watch("types") || [];
   const newMsgIsMessageType = newMsgTypes.includes("message");
+  const newMsgIsEmailType = newMsgTypes.includes("email");
 
-  const filteredUsersForNewMsg = newMsgIsPushSelected
+  const filteredUsersForNewMsg = newMsgIsEmailType
     ? users.filter((u: any) => u.email && u.email.trim() !== '')
     : users;
 
@@ -17289,13 +17226,16 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
     mutationFn: async (data: any) => {
       const types = data.types || [];
       const hasMessageType = types.includes("message");
-      const hasNotificationType = types.includes("announcement") || types.includes("notification");
+      const hasAnnouncementType = types.includes("announcement");
+      const hasEmailType = types.includes("email");
 
-      if (!hasMessageType && !hasNotificationType) {
+      if (!hasMessageType && !hasAnnouncementType && !hasEmailType) {
         throw new Error('Please select at least one type');
       }
 
-      // If scheduling is selected, always create a campaign regardless of types
+      const computedChannels = ["in_app", "push"];
+      if (hasEmailType) computedChannels.push("email");
+
       if (newMsgScheduleType !== 'immediate') {
         if (newMsgScheduleType === 'scheduled' && !newMsgScheduledAt) {
           throw new Error('Please select a date and time for the scheduled message');
@@ -17324,7 +17264,7 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
           recipientRoles: data.recipientRoles,
           recipientTeamIds: data.recipientTeamIds,
           recipientDivisionIds: data.recipientDivisionIds,
-          deliveryChannels: data.deliveryChannels,
+          deliveryChannels: computedChannels,
           scheduleType: newMsgScheduleType,
           scheduledAt: scheduledAtISO,
           recurrenceFrequency: newMsgScheduleType === 'recurring' ? newMsgRecurrenceFrequency : undefined,
@@ -17334,7 +17274,6 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
         return await apiRequest("POST", "/api/notification-campaigns", campaignData);
       }
 
-      // Immediate send: handle message type first (direct messages)
       if (hasMessageType) {
         const recipientIds = data.recipientUserIds || [];
         let targetUsers: string[] = [];
@@ -17354,11 +17293,13 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
         }
       }
 
-      if (hasNotificationType) {
-        const notifTypes = types.filter((t: string) => t !== "message");
+      if (hasAnnouncementType || hasEmailType) {
+        const notifTypes = types.filter((t: string) => t !== "message" && t !== "email");
+        if (notifTypes.length === 0) notifTypes.push("announcement");
         const notificationData = {
           ...data,
           types: notifTypes,
+          deliveryChannels: computedChannels,
           sentBy: currentUser?.id || data.sentBy,
           organizationId: organization?.id || data.organizationId,
         };
@@ -17806,20 +17747,20 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <Checkbox
-                                      id="newmsg-type-notification"
-                                      checked={field.value?.includes("notification")}
+                                      id="newmsg-type-email"
+                                      checked={field.value?.includes("email")}
                                       onCheckedChange={(checked) => {
                                         const current = field.value || [];
                                         if (checked) {
-                                          field.onChange([...current, "notification"]);
+                                          field.onChange([...current, "email"]);
                                         } else {
-                                          field.onChange(current.filter((t: string) => t !== "notification"));
+                                          field.onChange(current.filter((t: string) => t !== "email"));
                                         }
                                       }}
-                                      data-testid="newmsg-checkbox-type-notification"
+                                      data-testid="newmsg-checkbox-type-email"
                                     />
-                                    <label htmlFor="newmsg-type-notification" className="text-sm font-medium leading-none cursor-pointer">
-                                      Notification
+                                    <label htmlFor="newmsg-type-email" className="text-sm font-medium leading-none cursor-pointer">
+                                      Email
                                     </label>
                                   </div>
                                 </div>
@@ -17843,7 +17784,7 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
                                   </FormControl>
                                   <SelectContent>
                                     <SelectItem value="everyone">Everyone</SelectItem>
-                                    <SelectItem value="users">{newMsgIsPushSelected ? "Specific Accounts (with email)" : "Specific Users"}</SelectItem>
+                                    <SelectItem value="users">{newMsgIsEmailType ? "Specific Accounts (with email)" : "Specific Users"}</SelectItem>
                                     {!newMsgIsMessageType || newMsgTypes.length > 1 ? (
                                       <>
                                         <SelectItem value="roles">Roles</SelectItem>
@@ -17853,9 +17794,9 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
                                     ) : null}
                                   </SelectContent>
                                 </Select>
-                                {newMsgIsPushSelected && (
+                                {newMsgIsEmailType && (
                                   <p className="text-sm text-blue-600 bg-blue-50 p-2 rounded-md mt-2">
-                                    Push notifications are email-based. Only accounts with email addresses are shown.
+                                    Email type selected. Only accounts with email addresses are shown.
                                   </p>
                                 )}
                                 {newMsgIsMessageType && newMsgTypes.length === 1 && (
@@ -17874,7 +17815,7 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
                               name="recipientUserIds"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>{newMsgIsPushSelected ? "Select Accounts" : "Select Users"}</FormLabel>
+                                  <FormLabel>{newMsgIsEmailType ? "Select Accounts" : "Select Users"}</FormLabel>
                                   <Input
                                     placeholder="Search by name, email, or role..."
                                     value={newMsgUserSearch}
@@ -17884,7 +17825,7 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
                                   <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
                                     {newMsgVisibleUsers.length === 0 ? (
                                       <p className="text-sm text-gray-500 italic">
-                                        {newMsgIsPushSelected
+                                        {newMsgIsEmailType
                                           ? "No accounts with email addresses found."
                                           : "No users found."}
                                       </p>
@@ -17911,7 +17852,7 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
                                     )}
                                   </div>
                                   <p className="text-sm text-gray-500 mt-1">
-                                    Selected: {field.value?.length || 0} {newMsgIsPushSelected ? "account(s)" : "user(s)"}
+                                    Selected: {field.value?.length || 0} {newMsgIsEmailType ? "account(s)" : "user(s)"}
                                   </p>
                                   <FormMessage />
                                 </FormItem>
@@ -18018,68 +17959,7 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
                             />
                           )}
 
-                          <FormField
-                            control={newMsgForm.control}
-                            name="deliveryChannels"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Delivery Channels</FormLabel>
-                                <div className="border rounded-md p-4 space-y-2">
-                                  <div className="flex items-center gap-2">
-                                    <Checkbox
-                                      checked={field.value?.includes("in_app")}
-                                      onCheckedChange={(checked) => {
-                                        const current = field.value || [];
-                                        if (checked) {
-                                          field.onChange([...current, "in_app"]);
-                                        } else {
-                                          field.onChange(current.filter((ch: string) => ch !== "in_app"));
-                                        }
-                                      }}
-                                      data-testid="newmsg-checkbox-channel-in-app"
-                                    />
-                                    <span className="text-sm">In-App</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Checkbox
-                                      checked={field.value?.includes("email")}
-                                      onCheckedChange={(checked) => {
-                                        const current = field.value || [];
-                                        if (checked) {
-                                          field.onChange([...current, "email"]);
-                                        } else {
-                                          field.onChange(current.filter((ch: string) => ch !== "email"));
-                                        }
-                                      }}
-                                      data-testid="newmsg-checkbox-channel-email"
-                                    />
-                                    <span className="text-sm">Email</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Checkbox
-                                      checked={field.value?.includes("push")}
-                                      onCheckedChange={(checked) => {
-                                        const current = field.value || [];
-                                        if (checked) {
-                                          field.onChange([...current, "push"]);
-                                        } else {
-                                          field.onChange(current.filter((ch: string) => ch !== "push"));
-                                        }
-                                      }}
-                                      data-testid="newmsg-checkbox-channel-push"
-                                    />
-                                    <span className="text-sm">Push</span>
-                                  </div>
-                                </div>
-                                <p className="text-sm text-gray-500 mt-1">
-                                  Selected: {field.value?.length || 0} channel(s)
-                                </p>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          {(newMsgTypes.includes("announcement") || newMsgTypes.includes("notification")) && (
+                          {(newMsgTypes.includes("announcement") || newMsgTypes.includes("email")) && (
                             <div className="border-t pt-4">
                               <FormLabel className="text-base font-semibold">Scheduling</FormLabel>
                               <div className="mt-3 space-y-3">

@@ -467,14 +467,7 @@ export default function AdminDashboard() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div ref={tabsRef} className="overflow-x-auto hide-scrollbar drag-scroll mb-6 -mx-4 px-4 sm:mx-0 sm:px-0"
-            onWheel={(e) => {
-              const tabs = ['overview','users','programs','teams','events','awards','store','waivers','communications','migrations'];
-              const idx = tabs.indexOf(activeTab);
-              if (e.deltaY > 0 && idx < tabs.length - 1) { e.preventDefault(); setActiveTab(tabs[idx + 1]); }
-              else if (e.deltaY < 0 && idx > 0) { e.preventDefault(); setActiveTab(tabs[idx - 1]); }
-            }}
-          >
+          <div ref={tabsRef} className="overflow-x-auto hide-scrollbar drag-scroll mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex w-auto min-w-full sm:w-auto bg-transparent border-b border-gray-200 rounded-none p-0 h-auto gap-0">
               <TabsTrigger value="overview" data-testid="tab-overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <TrendingUp className="w-4 h-4 mr-2" />

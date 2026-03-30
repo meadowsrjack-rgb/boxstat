@@ -13288,12 +13288,12 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
                 <Plus className="w-4 h-4" />
               </Button>
             </DialogTrigger>
-          <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-[95vw] w-full max-h-[90vh] flex flex-col overflow-hidden">
             <DialogHeader>
               <DialogTitle>Create New Announcement</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => createMessage.mutate(data))} className="space-y-4">
+              <form onSubmit={form.handleSubmit((data) => createMessage.mutate(data))} className="space-y-4 overflow-y-auto flex-1 min-h-0 pr-1">
                 <FormField
                   control={form.control}
                   name="title"
@@ -17659,12 +17659,12 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
                         New Message
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
+                    <DialogContent className="max-w-[95vw] w-full max-h-[90vh] flex flex-col overflow-hidden">
                       <DialogHeader>
                         <DialogTitle>Create New Message</DialogTitle>
                       </DialogHeader>
                       <Form {...newMsgForm}>
-                        <form onSubmit={newMsgForm.handleSubmit((data) => createNewMessage.mutate(data))} className="space-y-4">
+                        <form onSubmit={newMsgForm.handleSubmit((data) => createNewMessage.mutate(data))} className="space-y-4 overflow-y-auto flex-1 min-h-0 pr-1">
                           <FormField
                             control={newMsgForm.control}
                             name="title"

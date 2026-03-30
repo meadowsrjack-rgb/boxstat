@@ -5324,6 +5324,8 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
   
   // Multi-select state for event targeting
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [createEventUserSearch, setCreateEventUserSearch] = useState<string>("");
+  const [editEventUserSearch, setEditEventUserSearch] = useState<string>("");
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [selectedDivisions, setSelectedDivisions] = useState<string[]>([]);
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
@@ -5664,6 +5666,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
       setSelectedDivisions([]);
       setSelectedPrograms([]);
       setSelectedRoles([]);
+      setCreateEventUserSearch("");
       setLocationType('physical');
       setIsRecurring(false);
       setRecurrenceFrequency('weekly');
@@ -5752,6 +5755,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       toast({ title: "Event updated successfully" });
       setEditingEvent(null);
+      setEditEventUserSearch("");
       setEditEventWindows([]);
     },
     onError: () => {
@@ -6326,8 +6330,23 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                   {String(form.watch("targetType")) === "user" && (
                     <div className="space-y-2">
                       <Label>Select Users</Label>
+                      <Input
+                        placeholder="Search by name, email, or role..."
+                        value={createEventUserSearch}
+                        onChange={(e) => setCreateEventUserSearch(e.target.value)}
+                        className="mb-2"
+                      />
                       <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                        {allUsers.filter((u: any) => u.isActive).map((user: any) => (
+                        {allUsers.filter((u: any) => u.isActive).filter((user: any) => {
+                          const q = createEventUserSearch.toLowerCase();
+                          if (!q) return true;
+                          return (
+                            (user.firstName || "").toLowerCase().includes(q) ||
+                            (user.lastName || "").toLowerCase().includes(q) ||
+                            (user.email || "").toLowerCase().includes(q) ||
+                            (user.role || "").toLowerCase().includes(q)
+                          );
+                        }).map((user: any) => (
                           <div key={user.id} className="flex items-center space-x-2">
                             <Checkbox
                               checked={selectedUsers.includes(user.id)}
@@ -6488,7 +6507,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
 
           {/* Edit Event Dialog */}
           {editingEvent && (
-            <Dialog open={!!editingEvent} onOpenChange={(open) => { if (!open) { setEditingEvent(null); setEditIsRecurring(false); setEditRecurrenceFrequency('weekly'); setEditRecurrenceCount(4); setEditRecurrenceDays([]); setEditRecurrenceEndType('count'); setEditRecurrenceEndDate(''); }}}>
+            <Dialog open={!!editingEvent} onOpenChange={(open) => { if (!open) { setEditingEvent(null); setEditEventUserSearch(""); setEditIsRecurring(false); setEditRecurrenceFrequency('weekly'); setEditRecurrenceCount(4); setEditRecurrenceDays([]); setEditRecurrenceEndType('count'); setEditRecurrenceEndDate(''); }}}>
               <DialogContent className="max-w-[95vw] w-full">
                 <DialogHeader>
                   <DialogTitle>Edit Event</DialogTitle>
@@ -6738,8 +6757,23 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                   {editingEvent.targetType === "user" && (
                     <div className="space-y-2">
                       <Label>Select Users</Label>
+                      <Input
+                        placeholder="Search by name, email, or role..."
+                        value={editEventUserSearch}
+                        onChange={(e) => setEditEventUserSearch(e.target.value)}
+                        className="mb-2"
+                      />
                       <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                        {allUsers.filter((u: any) => u.isActive).map((user: any) => (
+                        {allUsers.filter((u: any) => u.isActive).filter((user: any) => {
+                          const q = editEventUserSearch.toLowerCase();
+                          if (!q) return true;
+                          return (
+                            (user.firstName || "").toLowerCase().includes(q) ||
+                            (user.lastName || "").toLowerCase().includes(q) ||
+                            (user.email || "").toLowerCase().includes(q) ||
+                            (user.role || "").toLowerCase().includes(q)
+                          );
+                        }).map((user: any) => (
                           <div key={user.id} className="flex items-center space-x-2">
                             <Checkbox
                               checked={(editingEvent.targetIds || []).includes(String(user.id))}
@@ -12990,6 +13024,7 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [scheduleType, setScheduleType] = useState<'immediate' | 'scheduled' | 'recurring'>('immediate');
+  const [notificationUserSearch, setNotificationUserSearch] = useState<string>("");
   const [deleteConfirmMessage, setDeleteConfirmMessage] = useState<any>(null);
   const [scheduledAt, setScheduledAt] = useState('');
   const [recurrenceFrequency, setRecurrenceFrequency] = useState('daily');
@@ -13061,6 +13096,17 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
   const filteredUsersForNotification = isPushSelected 
     ? users.filter((u: any) => u.email && u.email.trim() !== '')
     : users;
+
+  const notificationVisibleUsers = filteredUsersForNotification.filter((user: any) => {
+    const q = notificationUserSearch.toLowerCase();
+    if (!q) return true;
+    return (
+      (user.firstName || "").toLowerCase().includes(q) ||
+      (user.lastName || "").toLowerCase().includes(q) ||
+      (user.email || "").toLowerCase().includes(q) ||
+      (user.role || "").toLowerCase().includes(q)
+    );
+  });
 
   const createMessage = useMutation({
     mutationFn: async (data: any) => {
@@ -13148,6 +13194,7 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
       setScheduledAt('');
       setRecurrenceFrequency('daily');
       setRecurrenceTime('09:00');
+      setNotificationUserSearch("");
     }
   };
 
@@ -13422,15 +13469,21 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{isPushSelected ? "Select Accounts" : "Select Users"}</FormLabel>
+                        <Input
+                          placeholder="Search by name, email, or role..."
+                          value={notificationUserSearch}
+                          onChange={(e) => setNotificationUserSearch(e.target.value)}
+                          className="mb-2"
+                        />
                         <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
-                          {filteredUsersForNotification.length === 0 ? (
+                          {notificationVisibleUsers.length === 0 ? (
                             <p className="text-sm text-gray-500 italic">
                               {isPushSelected 
                                 ? "No accounts with email addresses found. Push notifications require accounts with email."
                                 : "No users found."}
                             </p>
                           ) : (
-                            filteredUsersForNotification.map((user: any) => (
+                            notificationVisibleUsers.map((user: any) => (
                               <div key={user.id} className="flex items-center gap-2">
                                 <Checkbox
                                   checked={(field.value as string[] | undefined)?.includes(user.id) ?? false}
@@ -17172,6 +17225,7 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
   const [clearChannelConfirm, setClearChannelConfirm] = useState(false);
   const [isNewMessageOpen, setIsNewMessageOpen] = useState(false);
   const [newMsgScheduleType, setNewMsgScheduleType] = useState<'immediate' | 'scheduled' | 'recurring'>('immediate');
+  const [newMsgUserSearch, setNewMsgUserSearch] = useState<string>("");
   const [newMsgScheduledAt, setNewMsgScheduledAt] = useState('');
   const [newMsgRecurrenceFrequency, setNewMsgRecurrenceFrequency] = useState('daily');
   const [newMsgRecurrenceTime, setNewMsgRecurrenceTime] = useState('09:00');
@@ -17208,6 +17262,17 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
     ? users.filter((u: any) => u.email && u.email.trim() !== '')
     : users;
 
+  const newMsgVisibleUsers = filteredUsersForNewMsg.filter((user: any) => {
+    const q = newMsgUserSearch.toLowerCase();
+    if (!q) return true;
+    return (
+      (user.firstName || "").toLowerCase().includes(q) ||
+      (user.lastName || "").toLowerCase().includes(q) ||
+      (user.email || "").toLowerCase().includes(q) ||
+      (user.role || "").toLowerCase().includes(q)
+    );
+  });
+
   const handleNewMsgDialogClose = (open: boolean) => {
     setIsNewMessageOpen(open);
     if (!open) {
@@ -17216,6 +17281,7 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
       setNewMsgScheduledAt('');
       setNewMsgRecurrenceFrequency('daily');
       setNewMsgRecurrenceTime('09:00');
+      setNewMsgUserSearch("");
     }
   };
 
@@ -17809,15 +17875,21 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel>{newMsgIsPushSelected ? "Select Accounts" : "Select Users"}</FormLabel>
+                                  <Input
+                                    placeholder="Search by name, email, or role..."
+                                    value={newMsgUserSearch}
+                                    onChange={(e) => setNewMsgUserSearch(e.target.value)}
+                                    className="mb-2"
+                                  />
                                   <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
-                                    {filteredUsersForNewMsg.length === 0 ? (
+                                    {newMsgVisibleUsers.length === 0 ? (
                                       <p className="text-sm text-gray-500 italic">
                                         {newMsgIsPushSelected
                                           ? "No accounts with email addresses found."
                                           : "No users found."}
                                       </p>
                                     ) : (
-                                      filteredUsersForNewMsg.map((user: any) => (
+                                      newMsgVisibleUsers.map((user: any) => (
                                         <div key={user.id} className="flex items-center gap-2">
                                           <Checkbox
                                             checked={(field.value as string[] | undefined)?.includes(user.id) ?? false}

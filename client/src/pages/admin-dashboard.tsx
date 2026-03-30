@@ -2786,10 +2786,16 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                           type="button"
                                           className="text-red-500 hover:text-red-700 text-sm font-medium px-1"
                                           onClick={() => {
+                                            const programTeamIds = (teams?.filter((t: any) => t.programId === enrollment.programId) || []).map((t: any) => t.id);
+                                            const newTeamIds = (Array.isArray(editingUser.teamIds) ? editingUser.teamIds : editingUser.teamId ? [editingUser.teamId] : []).filter((id: number) => !programTeamIds.includes(id));
+                                            const newActiveTeams = (editingUser.activeTeams || []).filter((a: any) => !programTeamIds.includes(a.teamId));
                                             setEditingUser({
                                               ...editingUser,
                                               enrollmentsToRemove: [...(editingUser.enrollmentsToRemove || []), enrollment.enrollmentId],
-                                              pendingEnrollments: (editingUser.pendingEnrollments || programEnrollments).filter((e: any) => e.enrollmentId !== enrollment.enrollmentId)
+                                              pendingEnrollments: (editingUser.pendingEnrollments || programEnrollments).filter((e: any) => e.enrollmentId !== enrollment.enrollmentId),
+                                              teamIds: newTeamIds,
+                                              teamId: newTeamIds[0] || null,
+                                              activeTeams: newActiveTeams
                                             });
                                           }}
                                           data-testid={`button-remove-enrollment-${enrollment.enrollmentId}`}
@@ -2988,7 +2994,9 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                           <div className="mt-3">
                             <p className="text-xs font-semibold text-gray-600 mb-2">Add to Team:</p>
                             <div className="border rounded-md max-h-48 overflow-y-auto" data-testid="program-team-assignments">
-                              {programs?.map((program: any) => {
+                              {programs?.filter((program: any) =>
+                                programEnrollments.some((e: any) => e.programId === program.id)
+                              ).map((program: any) => {
                                 const programTeams = teamsByProgram[program.id]?.teams || [];
                                 if (programTeams.length === 0) return null;
                                 

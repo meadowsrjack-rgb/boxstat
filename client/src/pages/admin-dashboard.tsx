@@ -1393,6 +1393,24 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   const [filterStatuses, setFilterStatuses] = useState<Set<string>>(new Set());
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
   const tableRef = useDragScroll();
+  const stickyScrollbarRef = useRef<HTMLDivElement>(null);
+  const stickyScrollbarInnerRef = useRef<HTMLDivElement>(null);
+  const [hasHorizontalOverflow, setHasHorizontalOverflow] = useState(false);
+
+  useEffect(() => {
+    const table = tableRef.current;
+    if (!table || !stickyScrollbarInnerRef.current) return;
+    const syncWidth = () => {
+      if (stickyScrollbarInnerRef.current && table) {
+        stickyScrollbarInnerRef.current.style.width = table.scrollWidth + 'px';
+        setHasHorizontalOverflow(table.scrollWidth > table.clientWidth);
+      }
+    };
+    syncWidth();
+    const observer = new ResizeObserver(syncWidth);
+    observer.observe(table);
+    return () => observer.disconnect();
+  }, []);
 
   // Fetch user evaluations - only when viewing user in performance tab
   const { data: userEvaluations = [], isLoading: evaluationsLoading, error: evaluationsError } = useQuery<any[]>({
@@ -3488,26 +3506,13 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
           )}
         </div>
         
-        {/* Top scrollbar for horizontal navigation */}
-        <div 
-          className="overflow-x-auto mb-2"
-          onScroll={(e) => {
-            if (tableRef.current) {
-              tableRef.current.scrollLeft = e.currentTarget.scrollLeft;
-            }
-          }}
-        >
-          <div style={{ width: tableRef.current?.scrollWidth || '100%', height: '1px' }}></div>
-        </div>
-        
         {/* Table with bottom scrollbar and mobile swipe support */}
         <div 
           ref={tableRef} 
-          className="overflow-x-scroll drag-scroll touch-pan-x"
+          className="overflow-x-scroll hide-scrollbar drag-scroll touch-pan-x"
           onScroll={(e) => {
-            const topScrollbar = e.currentTarget.previousElementSibling as HTMLElement;
-            if (topScrollbar) {
-              topScrollbar.scrollLeft = e.currentTarget.scrollLeft;
+            if (stickyScrollbarRef.current) {
+              stickyScrollbarRef.current.scrollLeft = e.currentTarget.scrollLeft;
             }
           }}
         >
@@ -3819,6 +3824,20 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
           </TableBody>
         </Table>
         </div>
+        {hasHorizontalOverflow && (
+          <div
+            ref={stickyScrollbarRef}
+            className="overflow-x-auto bg-white dark:bg-gray-900"
+            style={{ position: 'sticky', bottom: 0, zIndex: 10 }}
+            onScroll={(e) => {
+              if (tableRef.current) {
+                tableRef.current.scrollLeft = e.currentTarget.scrollLeft;
+              }
+            }}
+          >
+            <div ref={stickyScrollbarInnerRef} style={{ width: tableRef.current?.scrollWidth || '100%', height: '12px' }} />
+          </div>
+        )}
       </CardContent>
       {/* User Detail View Dialog */}
       <Dialog open={!!viewingUser} onOpenChange={(open) => !open && setViewingUser(null)}>

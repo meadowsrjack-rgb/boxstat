@@ -1399,18 +1399,24 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
 
   useEffect(() => {
     const table = tableRef.current;
-    if (!table || !stickyScrollbarInnerRef.current) return;
-    const syncWidth = () => {
-      if (stickyScrollbarInnerRef.current && table) {
+    if (!table) return;
+    const syncOverflow = () => {
+      setHasHorizontalOverflow(table.scrollWidth > table.clientWidth);
+      if (stickyScrollbarInnerRef.current) {
         stickyScrollbarInnerRef.current.style.width = table.scrollWidth + 'px';
-        setHasHorizontalOverflow(table.scrollWidth > table.clientWidth);
       }
     };
-    syncWidth();
-    const observer = new ResizeObserver(syncWidth);
+    syncOverflow();
+    const observer = new ResizeObserver(syncOverflow);
     observer.observe(table);
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (hasHorizontalOverflow && stickyScrollbarInnerRef.current && tableRef.current) {
+      stickyScrollbarInnerRef.current.style.width = tableRef.current.scrollWidth + 'px';
+    }
+  }, [hasHorizontalOverflow]);
 
   // Fetch user evaluations - only when viewing user in performance tab
   const { data: userEvaluations = [], isLoading: evaluationsLoading, error: evaluationsError } = useQuery<any[]>({

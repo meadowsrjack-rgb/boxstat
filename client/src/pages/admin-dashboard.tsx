@@ -146,27 +146,90 @@ function useDragScroll() {
       element.scrollLeft = scrollLeft - walk;
     };
 
-    const handleWheel = (e: WheelEvent) => {
-      if (element.scrollWidth > element.clientWidth) {
-        e.preventDefault();
-        element.scrollLeft += e.deltaY || e.deltaX;
-      }
-    };
-
     element.addEventListener('mousedown', handleMouseDown);
     element.addEventListener('mouseleave', handleMouseLeave);
     element.addEventListener('mouseup', handleMouseUp);
     element.addEventListener('mousemove', handleMouseMove);
-    element.addEventListener('wheel', handleWheel, { passive: false });
 
     return () => {
       element.removeEventListener('mousedown', handleMouseDown);
       element.removeEventListener('mouseleave', handleMouseLeave);
       element.removeEventListener('mouseup', handleMouseUp);
       element.removeEventListener('mousemove', handleMouseMove);
-      element.removeEventListener('wheel', handleWheel);
     };
   }, [isDragging, startX, scrollLeft]);
+
+  return ref;
+}
+
+function useTabCycleScroll(tabValues: string[], activeTab: string, setActiveTab: (tab: string) => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  const dragStartX = useRef(0);
+  const hasCycled = useRef(false);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    let dragging = false;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      dragging = true;
+      dragStartX.current = e.clientX;
+      hasCycled.current = false;
+      element.style.cursor = 'grabbing';
+    };
+
+    const handleMouseUp = () => {
+      dragging = false;
+      element.style.cursor = '';
+    };
+
+    const handleMouseLeave = () => {
+      dragging = false;
+      element.style.cursor = '';
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!dragging || hasCycled.current) return;
+      const diff = e.clientX - dragStartX.current;
+      const threshold = 60;
+      if (Math.abs(diff) < threshold) return;
+      hasCycled.current = true;
+      const idx = tabValues.indexOf(activeTab);
+      if (diff < 0 && idx < tabValues.length - 1) {
+        setActiveTab(tabValues[idx + 1]);
+      } else if (diff > 0 && idx > 0) {
+        setActiveTab(tabValues[idx - 1]);
+      }
+      dragStartX.current = e.clientX;
+      hasCycled.current = false;
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const idx = tabValues.indexOf(activeTab);
+      if (e.deltaY > 0 && idx < tabValues.length - 1) {
+        setActiveTab(tabValues[idx + 1]);
+      } else if (e.deltaY < 0 && idx > 0) {
+        setActiveTab(tabValues[idx - 1]);
+      }
+    };
+
+    element.addEventListener('mousedown', handleMouseDown);
+    element.addEventListener('mouseup', handleMouseUp);
+    element.addEventListener('mouseleave', handleMouseLeave);
+    element.addEventListener('mousemove', handleMouseMove);
+    element.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      element.removeEventListener('mousedown', handleMouseDown);
+      element.removeEventListener('mouseup', handleMouseUp);
+      element.removeEventListener('mouseleave', handleMouseLeave);
+      element.removeEventListener('mousemove', handleMouseMove);
+      element.removeEventListener('wheel', handleWheel);
+    };
+  }, [tabValues, activeTab, setActiveTab]);
 
   return ref;
 }
@@ -174,7 +237,7 @@ function useDragScroll() {
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const tabsRef = useDragScroll();
+  const adminTabValues = ['overview','users','programs','teams','events','awards','store','waivers','communications','migrations'];
 
   const getInitialTab = () => {
     if (typeof window !== 'undefined') {
@@ -202,6 +265,8 @@ export default function AdminDashboard() {
     }
     window.history.replaceState({}, '', url.toString());
   };
+
+  const tabsRef = useTabCycleScroll(adminTabValues, activeTab, setActiveTab);
 
   // Fetch current user for role-based access control
   const { data: currentUser, isLoading: userLoading } = useQuery<any>({
@@ -467,14 +532,7 @@ export default function AdminDashboard() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div ref={tabsRef} className="overflow-x-auto hide-scrollbar drag-scroll mb-6 -mx-4 px-4 sm:mx-0 sm:px-0"
-            onWheel={(e) => {
-              const tabs = ['overview','users','programs','teams','events','awards','store','waivers','communications','migrations'];
-              const idx = tabs.indexOf(activeTab);
-              if (e.deltaY > 0 && idx < tabs.length - 1) { e.preventDefault(); setActiveTab(tabs[idx + 1]); }
-              else if (e.deltaY < 0 && idx > 0) { e.preventDefault(); setActiveTab(tabs[idx - 1]); }
-            }}
-          >
+          <div ref={tabsRef} className="overflow-x-auto hide-scrollbar mb-6 -mx-4 px-4 sm:mx-0 sm:px-0 cursor-grab">
             <TabsList className="inline-flex w-auto min-w-full sm:w-auto bg-transparent border-b border-gray-200 rounded-none p-0 h-auto gap-0">
               <TabsTrigger value="overview" data-testid="tab-overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <TrendingUp className="w-4 h-4 mr-2" />

@@ -1880,14 +1880,15 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
       arr.findIndex(x => x.id === e.id) === i
     );
     const isOnTeamForProgram = (u: any, programId: string) => {
+      const hasAnyTeam = (Array.isArray(u.activeTeams) && u.activeTeams.length > 0) || u.teamId;
       const programTeamIds = teams.filter((t: any) => String(t.programId) === String(programId)).map((t: any) => String(t.id));
-      if (programTeamIds.length === 0) return true;
+      if (programTeamIds.length === 0) return !!hasAnyTeam;
       if (Array.isArray(u.activeTeams) && u.activeTeams.some((at: any) => programTeamIds.includes(String(at.teamId)))) return true;
       if (u.teamId && programTeamIds.includes(String(u.teamId))) return true;
       if (Array.isArray(u.teamIds) && u.teamIds.some((tid: any) => programTeamIds.includes(String(tid)))) return true;
       return false;
     };
-    const hasActiveEnrollmentWithoutTeam = teams.length > 0 ? (() => {
+    const hasActiveEnrollmentWithoutTeam = (() => {
       const checkPlayer = (player: any) => {
         if (player.role !== 'player') return false;
         const playerActiveEnrollments = uniqueEnrollments.filter((e: any) =>
@@ -1897,7 +1898,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
       };
       if (user.role === "player" && checkPlayer(user)) return true;
       return linkedPlayersForUser.some((player: any) => checkPlayer(player));
-    })() : false;
+    })();
     const hasPaymentFailed = uniqueEnrollments.some((e: any) =>
       e.status === 'payment_failed' || e.paymentStatus === 'failed'
     );
@@ -3857,19 +3858,26 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                           const profile = profileId === user.id ? user : linkedPlayers.find((p: any) => p.id === profileId);
                           const isPlayerProfile = profile?.role === 'player';
 
-                          const programTeams = teams.filter((t: any) => String(t.programId) === String(enrollment.programId));
-                          if (programTeams.length > 0 && isPlayerProfile) {
-                            const playerOnTeam = programTeams.some((t: any) => {
-                              if (!profile) return false;
-                              if (Array.isArray(profile.activeTeams) && profile.activeTeams.some((at: any) => String(at.teamId) === String(t.id))) return true;
-                              if (profile.teamId && String(profile.teamId) === String(t.id)) return true;
-                              if (Array.isArray(profile.teamIds) && profile.teamIds.some((tid: any) => String(tid) === String(t.id))) return true;
-                              return false;
-                            });
-                            if (playerOnTeam) {
-                              badges.push({ label: `${progName}: Active`, cls: "bg-green-600 text-white hover:bg-green-700", key: enrollKey });
+                          if (isPlayerProfile) {
+                            const programTeams = teams.filter((t: any) => String(t.programId) === String(enrollment.programId));
+                            const hasAnyTeam = (Array.isArray(profile?.activeTeams) && profile.activeTeams.length > 0) || profile?.teamId;
+                            if (programTeams.length > 0) {
+                              const playerOnTeam = programTeams.some((t: any) => {
+                                if (!profile) return false;
+                                if (Array.isArray(profile.activeTeams) && profile.activeTeams.some((at: any) => String(at.teamId) === String(t.id))) return true;
+                                if (profile.teamId && String(profile.teamId) === String(t.id)) return true;
+                                if (Array.isArray(profile.teamIds) && profile.teamIds.some((tid: any) => String(tid) === String(t.id))) return true;
+                                return false;
+                              });
+                              if (playerOnTeam) {
+                                badges.push({ label: `${progName}: Active`, cls: "bg-green-600 text-white hover:bg-green-700", key: enrollKey });
+                              } else {
+                                badges.push({ label: `${progName}: Needs Team`, cls: "bg-amber-500 text-white hover:bg-amber-600", key: enrollKey });
+                              }
+                            } else if (!hasAnyTeam) {
+                              badges.push({ label: `${progName}: Unassigned`, cls: "bg-amber-500 text-white hover:bg-amber-600", key: enrollKey });
                             } else {
-                              badges.push({ label: `${progName}: Needs Team`, cls: "bg-amber-500 text-white hover:bg-amber-600", key: enrollKey });
+                              badges.push({ label: `${progName}: Active`, cls: "bg-green-600 text-white hover:bg-green-700", key: enrollKey });
                             }
                           } else {
                             badges.push({ label: `${progName}: Active`, cls: "bg-green-600 text-white hover:bg-green-700", key: enrollKey });

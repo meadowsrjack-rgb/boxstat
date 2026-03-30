@@ -1141,10 +1141,10 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
   const adminReplyCount = myContactMessages.reduce((count: number, msg: any) => count + (msg.replies || []).filter((r: any) => r.isAdmin).length, 0);
 
   useEffect(() => {
-    if (adminReplyCount > lastSeenReplyCount && lastSeenReplyCount > 0) {
+    if (adminReplyCount > lastSeenReplyCount && managementChatViewed) {
       setManagementChatViewed(false);
     }
-  }, [adminReplyCount, lastSeenReplyCount]);
+  }, [adminReplyCount, lastSeenReplyCount, managementChatViewed]);
 
   // Send team message mutation (parent channel)
   const sendTeamMessageMutation = useMutation({

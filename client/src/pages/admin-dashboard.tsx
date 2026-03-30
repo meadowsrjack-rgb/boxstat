@@ -17229,6 +17229,46 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
         throw new Error('Please select at least one type');
       }
 
+      // If scheduling is selected, always create a campaign regardless of types
+      if (newMsgScheduleType !== 'immediate') {
+        if (newMsgScheduleType === 'scheduled' && !newMsgScheduledAt) {
+          throw new Error('Please select a date and time for the scheduled message');
+        }
+
+        if (hasMessageType) {
+          const recipientIds = data.recipientUserIds || [];
+          const targetUsers = data.recipientTarget === "users" ? recipientIds
+            : data.recipientTarget === "everyone" ? users.map((u: any) => u.id)
+            : [];
+          if (targetUsers.length === 0) {
+            throw new Error('Message type requires selecting specific users or "Everyone"');
+          }
+        }
+
+        const scheduledAtISO = newMsgScheduleType === 'scheduled' && newMsgScheduledAt
+          ? new Date(newMsgScheduledAt).toISOString()
+          : undefined;
+
+        const campaignData = {
+          title: data.title,
+          message: data.message,
+          types,
+          recipientTarget: data.recipientTarget,
+          recipientUserIds: data.recipientUserIds,
+          recipientRoles: data.recipientRoles,
+          recipientTeamIds: data.recipientTeamIds,
+          recipientDivisionIds: data.recipientDivisionIds,
+          deliveryChannels: data.deliveryChannels,
+          scheduleType: newMsgScheduleType,
+          scheduledAt: scheduledAtISO,
+          recurrenceFrequency: newMsgScheduleType === 'recurring' ? newMsgRecurrenceFrequency : undefined,
+          recurrenceTime: newMsgScheduleType === 'recurring' ? newMsgRecurrenceTime : undefined,
+          timezone: 'America/Los_Angeles',
+        };
+        return await apiRequest("POST", "/api/notification-campaigns", campaignData);
+      }
+
+      // Immediate send: handle message type first (direct messages)
       if (hasMessageType) {
         const recipientIds = data.recipientUserIds || [];
         let targetUsers: string[] = [];
@@ -17250,34 +17290,6 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
 
       if (hasNotificationType) {
         const notifTypes = types.filter((t: string) => t !== "message");
-
-        if (newMsgScheduleType !== 'immediate') {
-          if (newMsgScheduleType === 'scheduled' && !newMsgScheduledAt) {
-            throw new Error('Please select a date and time for the scheduled message');
-          }
-          const scheduledAtISO = newMsgScheduleType === 'scheduled' && newMsgScheduledAt
-            ? new Date(newMsgScheduledAt).toISOString()
-            : undefined;
-
-          const campaignData = {
-            title: data.title,
-            message: data.message,
-            types: notifTypes,
-            recipientTarget: data.recipientTarget,
-            recipientUserIds: data.recipientUserIds,
-            recipientRoles: data.recipientRoles,
-            recipientTeamIds: data.recipientTeamIds,
-            recipientDivisionIds: data.recipientDivisionIds,
-            deliveryChannels: data.deliveryChannels,
-            scheduleType: newMsgScheduleType,
-            scheduledAt: scheduledAtISO,
-            recurrenceFrequency: newMsgScheduleType === 'recurring' ? newMsgRecurrenceFrequency : undefined,
-            recurrenceTime: newMsgScheduleType === 'recurring' ? newMsgRecurrenceTime : undefined,
-            timezone: 'America/Los_Angeles',
-          };
-          return await apiRequest("POST", "/api/notification-campaigns", campaignData);
-        }
-
         const notificationData = {
           ...data,
           types: notifTypes,

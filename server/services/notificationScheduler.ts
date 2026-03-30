@@ -353,19 +353,85 @@ export class NotificationScheduler {
           let successCount = 0;
           let failureCount = 0;
           
-          // Send notifications to each recipient
+          // Determine if this campaign includes message type (direct messages)
+          const campaignTypes: string[] = Array.isArray(campaign.types) ? campaign.types as string[] : [];
+          const hasMessageType = campaignTypes.includes('message');
+          const hasNotificationType = campaignTypes.includes('announcement') || campaignTypes.includes('notification');
+
+          // Send to each recipient
           for (const userId of recipients) {
             try {
-              // Create in-app notification
-              await notificationService.sendMultiChannelNotification({
-                userId,
-                title: campaign.title,
-                message: campaign.message,
-                type: 'campaign',
-                data: { campaignId: campaign.id },
-                channels: campaign.deliveryChannels as Array<'in_app' | 'push' | 'email'>,
-                apnsEnvironment: campaign.apnsEnvironment as 'sandbox' | 'production' | undefined,
-              });
+              // Send direct contact-management message if message type is included
+              if (hasMessageType) {
+                const recipientUser = await storage.getUser(userId);
+                if (recipientUser) {
+                  const existingMessages = await storage.getContactManagementMessagesBySender(userId);
+                  const existingThread = existingMessages.find((m: any) => !m.parentMessageId);
+
+                  let parentMessageId: number;
+                  if (existingThread) {
+                    parentMessageId = existingThread.id;
+                  } else {
+                    const recipientName = `${recipientUser.firstName} ${recipientUser.lastName}`;
+                    const threadStarter = await storage.createContactManagementMessage({
+                      organizationId: campaign.organizationId,
+                      senderId: userId,
+                      senderName: recipientName,
+                      senderEmail: recipientUser.email || null,
+                      message: `Conversation with ${recipientName}`,
+                      isAdmin: false,
+                    });
+                    parentMessageId = threadStarter.id;
+                  }
+
+                  await storage.createContactManagementMessage({
+                    organizationId: campaign.organizationId,
+                    senderId: campaign.createdBy || campaign.organizationId,
+                    senderName: 'Admin',
+                    senderEmail: null,
+                    message: campaign.message,
+                    parentMessageId,
+                    isAdmin: true,
+                  });
+
+                  // Send push notification to match admin-initiate route behavior
+                  try {
+                    const org = await storage.getOrganization(campaign.organizationId);
+                    const orgName = org?.name || 'Your Organization';
+                    const recipientRole = recipientUser.role || 'parent';
+                    const targetUrl = recipientRole === 'admin'
+                      ? '/admin-dashboard?tab=communications&subtab=messages'
+                      : '/home?tab=messages';
+                    await adminNotificationService.createNotification({
+                      organizationId: campaign.organizationId,
+                      types: ['message'],
+                      title: `New message from ${orgName}`,
+                      message: `Admin: ${campaign.message.substring(0, 80)}${campaign.message.length > 80 ? '...' : ''}`,
+                      recipientTarget: 'users',
+                      recipientUserIds: [userId],
+                      deliveryChannels: ['push'],
+                      sentBy: campaign.createdBy || campaign.organizationId,
+                      status: 'sent',
+                    }, { url: targetUrl });
+                  } catch (notifError: any) {
+                    console.error(`⚠️ Scheduled message push notification failed for user ${userId} (non-fatal):`, notifError.message);
+                  }
+                }
+              }
+
+              // Send notification if announcement/notification type is included
+              if (hasNotificationType || !hasMessageType) {
+                await notificationService.sendMultiChannelNotification({
+                  userId,
+                  title: campaign.title,
+                  message: campaign.message,
+                  type: 'campaign',
+                  data: { campaignId: campaign.id },
+                  channels: campaign.deliveryChannels as Array<'in_app' | 'push' | 'email'>,
+                  apnsEnvironment: campaign.apnsEnvironment as 'sandbox' | 'production' | undefined,
+                });
+              }
+
               successCount++;
             } catch (err) {
               console.error(`Failed to send campaign notification to user ${userId}:`, err);

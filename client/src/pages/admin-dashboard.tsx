@@ -146,16 +146,25 @@ function useDragScroll() {
       element.scrollLeft = scrollLeft - walk;
     };
 
+    const handleWheel = (e: WheelEvent) => {
+      if (element.scrollWidth > element.clientWidth) {
+        e.preventDefault();
+        element.scrollLeft += e.deltaY || e.deltaX;
+      }
+    };
+
     element.addEventListener('mousedown', handleMouseDown);
     element.addEventListener('mouseleave', handleMouseLeave);
     element.addEventListener('mouseup', handleMouseUp);
     element.addEventListener('mousemove', handleMouseMove);
+    element.addEventListener('wheel', handleWheel, { passive: false });
 
     return () => {
       element.removeEventListener('mousedown', handleMouseDown);
       element.removeEventListener('mouseleave', handleMouseLeave);
       element.removeEventListener('mouseup', handleMouseUp);
       element.removeEventListener('mousemove', handleMouseMove);
+      element.removeEventListener('wheel', handleWheel);
     };
   }, [isDragging, startX, scrollLeft]);
 

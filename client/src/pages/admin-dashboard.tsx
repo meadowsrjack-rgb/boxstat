@@ -14503,33 +14503,15 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
 
 function StripeSettingsSection() {
   const { toast } = useToast();
-  const [showSecret, setShowSecret] = useState(false);
-  const [showWebhook, setShowWebhook] = useState(false);
-  const [stripeSecretKey, setStripeSecretKey] = useState("");
-  const [stripePublishableKey, setStripePublishableKey] = useState("");
-  const [stripeWebhookSecret, setStripeWebhookSecret] = useState("");
-  const [loaded, setLoaded] = useState(false);
-  const [showLegacy, setShowLegacy] = useState(false);
-
-  const { data: settings, isLoading } = useQuery<any>({
-    queryKey: ["/api/organization/stripe-settings"],
-  });
 
   const { data: connectStatus, isLoading: connectLoading, refetch: refetchConnect } = useQuery<any>({
     queryKey: ["/api/stripe-connect/status"],
   });
 
   useEffect(() => {
-    if (settings && !loaded) {
-      setStripePublishableKey(settings.stripePublishableKey || "");
-      setLoaded(true);
-    }
-  }, [settings, loaded]);
-
-  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("stripe") === "connected") {
-      toast({ title: "Stripe Connect setup updated" });
+      toast({ title: "Payment setup updated successfully" });
       refetchConnect();
       window.history.replaceState({}, "", window.location.pathname);
     }
@@ -14546,7 +14528,7 @@ function StripeSettingsSection() {
       }
     },
     onError: () => {
-      toast({ title: "Failed to start Stripe Connect setup", variant: "destructive" });
+      toast({ title: "Failed to start payment setup", variant: "destructive" });
     },
   });
 
@@ -14561,32 +14543,9 @@ function StripeSettingsSection() {
       }
     },
     onError: () => {
-      toast({ title: "Failed to open Stripe dashboard", variant: "destructive" });
+      toast({ title: "Failed to open payment dashboard", variant: "destructive" });
     },
   });
-
-  const saveMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest("PATCH", "/api/organization/stripe-settings", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/organization/stripe-settings"] });
-      toast({ title: "Stripe settings saved" });
-      setStripeSecretKey("");
-      setStripeWebhookSecret("");
-    },
-    onError: () => {
-      toast({ title: "Failed to save Stripe settings", variant: "destructive" });
-    },
-  });
-
-  const handleSave = () => {
-    const data: any = {};
-    if (stripePublishableKey) data.stripePublishableKey = stripePublishableKey;
-    if (stripeSecretKey) data.stripeSecretKey = stripeSecretKey;
-    if (stripeWebhookSecret) data.stripeWebhookSecret = stripeWebhookSecret;
-    saveMutation.mutate(data);
-  };
 
   const status = connectStatus?.status || "not_started";
   const connectedId = connectStatus?.connectedAccountId || "";
@@ -14597,26 +14556,27 @@ function StripeSettingsSection() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CreditCard className="w-5 h-5" />
-          Stripe Integration
+          Payment Setup
         </CardTitle>
-        <CardDescription>Connect your Stripe account to receive payments from your organization</CardDescription>
+        <CardDescription>Connect your bank account to receive payments from program enrollments and store purchases</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-3">
-          <h4 className="text-sm font-semibold">Stripe Connect</h4>
-
-          {connectLoading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 border rounded-lg">
-              <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-              Checking connection status...
+      <CardContent className="space-y-4">
+        {connectLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 border rounded-lg">
+            <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+            Checking connection status...
+          </div>
+        ) : status === "active" ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 dark:bg-green-950 dark:text-green-400 p-3 rounded-lg">
+              <Check className="w-4 h-4" />
+              <span className="font-medium">Payment account connected</span>
+              <span className="text-green-600 dark:text-green-500 font-mono text-xs ml-auto">{maskedId}</span>
             </div>
-          ) : status === "active" ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 dark:bg-green-950 dark:text-green-400 p-3 rounded-lg">
-                <Check className="w-4 h-4" />
-                <span className="font-medium">Connected</span>
-                <span className="text-green-600 dark:text-green-500 font-mono text-xs ml-auto">{maskedId}</span>
-              </div>
+            <p className="text-sm text-muted-foreground">
+              Your account is set up to receive payments. All program and store payments from parents will be deposited to your connected bank account.
+            </p>
+            <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -14624,143 +14584,61 @@ function StripeSettingsSection() {
                 disabled={dashboardMutation.isPending}
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
-                {dashboardMutation.isPending ? "Opening..." : "View Stripe Dashboard"}
+                {dashboardMutation.isPending ? "Opening..." : "View Payout Dashboard"}
               </Button>
-            </div>
-          ) : status === "pending" ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm text-yellow-700 bg-yellow-50 dark:bg-yellow-950 dark:text-yellow-400 p-3 rounded-lg">
-                <AlertTriangle className="w-4 h-4" />
-                <span className="font-medium">Setup in progress</span>
-              </div>
-              <p className="text-xs text-muted-foreground">Your Stripe account setup is not yet complete. Click below to continue where you left off.</p>
               <Button
+                variant="ghost"
                 size="sm"
                 onClick={() => onboardMutation.mutate()}
                 disabled={onboardMutation.isPending}
               >
-                {onboardMutation.isPending ? "Loading..." : "Continue Setup"}
+                {onboardMutation.isPending ? "Loading..." : "Update Bank Details"}
               </Button>
             </div>
-          ) : status === "restricted" ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm text-orange-700 bg-orange-50 dark:bg-orange-950 dark:text-orange-400 p-3 rounded-lg">
-                <AlertTriangle className="w-4 h-4" />
-                <span className="font-medium">Account needs attention</span>
-              </div>
-              <p className="text-xs text-muted-foreground">Stripe requires additional information before you can accept payments. Click below to resolve.</p>
-              <Button
-                size="sm"
-                onClick={() => onboardMutation.mutate()}
-                disabled={onboardMutation.isPending}
-              >
-                {onboardMutation.isPending ? "Loading..." : "Complete Setup"}
-              </Button>
+          </div>
+        ) : status === "pending" ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm text-yellow-700 bg-yellow-50 dark:bg-yellow-950 dark:text-yellow-400 p-3 rounded-lg">
+              <AlertTriangle className="w-4 h-4" />
+              <span className="font-medium">Setup in progress</span>
             </div>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Connect your Stripe account to start accepting payments. BoxStat handles the payment processing — you just need to link your account.
-              </p>
-              <Button
-                onClick={() => onboardMutation.mutate()}
-                disabled={onboardMutation.isPending}
-              >
-                {onboardMutation.isPending ? "Setting up..." : "Connect with Stripe"}
-              </Button>
+            <p className="text-sm text-muted-foreground">Your payment account setup is not yet complete. Click below to continue where you left off.</p>
+            <Button
+              size="sm"
+              onClick={() => onboardMutation.mutate()}
+              disabled={onboardMutation.isPending}
+            >
+              {onboardMutation.isPending ? "Loading..." : "Continue Setup"}
+            </Button>
+          </div>
+        ) : status === "restricted" ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm text-orange-700 bg-orange-50 dark:bg-orange-950 dark:text-orange-400 p-3 rounded-lg">
+              <AlertTriangle className="w-4 h-4" />
+              <span className="font-medium">Account needs attention</span>
             </div>
-          )}
-        </div>
-
-        <div className="border-t pt-4">
-          <button
-            type="button"
-            onClick={() => setShowLegacy(!showLegacy)}
-            className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ChevronDown className={`w-3 h-3 transition-transform ${showLegacy ? "rotate-180" : ""}`} />
-            Legacy API Key Settings
-          </button>
-
-          {showLegacy && (
-            <div className="mt-3 space-y-4 p-3 bg-muted/50 rounded-lg">
-              <p className="text-xs text-muted-foreground">These fields will be removed in a future update. Use Stripe Connect above instead.</p>
-
-              {settings?.hasStripeKeys && (
-                <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-3 rounded-lg">
-                  <Check className="w-4 h-4" />
-                  Legacy keys configured
-                </div>
-              )}
-
-              <div>
-                <Label htmlFor="stripe-pk">Publishable Key</Label>
-                <Input
-                  id="stripe-pk"
-                  value={stripePublishableKey}
-                  onChange={(e) => setStripePublishableKey(e.target.value)}
-                  placeholder="pk_live_..."
-                  className="font-mono text-sm"
-                />
-                {settings?.stripePublishableKey && !stripePublishableKey && (
-                  <p className="text-xs text-gray-500 mt-1">Current: {settings.stripePublishableKey}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="stripe-sk">Secret Key</Label>
-                <div className="relative">
-                  <Input
-                    id="stripe-sk"
-                    type={showSecret ? "text" : "password"}
-                    value={stripeSecretKey}
-                    onChange={(e) => setStripeSecretKey(e.target.value)}
-                    placeholder="sk_live_..."
-                    className="font-mono text-sm pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowSecret(!showSecret)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {settings?.stripeSecretKey && (
-                  <p className="text-xs text-gray-500 mt-1">Current: {settings.stripeSecretKey}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="stripe-wh">Webhook Secret (optional)</Label>
-                <div className="relative">
-                  <Input
-                    id="stripe-wh"
-                    type={showWebhook ? "text" : "password"}
-                    value={stripeWebhookSecret}
-                    onChange={(e) => setStripeWebhookSecret(e.target.value)}
-                    placeholder="whsec_..."
-                    className="font-mono text-sm pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowWebhook(!showWebhook)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showWebhook ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {settings?.stripeWebhookSecret && (
-                  <p className="text-xs text-gray-500 mt-1">Current: {settings.stripeWebhookSecret}</p>
-                )}
-              </div>
-
-              <Button onClick={handleSave} disabled={saveMutation.isPending} variant="outline" size="sm">
-                {saveMutation.isPending ? "Saving..." : "Save Legacy Settings"}
-              </Button>
-            </div>
-          )}
-        </div>
+            <p className="text-sm text-muted-foreground">Additional information is required before you can accept payments. Click below to resolve.</p>
+            <Button
+              size="sm"
+              onClick={() => onboardMutation.mutate()}
+              disabled={onboardMutation.isPending}
+            >
+              {onboardMutation.isPending ? "Loading..." : "Complete Setup"}
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Set up your payment account to start receiving money from program enrollments and store purchases. You'll enter your bank details through a secure setup process.
+            </p>
+            <Button
+              onClick={() => onboardMutation.mutate()}
+              disabled={onboardMutation.isPending}
+            >
+              {onboardMutation.isPending ? "Setting up..." : "Set Up Payments"}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

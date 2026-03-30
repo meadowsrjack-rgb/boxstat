@@ -237,7 +237,7 @@ function useTabCycleScroll(tabValues: string[], activeTab: string, setActiveTab:
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const adminTabValues = ['overview','users','programs','teams','events','awards','store','waivers','communications','migrations'];
+  const adminTabValues = ['overview','users','programs','teams','events','awards','store','waivers','messages','migrations'];
 
   const getInitialTab = () => {
     if (typeof window !== 'undefined') {
@@ -566,9 +566,9 @@ export default function AdminDashboard() {
                 <FileText className="w-4 h-4 mr-2" />
                 Waivers
               </TabsTrigger>
-              <TabsTrigger value="communications" data-testid="tab-communications" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <Bell className="w-4 h-4 mr-2" />
-                Communications
+              <TabsTrigger value="messages" data-testid="tab-messages" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Messages
               </TabsTrigger>
               <TabsTrigger value="migrations" data-testid="tab-migrations" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <ArrowLeftRight className="w-4 h-4 mr-2" />
@@ -579,7 +579,7 @@ export default function AdminDashboard() {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <CrmMessageBanner onNavigateToCrm={() => { setCrmSubTab("messages"); setActiveTab("communications"); }} />
+            <CrmMessageBanner onNavigateToCrm={() => { setCrmSubTab("messages"); setActiveTab("messages"); }} />
             <StorePurchaseBanner onNavigateToStore={() => setActiveTab("store")} />
             <EnrollmentAssignmentBanner onNavigateToUsers={() => setActiveTab("users")} />
 
@@ -723,7 +723,7 @@ export default function AdminDashboard() {
             <WaiversTab organization={organization} />
           </TabsContent>
 
-          <TabsContent value="communications">
+          <TabsContent value="messages">
             <CommunicationsTab notifications={notifications} users={users} teams={teams} divisions={divisions} organization={organization} initialCrmSubTab={crmSubTab} />
           </TabsContent>
 
@@ -17150,14 +17150,13 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
 // CRM Tab Component
 function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'leads' | 'messages'>(initialSubTab || 'leads');
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [viewingEvaluation, setViewingEvaluation] = useState<any>(null);
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
   const [newNote, setNewNote] = useState("");
   const [replyMessage, setReplyMessage] = useState("");
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
-  const [messagesFilter, setMessagesFilter] = useState<'users' | 'teams'>('users');
+  const [activeView, setActiveView] = useState<'users' | 'teams' | 'leads'>('users');
   const [selectedTeamChat, setSelectedTeamChat] = useState<{ teamId: number; channel: 'players' | 'parents'; teamName: string } | null>(null);
   const [teamChatMessage, setTeamChatMessage] = useState("");
   const [clearChannelConfirm, setClearChannelConfirm] = useState(false);
@@ -17519,153 +17518,22 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Headphones className="w-5 h-5" />
-          Communications
-        </CardTitle>
-        <CardDescription>Manage leads and customer communications</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {/* Sub-tabs */}
-        <div className="flex gap-2 mb-6 border-b pb-2">
-          <Button
-            variant={activeTab === 'leads' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setActiveTab('leads')}
-            data-testid="button-crm-leads"
-          >
-            <Users className="w-4 h-4 mr-2" />
-            Leads
-          </Button>
-          <Button
-            variant={activeTab === 'messages' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setActiveTab('messages')}
-            data-testid="button-crm-messages"
-          >
-            <MessageSquare className="w-4 h-4 mr-2" />
-            Messages
-          </Button>
-        </div>
-
-        {/* Leads Tab */}
-        {activeTab === 'leads' && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-medium">Lead Management</h3>
-              <Button onClick={() => setIsAddLeadOpen(true)} data-testid="button-add-lead">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Lead
-              </Button>
-            </div>
-
-            {leads.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Users className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                <p>No leads yet. Add your first lead to get started.</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Source</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {leads.map((lead: any) => (
-                    <TableRow key={lead.id} data-testid={`row-lead-${lead.id}`}>
-                      <TableCell>
-                        <div className="font-medium">{lead.firstName} {lead.lastName}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {lead.email && <div className="flex items-center gap-1"><Mail className="w-3 h-3" /> {lead.email}</div>}
-                          {lead.phone && <div className="flex items-center gap-1"><Phone className="w-3 h-3" /> {lead.phone}</div>}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{lead.source}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={lead.status}
-                          onValueChange={(status) => updateLeadMutation.mutate({ id: lead.id, status })}
-                        >
-                          <SelectTrigger className="w-32" data-testid={`select-lead-status-${lead.id}`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="new">New</SelectItem>
-                            <SelectItem value="contacted">Contacted</SelectItem>
-                            <SelectItem value="qualified">Qualified</SelectItem>
-                            <SelectItem value="converted">Converted</SelectItem>
-                            <SelectItem value="lost">Lost</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedLead(lead)}
-                            data-testid={`button-view-lead-${lead.id}`}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              Messages
+            </CardTitle>
+            <CardDescription>Manage messages, team chats, and leads</CardDescription>
           </div>
-        )}
-
-        {/* Messages Tab */}
-        {activeTab === 'messages' && (
-          <div className="space-y-4">
-            {/* Filter tabs */}
-            <div className="flex gap-2 items-center">
-              <span className="text-sm text-gray-500">Filter:</span>
-              <Button
-                variant={messagesFilter === 'users' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => { setMessagesFilter('users'); setSelectedTeamChat(null); }}
-                data-testid="button-filter-users"
-              >
-                <User className="w-4 h-4 mr-1" />
-                Single Users
+          <Dialog open={isNewMessageOpen} onOpenChange={handleNewMsgDialogClose}>
+            <DialogTrigger asChild>
+              <Button size="sm" data-testid="button-new-message">
+                <Plus className="w-4 h-4 mr-2" />
+                New Message
               </Button>
-              <Button
-                variant={messagesFilter === 'teams' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => { setMessagesFilter('teams'); setSelectedConversation(null); }}
-                data-testid="button-filter-teams"
-              >
-                <Users className="w-4 h-4 mr-1" />
-                Team Chats
-              </Button>
-            </div>
-            
-            {/* Single Users Messages */}
-            {messagesFilter === 'users' && (
-              <>
-                <div className="flex justify-between items-center">
-                  <h3 className="font-medium">Contact Management Messages</h3>
-                  <Dialog open={isNewMessageOpen} onOpenChange={handleNewMsgDialogClose}>
-                    <DialogTrigger asChild>
-                      <Button size="sm" data-testid="button-new-message">
-                        <Plus className="w-4 h-4 mr-2" />
-                        New Message
-                      </Button>
-                    </DialogTrigger>
+            </DialogTrigger>
                     <DialogContent className="max-w-[95vw] w-full max-h-[90vh] flex flex-col overflow-hidden">
                       <DialogHeader>
                         <DialogTitle>Create New Message</DialogTitle>
@@ -18028,10 +17896,43 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
                         </form>
                       </Form>
                     </DialogContent>
-                  </Dialog>
-                </div>
-                
-                {contactMessages.length === 0 ? (
+          </Dialog>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex gap-2 mb-6">
+          <Button
+            variant={activeView === 'users' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => { setActiveView('users'); setSelectedTeamChat(null); }}
+            data-testid="button-view-users"
+          >
+            <User className="w-4 h-4 mr-1" />
+            Single Users
+          </Button>
+          <Button
+            variant={activeView === 'teams' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => { setActiveView('teams'); setSelectedConversation(null); }}
+            data-testid="button-view-teams"
+          >
+            <Users className="w-4 h-4 mr-1" />
+            Team Chats
+          </Button>
+          <Button
+            variant={activeView === 'leads' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => { setActiveView('leads'); setSelectedConversation(null); setSelectedTeamChat(null); }}
+            data-testid="button-view-leads"
+          >
+            <Users className="w-4 h-4 mr-1" />
+            Leads
+          </Button>
+        </div>
+
+        {activeView === 'users' && (
+          <div className="space-y-4">
+            {contactMessages.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <MessageSquare className="w-12 h-12 mx-auto mb-2 text-gray-400" />
                     <p>No messages yet. Messages from parents will appear here.</p>
@@ -18120,11 +18021,10 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
                     </div>
                   </div>
                 )}
-              </>
-            )}
+          </div>
+        )}
 
-            {/* Team Chats */}
-            {messagesFilter === 'teams' && (
+        {activeView === 'teams' && (
               <>
                 <h3 className="font-medium">Team Chat Rooms</h3>
                 
@@ -18334,6 +18234,82 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
                   </div>
                 )}
               </>
+        )}
+
+        {activeView === 'leads' && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-medium">Lead Management</h3>
+              <Button onClick={() => setIsAddLeadOpen(true)} data-testid="button-add-lead">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Lead
+              </Button>
+            </div>
+
+            {leads.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Users className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                <p>No leads yet. Add your first lead to get started.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {leads.map((lead: any) => (
+                    <TableRow key={lead.id} data-testid={`row-lead-${lead.id}`}>
+                      <TableCell>
+                        <div className="font-medium">{lead.firstName} {lead.lastName}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {lead.email && <div className="flex items-center gap-1"><Mail className="w-3 h-3" /> {lead.email}</div>}
+                          {lead.phone && <div className="flex items-center gap-1"><Phone className="w-3 h-3" /> {lead.phone}</div>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{lead.source}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={lead.status}
+                          onValueChange={(status) => updateLeadMutation.mutate({ id: lead.id, status })}
+                        >
+                          <SelectTrigger className="w-32" data-testid={`select-lead-status-${lead.id}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="new">New</SelectItem>
+                            <SelectItem value="contacted">Contacted</SelectItem>
+                            <SelectItem value="qualified">Qualified</SelectItem>
+                            <SelectItem value="converted">Converted</SelectItem>
+                            <SelectItem value="lost">Lost</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedLead(lead)}
+                            data-testid={`button-view-lead-${lead.id}`}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </div>
         )}

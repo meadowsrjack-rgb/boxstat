@@ -5210,6 +5210,9 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
                                     queryClient.invalidateQueries({ queryKey: ["/api/users", player.id, "team"] });
                                     queryClient.invalidateQueries({ queryKey: ["/api/users", player.id, "teams"] });
                                     queryClient.invalidateQueries({ queryKey: ["/api/users", player.id, "program-memberships"] });
+                                    queryClient.invalidateQueries({ queryKey: ["/api/admin/enrollments"] });
+                                    queryClient.invalidateQueries({ queryKey: ["/api/product-enrollments"] });
+                                    queryClient.invalidateQueries({ queryKey: ["/api/enrollments"] });
                                     queryClient.invalidateQueries({ queryKey: [`/api/profile/${player.id}`] });
                                     queryClient.invalidateQueries({ queryKey: ["/api/profile", player.id] });
                                     toast({ 
@@ -17074,6 +17077,9 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
                                         }
                                         queryClient.invalidateQueries({ queryKey: ["/api/users"] });
                                         queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+                                        queryClient.invalidateQueries({ queryKey: ["/api/admin/enrollments"] });
+                                        queryClient.invalidateQueries({ queryKey: ["/api/product-enrollments"] });
+                                        queryClient.invalidateQueries({ queryKey: ["/api/enrollments"] });
                                         toast({ 
                                           title: checked 
                                             ? `Added ${player.firstName} ${player.lastName} to ${selectedTeam.name}`

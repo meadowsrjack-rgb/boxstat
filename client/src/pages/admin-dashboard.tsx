@@ -16718,7 +16718,7 @@ function CommunicationsTab({ notifications, users, teams, divisions, organizatio
         <NotificationsTab notifications={notifications} users={users} teams={teams} divisions={divisions} organization={organization} />
       )}
       {activeSection === 'messages' && (
-        <CRMTab organization={organization} users={users} teams={teams} initialSubTab="messages" />
+        <CRMTab organization={organization} users={users} teams={teams} divisions={divisions} initialSubTab="messages" />
       )}
     </div>
   );
@@ -17157,7 +17157,7 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
 }
 
 // CRM Tab Component
-function CRMTab({ organization, users, teams, initialSubTab }: any) {
+function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'leads' | 'messages'>(initialSubTab || 'leads');
   const [selectedLead, setSelectedLead] = useState<any>(null);
@@ -17171,9 +17171,139 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
   const [teamChatMessage, setTeamChatMessage] = useState("");
   const [clearChannelConfirm, setClearChannelConfirm] = useState(false);
   const [isNewMessageOpen, setIsNewMessageOpen] = useState(false);
-  const [newMessageRecipient, setNewMessageRecipient] = useState<string>('');
-  const [newMessageText, setNewMessageText] = useState('');
-  const [newMessageSearch, setNewMessageSearch] = useState('');
+  const [newMsgScheduleType, setNewMsgScheduleType] = useState<'immediate' | 'scheduled' | 'recurring'>('immediate');
+  const [newMsgScheduledAt, setNewMsgScheduledAt] = useState('');
+  const [newMsgRecurrenceFrequency, setNewMsgRecurrenceFrequency] = useState('daily');
+  const [newMsgRecurrenceTime, setNewMsgRecurrenceTime] = useState('09:00');
+
+  const { data: currentUser } = useQuery<any>({
+    queryKey: ["/api/auth/user"],
+  });
+
+  const newMsgForm = useForm({
+    resolver: zodResolver(insertNotificationSchema),
+    defaultValues: {
+      organizationId: organization?.id || "",
+      types: ["message"],
+      title: "",
+      message: "",
+      recipientTarget: "users",
+      recipientUserIds: [] as string[],
+      recipientRoles: [] as string[],
+      recipientTeamIds: [] as string[],
+      recipientDivisionIds: [] as string[],
+      deliveryChannels: ["in_app"],
+      sentBy: currentUser?.id || "",
+      status: "pending",
+    },
+  });
+
+  const newMsgRecipientTarget = newMsgForm.watch("recipientTarget");
+  const newMsgDeliveryChannels = newMsgForm.watch("deliveryChannels") || [];
+  const newMsgIsPushSelected = newMsgDeliveryChannels.includes("push");
+  const newMsgTypes = newMsgForm.watch("types") || [];
+  const newMsgIsMessageType = newMsgTypes.includes("message");
+
+  const filteredUsersForNewMsg = newMsgIsPushSelected
+    ? users.filter((u: any) => u.email && u.email.trim() !== '')
+    : users;
+
+  const handleNewMsgDialogClose = (open: boolean) => {
+    setIsNewMessageOpen(open);
+    if (!open) {
+      newMsgForm.reset();
+      setNewMsgScheduleType('immediate');
+      setNewMsgScheduledAt('');
+      setNewMsgRecurrenceFrequency('daily');
+      setNewMsgRecurrenceTime('09:00');
+    }
+  };
+
+  const createNewMessage = useMutation({
+    mutationFn: async (data: any) => {
+      const types = data.types || [];
+      const hasMessageType = types.includes("message");
+      const hasNotificationType = types.includes("announcement") || types.includes("notification");
+
+      if (!hasMessageType && !hasNotificationType) {
+        throw new Error('Please select at least one type');
+      }
+
+      if (hasMessageType) {
+        const recipientIds = data.recipientUserIds || [];
+        let targetUsers: string[] = [];
+        if (data.recipientTarget === "users") {
+          targetUsers = recipientIds;
+        } else if (data.recipientTarget === "everyone") {
+          targetUsers = users.map((u: any) => u.id);
+        }
+        if (targetUsers.length === 0) {
+          throw new Error('Message type requires selecting specific users or "Everyone"');
+        }
+        for (const userId of targetUsers) {
+          await apiRequest('/api/contact-management/admin-initiate', {
+            method: 'POST',
+            data: { recipientUserId: userId, message: data.message }
+          });
+        }
+      }
+
+      if (hasNotificationType) {
+        const notifTypes = types.filter((t: string) => t !== "message");
+
+        if (newMsgScheduleType !== 'immediate') {
+          if (newMsgScheduleType === 'scheduled' && !newMsgScheduledAt) {
+            throw new Error('Please select a date and time for the scheduled message');
+          }
+          const scheduledAtISO = newMsgScheduleType === 'scheduled' && newMsgScheduledAt
+            ? new Date(newMsgScheduledAt).toISOString()
+            : undefined;
+
+          const campaignData = {
+            title: data.title,
+            message: data.message,
+            types: notifTypes,
+            recipientTarget: data.recipientTarget,
+            recipientUserIds: data.recipientUserIds,
+            recipientRoles: data.recipientRoles,
+            recipientTeamIds: data.recipientTeamIds,
+            recipientDivisionIds: data.recipientDivisionIds,
+            deliveryChannels: data.deliveryChannels,
+            scheduleType: newMsgScheduleType,
+            scheduledAt: scheduledAtISO,
+            recurrenceFrequency: newMsgScheduleType === 'recurring' ? newMsgRecurrenceFrequency : undefined,
+            recurrenceTime: newMsgScheduleType === 'recurring' ? newMsgRecurrenceTime : undefined,
+            timezone: 'America/Los_Angeles',
+          };
+          return await apiRequest("POST", "/api/notification-campaigns", campaignData);
+        }
+
+        const notificationData = {
+          ...data,
+          types: notifTypes,
+          sentBy: currentUser?.id || data.sentBy,
+          organizationId: organization?.id || data.organizationId,
+        };
+        return await apiRequest("POST", "/api/admin/notifications", notificationData);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notification-campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contact-management'] });
+      const successMessage = newMsgScheduleType === 'immediate' ? "Message sent successfully" : "Message scheduled successfully";
+      setNewMsgScheduleType('immediate');
+      setNewMsgScheduledAt('');
+      setNewMsgRecurrenceFrequency('daily');
+      setNewMsgRecurrenceTime('09:00');
+      newMsgForm.reset();
+      setIsNewMessageOpen(false);
+      toast({ title: successMessage });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to send message", description: error.message || "Please try again", variant: "destructive" });
+    },
+  });
 
   // Fetch CRM leads
   const { data: leads = [], refetch: refetchLeads } = useQuery<any[]>({
@@ -17352,23 +17482,6 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
     },
   });
 
-  const sendNewMessageMutation = useMutation({
-    mutationFn: async ({ recipientUserId, message }: { recipientUserId: string; message: string }) => {
-      return apiRequest('/api/contact-management/admin-initiate', { method: 'POST', data: { recipientUserId, message } });
-    },
-    onSuccess: () => {
-      refetchMessages();
-      setNewMessageText('');
-      setNewMessageRecipient('');
-      setNewMessageSearch('');
-      setIsNewMessageOpen(false);
-      toast({ title: "Message sent successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to send message", variant: "destructive" });
-    },
-  });
-
   // Lead form
   const leadForm = useForm({
     defaultValues: {
@@ -17527,83 +17640,429 @@ function CRMTab({ organization, users, teams, initialSubTab }: any) {
               <>
                 <div className="flex justify-between items-center">
                   <h3 className="font-medium">Contact Management Messages</h3>
-                  <Dialog open={isNewMessageOpen} onOpenChange={(open) => { setIsNewMessageOpen(open); if (!open) { setNewMessageRecipient(''); setNewMessageText(''); setNewMessageSearch(''); } }}>
+                  <Dialog open={isNewMessageOpen} onOpenChange={handleNewMsgDialogClose}>
                     <DialogTrigger asChild>
                       <Button size="sm" data-testid="button-new-message">
                         <Plus className="w-4 h-4 mr-2" />
                         New Message
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-md">
+                    <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
-                        <DialogTitle>Send Message to User</DialogTitle>
+                        <DialogTitle>Create New Message</DialogTitle>
                       </DialogHeader>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Select User</Label>
-                          <Input
-                            placeholder="Search by name or email..."
-                            value={newMessageSearch}
-                            onChange={(e) => setNewMessageSearch(e.target.value)}
-                            data-testid="input-new-message-search"
+                      <Form {...newMsgForm}>
+                        <form onSubmit={newMsgForm.handleSubmit((data) => createNewMessage.mutate(data))} className="space-y-4">
+                          <FormField
+                            control={newMsgForm.control}
+                            name="title"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Title</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Message title" data-testid="input-new-msg-title" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
-                          {newMessageSearch.trim() && (
-                            <div className="border rounded-md max-h-40 overflow-y-auto">
-                              {users
-                                .filter((u: any) => {
-                                  const search = newMessageSearch.toLowerCase();
-                                  return (
-                                    `${u.firstName} ${u.lastName}`.toLowerCase().includes(search) ||
-                                    (u.email && u.email.toLowerCase().includes(search))
-                                  );
-                                })
-                                .slice(0, 10)
-                                .map((u: any) => (
-                                  <div
-                                    key={u.id}
-                                    className={`p-2 text-sm cursor-pointer hover:bg-gray-100 ${newMessageRecipient === u.id ? 'bg-blue-50 font-medium' : ''}`}
-                                    onClick={() => {
-                                      setNewMessageRecipient(u.id);
-                                      setNewMessageSearch(`${u.firstName} ${u.lastName}`);
-                                    }}
-                                    data-testid={`new-msg-user-${u.id}`}
-                                  >
-                                    <div>{u.firstName} {u.lastName}</div>
-                                    <div className="text-xs text-gray-500">{u.email} ({u.role})</div>
+                          <FormField
+                            control={newMsgForm.control}
+                            name="message"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Message</FormLabel>
+                                <FormControl>
+                                  <Textarea {...field} placeholder="Message content..." rows={4} data-testid="input-new-msg-message" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={newMsgForm.control}
+                            name="types"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Type</FormLabel>
+                                <FormDescription>
+                                  Select one or more types for this communication
+                                </FormDescription>
+                                <div className="border rounded-md p-4 space-y-3">
+                                  <div className="flex items-center gap-2">
+                                    <Checkbox
+                                      id="newmsg-type-message"
+                                      checked={field.value?.includes("message")}
+                                      onCheckedChange={(checked) => {
+                                        const current = field.value || [];
+                                        if (checked) {
+                                          field.onChange([...current, "message"]);
+                                        } else {
+                                          field.onChange(current.filter((t: string) => t !== "message"));
+                                        }
+                                      }}
+                                      data-testid="newmsg-checkbox-type-message"
+                                    />
+                                    <label htmlFor="newmsg-type-message" className="text-sm font-medium leading-none cursor-pointer">
+                                      Message
+                                    </label>
                                   </div>
-                                ))
-                              }
-                              {users.filter((u: any) => {
-                                const search = newMessageSearch.toLowerCase();
-                                return `${u.firstName} ${u.lastName}`.toLowerCase().includes(search) || (u.email && u.email.toLowerCase().includes(search));
-                              }).length === 0 && (
-                                <div className="p-2 text-sm text-gray-500">No users found</div>
+                                  <div className="flex items-center gap-2">
+                                    <Checkbox
+                                      id="newmsg-type-announcement"
+                                      checked={field.value?.includes("announcement")}
+                                      onCheckedChange={(checked) => {
+                                        const current = field.value || [];
+                                        if (checked) {
+                                          field.onChange([...current, "announcement"]);
+                                        } else {
+                                          field.onChange(current.filter((t: string) => t !== "announcement"));
+                                        }
+                                      }}
+                                      data-testid="newmsg-checkbox-type-announcement"
+                                    />
+                                    <label htmlFor="newmsg-type-announcement" className="text-sm font-medium leading-none cursor-pointer">
+                                      Announcement
+                                    </label>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Checkbox
+                                      id="newmsg-type-notification"
+                                      checked={field.value?.includes("notification")}
+                                      onCheckedChange={(checked) => {
+                                        const current = field.value || [];
+                                        if (checked) {
+                                          field.onChange([...current, "notification"]);
+                                        } else {
+                                          field.onChange(current.filter((t: string) => t !== "notification"));
+                                        }
+                                      }}
+                                      data-testid="newmsg-checkbox-type-notification"
+                                    />
+                                    <label htmlFor="newmsg-type-notification" className="text-sm font-medium leading-none cursor-pointer">
+                                      Notification
+                                    </label>
+                                  </div>
+                                </div>
+                                <p className="text-sm text-gray-500 mt-1">Selected: {field.value?.length || 0} type(s)</p>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={newMsgForm.control}
+                            name="recipientTarget"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Send To</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="newmsg-select-recipient-target">
+                                      <SelectValue placeholder="Select recipients" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="everyone">Everyone</SelectItem>
+                                    <SelectItem value="users">{newMsgIsPushSelected ? "Specific Accounts (with email)" : "Specific Users"}</SelectItem>
+                                    {!newMsgIsMessageType || newMsgTypes.length > 1 ? (
+                                      <>
+                                        <SelectItem value="roles">Roles</SelectItem>
+                                        <SelectItem value="teams">Teams</SelectItem>
+                                        <SelectItem value="divisions">Divisions</SelectItem>
+                                      </>
+                                    ) : null}
+                                  </SelectContent>
+                                </Select>
+                                {newMsgIsPushSelected && (
+                                  <p className="text-sm text-blue-600 bg-blue-50 p-2 rounded-md mt-2">
+                                    Push notifications are email-based. Only accounts with email addresses are shown.
+                                  </p>
+                                )}
+                                {newMsgIsMessageType && newMsgTypes.length === 1 && (
+                                  <p className="text-sm text-amber-600 bg-amber-50 p-2 rounded-md mt-2">
+                                    Direct messages can only be sent to specific users or everyone.
+                                  </p>
+                                )}
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          {newMsgRecipientTarget === "users" && (
+                            <FormField
+                              control={newMsgForm.control}
+                              name="recipientUserIds"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>{newMsgIsPushSelected ? "Select Accounts" : "Select Users"}</FormLabel>
+                                  <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
+                                    {filteredUsersForNewMsg.length === 0 ? (
+                                      <p className="text-sm text-gray-500 italic">
+                                        {newMsgIsPushSelected
+                                          ? "No accounts with email addresses found."
+                                          : "No users found."}
+                                      </p>
+                                    ) : (
+                                      filteredUsersForNewMsg.map((user: any) => (
+                                        <div key={user.id} className="flex items-center gap-2">
+                                          <Checkbox
+                                            checked={(field.value as string[] | undefined)?.includes(user.id) ?? false}
+                                            onCheckedChange={(checked) => {
+                                              const current = (field.value as string[]) || [];
+                                              if (checked) {
+                                                field.onChange([...current, user.id]);
+                                              } else {
+                                                field.onChange(current.filter((id: string) => id !== user.id));
+                                              }
+                                            }}
+                                            data-testid={`newmsg-checkbox-recipient-${user.id}`}
+                                          />
+                                          <span className="text-sm">
+                                            {user.firstName} {user.lastName} {user.email ? `- ${user.email}` : ''} ({user.role})
+                                          </span>
+                                        </div>
+                                      ))
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-gray-500 mt-1">
+                                    Selected: {field.value?.length || 0} {newMsgIsPushSelected ? "account(s)" : "user(s)"}
+                                  </p>
+                                  <FormMessage />
+                                </FormItem>
                               )}
+                            />
+                          )}
+
+                          {newMsgRecipientTarget === "roles" && (
+                            <FormField
+                              control={newMsgForm.control}
+                              name="recipientRoles"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Select Roles</FormLabel>
+                                  <div className="border rounded-md p-4 space-y-2">
+                                    {["admin", "coach", "player", "parent"].map((role) => (
+                                      <div key={role} className="flex items-center gap-2">
+                                        <Checkbox
+                                          checked={(field.value as string[] | undefined)?.includes(role) ?? false}
+                                          onCheckedChange={(checked) => {
+                                            const current = (field.value as string[]) || [];
+                                            if (checked) {
+                                              field.onChange([...current, role]);
+                                            } else {
+                                              field.onChange(current.filter((r: string) => r !== role));
+                                            }
+                                          }}
+                                          data-testid={`newmsg-checkbox-role-${role}`}
+                                        />
+                                        <span className="text-sm capitalize">{role}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <p className="text-sm text-gray-500 mt-1">Selected: {field.value?.length || 0} role(s)</p>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          )}
+
+                          {newMsgRecipientTarget === "teams" && (
+                            <FormField
+                              control={newMsgForm.control}
+                              name="recipientTeamIds"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Select Teams</FormLabel>
+                                  <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
+                                    {teams.map((team: any) => (
+                                      <div key={team.id} className="flex items-center gap-2">
+                                        <Checkbox
+                                          checked={(field.value as string[] | undefined)?.includes(String(team.id)) ?? false}
+                                          onCheckedChange={(checked) => {
+                                            const current = (field.value as string[]) || [];
+                                            if (checked) {
+                                              field.onChange([...current, String(team.id)]);
+                                            } else {
+                                              field.onChange(current.filter((id: string) => id !== String(team.id)));
+                                            }
+                                          }}
+                                          data-testid={`newmsg-checkbox-team-${team.id}`}
+                                        />
+                                        <span className="text-sm">{team.name}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <p className="text-sm text-gray-500 mt-1">Selected: {field.value?.length || 0} team(s)</p>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          )}
+
+                          {newMsgRecipientTarget === "divisions" && (
+                            <FormField
+                              control={newMsgForm.control}
+                              name="recipientDivisionIds"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Select Divisions</FormLabel>
+                                  <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
+                                    {(divisions || []).map((division: any) => (
+                                      <div key={division.id} className="flex items-center gap-2">
+                                        <Checkbox
+                                          checked={(field.value as string[] | undefined)?.includes(String(division.id)) ?? false}
+                                          onCheckedChange={(checked) => {
+                                            const current = (field.value as string[]) || [];
+                                            if (checked) {
+                                              field.onChange([...current, String(division.id)]);
+                                            } else {
+                                              field.onChange(current.filter((id: string) => id !== String(division.id)));
+                                            }
+                                          }}
+                                          data-testid={`newmsg-checkbox-division-${division.id}`}
+                                        />
+                                        <span className="text-sm">{division.name}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <p className="text-sm text-gray-500 mt-1">Selected: {field.value?.length || 0} division(s)</p>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          )}
+
+                          <FormField
+                            control={newMsgForm.control}
+                            name="deliveryChannels"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Delivery Channels</FormLabel>
+                                <div className="border rounded-md p-4 space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <Checkbox
+                                      checked={field.value?.includes("in_app")}
+                                      onCheckedChange={(checked) => {
+                                        const current = field.value || [];
+                                        if (checked) {
+                                          field.onChange([...current, "in_app"]);
+                                        } else {
+                                          field.onChange(current.filter((ch: string) => ch !== "in_app"));
+                                        }
+                                      }}
+                                      data-testid="newmsg-checkbox-channel-in-app"
+                                    />
+                                    <span className="text-sm">In-App</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Checkbox
+                                      checked={field.value?.includes("email")}
+                                      onCheckedChange={(checked) => {
+                                        const current = field.value || [];
+                                        if (checked) {
+                                          field.onChange([...current, "email"]);
+                                        } else {
+                                          field.onChange(current.filter((ch: string) => ch !== "email"));
+                                        }
+                                      }}
+                                      data-testid="newmsg-checkbox-channel-email"
+                                    />
+                                    <span className="text-sm">Email</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Checkbox
+                                      checked={field.value?.includes("push")}
+                                      onCheckedChange={(checked) => {
+                                        const current = field.value || [];
+                                        if (checked) {
+                                          field.onChange([...current, "push"]);
+                                        } else {
+                                          field.onChange(current.filter((ch: string) => ch !== "push"));
+                                        }
+                                      }}
+                                      data-testid="newmsg-checkbox-channel-push"
+                                    />
+                                    <span className="text-sm">Push</span>
+                                  </div>
+                                </div>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  Selected: {field.value?.length || 0} channel(s)
+                                </p>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          {(newMsgTypes.includes("announcement") || newMsgTypes.includes("notification")) && (
+                            <div className="border-t pt-4">
+                              <FormLabel className="text-base font-semibold">Scheduling</FormLabel>
+                              <div className="mt-3 space-y-3">
+                                <Select
+                                  value={newMsgScheduleType}
+                                  onValueChange={(val) => setNewMsgScheduleType(val as 'immediate' | 'scheduled' | 'recurring')}
+                                >
+                                  <SelectTrigger data-testid="newmsg-select-schedule-type">
+                                    <SelectValue placeholder="When to send" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="immediate">Send Immediately</SelectItem>
+                                    <SelectItem value="scheduled">Schedule for Later</SelectItem>
+                                    <SelectItem value="recurring">Recurring (Daily/Weekly)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+
+                                {newMsgScheduleType === 'scheduled' && (
+                                  <div className="space-y-2">
+                                    <Label>Send Date & Time</Label>
+                                    <Input
+                                      type="datetime-local"
+                                      value={newMsgScheduledAt}
+                                      onChange={(e) => setNewMsgScheduledAt(e.target.value)}
+                                      data-testid="newmsg-input-scheduled-at"
+                                    />
+                                  </div>
+                                )}
+
+                                {newMsgScheduleType === 'recurring' && (
+                                  <div className="space-y-3 bg-gray-50 p-3 rounded-md">
+                                    <div className="space-y-2">
+                                      <Label>Frequency</Label>
+                                      <Select value={newMsgRecurrenceFrequency} onValueChange={setNewMsgRecurrenceFrequency}>
+                                        <SelectTrigger data-testid="newmsg-select-recurrence-frequency">
+                                          <SelectValue placeholder="How often" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="daily">Daily</SelectItem>
+                                          <SelectItem value="weekly">Weekly</SelectItem>
+                                          <SelectItem value="monthly">Monthly</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label>Time of Day</Label>
+                                      <Input
+                                        type="time"
+                                        value={newMsgRecurrenceTime}
+                                        onChange={(e) => setNewMsgRecurrenceTime(e.target.value)}
+                                        data-testid="newmsg-input-recurrence-time"
+                                      />
+                                    </div>
+                                    <p className="text-xs text-gray-500">
+                                      Messages will be sent at the specified time based on Pacific Time.
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           )}
-                          {newMessageRecipient && !newMessageSearch.trim() && (
-                            <p className="text-xs text-green-600">User selected</p>
-                          )}
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Message</Label>
-                          <Textarea
-                            placeholder="Type your message..."
-                            value={newMessageText}
-                            onChange={(e) => setNewMessageText(e.target.value)}
-                            rows={4}
-                            data-testid="input-new-message-text"
-                          />
-                        </div>
-                        <Button
-                          className="w-full"
-                          onClick={() => sendNewMessageMutation.mutate({ recipientUserId: newMessageRecipient, message: newMessageText })}
-                          disabled={!newMessageRecipient || !newMessageText.trim() || sendNewMessageMutation.isPending}
-                          data-testid="button-send-new-message"
-                        >
-                          {sendNewMessageMutation.isPending ? 'Sending...' : 'Send Message'}
-                        </Button>
-                      </div>
+
+                          <Button type="submit" className="w-full" disabled={createNewMessage.isPending} data-testid="button-send-new-message">
+                            {createNewMessage.isPending ? (newMsgScheduleType === 'immediate' ? "Sending..." : "Scheduling...") : (newMsgScheduleType === 'immediate' ? "Send Message" : "Schedule Message")}
+                          </Button>
+                        </form>
+                      </Form>
                     </DialogContent>
                   </Dialog>
                 </div>

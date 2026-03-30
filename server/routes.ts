@@ -7408,11 +7408,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       })
         .from(productEnrollments)
         .innerJoin(products, eq(productEnrollments.programId, products.id))
+        .innerJoin(users, eq(productEnrollments.profileId, users.id))
         .where(and(
           eq(productEnrollments.organizationId, organizationId),
           eq(productEnrollments.status, 'active'),
           sql`${products.productCategory} IS DISTINCT FROM 'goods'`,
-          gte(productEnrollments.startDate, sql`NOW() - INTERVAL '30 days'`)
+          gte(productEnrollments.startDate, sql`NOW() - INTERVAL '30 days'`),
+          sql`${users.role} IS DISTINCT FROM 'parent'`
         ))
         .orderBy(desc(productEnrollments.startDate));
 

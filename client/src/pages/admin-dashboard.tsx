@@ -1875,21 +1875,22 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     const uniqueEnrollments = allRelevantEnrollments.filter((e, i, arr) =>
       arr.findIndex(x => x.id === e.id) === i
     );
-    const isOnTeam = (u: any) =>
-      u.teamId || (Array.isArray(u.teamIds) && u.teamIds.length > 0) || (Array.isArray(u.activeTeams) && u.activeTeams.length > 0);
+    const isOnTeamForProgram = (u: any, programId: string) => {
+      const programTeamIds = teams.filter((t: any) => String(t.programId) === String(programId)).map((t: any) => String(t.id));
+      if (programTeamIds.length === 0) return true;
+      if (Array.isArray(u.activeTeams) && u.activeTeams.some((at: any) => programTeamIds.includes(String(at.teamId)))) return true;
+      if (u.teamId && programTeamIds.includes(String(u.teamId))) return true;
+      return false;
+    };
     const hasActiveEnrollmentWithoutTeam = teams.length > 0 ? (() => {
-      if (user.role === "player") {
-        const hasActiveEnrollment = uniqueEnrollments.some((e: any) =>
-          e.profileId === user.id && e.status === 'active'
-        );
-        if (hasActiveEnrollment && !isOnTeam(user)) return true;
-      }
-      return linkedPlayersForUser.some((player: any) => {
-        const playerHasActive = uniqueEnrollments.some((e: any) =>
+      const checkPlayer = (player: any) => {
+        const playerActiveEnrollments = uniqueEnrollments.filter((e: any) =>
           e.profileId === player.id && e.status === 'active'
         );
-        return playerHasActive && !isOnTeam(player);
-      });
+        return playerActiveEnrollments.some((e: any) => !isOnTeamForProgram(player, e.programId));
+      };
+      if (user.role === "player" && checkPlayer(user)) return true;
+      return linkedPlayersForUser.some((player: any) => checkPlayer(player));
     })() : false;
     const hasPaymentFailed = uniqueEnrollments.some((e: any) =>
       e.status === 'payment_failed' || e.paymentStatus === 'failed'
@@ -1912,14 +1913,14 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     if (hasPaymentFailed) return "Payment Failed";
     if (hasLowBalance) return "Low Balance";
     const hasActiveEnrollmentOnTeam = (() => {
-      if (user.role === "player") {
-        const hasActive = uniqueEnrollments.some((e: any) => e.profileId === user.id && e.status === 'active');
-        if (hasActive && isOnTeam(user)) return true;
-      }
-      return linkedPlayersForUser.some((player: any) => {
-        const playerHasActive = uniqueEnrollments.some((e: any) => e.profileId === player.id && e.status === 'active');
-        return playerHasActive && isOnTeam(player);
-      });
+      const checkPlayer = (player: any) => {
+        const playerActiveEnrollments = uniqueEnrollments.filter((e: any) =>
+          e.profileId === player.id && e.status === 'active'
+        );
+        return playerActiveEnrollments.some((e: any) => isOnTeamForProgram(player, e.programId));
+      };
+      if (user.role === "player" && checkPlayer(user)) return true;
+      return linkedPlayersForUser.some((player: any) => checkPlayer(player));
     })();
     if (hasActiveEnrollmentOnTeam) return "Active Program";
     if (hasActiveSubscriber) return "Active Subscriber";
@@ -3803,26 +3804,74 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                     </TableCell>
                     <TableCell data-testid={`text-status-${user.id}`}>
                       {(() => {
-                        const status = deriveUserStatus(user);
-                        if (status === "Pending Assignment") {
-                          return <Badge className="bg-amber-500 text-white hover:bg-amber-600 whitespace-nowrap">Pending Assignment</Badge>;
+                        const allProfileIds = [user.id, ...linkedPlayers.map((p: any) => p.id)];
+                        const allEnrollments = enrollments.filter((e: any) =>
+                          allProfileIds.includes(e.profileId) || allProfileIds.includes(e.accountHolderId)
+                        );
+                        const activeEnrollments = allEnrollments.filter((e: any) => e.status === 'active');
+
+                        if (activeEnrollments.length === 0) {
+                          const hasExpired = allEnrollments.some((e: any) => e.status === 'expired' || e.status === 'cancelled');
+                          if (hasExpired) return <Badge className="bg-gray-500 text-white hover:bg-gray-600 whitespace-nowrap">Expired</Badge>;
+                          return <Badge className="bg-gray-200 text-gray-600 hover:bg-gray-300 whitespace-nowrap">No Enrollment</Badge>;
                         }
-                        if (status === "Active Program") {
+
+                        const seen = new Set<string>();
+                        const badges: { label: string; cls: string; key: string }[] = [];
+                        for (const enrollment of activeEnrollments) {
+                          const prog = programs.find((p: any) => String(p.id) === String(enrollment.programId));
+                          const progName = prog?.name || 'Program';
+                          const enrollKey = `${enrollment.profileId}-${enrollment.programId}`;
+                          if (seen.has(enrollKey)) continue;
+                          seen.add(enrollKey);
+
+                          if (enrollment.paymentStatus === 'failed') {
+                            badges.push({ label: `${progName}: Payment Failed`, cls: "bg-red-600 text-white hover:bg-red-700", key: enrollKey });
+                            continue;
+                          }
+
+                          const now = new Date();
+                          const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+                          if (enrollment.endDate) {
+                            const endDate = new Date(enrollment.endDate);
+                            if (endDate <= threeDaysFromNow && endDate > now) {
+                              badges.push({ label: `${progName}: Low Balance`, cls: "bg-yellow-400 text-yellow-900 hover:bg-yellow-500", key: enrollKey });
+                              continue;
+                            }
+                          }
+
+                          const programTeams = teams.filter((t: any) => String(t.programId) === String(enrollment.programId));
+                          if (programTeams.length > 0) {
+                            const profileId = enrollment.profileId;
+                            const playerOnTeam = programTeams.some((t: any) => {
+                              const profile = profileId === user.id ? user : linkedPlayers.find((p: any) => p.id === profileId);
+                              if (!profile) return false;
+                              if (Array.isArray(profile.activeTeams)) {
+                                return profile.activeTeams.some((at: any) => String(at.teamId) === String(t.id));
+                              }
+                              return String(profile.teamId) === String(t.id);
+                            });
+                            if (playerOnTeam) {
+                              badges.push({ label: `${progName}: Active`, cls: "bg-green-600 text-white hover:bg-green-700", key: enrollKey });
+                            } else {
+                              badges.push({ label: `${progName}: Needs Team`, cls: "bg-amber-500 text-white hover:bg-amber-600", key: enrollKey });
+                            }
+                          } else {
+                            badges.push({ label: `${progName}: Active`, cls: "bg-green-600 text-white hover:bg-green-700", key: enrollKey });
+                          }
+                        }
+
+                        if (badges.length === 0) {
                           return <Badge className="bg-green-600 text-white hover:bg-green-700 whitespace-nowrap">Active Program</Badge>;
                         }
-                        if (status === "Payment Failed") {
-                          return <Badge className="bg-red-600 text-white hover:bg-red-700 whitespace-nowrap">Payment Failed</Badge>;
-                        }
-                        if (status === "Low Balance") {
-                          return <Badge className="bg-yellow-400 text-yellow-900 hover:bg-yellow-500 whitespace-nowrap">Low Balance</Badge>;
-                        }
-                        if (status === "Active Subscriber") {
-                          return <Badge className="bg-green-600 text-white hover:bg-green-700 whitespace-nowrap">Active Subscriber</Badge>;
-                        }
-                        if (status === "Expired") {
-                          return <Badge className="bg-gray-500 text-white hover:bg-gray-600 whitespace-nowrap">Expired</Badge>;
-                        }
-                        return <Badge className="bg-gray-200 text-gray-600 hover:bg-gray-300 whitespace-nowrap">No Enrollment</Badge>;
+
+                        return (
+                          <div className="flex flex-col gap-1">
+                            {badges.map(b => (
+                              <Badge key={b.key} className={`${b.cls} whitespace-nowrap text-[10px] px-1.5 py-0.5`}>{b.label}</Badge>
+                            ))}
+                          </div>
+                        );
                       })()}
                     </TableCell>
                     <TableCell>

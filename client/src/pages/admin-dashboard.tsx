@@ -7075,6 +7075,134 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                       Times will automatically adjust for daylight saving changes
                     </p>
                   </div>
+                  
+                  {/* Recurring Event Options */}
+                  <div className="border rounded-lg p-4 space-y-3 bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="edit-recurring-toggle"
+                        checked={editIsRecurring}
+                        onCheckedChange={setEditIsRecurring}
+                        data-testid="switch-edit-recurring"
+                      />
+                      <Label htmlFor="edit-recurring-toggle" className="font-medium cursor-pointer">
+                        Make this a recurring event
+                      </Label>
+                    </div>
+                    
+                    {editIsRecurring && (
+                      <div className="space-y-4 pt-2">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Frequency</Label>
+                            <Select
+                              value={editRecurrenceFrequency}
+                              onValueChange={(value: 'daily' | 'weekly' | 'biweekly' | 'monthly') => {
+                                setEditRecurrenceFrequency(value);
+                                if (value !== 'weekly' && value !== 'biweekly') {
+                                  setEditRecurrenceDays([]);
+                                }
+                              }}
+                            >
+                              <SelectTrigger data-testid="select-edit-recurrence-frequency">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="daily">Daily</SelectItem>
+                                <SelectItem value="weekly">Weekly</SelectItem>
+                                <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
+                                <SelectItem value="monthly">Monthly</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Ends</Label>
+                            <Select
+                              value={editRecurrenceEndType}
+                              onValueChange={(value: 'count' | 'date') => setEditRecurrenceEndType(value)}
+                            >
+                              <SelectTrigger data-testid="select-edit-recurrence-end-type">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="count">After # of events</SelectItem>
+                                <SelectItem value="date">On specific date</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        
+                        {(editRecurrenceFrequency === 'weekly' || editRecurrenceFrequency === 'biweekly') && (
+                          <div className="space-y-2">
+                            <Label>Repeat On</Label>
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                { day: 0, label: 'Sun' },
+                                { day: 1, label: 'Mon' },
+                                { day: 2, label: 'Tue' },
+                                { day: 3, label: 'Wed' },
+                                { day: 4, label: 'Thu' },
+                                { day: 5, label: 'Fri' },
+                                { day: 6, label: 'Sat' },
+                              ].map(({ day, label }) => (
+                                <Button
+                                  key={day}
+                                  type="button"
+                                  variant={editRecurrenceDays.includes(day) ? "default" : "outline"}
+                                  size="sm"
+                                  className={`w-12 ${editRecurrenceDays.includes(day) ? 'bg-red-600 hover:bg-red-700' : ''}`}
+                                  onClick={() => {
+                                    if (editRecurrenceDays.includes(day)) {
+                                      setEditRecurrenceDays(editRecurrenceDays.filter(d => d !== day));
+                                    } else {
+                                      setEditRecurrenceDays([...editRecurrenceDays, day]);
+                                    }
+                                  }}
+                                  data-testid={`btn-edit-day-${label.toLowerCase()}`}
+                                >
+                                  {label}
+                                </Button>
+                              ))}
+                            </div>
+                            <p className="text-xs text-gray-500">Select which days of the week this event repeats</p>
+                          </div>
+                        )}
+                        
+                        {editRecurrenceEndType === 'count' ? (
+                          <div className="space-y-2">
+                            <Label>Number of Occurrences</Label>
+                            <Select
+                              value={String(editRecurrenceCount)}
+                              onValueChange={(value) => setEditRecurrenceCount(parseInt(value))}
+                            >
+                              <SelectTrigger data-testid="select-edit-recurrence-count">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {[2, 3, 4, 5, 6, 7, 8, 10, 12, 16, 20, 24, 30, 40, 52].map((count) => (
+                                  <SelectItem key={count} value={String(count)}>
+                                    {count} events
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <Label>End Date</Label>
+                            <Input
+                              type="date"
+                              value={editRecurrenceEndDate}
+                              onChange={(e) => setEditRecurrenceEndDate(e.target.value)}
+                              data-testid="input-edit-recurrence-end-date"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="space-y-3">
                     <Label>Location <span className="text-red-500">*</span></Label>
                     <div className="flex border rounded-lg overflow-hidden w-fit">
@@ -7325,137 +7453,6 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                     </div>
                   </div>
                   
-                  {/* Recurring Event Options */}
-                  <div className="border rounded-lg p-4 space-y-3 bg-gray-50">
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id="edit-recurring-toggle"
-                        checked={editIsRecurring}
-                        onCheckedChange={setEditIsRecurring}
-                        data-testid="switch-edit-recurring"
-                      />
-                      <Label htmlFor="edit-recurring-toggle" className="font-medium cursor-pointer">
-                        {editingEvent?.isRecurring ? "Recurring event settings" : "Create additional recurring events"}
-                      </Label>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      {editingEvent?.isRecurring
-                        ? (editIsRecurring ? "Update recurrence settings and generate new copies from this event" : "Disable to remove recurrence settings from this event")
-                        : (editIsRecurring ? "This will update the current event AND create additional recurring copies" : "Enable to generate recurring copies of this event")}
-                    </p>
-                    
-                    {editIsRecurring && (
-                      <div className="space-y-4 pt-2">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Frequency</Label>
-                            <Select
-                              value={editRecurrenceFrequency}
-                              onValueChange={(value: 'daily' | 'weekly' | 'biweekly' | 'monthly') => {
-                                setEditRecurrenceFrequency(value);
-                                if (value !== 'weekly' && value !== 'biweekly') {
-                                  setEditRecurrenceDays([]);
-                                }
-                              }}
-                            >
-                              <SelectTrigger data-testid="select-edit-recurrence-frequency">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="daily">Daily</SelectItem>
-                                <SelectItem value="weekly">Weekly</SelectItem>
-                                <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
-                                <SelectItem value="monthly">Monthly</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <Label>Ends</Label>
-                            <Select
-                              value={editRecurrenceEndType}
-                              onValueChange={(value: 'count' | 'date') => setEditRecurrenceEndType(value)}
-                            >
-                              <SelectTrigger data-testid="select-edit-recurrence-end-type">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="count">After # of events</SelectItem>
-                                <SelectItem value="date">On specific date</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        
-                        {(editRecurrenceFrequency === 'weekly' || editRecurrenceFrequency === 'biweekly') && (
-                          <div className="space-y-2">
-                            <Label>Repeat On</Label>
-                            <div className="flex flex-wrap gap-2">
-                              {[
-                                { day: 0, label: 'Sun' },
-                                { day: 1, label: 'Mon' },
-                                { day: 2, label: 'Tue' },
-                                { day: 3, label: 'Wed' },
-                                { day: 4, label: 'Thu' },
-                                { day: 5, label: 'Fri' },
-                                { day: 6, label: 'Sat' },
-                              ].map(({ day, label }) => (
-                                <Button
-                                  key={day}
-                                  type="button"
-                                  variant={editRecurrenceDays.includes(day) ? "default" : "outline"}
-                                  size="sm"
-                                  className={`w-12 ${editRecurrenceDays.includes(day) ? 'bg-red-600 hover:bg-red-700' : ''}`}
-                                  onClick={() => {
-                                    if (editRecurrenceDays.includes(day)) {
-                                      setEditRecurrenceDays(editRecurrenceDays.filter(d => d !== day));
-                                    } else {
-                                      setEditRecurrenceDays([...editRecurrenceDays, day]);
-                                    }
-                                  }}
-                                  data-testid={`btn-edit-day-${label.toLowerCase()}`}
-                                >
-                                  {label}
-                                </Button>
-                              ))}
-                            </div>
-                            <p className="text-xs text-gray-500">Select which days of the week this event repeats</p>
-                          </div>
-                        )}
-                        
-                        {editRecurrenceEndType === 'count' ? (
-                          <div className="space-y-2">
-                            <Label>Number of Additional Events</Label>
-                            <Select
-                              value={String(editRecurrenceCount)}
-                              onValueChange={(value) => setEditRecurrenceCount(parseInt(value))}
-                            >
-                              <SelectTrigger data-testid="select-edit-recurrence-count">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {[2, 3, 4, 5, 6, 7, 8, 10, 12, 16, 20, 24, 30, 40, 52].map((count) => (
-                                  <SelectItem key={count} value={String(count)}>
-                                    {count} events
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <Label>End Date</Label>
-                            <Input
-                              type="date"
-                              value={editRecurrenceEndDate}
-                              onChange={(e) => setEditRecurrenceEndDate(e.target.value)}
-                              data-testid="input-edit-recurrence-end-date"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
 
                   <div className="border-t pt-4">
                     <EventWindowsConfigurator

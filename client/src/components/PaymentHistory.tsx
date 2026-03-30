@@ -47,7 +47,7 @@ interface EnrichedPayment {
   amount: number;
   currency: string;
   paymentType: string;
-  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  status: 'pending' | 'completed' | 'failed' | 'refunded' | 'partially_refunded';
   stripePaymentId?: string;
   packageId?: string;
   programId?: string;

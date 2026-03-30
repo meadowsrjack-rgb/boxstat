@@ -37,6 +37,7 @@ import {
   insertFacilitySchema,
   insertAwardDefinitionSchema,
   insertUserAwardRecordSchema,
+  insertRefundSchema,
 } from "@shared/schema";
 import { evaluateAwardsForUser } from "./utils/awardEngine";
 import { populateAwards } from "./utils/populateAwards";
@@ -2654,6 +2655,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Error processing account.updated webhook:', connectError);
         }
 
+        return res.json({ received: true });
+      }
+
+      // Handle refund status updates (reconcile pending refunds)
+      if (event.type === 'charge.refund.updated') {
+        const stripeRefund = event.data.object as Stripe.Refund;
+        try {
+          const refunds = await storage.getRefundsByStripeId(stripeRefund.id);
+          for (const refund of refunds) {
+            if (refund.status === stripeRefund.status) continue;
+            const newStatus = stripeRefund.status as 'pending' | 'succeeded' | 'failed';
+            const clearedAt = newStatus === 'succeeded' ? new Date().toISOString() : null;
+            await storage.updateRefundStatus(refund.id, newStatus, clearedAt);
+            if (newStatus === 'succeeded') {
+              const allRefunds = await storage.getRefundsByPayment(refund.paymentId.toString());
+              const totalRefunded = allRefunds
+                .filter(r => r.status === 'succeeded')
+                .reduce((sum, r) => sum + r.amount, 0);
+              const payment = await storage.getPayment(refund.paymentId.toString());
+              if (payment) {
+                const isFullRefund = totalRefunded >= payment.amount;
+                await storage.updatePayment(refund.paymentId.toString(), {
+                  status: isFullRefund ? 'refunded' : 'partially_refunded',
+                });
+              }
+            }
+          }
+        } catch (refundWebhookError: any) {
+          console.error('Error processing charge.refund.updated:', refundWebhookError);
+        }
         return res.json({ received: true });
       }
 
@@ -10292,6 +10323,180 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     const updated = await storage.updatePayment(req.params.id, req.body);
     res.json(updated);
+  });
+
+  // Refund a payment
+  app.post('/api/payments/:id/refund', requireAuth, async (req: any, res) => {
+    try {
+      const { role, id: adminId, organizationId } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(adminId, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ message: 'Only admins can issue refunds' });
+      }
+
+      const paymentId = parseInt(req.params.id);
+      if (isNaN(paymentId)) {
+        return res.status(400).json({ message: 'Invalid payment ID' });
+      }
+
+      const payment = await storage.getPayment(req.params.id);
+      if (!payment) {
+        return res.status(404).json({ message: 'Payment not found' });
+      }
+
+      // Org scoping: ensure the payment belongs to the admin's organization
+      if (!payment.organizationId || payment.organizationId !== organizationId) {
+        return res.status(403).json({ message: 'Access denied: payment does not belong to your organization' });
+      }
+
+      if (payment.status === 'refunded') {
+        return res.status(400).json({ message: 'Payment has already been fully refunded' });
+      }
+
+      const { amount, reasonCode, notes, refundFee } = req.body;
+
+      if (!amount || typeof amount !== 'number' || amount <= 0) {
+        return res.status(400).json({ message: 'Invalid refund amount' });
+      }
+
+      if (!reasonCode) {
+        return res.status(400).json({ message: 'Reason code is required' });
+      }
+
+      // Calculate cumulative refunded amount to prevent over-refunding
+      const existingRefunds = await storage.getRefundsByPayment(paymentId);
+      const alreadyRefunded = existingRefunds
+        .filter(r => r.status === 'succeeded')
+        .reduce((sum, r) => sum + r.amount, 0);
+      const refundable = payment.amount - alreadyRefunded;
+
+      if (amount > refundable) {
+        return res.status(400).json({
+          message: `Refund amount exceeds refundable balance. Max refundable: $${(refundable / 100).toFixed(2)}`,
+        });
+      }
+
+      let stripeRefundId: string | undefined;
+      let clearedAt: string | undefined;
+
+      // Use org-aware Stripe client (handles connect accounts and org-specific keys)
+      const orgStripe = await getStripeForOrg(organizationId);
+
+      let refundStatus: string = 'succeeded';
+
+      // Process Stripe refund if payment has a Stripe payment ID
+      if (payment.stripePaymentId) {
+        // If payment has a Stripe ID but no Stripe client is available, fail explicitly
+        if (!orgStripe) {
+          return res.status(500).json({ message: 'Stripe is not configured for this organization. Cannot process refund.' });
+        }
+
+        try {
+          const refundParams: any = { amount };
+
+          // Determine what to refund based on the stripe payment ID type
+          if (payment.stripePaymentId.startsWith('pi_')) {
+            refundParams.payment_intent = payment.stripePaymentId;
+          } else if (payment.stripePaymentId.startsWith('ch_')) {
+            refundParams.charge = payment.stripePaymentId;
+          } else if (payment.stripePaymentId.startsWith('cs_')) {
+            // Checkout session - retrieve to get the payment intent
+            const session = await orgStripe.checkout.sessions.retrieve(payment.stripePaymentId);
+            if (session.payment_intent && typeof session.payment_intent === 'string') {
+              refundParams.payment_intent = session.payment_intent;
+            } else {
+              return res.status(400).json({ message: 'Cannot refund: no payment intent found for this checkout session' });
+            }
+          } else {
+            return res.status(400).json({ message: 'Cannot refund this type of payment via Stripe' });
+          }
+
+          // Optionally refund the application fee
+          if (refundFee) {
+            refundParams.refund_application_fee = true;
+          }
+
+          const stripeRefund = await orgStripe.refunds.create(refundParams);
+          stripeRefundId = stripeRefund.id;
+          // Use actual Stripe refund status: 'pending', 'succeeded', or 'failed'
+          refundStatus = stripeRefund.status || 'pending';
+          // Only set clearedAt when Stripe confirms it succeeded
+          if (refundStatus === 'succeeded') {
+            clearedAt = new Date().toISOString();
+          }
+        } catch (stripeError: any) {
+          console.error('Stripe refund error:', stripeError);
+          return res.status(400).json({ message: `Stripe refund failed: ${stripeError.message}` });
+        }
+      } else {
+        // No Stripe payment ID - record the refund internally as succeeded immediately
+        refundStatus = 'succeeded';
+        clearedAt = new Date().toISOString();
+      }
+
+      // Only update payment status when the refund has actually succeeded
+      // (Stripe refunds can be 'pending' for bank transfers, etc.)
+      if (refundStatus === 'succeeded') {
+        const totalRefunded = alreadyRefunded + amount;
+        const isFullRefund = totalRefunded >= payment.amount;
+        const newStatus = isFullRefund ? 'refunded' : 'partially_refunded';
+        await storage.updatePayment(req.params.id, { status: newStatus });
+      }
+      const updatedPayment = await storage.getPayment(req.params.id);
+
+      // Record the refund
+      const refundRecord = await storage.createRefund({
+        paymentId,
+        organizationId: payment.organizationId || organizationId,
+        stripeRefundId,
+        amount,
+        reasonCode,
+        notes: notes || null,
+        initiatedBy: adminId,
+        refundedFee: refundFee || false,
+        status: refundStatus,
+        clearedAt: clearedAt || null,
+      });
+
+      res.json({
+        refund: refundRecord,
+        payment: updatedPayment || payment,
+      });
+    } catch (error: any) {
+      console.error('Refund error:', error);
+      res.status(500).json({ message: 'Failed to process refund' });
+    }
+  });
+
+  // Get refunds for a payment
+  app.get('/api/payments/:id/refunds', requireAuth, async (req: any, res) => {
+    try {
+      const { role, id: adminId, organizationId } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(adminId, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ message: 'Only admins can view refunds' });
+      }
+
+      const paymentId = parseInt(req.params.id);
+      if (isNaN(paymentId)) {
+        return res.status(400).json({ message: 'Invalid payment ID' });
+      }
+
+      // Org scoping: verify the payment belongs to the admin's organization
+      const payment = await storage.getPayment(req.params.id);
+      if (!payment) {
+        return res.status(404).json({ message: 'Payment not found' });
+      }
+      if (!payment.organizationId || payment.organizationId !== organizationId) {
+        return res.status(403).json({ message: 'Access denied: payment does not belong to your organization' });
+      }
+
+      const refunds = await storage.getRefundsByPayment(paymentId);
+      res.json(refunds);
+    } catch (error: any) {
+      console.error('Error fetching refunds:', error);
+      res.status(500).json({ message: 'Failed to fetch refunds' });
+    }
   });
   
   // =============================================

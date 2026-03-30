@@ -880,6 +880,30 @@ export const payments = pgTable("payments", {
   organizationId: varchar("organization_id"), // organization
 });
 
+// Refunds table
+export const refunds = pgTable("refunds", {
+  id: serial().primaryKey().notNull(),
+  paymentId: integer("payment_id").notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  stripeRefundId: varchar("stripe_refund_id"),
+  amount: integer().notNull(), // Amount in cents
+  reasonCode: varchar("reason_code").notNull(), // customer_request, duplicate, fraudulent, product_not_received, other
+  notes: text(),
+  initiatedBy: varchar("initiated_by").notNull(), // admin user id
+  refundedFee: boolean("refunded_fee").default(false),
+  status: varchar().default('succeeded').notNull(), // pending, succeeded, failed
+  requestedAt: timestamp("requested_at", { mode: 'string' }).defaultNow(),
+  clearedAt: timestamp("cleared_at", { mode: 'string' }),
+});
+
+export const insertRefundSchema = createInsertSchema(refunds).omit({
+  id: true,
+  requestedAt: true,
+});
+
+export type InsertRefund = z.infer<typeof insertRefundSchema>;
+export type Refund = typeof refunds.$inferSelect;
+
 // Skills table (for coach evaluations)
 export const skills = pgTable("skills", {
   id: serial().primaryKey().notNull(),
@@ -1700,7 +1724,7 @@ export interface Payment {
   amount: number;
   currency: string;
   paymentType: string; // Configurable by organization
-  status: "pending" | "completed" | "failed" | "refunded";
+  status: "pending" | "completed" | "failed" | "refunded" | "partially_refunded";
   stripePaymentId?: string;
   packageId?: string;
   programId?: string;
@@ -1717,7 +1741,7 @@ export const insertPaymentSchema = z.object({
   amount: z.number().min(0),
   currency: z.string().default("usd"),
   paymentType: z.string().min(1),
-  status: z.enum(["pending", "completed", "failed", "refunded"]).default("pending"),
+  status: z.enum(["pending", "completed", "failed", "refunded", "partially_refunded"]).default("pending"),
   stripePaymentId: z.string().optional(),
   packageId: z.string().optional(),
   programId: z.string().optional(),

@@ -89,6 +89,9 @@ import {
   type ChatMute,
   type InsertChatMute,
   chatMutes,
+  type Refund,
+  type InsertRefund,
+  refunds,
 } from "@shared/schema";
 
 // =============================================
@@ -205,6 +208,12 @@ export interface IStorage {
   getPaymentsByUser(userId: string): Promise<Payment[]>;
   createPayment(payment: InsertPayment): Promise<Payment>;
   updatePayment(id: string, updates: Partial<Payment>): Promise<Payment | undefined>;
+
+  // Refund operations
+  createRefund(refund: InsertRefund): Promise<Refund>;
+  getRefundsByPayment(paymentId: string | number): Promise<Refund[]>;
+  getRefundsByStripeId(stripeRefundId: string): Promise<Refund[]>;
+  updateRefundStatus(refundId: number, status: 'pending' | 'succeeded' | 'failed', clearedAt: string | null): Promise<void>;
   
   // Waiver operations
   getWaiver(id: string): Promise<Waiver | undefined>;
@@ -433,6 +442,8 @@ class MemStorage implements IStorage {
   private chatMutesStore: Map<number, ChatMute> = new Map();
   private nextChatMuteId = 1;
   private payments: Map<string, Payment> = new Map();
+  private refundsStore: Map<number, Refund> = new Map();
+  private nextRefundId = 1;
   private programs: Map<string, Program> = new Map();
   private waivers: Map<string, Waiver> = new Map();
   private packageSelections: Map<string, PackageSelection> = new Map();
@@ -1609,6 +1620,38 @@ class MemStorage implements IStorage {
     const updated = { ...payment, ...updates };
     this.payments.set(id, updated);
     return updated;
+  }
+
+  async createRefund(refund: InsertRefund): Promise<Refund> {
+    const id = this.nextRefundId++;
+    const newRefund: Refund = {
+      ...refund,
+      id,
+      stripeRefundId: refund.stripeRefundId ?? null,
+      notes: refund.notes ?? null,
+      refundedFee: refund.refundedFee ?? false,
+      status: refund.status ?? 'succeeded',
+      requestedAt: new Date().toISOString(),
+      clearedAt: refund.clearedAt ?? null,
+    };
+    this.refundsStore.set(id, newRefund);
+    return newRefund;
+  }
+
+  async getRefundsByPayment(paymentId: string | number): Promise<Refund[]> {
+    const id = typeof paymentId === 'string' ? parseInt(paymentId, 10) : paymentId;
+    return Array.from(this.refundsStore.values()).filter(r => r.paymentId === id);
+  }
+
+  async getRefundsByStripeId(stripeRefundId: string): Promise<Refund[]> {
+    return Array.from(this.refundsStore.values()).filter(r => r.stripeRefundId === stripeRefundId);
+  }
+
+  async updateRefundStatus(refundId: number, status: 'pending' | 'succeeded' | 'failed', clearedAt: string | null): Promise<void> {
+    const refund = this.refundsStore.get(refundId);
+    if (refund) {
+      this.refundsStore.set(refundId, { ...refund, status, clearedAt: clearedAt ?? null });
+    }
   }
   
   // Waiver operations
@@ -4387,6 +4430,39 @@ class DatabaseStorage implements IStorage {
     
     if (results.length === 0) return undefined;
     return this.mapDbPaymentToPayment(results[0]);
+  }
+
+  async createRefund(refund: InsertRefund): Promise<Refund> {
+    const results = await db.insert(schema.refunds).values({
+      paymentId: refund.paymentId,
+      organizationId: refund.organizationId,
+      stripeRefundId: refund.stripeRefundId ?? null,
+      amount: refund.amount,
+      reasonCode: refund.reasonCode,
+      notes: refund.notes ?? null,
+      initiatedBy: refund.initiatedBy,
+      refundedFee: refund.refundedFee ?? false,
+      status: refund.status ?? 'succeeded',
+      clearedAt: refund.clearedAt ?? null,
+    }).returning();
+    return results[0] as Refund;
+  }
+
+  async getRefundsByPayment(paymentId: string | number): Promise<Refund[]> {
+    const id = typeof paymentId === 'string' ? parseInt(paymentId, 10) : paymentId;
+    const results = await db.select().from(schema.refunds).where(eq(schema.refunds.paymentId, id));
+    return results as Refund[];
+  }
+
+  async getRefundsByStripeId(stripeRefundId: string): Promise<Refund[]> {
+    const results = await db.select().from(schema.refunds).where(eq(schema.refunds.stripeRefundId, stripeRefundId));
+    return results as Refund[];
+  }
+
+  async updateRefundStatus(refundId: number, status: 'pending' | 'succeeded' | 'failed', clearedAt: string | null): Promise<void> {
+    await db.update(schema.refunds)
+      .set({ status, clearedAt: clearedAt ?? null })
+      .where(eq(schema.refunds.id, refundId));
   }
 
   // Waiver operations

@@ -692,7 +692,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <RecentTransactionsCard payments={payments} users={users} programs={programs} />
+            <RecentTransactionsCard payments={payments} users={users} programs={programs} isAdmin={currentUser?.role === 'admin' || hasAdminProfile} />
           </TabsContent>
 
           <TabsContent value="users">
@@ -861,24 +861,131 @@ function StatCard({ title, value, icon, subtitle, testId }: any) {
   );
 }
 
-function RecentTransactionsCard({ payments, users, programs }: any) {
+function RecentTransactionsCard({ payments, users, programs, isAdmin }: any) {
+  const { toast } = useToast();
   const [showAll, setShowAll] = useState(false);
-  
-  const sortedPayments = [...payments]
+  const [refundModalPayment, setRefundModalPayment] = useState<any>(null);
+  const [refundType, setRefundType] = useState<'full' | 'partial'>('full');
+  const [refundAmount, setRefundAmount] = useState('');
+  const [refundReason, setRefundReason] = useState('');
+  const [refundFee, setRefundFee] = useState(false);
+  const [refundNotes, setRefundNotes] = useState('');
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [localPayments, setLocalPayments] = useState<any[]>(payments);
+  const [expandedRefunds, setExpandedRefunds] = useState<Set<string | number>>(new Set());
+  const [refundsCache, setRefundsCache] = useState<Record<string | number, any[]>>({});
+
+  useEffect(() => {
+    setLocalPayments(payments);
+  }, [payments]);
+
+  const sortedPayments = [...localPayments]
     .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   
   const recentPayments = sortedPayments.slice(0, 5);
   const olderPayments = sortedPayments.slice(5);
+
+  const refundMutation = useMutation({
+    mutationFn: async ({ paymentId, amount, reasonCode, notes, refundFee }: any) => {
+      return apiRequest(`/api/payments/${paymentId}/refund`, {
+        method: 'POST',
+        data: { amount, reasonCode, notes, refundFee },
+      });
+    },
+    onSuccess: (data: any) => {
+      toast({ title: 'Refund processed successfully' });
+      const paymentId = data.payment?.id;
+      setLocalPayments(prev => prev.map((p: any) =>
+        String(p.id) === String(paymentId) ? { ...p, status: data.payment.status } : p
+      ));
+      // Update refund cache for this payment
+      if (paymentId && data.refund) {
+        setRefundsCache(prev => ({
+          ...prev,
+          [paymentId]: [...(prev[paymentId] || []), data.refund],
+        }));
+      }
+      queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
+      setRefundModalPayment(null);
+      setConfirmDialogOpen(false);
+      resetRefundForm();
+    },
+    onError: (error: any) => {
+      toast({ title: 'Refund failed', description: error.message || 'An error occurred', variant: 'destructive' });
+    },
+  });
+
+  const toggleRefundDetails = async (payment: any) => {
+    const id = payment.id;
+    const isExpanded = expandedRefunds.has(id);
+    if (isExpanded) {
+      setExpandedRefunds(prev => { const s = new Set(prev); s.delete(id); return s; });
+    } else {
+      setExpandedRefunds(prev => new Set([...prev, id]));
+      if (!refundsCache[id]) {
+        try {
+          const data = await apiRequest(`/api/payments/${id}/refunds`);
+          setRefundsCache(prev => ({ ...prev, [id]: Array.isArray(data) ? data : [] }));
+        } catch {
+          setRefundsCache(prev => ({ ...prev, [id]: [] }));
+        }
+      }
+    }
+  };
+
+  const reasonCodeLabels: Record<string, string> = {
+    customer_request: 'Customer Request',
+    duplicate: 'Duplicate Charge',
+    fraudulent: 'Fraudulent',
+    product_not_received: 'Product Not Received',
+    other: 'Other',
+  };
+
+  const resetRefundForm = () => {
+    setRefundType('full');
+    setRefundAmount('');
+    setRefundReason('');
+    setRefundFee(false);
+    setRefundNotes('');
+  };
+
+  const openRefundModal = (payment: any) => {
+    setRefundModalPayment(payment);
+    setRefundType('full');
+    setRefundAmount((payment.amount / 100).toFixed(2));
+    setRefundReason('');
+    setRefundFee(false);
+    setRefundNotes('');
+  };
+
+  const getRefundAmountInCents = () => {
+    if (refundType === 'full') return refundModalPayment?.amount;
+    const parsed = parseFloat(refundAmount);
+    return isNaN(parsed) ? 0 : Math.round(parsed * 100);
+  };
+
+  const handleConfirmRefund = () => {
+    const amountInCents = getRefundAmountInCents();
+    refundMutation.mutate({
+      paymentId: refundModalPayment.id,
+      amount: amountInCents,
+      reasonCode: refundReason,
+      notes: refundNotes,
+      refundFee,
+    });
+  };
   
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { variant: any; label: string }> = {
+    const statusConfig: Record<string, { variant: any; label: string; className?: string }> = {
       completed: { variant: "default", label: "Completed" },
       pending: { variant: "secondary", label: "Pending" },
       failed: { variant: "destructive", label: "Failed" },
+      refunded: { variant: "outline", label: "Refunded", className: "bg-orange-50 text-orange-700 border-orange-200" },
+      partially_refunded: { variant: "outline", label: "Partial Refund", className: "bg-yellow-50 text-yellow-700 border-yellow-200" },
     };
     
     const config = statusConfig[status] || statusConfig.pending;
-    return <Badge variant={config.variant as any} data-testid={`badge-status-${status}`}>{config.label}</Badge>;
+    return <Badge variant={config.variant as any} className={config.className} data-testid={`badge-status-${status}`}>{config.label}</Badge>;
   };
   
   const getUserName = (payment: any) => {
@@ -948,35 +1055,103 @@ function RecentTransactionsCard({ payments, users, programs }: any) {
     );
   };
   
-  const TransactionRow = ({ payment }: { payment: any }) => (
-    <div className="flex items-center justify-between py-3 border-b last:border-0" data-testid={`transaction-${payment.id}`}>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <p className="font-medium text-sm truncate" data-testid={`transaction-user-${payment.id}`}>
-            {getUserName(payment)}
-          </p>
-          {getStatusBadge(payment.status)}
-          {getPaymentTypeBadge(payment)}
+  const canRefund = (payment: any) => {
+    return isAdmin && payment.status === 'completed';
+  };
+
+  const isRefunded = (payment: any) => {
+    return payment.status === 'refunded' || payment.status === 'partially_refunded';
+  };
+
+  const TransactionRow = ({ payment }: { payment: any }) => {
+    const isExpanded = expandedRefunds.has(payment.id);
+    const rowRefunds = refundsCache[payment.id] || [];
+    const showExpand = isAdmin && isRefunded(payment);
+
+    return (
+      <div className="border-b last:border-0" data-testid={`transaction-${payment.id}`}>
+        <div className="flex items-center justify-between py-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-medium text-sm truncate" data-testid={`transaction-user-${payment.id}`}>
+                {getUserName(payment)}
+              </p>
+              {getStatusBadge(payment.status)}
+              {getPaymentTypeBadge(payment)}
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-xs text-gray-500" data-testid={`transaction-program-${payment.id}`}>
+                {getProgramName(payment)}
+              </p>
+              <span className="text-xs text-gray-400">•</span>
+              <p className="text-xs text-gray-500" data-testid={`transaction-date-${payment.id}`}>
+                {formatDate(payment.createdAt)}
+              </p>
+              {showExpand && (
+                <button
+                  onClick={() => toggleRefundDetails(payment)}
+                  className="text-xs text-blue-600 hover:underline ml-1"
+                  data-testid={`transaction-expand-${payment.id}`}
+                >
+                  {isExpanded ? 'Hide refunds' : 'View refunds'}
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="ml-4 flex-shrink-0 flex items-center gap-2">
+            <p className="text-sm font-semibold" data-testid={`transaction-amount-${payment.id}`}>
+              ${(payment.amount / 100).toFixed(2)}
+            </p>
+            {canRefund(payment) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" data-testid={`transaction-menu-${payment.id}`}>
+                    <span className="sr-only">Open menu</span>
+                    <span className="text-base leading-none">⋮</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => openRefundModal(payment)}
+                    data-testid={`transaction-refund-${payment.id}`}
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Refund
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2 mt-1">
-          <p className="text-xs text-gray-500" data-testid={`transaction-program-${payment.id}`}>
-            {getProgramName(payment)}
-          </p>
-          <span className="text-xs text-gray-400">•</span>
-          <p className="text-xs text-gray-500" data-testid={`transaction-date-${payment.id}`}>
-            {formatDate(payment.createdAt)}
-          </p>
-        </div>
+        {showExpand && isExpanded && (
+          <div className="pb-3 pl-2 pr-2">
+            {rowRefunds.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">Loading refund history...</p>
+            ) : (
+              <div className="space-y-2">
+                {rowRefunds.map((r: any, idx: number) => (
+                  <div key={r.id || idx} className="rounded-md bg-orange-50 border border-orange-100 p-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-orange-800">${(r.amount / 100).toFixed(2)} refunded</span>
+                      <span className="text-orange-600">{reasonCodeLabels[r.reasonCode] || r.reasonCode}</span>
+                    </div>
+                    <div className="flex justify-between mt-1 text-orange-600">
+                      <span>Requested: {r.requestedAt ? formatDate(r.requestedAt) : '—'}</span>
+                      <span>Cleared: {r.clearedAt ? formatDate(r.clearedAt) : 'Pending'}</span>
+                    </div>
+                    {r.notes && <p className="mt-1 text-orange-600">Note: {r.notes}</p>}
+                    {r.stripeRefundId && <p className="mt-1 text-gray-400 font-mono">{r.stripeRefundId}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
-      <div className="ml-4 flex-shrink-0">
-        <p className="text-sm font-semibold" data-testid={`transaction-amount-${payment.id}`}>
-          ${(payment.amount / 100).toFixed(2)}
-        </p>
-      </div>
-    </div>
-  );
+    );
+  };
   
-  if (payments.length === 0) {
+  if (localPayments.length === 0) {
     return (
       <Card data-testid="card-recent-transactions">
         <CardHeader>
@@ -995,49 +1170,200 @@ function RecentTransactionsCard({ payments, users, programs }: any) {
     );
   }
   
+  const refundAmountInCents = getRefundAmountInCents();
+  const refundAmountDollars = (refundAmountInCents / 100).toFixed(2);
+  const customerName = refundModalPayment ? getUserName(refundModalPayment) : '';
+  const isRefundValid = refundReason && refundAmountInCents > 0 && (!refundModalPayment || refundAmountInCents <= refundModalPayment.amount);
+
   return (
-    <Card data-testid="card-recent-transactions">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ArrowLeftRight className="w-5 h-5" />
-          Recent Transactions
-        </CardTitle>
-        <CardDescription>
-          {sortedPayments.length} total transaction{sortedPayments.length !== 1 ? 's' : ''}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-0">
-          {recentPayments.map((payment: any) => (
-            <TransactionRow key={payment.id} payment={payment} />
-          ))}
-          
-          {olderPayments.length > 0 && (
-            <Collapsible open={showAll} onOpenChange={setShowAll}>
-              <CollapsibleTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="w-full mt-2 flex items-center justify-center gap-2"
-                  data-testid="button-show-all-transactions"
-                >
-                  <span className="text-sm">
-                    {showAll ? 'Show Less' : `Show ${olderPayments.length} More`}
-                  </span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showAll ? 'rotate-180' : ''}`} />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="space-y-0 mt-2">
-                  {olderPayments.map((payment: any) => (
-                    <TransactionRow key={payment.id} payment={payment} />
-                  ))}
+    <>
+      <Card data-testid="card-recent-transactions">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ArrowLeftRight className="w-5 h-5" />
+            Recent Transactions
+          </CardTitle>
+          <CardDescription>
+            {sortedPayments.length} total transaction{sortedPayments.length !== 1 ? 's' : ''}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-0">
+            {recentPayments.map((payment: any) => (
+              <TransactionRow key={payment.id} payment={payment} />
+            ))}
+            
+            {olderPayments.length > 0 && (
+              <Collapsible open={showAll} onOpenChange={setShowAll}>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="w-full mt-2 flex items-center justify-center gap-2"
+                    data-testid="button-show-all-transactions"
+                  >
+                    <span className="text-sm">
+                      {showAll ? 'Show Less' : `Show ${olderPayments.length} More`}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${showAll ? 'rotate-180' : ''}`} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="space-y-0 mt-2">
+                    {olderPayments.map((payment: any) => (
+                      <TransactionRow key={payment.id} payment={payment} />
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Refund Modal */}
+      <Dialog open={!!refundModalPayment && !confirmDialogOpen} onOpenChange={(open) => { if (!open) { setRefundModalPayment(null); resetRefundForm(); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Issue Refund</DialogTitle>
+            <DialogDescription>
+              Process a refund for this transaction. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {refundModalPayment && (
+            <div className="space-y-4">
+              <div className="rounded-md bg-gray-50 p-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Customer:</span>
+                  <span className="font-medium">{customerName}</span>
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
+                <div className="flex justify-between mt-1">
+                  <span className="text-gray-600">Original amount:</span>
+                  <span className="font-medium">${(refundModalPayment.amount / 100).toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium">Refund Type</Label>
+                <div className="flex gap-3 mt-2">
+                  <Button
+                    type="button"
+                    variant={refundType === 'full' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => { setRefundType('full'); setRefundAmount((refundModalPayment.amount / 100).toFixed(2)); }}
+                  >
+                    Full Refund
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={refundType === 'partial' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setRefundType('partial')}
+                  >
+                    Partial Refund
+                  </Button>
+                </div>
+              </div>
+
+              {refundType === 'partial' && (
+                <div>
+                  <Label htmlFor="refund-amount" className="text-sm font-medium">Refund Amount ($)</Label>
+                  <Input
+                    id="refund-amount"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    max={(refundModalPayment.amount / 100).toFixed(2)}
+                    value={refundAmount}
+                    onChange={(e) => setRefundAmount(e.target.value)}
+                    className="mt-1"
+                    placeholder="0.00"
+                  />
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="refund-reason" className="text-sm font-medium">Reason Code <span className="text-red-500">*</span></Label>
+                <Select value={refundReason} onValueChange={setRefundReason}>
+                  <SelectTrigger id="refund-reason" className="mt-1">
+                    <SelectValue placeholder="Select a reason..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="customer_request">Customer Request</SelectItem>
+                    <SelectItem value="duplicate">Duplicate Charge</SelectItem>
+                    <SelectItem value="fraudulent">Fraudulent</SelectItem>
+                    <SelectItem value="product_not_received">Product Not Received</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Switch
+                  id="refund-fee"
+                  checked={refundFee}
+                  onCheckedChange={setRefundFee}
+                />
+                <Label htmlFor="refund-fee" className="text-sm">Refund BoxStat Fee? (proportional)</Label>
+              </div>
+
+              <div>
+                <Label htmlFor="refund-notes" className="text-sm font-medium">Internal Notes</Label>
+                <Textarea
+                  id="refund-notes"
+                  value={refundNotes}
+                  onChange={(e) => setRefundNotes(e.target.value)}
+                  className="mt-1"
+                  placeholder="Optional notes for your records..."
+                  rows={2}
+                />
+              </div>
+
+              <div className="rounded-md border border-orange-200 bg-orange-50 p-3 text-sm">
+                <p className="font-medium text-orange-800">Refund Summary</p>
+                <p className="text-orange-700 mt-1">
+                  You are about to refund <strong>${refundType === 'full' ? (refundModalPayment.amount / 100).toFixed(2) : (parseFloat(refundAmount) || 0).toFixed(2)}</strong> to <strong>{customerName}</strong>.
+                </p>
+                <p className="text-orange-600 mt-1 text-xs">⚠ This cannot be undone.</p>
+              </div>
+            </div>
           )}
-        </div>
-      </CardContent>
-    </Card>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setRefundModalPayment(null); resetRefundForm(); }}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!isRefundValid || refundMutation.isPending}
+              onClick={() => setConfirmDialogOpen(true)}
+            >
+              Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Refund</AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to refund <strong>${refundAmountDollars}</strong> to <strong>{customerName}</strong>. This cannot be undone. Proceed?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmDialogOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmRefund}
+              disabled={refundMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {refundMutation.isPending ? 'Processing...' : 'Confirm Refund'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

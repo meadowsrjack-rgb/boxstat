@@ -13771,7 +13771,8 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
 
   const recipientTarget = form.watch("recipientTarget");
   const formTypes = form.watch("types") || [];
-  const isEmailTypeSelected = formTypes.includes("email");
+  const [notifEmailEnabled, setNotifEmailEnabled] = useState(false);
+  const isEmailTypeSelected = notifEmailEnabled;
   
   const filteredUsersForNotification = isEmailTypeSelected 
     ? users.filter((u: any) => u.email && u.email.trim() !== '')
@@ -13806,7 +13807,7 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
           : undefined;
         
         const campaignChannels = ["in_app", "push"];
-        if ((data.types || []).includes("email")) campaignChannels.push("email");
+        if (notifEmailEnabled) campaignChannels.push("email");
         const campaignData = {
           title: data.title,
           message: data.message,
@@ -13827,9 +13828,8 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
         return await apiRequest("POST", "/api/notification-campaigns", campaignData);
       }
       
-      // For immediate messages, use the regular notification API
       const computedChannels = ["in_app", "push"];
-      if ((data.types || []).includes("email")) computedChannels.push("email");
+      if (notifEmailEnabled) computedChannels.push("email");
       const notificationData = {
         ...data,
         deliveryChannels: computedChannels,
@@ -13880,6 +13880,7 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
       setRecurrenceFrequency('daily');
       setRecurrenceTime('09:00');
       setNotificationUserSearch("");
+      setNotifEmailEnabled(false);
     }
   };
 
@@ -14025,7 +14026,16 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
               <DialogTitle>Create New Announcement</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => createMessage.mutate(data))} className="space-y-4 overflow-y-auto flex-1 min-h-0 pr-1">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const currentTypes = form.getValues("types") || [];
+                if (currentTypes.length === 0 && notifEmailEnabled) {
+                  const data = form.getValues();
+                  createMessage.mutate({ ...data, types: ["announcement"] });
+                } else {
+                  form.handleSubmit((data) => createMessage.mutate(data))(e);
+                }
+              }} className="space-y-4 overflow-y-auto flex-1 min-h-0 pr-1">
                 <FormField
                   control={form.control}
                   name="title"
@@ -14087,14 +14097,9 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
                         <div className="flex items-center gap-2">
                           <Checkbox
                             id="type-email"
-                            checked={field.value?.includes("email")}
+                            checked={notifEmailEnabled}
                             onCheckedChange={(checked) => {
-                              const current = field.value || [];
-                              if (checked) {
-                                field.onChange([...current, "email"]);
-                              } else {
-                                field.onChange(current.filter((t: string) => t !== "email"));
-                              }
+                              setNotifEmailEnabled(!!checked);
                             }}
                             data-testid="checkbox-type-email"
                           />
@@ -14106,7 +14111,7 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
                           </label>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">Selected: {field.value?.length || 0} type(s)</p>
+                      <p className="text-sm text-gray-500 mt-1">Selected: {(field.value?.length || 0) + (notifEmailEnabled ? 1 : 0)} type(s)</p>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -17966,7 +17971,8 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
   const newMsgRecipientTarget = newMsgForm.watch("recipientTarget");
   const newMsgTypes = newMsgForm.watch("types") || [];
   const newMsgIsMessageType = newMsgTypes.includes("message");
-  const newMsgIsEmailType = newMsgTypes.includes("email");
+  const [newMsgEmailEnabled, setNewMsgEmailEnabled] = useState(false);
+  const newMsgIsEmailType = newMsgEmailEnabled;
 
   const filteredUsersForNewMsg = newMsgIsEmailType
     ? users.filter((u: any) => u.email && u.email.trim() !== '')
@@ -17992,6 +17998,7 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
       setNewMsgRecurrenceFrequency('daily');
       setNewMsgRecurrenceTime('09:00');
       setNewMsgUserSearch("");
+      setNewMsgEmailEnabled(false);
     }
   };
 
@@ -18000,7 +18007,7 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
       const types = data.types || [];
       const hasMessageType = types.includes("message");
       const hasAnnouncementType = types.includes("announcement");
-      const hasEmailType = types.includes("email");
+      const hasEmailType = newMsgEmailEnabled;
 
       if (!hasMessageType && !hasAnnouncementType && !hasEmailType) {
         throw new Error('Please select at least one type');
@@ -18067,7 +18074,7 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
       }
 
       if (hasAnnouncementType || hasEmailType) {
-        const notifTypes = types.filter((t: string) => t !== "message" && t !== "email");
+        const notifTypes = types.filter((t: string) => t !== "message");
         if (notifTypes.length === 0) notifTypes.push("announcement");
         const notificationData = {
           ...data,
@@ -18336,7 +18343,16 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
                         <DialogTitle>Create New Message</DialogTitle>
                       </DialogHeader>
                       <Form {...newMsgForm}>
-                        <form onSubmit={newMsgForm.handleSubmit((data) => createNewMessage.mutate(data))} className="space-y-4 overflow-y-auto flex-1 min-h-0 pr-1">
+                        <form onSubmit={(e) => {
+                          e.preventDefault();
+                          const formTypes = newMsgForm.getValues("types") || [];
+                          if (formTypes.length === 0 && newMsgEmailEnabled) {
+                            const data = newMsgForm.getValues();
+                            createNewMessage.mutate({ ...data, types: ["announcement"] });
+                          } else {
+                            newMsgForm.handleSubmit((data) => createNewMessage.mutate(data))(e);
+                          }
+                        }} className="space-y-4 overflow-y-auto flex-1 min-h-0 pr-1">
                           <FormField
                             control={newMsgForm.control}
                             name="title"
@@ -18413,14 +18429,9 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
                                   <div className="flex items-center gap-2">
                                     <Checkbox
                                       id="newmsg-type-email"
-                                      checked={field.value?.includes("email")}
+                                      checked={newMsgEmailEnabled}
                                       onCheckedChange={(checked) => {
-                                        const current = field.value || [];
-                                        if (checked) {
-                                          field.onChange([...current, "email"]);
-                                        } else {
-                                          field.onChange(current.filter((t: string) => t !== "email"));
-                                        }
+                                        setNewMsgEmailEnabled(!!checked);
                                       }}
                                       data-testid="newmsg-checkbox-type-email"
                                     />
@@ -18429,7 +18440,7 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
                                     </label>
                                   </div>
                                 </div>
-                                <p className="text-sm text-gray-500 mt-1">Selected: {field.value?.length || 0} type(s)</p>
+                                <p className="text-sm text-gray-500 mt-1">Selected: {(field.value?.length || 0) + (newMsgEmailEnabled ? 1 : 0)} type(s)</p>
                                 <FormMessage />
                               </FormItem>
                             )}

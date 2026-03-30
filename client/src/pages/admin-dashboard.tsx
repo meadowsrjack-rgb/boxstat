@@ -8267,11 +8267,40 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Event</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deleteConfirmEvent?.title}"? This action cannot be undone.
+              {deleteConfirmEvent?.isRecurring
+                ? `"${deleteConfirmEvent?.title}" is a recurring event. Would you like to delete just this event or all occurrences?`
+                : `Are you sure you want to delete "${deleteConfirmEvent?.title}"? This action cannot be undone.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className={deleteConfirmEvent?.isRecurring ? "flex-col sm:flex-row gap-2" : ""}>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
+            {deleteConfirmEvent?.isRecurring && (
+              <AlertDialogAction
+                className="bg-red-600 hover:bg-red-700"
+                onClick={() => {
+                  const target = deleteConfirmEvent;
+                  const matchingIds = events
+                    .filter((e: any) =>
+                      e.isRecurring &&
+                      e.title === target.title &&
+                      e.eventType === target.eventType &&
+                      JSON.stringify(e.visibility) === JSON.stringify(target.visibility)
+                    )
+                    .map((e: any) => Number(e.id));
+                  if (matchingIds.length > 0) {
+                    bulkDeleteEvents.mutate(matchingIds);
+                  }
+                  setDeleteConfirmEvent(null);
+                }}
+              >
+                Delete All Occurrences ({events.filter((e: any) =>
+                  e.isRecurring &&
+                  e.title === deleteConfirmEvent?.title &&
+                  e.eventType === deleteConfirmEvent?.eventType &&
+                  JSON.stringify(e.visibility) === JSON.stringify(deleteConfirmEvent?.visibility)
+                ).length})
+              </AlertDialogAction>
+            )}
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
               onClick={() => {
@@ -8279,7 +8308,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                 setDeleteConfirmEvent(null);
               }}
             >
-              Delete
+              {deleteConfirmEvent?.isRecurring ? "Delete This Event Only" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

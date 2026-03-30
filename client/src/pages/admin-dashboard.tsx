@@ -1379,8 +1379,8 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   const [viewingUser, setViewingUser] = useState<any>(null);
   const [selectedDivision, setSelectedDivision] = useState<string>("");
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
-  const [sortField, setSortField] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortField, setSortField] = useState<string | null>('createdAt');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [userSearchTerm, setUserSearchTerm] = useState("");
   const [detailTab, setDetailTab] = useState("team");
   const [showDobPicker, setShowDobPicker] = useState(false);
@@ -1832,6 +1832,11 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     if (sortField === 'dob' || sortField === 'dateOfBirth') {
       aValue = a.dob || a.dateOfBirth;
       bValue = b.dob || b.dateOfBirth;
+    }
+
+    if (sortField === 'createdAt') {
+      aValue = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      bValue = b.createdAt ? new Date(b.createdAt).getTime() : 0;
     }
 
     if (sortField === 'awards') {
@@ -3599,6 +3604,13 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                 >
                   Status
                 </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('createdAt')}
+                  data-testid="sort-created"
+                >
+                  Date Created {sortField === 'createdAt' && (sortDirection === 'asc' ? '↑' : '↓')}
+                </TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -3876,6 +3888,9 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                           </div>
                         );
                       })()}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-sm text-gray-500">
+                      {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
                     </TableCell>
                     <TableCell>
                         <Button 

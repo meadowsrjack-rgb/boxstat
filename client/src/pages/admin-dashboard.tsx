@@ -16678,40 +16678,9 @@ function MigrationsTab({ organization, users }: any) {
   );
 }
 
-// Communications Tab - combines Notifications and CRM
 function CommunicationsTab({ notifications, users, teams, divisions, organization, initialCrmSubTab }: any) {
-  const [activeSection, setActiveSection] = useState<'notifications' | 'messages'>(initialCrmSubTab === 'notifications' ? 'notifications' : 'messages');
-
   return (
-    <div className="space-y-4">
-      <div className="flex gap-2 flex-wrap">
-        <Button
-          variant={activeSection === 'messages' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setActiveSection('messages')}
-          data-testid="button-comms-messages"
-        >
-          <MessageSquare className="w-4 h-4 mr-2" />
-          Messages
-        </Button>
-        <Button
-          variant={activeSection === 'notifications' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setActiveSection('notifications')}
-          data-testid="button-comms-notifications"
-        >
-          <Bell className="w-4 h-4 mr-2" />
-          Announcements
-        </Button>
-      </div>
-
-      {activeSection === 'notifications' && (
-        <NotificationsTab notifications={notifications} users={users} teams={teams} divisions={divisions} organization={organization} />
-      )}
-      {activeSection === 'messages' && (
-        <CRMTab organization={organization} users={users} teams={teams} divisions={divisions} initialSubTab="messages" />
-      )}
-    </div>
+    <CRMTab organization={organization} users={users} teams={teams} divisions={divisions} notifications={notifications} initialSubTab="messages" />
   );
 }
 
@@ -17148,7 +17117,7 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
 }
 
 // CRM Tab Component
-function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
+function CRMTab({ organization, users, teams, divisions, notifications, initialSubTab }: any) {
   const { toast } = useToast();
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [viewingEvaluation, setViewingEvaluation] = useState<any>(null);
@@ -17156,7 +17125,7 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
   const [newNote, setNewNote] = useState("");
   const [replyMessage, setReplyMessage] = useState("");
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
-  const [activeView, setActiveView] = useState<'users' | 'teams' | 'leads'>('users');
+  const [activeView, setActiveView] = useState<'users' | 'teams' | 'leads' | 'announcements'>('users');
   const [selectedTeamChat, setSelectedTeamChat] = useState<{ teamId: number; channel: 'players' | 'parents'; teamName: string } | null>(null);
   const [teamChatMessage, setTeamChatMessage] = useState("");
   const [clearChannelConfirm, setClearChannelConfirm] = useState(false);
@@ -17527,13 +17496,39 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
             </CardTitle>
             <CardDescription>Manage messages, team chats, and leads</CardDescription>
           </div>
-          <Dialog open={isNewMessageOpen} onOpenChange={handleNewMsgDialogClose}>
-            <DialogTrigger asChild>
-              <Button size="sm" data-testid="button-new-message">
-                <Plus className="w-4 h-4 mr-2" />
-                New Message
-              </Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" data-testid="button-view-switcher">
+                  {activeView === 'users' && <><User className="w-4 h-4 mr-1" /> Single Users</>}
+                  {activeView === 'teams' && <><Users className="w-4 h-4 mr-1" /> Team Chats</>}
+                  {activeView === 'leads' && <><Users className="w-4 h-4 mr-1" /> Leads</>}
+                  {activeView === 'announcements' && <><Bell className="w-4 h-4 mr-1" /> Announcements</>}
+                  <ChevronDown className="w-4 h-4 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => { setActiveView('users'); setSelectedTeamChat(null); }}>
+                  <User className="w-4 h-4 mr-2" /> Single Users
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setActiveView('teams'); setSelectedConversation(null); }}>
+                  <Users className="w-4 h-4 mr-2" /> Team Chats
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setActiveView('leads'); setSelectedConversation(null); setSelectedTeamChat(null); }}>
+                  <Users className="w-4 h-4 mr-2" /> Leads
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setActiveView('announcements'); setSelectedConversation(null); setSelectedTeamChat(null); }}>
+                  <Bell className="w-4 h-4 mr-2" /> Announcements
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Dialog open={isNewMessageOpen} onOpenChange={handleNewMsgDialogClose}>
+              <DialogTrigger asChild>
+                <Button size="sm" data-testid="button-new-message">
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Message
+                </Button>
+              </DialogTrigger>
                     <DialogContent className="max-w-[95vw] w-full max-h-[90vh] flex flex-col overflow-hidden">
                       <DialogHeader>
                         <DialogTitle>Create New Message</DialogTitle>
@@ -17896,39 +17891,14 @@ function CRMTab({ organization, users, teams, divisions, initialSubTab }: any) {
                         </form>
                       </Form>
                     </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex gap-2 mb-6">
-          <Button
-            variant={activeView === 'users' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => { setActiveView('users'); setSelectedTeamChat(null); }}
-            data-testid="button-view-users"
-          >
-            <User className="w-4 h-4 mr-1" />
-            Single Users
-          </Button>
-          <Button
-            variant={activeView === 'teams' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => { setActiveView('teams'); setSelectedConversation(null); }}
-            data-testid="button-view-teams"
-          >
-            <Users className="w-4 h-4 mr-1" />
-            Team Chats
-          </Button>
-          <Button
-            variant={activeView === 'leads' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => { setActiveView('leads'); setSelectedConversation(null); setSelectedTeamChat(null); }}
-            data-testid="button-view-leads"
-          >
-            <Users className="w-4 h-4 mr-1" />
-            Leads
-          </Button>
-        </div>
+        {activeView === 'announcements' && (
+          <NotificationsTab notifications={notifications} users={users} teams={teams} divisions={divisions} organization={organization} />
+        )}
 
         {activeView === 'users' && (
           <div className="space-y-4">

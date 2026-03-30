@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import ForkInTheRoadModal from "@/components/ForkInTheRoadModal";
 import {
   Tooltip,
   TooltipContent,
@@ -36,6 +38,7 @@ import screenshot6 from "@assets/6_1768860806318.png";
 
 export default function MarketingLanding() {
   const [, setLocation] = useLocation();
+  const [forkModalOpen, setForkModalOpen] = useState(false);
 
   const features = [
     {
@@ -106,7 +109,7 @@ export default function MarketingLanding() {
             <div className="flex items-center gap-3">
               <Button 
                 className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white border-0 shadow-lg shadow-red-500/25"
-                onClick={() => { window.location.href = '/signup?plan=growth'; }}
+                onClick={() => setForkModalOpen(true)}
               >
                 Get Started
                 <ChevronRight className="w-4 h-4 ml-1" />
@@ -114,7 +117,7 @@ export default function MarketingLanding() {
               <Button 
                 variant="ghost" 
                 className="text-white hover:bg-white/10 hover:text-white hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all duration-300"
-                onClick={() => setLocation('/login')}
+                onClick={() => setForkModalOpen(true)}
               >
                 Sign In
               </Button>
@@ -155,9 +158,18 @@ export default function MarketingLanding() {
                 Watch Demo
               </Button>
             </div>
+            {/* Sub-CTA for players/parents */}
+            <p className="text-sm text-gray-500 mt-2">
+              Are you a player or parent?{" "}
+              <Link href="/login" className="text-gray-400 underline underline-offset-2 hover:text-white transition-colors">
+                Log in here.
+              </Link>
+            </p>
           </div>
         </div>
       </section>
+      {/* Fork-in-the-Road Modal */}
+      <ForkInTheRoadModal open={forkModalOpen} onOpenChange={setForkModalOpen} />
       {/* App Screenshots Section */}
       <section className="relative z-10 pb-12 px-6 overflow-hidden pt-[10px]">
         <div className="max-w-7xl mx-auto">

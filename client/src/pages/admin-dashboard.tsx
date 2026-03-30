@@ -3847,10 +3847,10 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                             const playerOnTeam = programTeams.some((t: any) => {
                               const profile = profileId === user.id ? user : linkedPlayers.find((p: any) => p.id === profileId);
                               if (!profile) return false;
-                              if (Array.isArray(profile.activeTeams)) {
-                                return profile.activeTeams.some((at: any) => String(at.teamId) === String(t.id));
-                              }
-                              return String(profile.teamId) === String(t.id);
+                              if (Array.isArray(profile.activeTeams) && profile.activeTeams.some((at: any) => String(at.teamId) === String(t.id))) return true;
+                              if (profile.teamId && String(profile.teamId) === String(t.id)) return true;
+                              if (Array.isArray(profile.teamIds) && profile.teamIds.some((tid: any) => String(tid) === String(t.id))) return true;
+                              return false;
                             });
                             if (playerOnTeam) {
                               badges.push({ label: `${progName}: Active`, cls: "bg-green-600 text-white hover:bg-green-700", key: enrollKey });

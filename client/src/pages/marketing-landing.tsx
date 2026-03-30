@@ -158,13 +158,6 @@ export default function MarketingLanding() {
                 Watch Demo
               </Button>
             </div>
-            {/* Sub-CTA for players/parents */}
-            <p className="text-sm text-gray-500 mt-2">
-              Are you a player or parent?{" "}
-              <Link href="/login" className="text-gray-400 underline underline-offset-2 hover:text-white transition-colors">
-                Log in here.
-              </Link>
-            </p>
           </div>
         </div>
       </section>

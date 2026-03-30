@@ -15,7 +15,6 @@ export default function CrmMessageBanner({ onNavigateToCrm }: { onNavigateToCrm?
 
   const { data } = useQuery<CrmUnreadInfo>({
     queryKey: ['/api/admin/crm-unread'],
-    refetchInterval: 60 * 1000,
   });
 
   if (dismissed || !data || data.unreadCount === 0) return null;

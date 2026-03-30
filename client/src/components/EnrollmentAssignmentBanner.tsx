@@ -15,7 +15,6 @@ export default function EnrollmentAssignmentBanner({ onNavigateToUsers }: { onNa
 
   const { data } = useQuery<PendingAssignmentsInfo>({
     queryKey: ['/api/admin/pending-assignments'],
-    refetchInterval: 60 * 1000,
   });
 
   if (dismissed || !data || data.pendingCount === 0) return null;

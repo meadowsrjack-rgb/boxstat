@@ -15,7 +15,6 @@ export default function StorePurchaseBanner({ onNavigateToStore }: { onNavigateT
 
   const { data } = useQuery<PendingOrdersInfo>({
     queryKey: ['/api/admin/pending-orders'],
-    refetchInterval: 60 * 1000,
   });
 
   if (dismissed || !data || data.pendingCount === 0) return null;

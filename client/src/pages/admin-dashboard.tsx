@@ -321,7 +321,6 @@ export default function AdminDashboard() {
 
   const { data: adminAlerts = [] } = useQuery<any[]>({
     queryKey: ["/api/admin/alerts"],
-    refetchInterval: 60000,
   });
 
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(() => {

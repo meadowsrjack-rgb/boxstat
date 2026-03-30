@@ -319,7 +319,6 @@ export default function CoachDashboard() {
       if (!res.ok) return [];
       return res.json();
     },
-    refetchInterval: 60000,
   });
 
   /* ===== Mutations ===== */

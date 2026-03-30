@@ -49,7 +49,6 @@ export function AnnouncementBanner() {
 
   const { data: announcements = [] } = useQuery<Announcement[]>({
     queryKey: ["/api/notifications/announcements"],
-    refetchInterval: 60000,
   });
 
   const markAsRead = useMutation({

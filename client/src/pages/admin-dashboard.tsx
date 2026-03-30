@@ -17146,9 +17146,28 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [rosterSearch, setRosterSearch] = useState('');
   const [manageTab, setManageTab] = useState<'roster' | 'coaches'>('roster');
+  const [addTeamOpen, setAddTeamOpen] = useState(false);
+  const [newTeam, setNewTeam] = useState({ name: '', programId: '', division: '', season: '', location: '', notes: '' });
+  const [addTeamError, setAddTeamError] = useState('');
   const programs = allPrograms.filter((p: any) => p.productCategory === 'service' || !p.productCategory);
   const players = (users || []).filter((u: any) => u.role === 'player');
   const coaches = (users || []).filter((u: any) => u.role === 'coach');
+
+  const createTeamMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/teams", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      toast({ title: "Team created", description: `"${newTeam.name}" has been created successfully.` });
+      setNewTeam({ name: '', programId: '', division: '', season: '', location: '', notes: '' });
+      setAddTeamError('');
+      setAddTeamOpen(false);
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err?.message || "Failed to create team.", variant: "destructive" });
+    },
+  });
   
   const getTeamsForProgram = (programId: string) => {
     return teams.filter((t: any) => String(t.programId) === String(programId));
@@ -17192,12 +17211,114 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
     );
   };
 
+  const handleAddTeamSubmit = () => {
+    const raw: any = { name: newTeam.name.trim() };
+    if (organization?.id) raw.organizationId = String(organization.id);
+    if (newTeam.programId) raw.programId = newTeam.programId;
+    if (newTeam.division) raw.division = newTeam.division;
+    if (newTeam.season) raw.season = newTeam.season;
+    if (newTeam.location) raw.location = newTeam.location;
+    if (newTeam.notes) raw.notes = newTeam.notes;
+    const result = insertTeamSchema.safeParse(raw);
+    if (!result.success) {
+      const nameError = result.error.issues.find((i) => i.path.includes('name'));
+      setAddTeamError(nameError ? nameError.message : 'Please check the form and try again.');
+      return;
+    }
+    setAddTeamError('');
+    createTeamMutation.mutate(result.data);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">Teams by Program</h2>
-        <Badge variant="outline">{teams.length} total teams</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline">{teams.length} total teams</Badge>
+          <Button size="sm" onClick={() => setAddTeamOpen(true)}>
+            <Plus className="w-4 h-4 mr-1" />
+            Add Team
+          </Button>
+        </div>
       </div>
+
+      <Dialog open={addTeamOpen} onOpenChange={(open) => { setAddTeamOpen(open); if (!open) { setAddTeamError(''); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Team</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="new-team-name">Team Name <span className="text-red-500">*</span></Label>
+              <Input
+                id="new-team-name"
+                placeholder="e.g. U10 Red"
+                value={newTeam.name}
+                onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
+                className={addTeamError ? 'border-red-500' : ''}
+              />
+              {addTeamError && <p className="text-xs text-red-500 mt-1">{addTeamError}</p>}
+            </div>
+            <div>
+              <Label htmlFor="new-team-program">Program</Label>
+              <Select value={newTeam.programId} onValueChange={(val) => setNewTeam({ ...newTeam, programId: val === '__none__' ? '' : val })}>
+                <SelectTrigger id="new-team-program">
+                  <SelectValue placeholder="Select a program" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No program</SelectItem>
+                  {programs.map((p: any) => (
+                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="new-team-division">Division</Label>
+              <Input
+                id="new-team-division"
+                placeholder="e.g. U10, U12"
+                value={newTeam.division}
+                onChange={(e) => setNewTeam({ ...newTeam, division: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-team-season">Season</Label>
+              <Input
+                id="new-team-season"
+                placeholder="e.g. Fall 2025"
+                value={newTeam.season}
+                onChange={(e) => setNewTeam({ ...newTeam, season: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-team-location">Location</Label>
+              <Input
+                id="new-team-location"
+                placeholder="e.g. Main Field"
+                value={newTeam.location}
+                onChange={(e) => setNewTeam({ ...newTeam, location: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-team-notes">Notes</Label>
+              <Textarea
+                id="new-team-notes"
+                placeholder="Optional notes about this team"
+                value={newTeam.notes}
+                onChange={(e) => setNewTeam({ ...newTeam, notes: e.target.value })}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => { setAddTeamOpen(false); setAddTeamError(''); }}>Cancel</Button>
+            <Button onClick={handleAddTeamSubmit} disabled={createTeamMutation.isPending}>
+              {createTeamMutation.isPending ? 'Creating...' : 'Create Team'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {programs.map((program: any) => {
         const programTeams = getTeamsForProgram(program.id);

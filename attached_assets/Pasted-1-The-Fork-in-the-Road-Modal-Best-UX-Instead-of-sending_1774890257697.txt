@@ -1,0 +1,34 @@
+1. The "Fork in the Road" Modal (Best UX)
+Instead of sending people straight to a checkout or registration page when they click "Get Started" (in the top right) or "Sign In," trigger a simple popup modal that asks them to self-identify.
+
+Header: "Welcome to BoxStat!"
+
+Option A (Large Button): "I manage a club or league" → Routes to Owner Registration/Free Trial.
+
+Option B (Large Button): "I'm a player, parent, or coach" → Routes to the participant Login page or links to download the mobile app.
+
+2. Adjust the Header Navigation
+Parents and players usually just look for the fastest way to log in. You can clear up the confusion right in the top navigation bar.
+
+Change "Sign In" to a dropdown menu. When hovered or clicked, it shows:
+
+Owner Portal
+
+Player/Parent Login
+
+Alternatively, add a prominent "Download App" link in the header. For sports management, 99% of parents and players will be interacting with BoxStat via their phones on the sidelines, not a desktop web browser. Funneling them straight to the App Store/Google Play solves the routing issue immediately.
+
+3. Add a Sub-CTA in the Hero Section
+Your main red "Start Free Trial" button is perfect for owners. Directly beneath it (or beneath the "Watch Demo" button), add a simple, low-emphasis text link:
+
+Start Free Trial ➔ | Watch Demo ▷
+^(Are you a player or parent? Log in here.)
+
+This keeps the visual hierarchy focused on acquiring new clubs, but immediately catches the eye of a parent trying to figure out where to go.
+
+4. The Ideal Fix: Bypassing the Homepage Entirely
+In the long run, players and parents shouldn't really be landing on your marketing homepage at all.
+
+When a club owner sets up their organization in BoxStat, they should be able to send an automated email, SMS, or shareable link to their roster. That specific link (e.g., app.boxstat.com/join/flowstate-performance) should take parents directly to a branded login/account creation screen for that specific club, completely bypassing your main marketing site.
+
+Recommendation for right now: I would implement the "Fork in the Road" modal on your "Sign In" and "Get Started" buttons. It requires the least amount of redesign to your current page while completely eliminating the risk of a parent accidentally starting a SaaS trial.

@@ -1,0 +1,36 @@
+
+Gemini said
+To make the refund process seamless for both you and the merchants using BoxStat, you need to balance "ease of use" with "protection against mistakes."
+
+Since you are using the Platform model, remember that when a refund happens, the money usually comes out of the merchant's Stripe balance, and you need to decide if you are giving back your 1% fee as well.
+
+Here are the essential features to include:
+
+1. The Core Refund Logic
+Full vs. Partial Refunds: Give the merchant the ability to refund the full $100 or a specific custom amount (e.g., just $20 if a jersey was damaged but the customer kept it).
+
+Reason Codes: A dropdown menu (e.g., "Customer Request," "Duplicate Charge," "Fraudulent") is vital. This helps with your internal analytics and helps Stripe better understand charge patterns.
+
+Application Fee Refund: You need a toggle for "Refund BoxStat Fee?". Usually, if a merchant is refunding a customer because they messed up, you might still want to keep your 1%, but most platforms refund the fee proportionally to stay on the merchant's good side.
+
+2. Merchant Workflow Features
+Refund Status Badge: Once a refund is initiated, change the "Completed" status in your screenshot to "Refunded" or "Partially Refunded."
+
+Inventory Integration: Since this is for jerseys/gear, clicking "Refund" should trigger a popup asking: "Add item back to inventory stock?" This saves the merchant from having to do it manually in two places.
+
+Automated Emails: BoxStat should automatically trigger a "Your refund is being processed" email to the customer so they don't keep emailing the merchant asking where their money is.
+
+3. Safety & Security (Crucial)
+Admin Permissions: Ensure only users with "Owner" or "Manager" roles in the BoxStat dashboard can see the Refund button. You don't want a seasonal intern accidentally emptying the merchant's bank account.
+
+The "Double-Check" Modal: Never make a refund a single click. Always show a confirmation screen:
+
+"You are about to refund $100.00 to Ling Tan. This cannot be undone. Proceed?"
+
+Suggested UI Layout
+I'd recommend adding a vertical "three-dot" menu (⋮) or a "Refund" button on the far right of each transaction row.
+
+Feature	Why you need it
+Transaction ID Link	Clickable link to the specific Stripe receipt for proof.
+Refund Timeline	Shows when the refund was requested vs. when it cleared.
+Note Field	Internal text box for the merchant: "Refunded because the medium was too small."

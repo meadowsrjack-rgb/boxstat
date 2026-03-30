@@ -1880,6 +1880,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
       if (programTeamIds.length === 0) return true;
       if (Array.isArray(u.activeTeams) && u.activeTeams.some((at: any) => programTeamIds.includes(String(at.teamId)))) return true;
       if (u.teamId && programTeamIds.includes(String(u.teamId))) return true;
+      if (Array.isArray(u.teamIds) && u.teamIds.some((tid: any) => programTeamIds.includes(String(tid)))) return true;
       return false;
     };
     const hasActiveEnrollmentWithoutTeam = teams.length > 0 ? (() => {
@@ -6056,13 +6057,18 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
           });
           return;
         }
+      }
+
+      eventsToCreate.push(basePayload);
+
+      if (isRecurring) {
         
         let maxEndDate: Date | null = null;
         if (recurrenceEndType === 'date' && recurrenceEndDate) {
           const [year, month, day] = recurrenceEndDate.split('-').map(Number);
           maxEndDate = new Date(year, month - 1, day, 23, 59, 59, 999);
         }
-        const maxCount = recurrenceEndType === 'count' ? recurrenceCount : 1000;
+        const maxAdditional = recurrenceEndType === 'count' ? Math.max(recurrenceCount - 1, 0) : 1000;
 
         const makeOccurrence = (y: number, m: number, d: number) => {
           const pad = (n: number) => String(n).padStart(2, '0');
@@ -6076,6 +6082,8 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
             endTime: localDatetimeToUTC(naiveE, eventTimezone),
           };
         };
+
+        const startDateStr = `${sYear}-${String(sMonth).padStart(2,'0')}-${String(sDay).padStart(2,'0')}`;
         
         if ((recurrenceFrequency === 'weekly' || recurrenceFrequency === 'biweekly') && recurrenceDays.length > 0) {
           const weekInterval = recurrenceFrequency === 'biweekly' ? 2 : 1;
@@ -6087,17 +6095,20 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
           let iterations = 0;
           let shouldStop = false;
           
-          while (eventCount < maxCount && iterations < maxIterations && !shouldStop) {
+          while (eventCount < maxAdditional && iterations < maxIterations && !shouldStop) {
             for (const dayOfWeek of recurrenceDays.sort((a, b) => a - b)) {
-              if (eventCount >= maxCount) { shouldStop = true; break; }
+              if (eventCount >= maxAdditional) { shouldStop = true; break; }
               
               const eventDate = new Date(curWeekStart);
               eventDate.setDate(curWeekStart.getDate() + dayOfWeek);
               
               const startDateRef = new Date(sYear, sMonth - 1, sDay);
-              if (eventDate < startDateRef) continue;
+              if (eventDate <= startDateRef) continue;
               
               if (maxEndDate && eventDate > maxEndDate) { shouldStop = true; break; }
+              
+              const occDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth()+1).padStart(2,'0')}-${String(eventDate.getDate()).padStart(2,'0')}`;
+              if (occDateStr === startDateStr) continue;
               
               eventsToCreate.push(makeOccurrence(eventDate.getFullYear(), eventDate.getMonth() + 1, eventDate.getDate()));
               eventCount++;
@@ -6107,7 +6118,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
             iterations++;
           }
         } else {
-          for (let i = 0; i < maxCount; i++) {
+          for (let i = 1; i <= maxAdditional; i++) {
             const d = new Date(sYear, sMonth - 1, sDay);
             
             if (recurrenceFrequency === 'daily') {
@@ -6125,8 +6136,6 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
             eventsToCreate.push(makeOccurrence(d.getFullYear(), d.getMonth() + 1, d.getDate()));
           }
         }
-      } else {
-        eventsToCreate.push(basePayload);
       }
       
       // Check if events were truncated by the safety cap (only relevant for date-based end)

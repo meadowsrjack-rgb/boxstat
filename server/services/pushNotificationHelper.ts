@@ -9,10 +9,11 @@ interface NotificationParams {
   title: string;
   message: string;
   channels?: ('in_app' | 'push' | 'email')[];
+  url?: string;
 }
 
 async function sendNotification(storage: IStorage, params: NotificationParams) {
-  const { userId, title, message, channels = ['in_app', 'push'] } = params;
+  const { userId, title, message, channels = ['in_app', 'push'], url } = params;
   
   try {
     // Get user's organization for notification
@@ -36,7 +37,9 @@ async function sendNotification(storage: IStorage, params: NotificationParams) {
         createdNotification.id,
         userId,
         title,
-        message
+        message,
+        undefined,
+        url ? { url } : undefined
       );
     }
     
@@ -86,6 +89,7 @@ export const pushNotifications = {
       userId: playerId,
       title: "✅ You're Checked In!",
       message: `You've been checked in to ${event.title}`,
+      url: '/player-dashboard?tab=activity',
     });
   },
 
@@ -97,6 +101,7 @@ export const pushNotifications = {
       userId: playerId,
       title: "📍 Check-in Now Open",
       message: `Check-in is now open for ${event.title}`,
+      url: '/player-dashboard?tab=activity',
     });
   },
 
@@ -108,6 +113,7 @@ export const pushNotifications = {
       userId: playerId,
       title: "⏰ Check-in Closing Soon",
       message: `Check-in closes in ${minutesLeft} minutes for ${event.title}`,
+      url: '/player-dashboard?tab=activity',
     });
   },
 
@@ -119,6 +125,7 @@ export const pushNotifications = {
       userId: playerId,
       title: "📍 You're Near the Venue",
       message: `You're within check-in distance for ${event.title} - ready to check in?`,
+      url: '/player-dashboard?tab=activity',
     });
   },
 
@@ -130,6 +137,7 @@ export const pushNotifications = {
       userId: playerId,
       title: "📋 RSVP Requested",
       message: `Please RSVP for ${event.title} on ${new Date(event.startTime).toLocaleDateString()}`,
+      url: '/player-dashboard?tab=activity',
     });
   },
 
@@ -141,6 +149,7 @@ export const pushNotifications = {
       userId: playerId,
       title: "📋 RSVP Reminder",
       message: `Don't forget to RSVP for ${event.title} by ${dueDate}`,
+      url: '/player-dashboard?tab=activity',
     });
   },
 
@@ -149,6 +158,7 @@ export const pushNotifications = {
       userId: playerId,
       title: "📊 Skills Evaluated",
       message: `Coach ${coachName} evaluated your skills - check your progress!`,
+      url: '/player-dashboard?tab=profile',
     });
   },
 
@@ -160,6 +170,7 @@ export const pushNotifications = {
       userId: playerId,
       title: "💬 New Team Message",
       message: `${senderName} sent a message in ${team.name} chat`,
+      url: '/unified-account?tab=messages',
     });
   },
 
@@ -172,6 +183,7 @@ export const pushNotifications = {
       userId: playerId,
       title: "⏰ Event Reminder",
       message: `${event.title} starts in ${timeText}`,
+      url: '/player-dashboard?tab=activity',
     });
   },
 
@@ -187,6 +199,7 @@ export const pushNotifications = {
       userId: parentId,
       title: "📋 RSVP Needed",
       message: `${playerName} has an RSVP pending for ${event.title}`,
+      url: '/unified-account?tab=home',
     });
   },
 
@@ -198,6 +211,7 @@ export const pushNotifications = {
       userId: parentId,
       title: "✅ Player Checked In",
       message: `${playerName} checked in to ${event.title}`,
+      url: '/unified-account?tab=home',
     });
   },
 
@@ -206,6 +220,7 @@ export const pushNotifications = {
       userId: parentId,
       title: "⚠️ Sessions Running Low",
       message: `${playerName} has ${sessionsRemaining} session${sessionsRemaining === 1 ? '' : 's'} remaining in ${programName}`,
+      url: '/unified-account?tab=payments',
     });
   },
 
@@ -215,6 +230,7 @@ export const pushNotifications = {
       userId: parentId,
       title: "💳 Payment Due",
       message: `Payment due for ${playerName}: ${programName}${amountText}`,
+      url: '/unified-account?tab=payments',
     });
   },
 
@@ -223,6 +239,7 @@ export const pushNotifications = {
       userId: parentId,
       title: "✅ Payment Confirmed",
       message: `Payment of $${(amount / 100).toFixed(2)} confirmed for ${playerName}`,
+      url: '/unified-account?tab=payments',
     });
   },
 
@@ -231,6 +248,7 @@ export const pushNotifications = {
       userId: parentId,
       title: "📅 Subscription Expiring",
       message: `${playerName}'s enrollment in ${programName} expires in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}`,
+      url: '/unified-account?tab=payments',
     });
   },
 
@@ -239,6 +257,7 @@ export const pushNotifications = {
       userId: parentId,
       title: "📝 Waiver Required",
       message: `New waiver "${waiverName}" requires your signature for ${playerName}`,
+      url: '/unified-account?tab=home',
     });
   },
 
@@ -247,6 +266,7 @@ export const pushNotifications = {
       userId: parentId,
       title: "📊 Skills Update",
       message: `${playerName}'s skills were evaluated by ${coachName}`,
+      url: '/unified-account?tab=home',
     });
   },
 
@@ -255,6 +275,7 @@ export const pushNotifications = {
       userId: parentId,
       title: "🏀 Team Assignment",
       message: `${playerName} has been added to ${teamName}`,
+      url: '/unified-account?tab=home',
     });
   },
 
@@ -271,6 +292,7 @@ export const pushNotifications = {
       userId: coachId,
       title: "💬 New Message",
       message: `${senderName} sent a ${chatType} message in ${team.name} chat`,
+      url: '/coach-dashboard',
     });
   },
 
@@ -282,6 +304,7 @@ export const pushNotifications = {
       userId: coachId,
       title: "📋 RSVP Summary",
       message: `${confirmedCount} player${confirmedCount === 1 ? '' : 's'} confirmed for ${event.title}`,
+      url: '/coach-dashboard?tab=calendar',
     });
   },
 
@@ -293,6 +316,7 @@ export const pushNotifications = {
       userId: coachId,
       title: "⚠️ Low Attendance",
       message: `Only ${confirmedCount} player${confirmedCount === 1 ? '' : 's'} confirmed for ${event.title}`,
+      url: '/coach-dashboard?tab=calendar',
     });
   },
 
@@ -304,6 +328,7 @@ export const pushNotifications = {
       userId: coachId,
       title: "✅ Player Check-in",
       message: `${playerName} checked in to ${event.title}`,
+      url: '/coach-dashboard?tab=calendar',
     });
   },
 
@@ -316,6 +341,7 @@ export const pushNotifications = {
       userId: coachId,
       title: "⏰ Session Reminder",
       message: `Your session ${event.title} starts in ${timeText}`,
+      url: '/coach-dashboard?tab=calendar',
     });
   },
 
@@ -324,6 +350,7 @@ export const pushNotifications = {
       userId: coachId,
       title: "👋 New Player",
       message: `${playerName} joined ${teamName}`,
+      url: '/coach-dashboard?tab=team',
     });
   },
 
@@ -332,6 +359,7 @@ export const pushNotifications = {
       userId: coachId,
       title: "📋 Roster Updated",
       message: `Your roster for ${teamName} has been updated`,
+      url: '/coach-dashboard?tab=team',
     });
   },
 
@@ -344,6 +372,7 @@ export const pushNotifications = {
       userId: adminId,
       title: "💰 New Payment",
       message: `Payment of $${(amount / 100).toFixed(2)} received from ${parentName}`,
+      url: '/admin-dashboard?tab=payments',
     });
   },
 
@@ -352,6 +381,7 @@ export const pushNotifications = {
       userId: adminId,
       title: "❌ Payment Failed",
       message: `Payment failed for ${parentName} - ${programName}`,
+      url: '/admin-dashboard?tab=payments',
     });
   },
 
@@ -360,6 +390,7 @@ export const pushNotifications = {
       userId: adminId,
       title: "👤 New Registration",
       message: `New account created: ${email}`,
+      url: '/admin-dashboard?tab=users',
     });
   },
 
@@ -368,6 +399,7 @@ export const pushNotifications = {
       userId: adminId,
       title: "✅ New Enrollment",
       message: `${playerName} enrolled in ${programName}`,
+      url: '/admin-dashboard?tab=programs',
     });
   },
 
@@ -376,6 +408,7 @@ export const pushNotifications = {
       userId: adminId,
       title: "📦 Low Inventory",
       message: `${productName} has only ${remainingCount} item${remainingCount === 1 ? '' : 's'} left`,
+      url: '/admin-dashboard?tab=store',
     });
   },
 
@@ -384,6 +417,7 @@ export const pushNotifications = {
       userId: adminId,
       title: "🚩 Message Flagged",
       message: `Message flagged for review in ${teamName} chat`,
+      url: '/admin-dashboard?tab=messages',
     });
   },
 
@@ -392,6 +426,7 @@ export const pushNotifications = {
       userId: adminId,
       title: "📝 Waiver Signed",
       message: `${parentName} signed "${waiverName}" for ${playerName}`,
+      url: '/admin-dashboard?tab=waivers',
     });
   },
 
@@ -400,6 +435,7 @@ export const pushNotifications = {
       userId: adminId,
       title: "🚫 Subscription Cancelled",
       message: `${parentName} cancelled ${programName}`,
+      url: '/admin-dashboard?tab=programs',
     });
   },
 
@@ -409,6 +445,7 @@ export const pushNotifications = {
       title: "📊 Daily Summary",
       message: `Today: ${checkIns} check-ins, ${payments} payments, ${newUsers} new users`,
       channels: ['in_app', 'push', 'email'],
+      url: '/admin-dashboard?tab=overview',
     });
   },
 
@@ -416,7 +453,7 @@ export const pushNotifications = {
   // UTILITY: Send to all admins
   // ============================================
 
-  async notifyAllAdmins(storage: IStorage, title: string, message: string, organizationId?: string) {
+  async notifyAllAdmins(storage: IStorage, title: string, message: string, organizationId?: string, url?: string) {
     const conditions = [eq(users.role, 'admin')];
     if (organizationId) {
       conditions.push(eq(users.organizationId, organizationId));
@@ -430,11 +467,12 @@ export const pushNotifications = {
         userId: admin.id,
         title,
         message,
+        url: url || '/admin-dashboard',
       });
     }
   },
 
-  async notifyTeamCoaches(storage: IStorage, teamId: number, title: string, message: string) {
+  async notifyTeamCoaches(storage: IStorage, teamId: number, title: string, message: string, url?: string) {
     const team = await getTeamById(teamId);
     if (!team || !team.coachId) return;
     
@@ -442,6 +480,7 @@ export const pushNotifications = {
       userId: team.coachId,
       title,
       message,
+      url: url || '/coach-dashboard',
     });
   },
 
@@ -461,7 +500,7 @@ export const pushNotifications = {
       ? { title: "🚨 Time to Come Back", message: `You've missed ${missCount} events in a row. Your spot is waiting — come back stronger!` }
       : null);
     if (!msg) return;
-    await sendNotification(storage, { userId: playerId, ...msg });
+    await sendNotification(storage, { userId: playerId, url: '/player-dashboard?tab=activity', ...msg });
   },
 
   async playerAttendStreak(storage: IStorage, playerId: string, streakCount: number) {
@@ -474,7 +513,7 @@ export const pushNotifications = {
       ? { title: "👑 Unstoppable!", message: `${streakCount} events in a row! You're in a league of your own.` }
       : null);
     if (!msg) return;
-    await sendNotification(storage, { userId: playerId, ...msg });
+    await sendNotification(storage, { userId: playerId, url: '/player-dashboard?tab=activity', ...msg });
   },
 
   async playerPerfectMonth(storage: IStorage, playerId: string, monthName: string) {
@@ -482,6 +521,7 @@ export const pushNotifications = {
       userId: playerId,
       title: "⭐ Perfect Month!",
       message: `You attended every event in ${monthName}. That's elite dedication!`,
+      url: '/player-dashboard?tab=activity',
     });
   },
 
@@ -490,6 +530,7 @@ export const pushNotifications = {
       userId: playerId,
       title: "👋 Welcome Back!",
       message: "Great to see you out there again. Let's keep the momentum going!",
+      url: '/player-dashboard?tab=activity',
     });
   },
 
@@ -505,7 +546,7 @@ export const pushNotifications = {
       ? { title: "⚠️ Extended Absence", message: `${playerName} has missed ${missCount} events in a row. Please reach out if we can help.` }
       : null);
     if (!msg) return;
-    await sendNotification(storage, { userId: parentId, ...msg });
+    await sendNotification(storage, { userId: parentId, url: '/unified-account?tab=home', ...msg });
   },
 
   async parentPlayerAttendStreak(storage: IStorage, parentId: string, playerName: string, streakCount: number) {
@@ -516,7 +557,7 @@ export const pushNotifications = {
     };
     const msg = messages[streakCount];
     if (!msg) return;
-    await sendNotification(storage, { userId: parentId, ...msg });
+    await sendNotification(storage, { userId: parentId, url: '/unified-account?tab=home', ...msg });
   },
 
   async parentPlayerPerfectMonth(storage: IStorage, parentId: string, playerName: string, monthName: string) {
@@ -524,6 +565,7 @@ export const pushNotifications = {
       userId: parentId,
       title: "⭐ Perfect Month!",
       message: `${playerName} attended every event in ${monthName}. Outstanding!`,
+      url: '/unified-account?tab=home',
     });
   },
 
@@ -539,7 +581,7 @@ export const pushNotifications = {
       ? { title: "🚨 Player Alert", message: `${playerName} has missed ${missCount} events in a row. Follow-up recommended.` }
       : null);
     if (!msg) return;
-    await sendNotification(storage, { userId: coachId, ...msg });
+    await sendNotification(storage, { userId: coachId, url: '/coach-dashboard?tab=team', ...msg });
   },
 
   async coachPlayerAttendStreak(storage: IStorage, coachId: string, playerName: string, streakCount: number) {
@@ -548,6 +590,7 @@ export const pushNotifications = {
         userId: coachId,
         title: "🌟 Player Streak",
         message: `${playerName} is on a 5-event streak. Great to see!`,
+        url: '/coach-dashboard?tab=team',
       });
     }
   },
@@ -557,6 +600,7 @@ export const pushNotifications = {
       userId: coachId,
       title: "🤝 Handshake-Worthy!",
       message: `Maybe a handshake is in order — ${playerName} has attended every practice in ${monthName}!`,
+      url: '/coach-dashboard?tab=team',
     });
   },
 
@@ -565,6 +609,7 @@ export const pushNotifications = {
       userId: coachId,
       title: "⭐ Perfect Attendance",
       message: `${playerName} hasn't missed a single event in ${monthName}. That's commitment!`,
+      url: '/coach-dashboard?tab=team',
     });
   },
 
@@ -579,7 +624,7 @@ export const pushNotifications = {
       ? { title: "🚨 Intervention Needed", message: `Alert: ${playerName} has missed ${missCount} events in a row. Intervention recommended.` }
       : null);
     if (!msg) return;
-    await sendNotification(storage, { userId: adminId, ...msg });
+    await sendNotification(storage, { userId: adminId, url: '/admin-dashboard?tab=overview', ...msg });
   },
 
   async adminPlayerAttendStreak(storage: IStorage, adminId: string, playerName: string, streakCount: number) {
@@ -588,6 +633,7 @@ export const pushNotifications = {
         userId: adminId,
         title: "🏆 Outstanding Dedication",
         message: `${playerName} has hit a ${streakCount}-event streak — outstanding dedication!`,
+        url: '/admin-dashboard?tab=overview',
       });
     }
   },
@@ -597,6 +643,7 @@ export const pushNotifications = {
       userId: adminId,
       title: "⭐ Perfect Attendance",
       message: `${playerName} attended every event in ${monthName}.`,
+      url: '/admin-dashboard?tab=overview',
     });
   },
 
@@ -605,6 +652,7 @@ export const pushNotifications = {
       userId: adminId,
       title: "📊 Attendance Report",
       message: `${count} player${count === 1 ? ' has' : 's have'} missed 3+ events this week. Review attendance report.`,
+      url: '/admin-dashboard?tab=overview',
     });
   },
 
@@ -620,6 +668,7 @@ export const pushNotifications = {
       userId,
       title: "🛒 You Left Something Behind!",
       message: msg,
+      url: '/unified-account?tab=home',
     });
   },
 
@@ -631,6 +680,7 @@ export const pushNotifications = {
       userId,
       title: "⏰ Still Interested?",
       message: msg,
+      url: '/unified-account?tab=home',
     });
   },
 
@@ -642,6 +692,7 @@ export const pushNotifications = {
       userId,
       title: "🔔 Last Chance!",
       message: msg,
+      url: '/unified-account?tab=home',
     });
   },
 };

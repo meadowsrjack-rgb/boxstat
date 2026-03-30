@@ -16695,15 +16695,6 @@ function CommunicationsTab({ notifications, users, teams, divisions, organizatio
     <div className="space-y-4">
       <div className="flex gap-2 flex-wrap">
         <Button
-          variant={activeSection === 'notifications' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setActiveSection('notifications')}
-          data-testid="button-comms-notifications"
-        >
-          <Bell className="w-4 h-4 mr-2" />
-          Announcements
-        </Button>
-        <Button
           variant={activeSection === 'messages' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setActiveSection('messages')}
@@ -16711,6 +16702,15 @@ function CommunicationsTab({ notifications, users, teams, divisions, organizatio
         >
           <MessageSquare className="w-4 h-4 mr-2" />
           Messages
+        </Button>
+        <Button
+          variant={activeSection === 'notifications' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setActiveSection('notifications')}
+          data-testid="button-comms-notifications"
+        >
+          <Bell className="w-4 h-4 mr-2" />
+          Announcements
         </Button>
       </div>
 

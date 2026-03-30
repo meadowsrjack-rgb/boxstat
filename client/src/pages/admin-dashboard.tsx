@@ -17125,7 +17125,7 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
   const [newNote, setNewNote] = useState("");
   const [replyMessage, setReplyMessage] = useState("");
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
-  const [activeView, setActiveView] = useState<'users' | 'teams' | 'leads' | 'announcements'>('users');
+  const [activeView, setActiveView] = useState<'users' | 'teams' | 'leads'>('users');
   const [selectedTeamChat, setSelectedTeamChat] = useState<{ teamId: number; channel: 'players' | 'parents'; teamName: string } | null>(null);
   const [teamChatMessage, setTeamChatMessage] = useState("");
   const [clearChannelConfirm, setClearChannelConfirm] = useState(false);
@@ -17503,7 +17503,6 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
                   {activeView === 'users' && <><User className="w-4 h-4 mr-1" /> Single Users</>}
                   {activeView === 'teams' && <><Users className="w-4 h-4 mr-1" /> Team Chats</>}
                   {activeView === 'leads' && <><Users className="w-4 h-4 mr-1" /> Leads</>}
-                  {activeView === 'announcements' && <><Bell className="w-4 h-4 mr-1" /> Announcements</>}
                   <ChevronDown className="w-4 h-4 ml-1" />
                 </Button>
               </DropdownMenuTrigger>
@@ -17517,11 +17516,9 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
                 <DropdownMenuItem onClick={() => { setActiveView('leads'); setSelectedConversation(null); setSelectedTeamChat(null); }}>
                   <Users className="w-4 h-4 mr-2" /> Leads
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setActiveView('announcements'); setSelectedConversation(null); setSelectedTeamChat(null); }}>
-                  <Bell className="w-4 h-4 mr-2" /> Announcements
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            {activeView !== 'leads' && (
             <Dialog open={isNewMessageOpen} onOpenChange={handleNewMsgDialogClose}>
               <DialogTrigger asChild>
                 <Button size="sm" data-testid="button-new-message">
@@ -17892,14 +17889,11 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
                       </Form>
                     </DialogContent>
             </Dialog>
+            )}
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        {activeView === 'announcements' && (
-          <NotificationsTab notifications={notifications} users={users} teams={teams} divisions={divisions} organization={organization} />
-        )}
-
         {activeView === 'users' && (
           <div className="space-y-4">
             {contactMessages.length === 0 ? (

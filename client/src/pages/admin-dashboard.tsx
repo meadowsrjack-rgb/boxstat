@@ -5951,6 +5951,9 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
       console.log('Event form data before submission:', { type, targetType, assignTo, ...rest });
       const utcStartTime = localDatetimeToUTC(rest.startTime, eventTimezone);
       const utcEndTime = localDatetimeToUTC(rest.endTime, eventTimezone);
+      const recurringEndDateISO = isRecurring && recurrenceEndType === 'date' && recurrenceEndDate
+        ? recurrenceEndDate + 'T23:59:59Z'
+        : null;
       const basePayload = {
         ...rest,
         startTime: utcStartTime,
@@ -5961,6 +5964,9 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
         visibility,
         playerRsvpEnabled,
         timezone: eventTimezone,
+        isRecurring,
+        recurringType: isRecurring ? recurrenceFrequency : null,
+        recurringEndDate: isRecurring ? recurringEndDateISO : null,
       };
       console.log('Event API payload:', basePayload);
       
@@ -7847,7 +7853,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                           }
                           
                           // Pre-populate recurring fields if event is already recurring
-                          if (event.isRecurring) {
+                          if (event.isRecurring || event.recurringType) {
                             setEditIsRecurring(true);
                             const freq = (event.recurringType && ['daily', 'weekly', 'biweekly', 'monthly'].includes(event.recurringType))
                               ? event.recurringType as 'daily' | 'weekly' | 'biweekly' | 'monthly'
@@ -8125,7 +8131,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                                     eventToEdit.endTime = utcToLocalDatetime(ensureUtcStr(eventToEdit.endTime), etz);
                                   }
 
-                                  if (event.isRecurring) {
+                                  if (event.isRecurring || event.recurringType) {
                                     setEditIsRecurring(true);
                                     const freq = (event.recurringType && ['daily', 'weekly', 'biweekly', 'monthly'].includes(event.recurringType))
                                       ? event.recurringType as 'daily' | 'weekly' | 'biweekly' | 'monthly'

@@ -96,16 +96,17 @@ export default function AdminProgramDetail() {
     select: (data: any[]) => data.filter(u => u.role === 'player'),
   });
 
-  // Fetch enrollments for this program
-  const { data: enrollments = [] } = useQuery<any[]>({
-    queryKey: ["/api/enrollments", { programId }],
-    queryFn: async () => {
-      const response = await fetch(`/api/enrollments?programId=${programId}`);
-      if (!response.ok) return [];
-      return response.json();
-    },
+  const { data: allUsers = [] } = useQuery<{ id: string; firstName: string; lastName: string }[]>({
+    queryKey: ["/api/users"],
+  });
+
+  // Fetch enrollments for this program (admin endpoint, filtered client-side)
+  const { data: allAdminEnrollments = [] } = useQuery<any[]>({
+    queryKey: ["/api/admin/enrollments"],
     enabled: !!programId,
   });
+
+  const enrollments = allAdminEnrollments.filter((e: any) => e.programId === programId);
 
   // Get player IDs that are enrolled in this program
   const enrolledPlayerIds = new Set(enrollments.map((e: any) => e.profileId).filter(Boolean));
@@ -253,6 +254,39 @@ export default function AdminProgramDetail() {
     },
     onError: (error: Error) => {
       toast({ title: "Failed to update roster", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const cancelEnrollment = useMutation({
+    mutationFn: async (enrollmentId: number) => {
+      return await apiRequest("POST", `/api/enrollments/${enrollmentId}/cancel`, {});
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/enrollments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/enrollments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/team-memberships"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+
+      const cascade = data?.cascade;
+      if (cascade && (cascade.playerEnrollmentsCancelled > 0 || cascade.teamMembershipsRemoved > 0)) {
+        const parts: string[] = [];
+        if (cascade.playerEnrollmentsCancelled > 0) {
+          parts.push(`${cascade.playerEnrollmentsCancelled} player enrollment${cascade.playerEnrollmentsCancelled !== 1 ? 's' : ''} cancelled`);
+        }
+        if (cascade.teamMembershipsRemoved > 0) {
+          parts.push(`${cascade.teamMembershipsRemoved} team membership${cascade.teamMembershipsRemoved !== 1 ? 's' : ''} removed`);
+        }
+        toast({
+          title: "Enrollment cancelled",
+          description: `Cascade: ${parts.join(', ')}.`,
+        });
+      } else {
+        toast({ title: "Enrollment cancelled successfully" });
+      }
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to cancel enrollment", description: error.message, variant: "destructive" });
     },
   });
 
@@ -572,6 +606,69 @@ export default function AdminProgramDetail() {
                       Cancel
                     </Button>
                   </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Enrollments</CardTitle>
+                <CardDescription>Manage parent and player enrollments for this program</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {enrollments.length === 0 ? (
+                  <p className="text-sm text-gray-500 py-4 text-center">No enrollments for this program</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Account Holder</TableHead>
+                        <TableHead>Player</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Start Date</TableHead>
+                        <TableHead className="w-[100px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {enrollments.map((enrollment: any) => {
+                        const accountHolder = (allUsers as any[]).find((u: any) => u.id === enrollment.accountHolderId);
+                        const player = enrollment.profileId && enrollment.profileId !== enrollment.accountHolderId
+                          ? (allUsers as any[]).find((u: any) => u.id === enrollment.profileId)
+                          : null;
+                        return (
+                          <TableRow key={enrollment.id} data-testid={`row-enrollment-${enrollment.id}`}>
+                            <TableCell className="font-medium">
+                              {accountHolder ? `${accountHolder.firstName} ${accountHolder.lastName}` : enrollment.accountHolderId}
+                            </TableCell>
+                            <TableCell>
+                              {player ? `${player.firstName} ${player.lastName}` : enrollment.profileId ? enrollment.profileId : <span className="text-gray-400">Family</span>}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={enrollment.status === 'active' ? 'default' : 'secondary'}>
+                                {enrollment.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-gray-500">
+                              {enrollment.startDate ? new Date(enrollment.startDate).toLocaleDateString() : '—'}
+                            </TableCell>
+                            <TableCell>
+                              {enrollment.status === 'active' && (
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  disabled={cancelEnrollment.isPending}
+                                  onClick={() => cancelEnrollment.mutate(enrollment.id)}
+                                  data-testid={`button-cancel-enrollment-${enrollment.id}`}
+                                >
+                                  Cancel
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
                 )}
               </CardContent>
             </Card>

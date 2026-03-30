@@ -11587,16 +11587,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(403).json({ message: 'Not authorized to cancel this enrollment' });
     }
 
-    const [cancelled] = await db.update(productEnrollments)
-      .set({ 
-        status: 'cancelled',
-        autoRenew: false,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(productEnrollments.id, enrollmentId))
-      .returning();
+    // Cascade: if this is a parent/account-holder enrollment, cancel all child player enrollments
+    // and remove their team memberships for this program. Wrapped in a transaction for atomicity.
+    let cancelled: any;
+    let cascadedEnrollments = 0;
+    let cascadedMemberships = 0;
 
-    res.json(cancelled);
+    const isParentEnrollment = !existingEnrollment.profileId || 
+      existingEnrollment.profileId === existingEnrollment.accountHolderId;
+
+    await db.transaction(async (tx) => {
+      // Cancel the primary enrollment
+      const [cancelledRow] = await tx.update(productEnrollments)
+        .set({ 
+          status: 'cancelled',
+          autoRenew: false,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(productEnrollments.id, enrollmentId))
+        .returning();
+      cancelled = cancelledRow;
+
+      if (!isParentEnrollment) return;
+
+      const programId = existingEnrollment.programId;
+      const accountHolderId = existingEnrollment.accountHolderId;
+
+      // Find all active player enrollments in the same program for this account holder
+      // (players are those with a profileId different from the accountHolderId)
+      const playerEnrollments = await tx.select()
+        .from(productEnrollments)
+        .where(
+          and(
+            eq(productEnrollments.programId, programId),
+            eq(productEnrollments.accountHolderId, accountHolderId),
+            eq(productEnrollments.status, 'active')
+          )
+        );
+
+      const playerIds = playerEnrollments
+        .filter(e => e.profileId && e.profileId !== accountHolderId)
+        .map(e => e.profileId as string);
+
+      if (playerIds.length > 0) {
+        // Cancel child player enrollments; use .returning() for accurate count
+        const cancelledPlayerEnrollments = await tx.update(productEnrollments)
+          .set({
+            status: 'cancelled',
+            autoRenew: false,
+            updatedAt: new Date().toISOString(),
+          })
+          .where(
+            and(
+              eq(productEnrollments.programId, programId),
+              eq(productEnrollments.accountHolderId, accountHolderId),
+              eq(productEnrollments.status, 'active'),
+              inArray(productEnrollments.profileId, playerIds)
+            )
+          )
+          .returning();
+        cascadedEnrollments = cancelledPlayerEnrollments.length;
+      }
+
+      // Find all teams associated with this program
+      const programTeams = await tx.select({ id: teams.id })
+        .from(teams)
+        .where(eq(teams.programId, programId));
+
+      if (programTeams.length === 0) return;
+
+      const teamIds = programTeams.map(t => t.id);
+
+      if (playerIds.length > 0) {
+        // Remove player team memberships for all program teams; use .returning() for accurate count
+        const removedMemberships = await tx.delete(teamMemberships)
+          .where(
+            and(
+              inArray(teamMemberships.teamId, teamIds),
+              inArray(teamMemberships.profileId, playerIds)
+            )
+          )
+          .returning();
+        cascadedMemberships = removedMemberships.length;
+      }
+
+      // For each program team, check if the parent still has any other children on that team.
+      // Only deactivate the parent's 'parent'-role membership if no other children remain.
+      // Look up all children of this parent (users whose parentId = accountHolderId),
+      // then check which of those children are still active members on the team.
+      const parentChildren = await tx.select({ id: users.id })
+        .from(users)
+        .where(eq(users.parentId, accountHolderId));
+      const allChildIds = parentChildren.map(c => c.id);
+      // remaining children = all children minus those we just cancelled
+      const remainingChildIds = allChildIds.filter(id => !playerIds.includes(id));
+
+      for (const teamId of teamIds) {
+        let hasRemainingChildOnTeam = false;
+        if (remainingChildIds.length > 0) {
+          const stillOnTeam = await tx.select({ id: teamMemberships.id })
+            .from(teamMemberships)
+            .where(
+              and(
+                eq(teamMemberships.teamId, teamId),
+                inArray(teamMemberships.profileId, remainingChildIds),
+                eq(teamMemberships.status, 'active')
+              )
+            )
+            .limit(1);
+          hasRemainingChildOnTeam = stillOnTeam.length > 0;
+        }
+
+        if (!hasRemainingChildOnTeam) {
+          // No remaining children on this team — deactivate the parent's membership
+          const updatedParentMembership = await tx.update(teamMemberships)
+            .set({ status: 'inactive' })
+            .where(
+              and(
+                eq(teamMemberships.teamId, teamId),
+                eq(teamMemberships.profileId, accountHolderId),
+                eq(teamMemberships.role, 'parent')
+              )
+            )
+            .returning();
+          cascadedMemberships += updatedParentMembership.length;
+        }
+      }
+    });
+
+    res.json({
+      ...cancelled,
+      cascade: {
+        playerEnrollmentsCancelled: cascadedEnrollments,
+        teamMembershipsRemoved: cascadedMemberships,
+      },
+    });
   });
   
   // =============================================

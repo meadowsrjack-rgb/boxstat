@@ -101,6 +101,21 @@ export function getBrowserTimezone(): string {
   }
 }
 
+/**
+ * Converts a raw DB timestamp string (which may have a space separator and no
+ * timezone info) to a proper UTC ISO string so it can be passed to `new Date()`.
+ *
+ * PostgreSQL `timestamp` columns (mode: 'string') return values like
+ * "2026-03-31 03:00:00" — without a 'T' separator or 'Z' suffix.
+ * This function normalises all such formats to "YYYY-MM-DDTHH:mm:ssZ".
+ */
+export function ensureUtcString(t: string): string {
+  if (!t) return t;
+  if (t.includes('Z') || t.match(/[+-]\d{2}:/)) return t;
+  if (!t.includes('T')) return t.replace(' ', 'T') + 'Z';
+  return t + 'Z';
+}
+
 export function localDatetimeToUTC(naiveDatetime: string, timezone: string): string {
   if (!naiveDatetime) return '';
   const [datePart, timePart] = naiveDatetime.split('T');

@@ -99,7 +99,7 @@ import { LocationSearch } from "@/components/LocationSearch";
 import AttendanceList from "@/components/AttendanceList";
 import { format } from "date-fns";
 import RevenueTrendChart from "@/components/RevenueTrendChart";
-import { TIMEZONE_OPTIONS, getBrowserTimezone, localDatetimeToUTC, utcToLocalDatetime, getTimezoneAbbreviation } from "@/lib/time";
+import { TIMEZONE_OPTIONS, getBrowserTimezone, localDatetimeToUTC, utcToLocalDatetime, getTimezoneAbbreviation, ensureUtcString } from "@/lib/time";
 import EventWindowsConfigurator from "@/components/EventWindowsConfigurator";
 import type { EventWindow } from "@shared/schema";
 import EventDetailModal from "@/components/EventDetailModal";
@@ -7899,17 +7899,11 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                           setEditLocationType(eventToEdit.location === 'Online' ? 'online' : 'physical');
 
                           const etz = event.timezone || 'America/Los_Angeles';
-                          const ensureUtcStr = (t: string) => {
-                            if (!t) return t;
-                            if (t.includes('Z') || t.match(/[+-]\d{2}:/)) return t;
-                            if (!t.includes('T')) return t.replace(' ', 'T') + 'Z';
-                            return t + 'Z';
-                          };
                           if (eventToEdit.startTime) {
-                            eventToEdit.startTime = utcToLocalDatetime(ensureUtcStr(eventToEdit.startTime), etz);
+                            eventToEdit.startTime = utcToLocalDatetime(ensureUtcString(eventToEdit.startTime), etz);
                           }
                           if (eventToEdit.endTime) {
-                            eventToEdit.endTime = utcToLocalDatetime(ensureUtcStr(eventToEdit.endTime), etz);
+                            eventToEdit.endTime = utcToLocalDatetime(ensureUtcString(eventToEdit.endTime), etz);
                           }
                           
                           // Pre-populate recurring fields if event is already recurring
@@ -7922,7 +7916,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                             // Derive recurrence days from the event's start time day-of-week
                             // using the event's local timezone (schema doesn't store recurring days)
                             if (freq === 'weekly' || freq === 'biweekly') {
-                              const startDate = new Date(ensureUtcStr(event.startTime));
+                              const startDate = new Date(ensureUtcString(event.startTime));
                               let dayOfWeek: number[] = [];
                               if (!isNaN(startDate.getTime())) {
                                 const localDayStr = new Intl.DateTimeFormat('en-US', { timeZone: etz, weekday: 'short' }).format(startDate);
@@ -8095,10 +8089,17 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                   
                   // Days of the month
                   for (let day = 1; day <= daysInMonth; day++) {
-                    const dateStr = new Date(year, month, day).toISOString().split('T')[0];
+                    const mm = String(month + 1).padStart(2, '0');
+                    const dd = String(day).padStart(2, '0');
+                    const dateStr = `${year}-${mm}-${dd}`;
                     const dayEvents = events.filter((event: any) => {
-                      const eventDate = new Date(event.startTime).toISOString().split('T')[0];
-                      return eventDate === dateStr;
+                      const etz = event.timezone || 'America/Los_Angeles';
+                      const d = new Date(ensureUtcString(event.startTime || ''));
+                      if (isNaN(d.getTime())) return false;
+                      const parts = new Intl.DateTimeFormat('en-US', { timeZone: etz, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d);
+                      const getPart = (type: string) => parts.find(p => p.type === type)?.value || '00';
+                      const localDateStr = `${getPart('year')}-${getPart('month')}-${getPart('day')}`;
+                      return localDateStr === dateStr;
                     });
                     
                     const eventTypeColors: Record<string, string> = {
@@ -8133,7 +8134,8 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                                 >
                                   <div className="font-medium truncate">{event.title}</div>
                                   <div className="text-xs opacity-75">
-                                    {new Date(event.startTime).toLocaleTimeString('en-US', { 
+                                    {new Date(ensureUtcString(event.startTime || '')).toLocaleTimeString('en-US', { 
+                                      timeZone: event.timezone || 'America/Los_Angeles',
                                       hour: 'numeric', 
                                       minute: '2-digit' 
                                     })}
@@ -8178,17 +8180,11 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                                   setEditLocationType(eventToEdit.location === 'Online' ? 'online' : 'physical');
 
                                   const etz = event.timezone || 'America/Los_Angeles';
-                                  const ensureUtcStr = (t: string) => {
-                                    if (!t) return t;
-                                    if (t.includes('Z') || t.match(/[+-]\d{2}:/)) return t;
-                                    if (!t.includes('T')) return t.replace(' ', 'T') + 'Z';
-                                    return t + 'Z';
-                                  };
                                   if (eventToEdit.startTime) {
-                                    eventToEdit.startTime = utcToLocalDatetime(ensureUtcStr(eventToEdit.startTime), etz);
+                                    eventToEdit.startTime = utcToLocalDatetime(ensureUtcString(eventToEdit.startTime), etz);
                                   }
                                   if (eventToEdit.endTime) {
-                                    eventToEdit.endTime = utcToLocalDatetime(ensureUtcStr(eventToEdit.endTime), etz);
+                                    eventToEdit.endTime = utcToLocalDatetime(ensureUtcString(eventToEdit.endTime), etz);
                                   }
 
                                   if (event.isRecurring || event.recurringType) {
@@ -8198,7 +8194,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
                                       : 'weekly';
                                     setEditRecurrenceFrequency(freq);
                                     if (freq === 'weekly' || freq === 'biweekly') {
-                                      const startDate = new Date(ensureUtcStr(event.startTime));
+                                      const startDate = new Date(ensureUtcString(event.startTime));
                                       let dayOfWeek: number[] = [];
                                       if (!isNaN(startDate.getTime())) {
                                         const localDayStr = new Intl.DateTimeFormat('en-US', { timeZone: etz, weekday: 'short' }).format(startDate);

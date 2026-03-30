@@ -5817,11 +5817,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       // Check if this role already exists for this account
-      const roleExists = existingProfiles.some((u: any) => u.role === newRole);
-      if (roleExists) {
-        return res.status(400).json({ 
-          message: `This account already has a ${newRole} profile` 
-        });
+      // Player role allows multiple profiles (e.g. parent with multiple children)
+      if (newRole !== 'player') {
+        const roleExists = existingProfiles.some((u: any) => u.role === newRole);
+        if (roleExists) {
+          return res.status(400).json({ 
+            message: `This account already has a ${newRole} profile` 
+          });
+        }
       }
       
       // Generate unique ID for new profile

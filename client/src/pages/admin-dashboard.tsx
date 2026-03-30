@@ -2594,7 +2594,8 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                         (u.id === accountHolderId || u.accountHolderId === accountHolderId) && u.id !== editingUser.id
                       );
                       const allProfileRoles = [editingUser, ...otherProfiles].map((u: any) => u.role);
-                      const availableRoles = ['player', 'parent', 'coach', 'admin'].filter(r => !allProfileRoles.includes(r));
+                      // Player role is always available (multiple children per account); other roles limited to one per account
+                      const availableRoles = ['player', 'parent', 'coach', 'admin'].filter(r => r === 'player' || !allProfileRoles.includes(r));
 
                       return (
                         <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
@@ -2643,13 +2644,26 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                     className="text-xs h-7 capitalize"
                                     disabled={addRole.isPending}
                                     onClick={() => {
-                                      if (confirm(`Create a new ${role} profile for ${editingUser.firstName} ${editingUser.lastName}?`)) {
+                                      if (role === 'player') {
+                                        const firstName = prompt("Enter the player's first name:");
+                                        if (!firstName || !firstName.trim()) return;
+                                        const lastName = prompt("Enter the player's last name:");
+                                        if (!lastName || !lastName.trim()) return;
                                         addRole.mutate({
                                           userId: accountHolderId,
                                           role,
-                                          firstName: editingUser.firstName,
-                                          lastName: editingUser.lastName,
+                                          firstName: firstName.trim(),
+                                          lastName: lastName.trim(),
                                         });
+                                      } else {
+                                        if (confirm(`Create a new ${role} profile for ${editingUser.firstName} ${editingUser.lastName}?`)) {
+                                          addRole.mutate({
+                                            userId: accountHolderId,
+                                            role,
+                                            firstName: editingUser.firstName,
+                                            lastName: editingUser.lastName,
+                                          });
+                                        }
                                       }
                                     }}
                                     data-testid={`button-add-role-${role}`}

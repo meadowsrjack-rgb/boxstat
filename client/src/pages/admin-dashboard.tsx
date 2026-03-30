@@ -1885,6 +1885,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     };
     const hasActiveEnrollmentWithoutTeam = teams.length > 0 ? (() => {
       const checkPlayer = (player: any) => {
+        if (player.role !== 'player') return false;
         const playerActiveEnrollments = uniqueEnrollments.filter((e: any) =>
           e.profileId === player.id && e.status === 'active'
         );
@@ -3841,11 +3842,13 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                             }
                           }
 
+                          const profileId = enrollment.profileId;
+                          const profile = profileId === user.id ? user : linkedPlayers.find((p: any) => p.id === profileId);
+                          const isPlayerProfile = profile?.role === 'player';
+
                           const programTeams = teams.filter((t: any) => String(t.programId) === String(enrollment.programId));
-                          if (programTeams.length > 0) {
-                            const profileId = enrollment.profileId;
+                          if (programTeams.length > 0 && isPlayerProfile) {
                             const playerOnTeam = programTeams.some((t: any) => {
-                              const profile = profileId === user.id ? user : linkedPlayers.find((p: any) => p.id === profileId);
                               if (!profile) return false;
                               if (Array.isArray(profile.activeTeams) && profile.activeTeams.some((at: any) => String(at.teamId) === String(t.id))) return true;
                               if (profile.teamId && String(profile.teamId) === String(t.id)) return true;

@@ -6984,7 +6984,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
           {/* Edit Event Dialog */}
           {editingEvent && (
             <Dialog open={!!editingEvent} onOpenChange={(open) => { if (!open) { setEditingEvent(null); setEditEventUserSearch(""); setEditIsRecurring(false); setEditRecurrenceFrequency('weekly'); setEditRecurrenceCount(4); setEditRecurrenceDays([]); setEditRecurrenceEndType('count'); setEditRecurrenceEndDate(''); }}}>
-              <DialogContent className="max-w-[95vw] w-full">
+              <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Edit Event</DialogTitle>
                 </DialogHeader>

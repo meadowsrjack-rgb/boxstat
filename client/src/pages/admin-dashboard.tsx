@@ -16689,7 +16689,7 @@ function MigrationsTab({ organization, users }: any) {
 
 // Communications Tab - combines Notifications and CRM
 function CommunicationsTab({ notifications, users, teams, divisions, organization, initialCrmSubTab }: any) {
-  const [activeSection, setActiveSection] = useState<'notifications' | 'messages'>(initialCrmSubTab === 'messages' ? 'messages' : 'notifications');
+  const [activeSection, setActiveSection] = useState<'notifications' | 'messages'>(initialCrmSubTab === 'notifications' ? 'notifications' : 'messages');
 
   return (
     <div className="space-y-4">

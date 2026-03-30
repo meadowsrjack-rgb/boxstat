@@ -1102,6 +1102,8 @@ function PlayerProfileCard({ player, onCoachClick, onNavigateToPayments }: { pla
 function ParentMessagesSection({ players, userId }: { players: any[]; userId?: string }) {
   const [activeChat, setActiveChat] = useState<{ type: 'team' | 'coach' | 'management'; teamId?: number; coachId?: string; teamName?: string } | null>(null);
   const [newMessage, setNewMessage] = useState("");
+  const [managementChatViewed, setManagementChatViewed] = useState(false);
+  const [lastSeenReplyCount, setLastSeenReplyCount] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -1135,6 +1137,14 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
   const { data: myContactMessages = [] } = useQuery<any[]>({
     queryKey: ['/api/contact-management/my-messages'],
   });
+
+  const adminReplyCount = myContactMessages.reduce((count: number, msg: any) => count + (msg.replies || []).filter((r: any) => r.isAdmin).length, 0);
+
+  useEffect(() => {
+    if (adminReplyCount > lastSeenReplyCount && lastSeenReplyCount > 0) {
+      setManagementChatViewed(false);
+    }
+  }, [adminReplyCount, lastSeenReplyCount]);
 
   // Send team message mutation (parent channel)
   const sendTeamMessageMutation = useMutation({
@@ -1319,16 +1329,16 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
           <Button
             variant="outline"
             className="w-full justify-between"
-            onClick={() => setActiveChat({ type: 'management' })}
+            onClick={() => { setActiveChat({ type: 'management' }); setManagementChatViewed(true); setLastSeenReplyCount(adminReplyCount); }}
             data-testid="button-contact-management"
           >
             <span className="flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-red-600" />
               {myContactMessages.length > 0 ? 'View messages' : 'Send a message to management'}
             </span>
-            {myContactMessages.some((msg: any) => (msg.replies || []).some((r: any) => r.isAdmin)) && (
+            {!managementChatViewed && adminReplyCount > 0 && (
               <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">
-                {myContactMessages.reduce((count: number, msg: any) => count + (msg.replies || []).filter((r: any) => r.isAdmin).length, 0)}
+                {adminReplyCount}
               </span>
             )}
           </Button>

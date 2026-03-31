@@ -166,9 +166,13 @@ async function clearLegacySubscriptionNotification(userId: string): Promise<void
   }
 }
 
-// Initialize Stripe (global fallback)
-const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-06-30.basil" })
+// Initialize Stripe (global fallback) — use test keys in dev mode if available
+const stripeSecretKey = (process.env.NODE_ENV === 'development' && process.env.TESTING_STRIPE_SECRET_KEY)
+  ? process.env.TESTING_STRIPE_SECRET_KEY
+  : process.env.STRIPE_SECRET_KEY;
+
+const stripe = stripeSecretKey
+  ? new Stripe(stripeSecretKey, { apiVersion: "2025-06-30.basil" })
   : null;
 
 const stripeOrgCache = new Map<string, { instance: Stripe; key: string; createdAt: number }>();
@@ -1524,14 +1528,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // STRIPE PAYMENT ROUTES
   // =============================================
   
-  // Initialize Stripe
-  const stripe = process.env.STRIPE_SECRET_KEY 
-    ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-06-30.basil" })
+  // Initialize Stripe — use test keys in dev mode if available
+  const routeStripeKey = (process.env.NODE_ENV === 'development' && process.env.TESTING_STRIPE_SECRET_KEY)
+    ? process.env.TESTING_STRIPE_SECRET_KEY
+    : process.env.STRIPE_SECRET_KEY;
+
+  const stripe = routeStripeKey
+    ? new Stripe(routeStripeKey, { apiVersion: "2025-06-30.basil" })
     : null;
   
-  // Verify Stripe mode on initialization
-  if (stripe && process.env.STRIPE_SECRET_KEY) {
-    const keyPrefix = process.env.STRIPE_SECRET_KEY.substring(0, 8);
+  if (stripe && routeStripeKey) {
+    const keyPrefix = routeStripeKey.substring(0, 8);
     const mode = keyPrefix.startsWith('sk_test') ? '🧪 TEST' : '🔴 LIVE';
     console.log(`Stripe initialized in ${mode} mode (key: ${keyPrefix}...)`);
   }

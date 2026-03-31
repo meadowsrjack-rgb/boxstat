@@ -1625,9 +1625,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get origin for URLs
       const origin = `${req.protocol}://${req.get('host')}`;
       
-      const connectInfo1 = await getOrgConnectInfo(req.user.organizationId);
-      const totalAmount1 = lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
-
       const sessionParams1: any = {
         customer: stripeCustomerId,
         line_items: lineItems,
@@ -1636,20 +1633,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cancel_url: `${origin}/payments?canceled=true`,
         metadata,
       };
-
-      if (connectInfo1.isConnected && connectInfo1.connectedAccountId) {
-        if (mode === 'subscription') {
-          sessionParams1.subscription_data = {
-            application_fee_percent: 1,
-            transfer_data: { destination: connectInfo1.connectedAccountId },
-          };
-        } else {
-          sessionParams1.payment_intent_data = {
-            application_fee_amount: Math.round(totalAmount1 * 0.01),
-            transfer_data: { destination: connectInfo1.connectedAccountId },
-          };
-        }
-      }
 
       const session = await orgStripe.checkout.sessions.create(sessionParams1);
       
@@ -2007,9 +1990,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? `${origin}/payment-success?canceled=true`
         : `${origin}/unified-account?payment=canceled`;
         
-      const connectInfo = await getOrgConnectInfo(req.user.organizationId);
-      const totalAmount = lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
-
       const checkoutMode = (isSubscription || isInstallmentPlan) ? 'subscription' : 'payment';
       
       const sessionParams: any = {
@@ -2099,26 +2079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sessionParams.subscription_data.cancel_at = cancelAt;
       }
 
-      if (connectInfo.isConnected && connectInfo.connectedAccountId) {
-        if (isSubscription || isInstallmentPlan) {
-          sessionParams.subscription_data = {
-            ...(sessionParams.subscription_data || {}),
-            application_fee_percent: 1,
-            transfer_data: {
-              destination: connectInfo.connectedAccountId,
-            },
-          };
-        } else {
-          sessionParams.payment_intent_data = {
-            application_fee_amount: Math.round(totalAmount * 0.01),
-            transfer_data: {
-              destination: connectInfo.connectedAccountId,
-            },
-            receipt_email: user.email,
-          };
-        }
-        console.log(`💳 Destination charge: ${connectInfo.connectedAccountId}, fee: 1% of ${totalAmount}`);
-      } else if (checkoutMode === 'payment') {
+      if (checkoutMode === 'payment') {
         sessionParams.payment_intent_data = {
           receipt_email: user.email,
         };
@@ -3144,7 +3105,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? `${origin}/payment-success?canceled=true`
         : `${origin}/unified-account?payment=canceled`;
 
-      const cartConnectInfo = await getOrgConnectInfo(req.user.organizationId);
       const cartSessionParams: any = {
         customer: customerId,
         line_items: [{
@@ -3173,13 +3133,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pricingOptionName: '',
         },
       };
-      if (cartConnectInfo.isConnected && cartConnectInfo.connectedAccountId) {
-        cartSessionParams.payment_intent_data = {
-          ...cartSessionParams.payment_intent_data,
-          application_fee_amount: Math.round(program.price * 0.01),
-          transfer_data: { destination: cartConnectInfo.connectedAccountId },
-        };
-      }
       const newSession = await orgStripe.checkout.sessions.create(cartSessionParams);
 
       if (!newSession.url) {
@@ -4355,7 +4308,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               quantity: 1,
             }];
         
-        const addPlayerSubConnect = await getOrgConnectInfo(req.user.organizationId);
         const addPlayerSubParams: any = {
           customer: stripeCustomerId,
           line_items: subscriptionLineItems,
@@ -4386,13 +4338,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             addOnIds: addOnIds ? JSON.stringify(addOnIds) : '',
           },
         };
-        if (addPlayerSubConnect.isConnected && addPlayerSubConnect.connectedAccountId) {
-          addPlayerSubParams.subscription_data = {
-            ...addPlayerSubParams.subscription_data,
-            application_fee_percent: 1,
-            transfer_data: { destination: addPlayerSubConnect.connectedAccountId },
-          };
-        }
         session = await playerOrgStripe.checkout.sessions.create(addPlayerSubParams);
         
         console.log(`Created subscription checkout for bundle-to-monthly: ${pricingOptionName} -> Monthly after ${bundleDurationDays} days`);
@@ -4457,8 +4402,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        const addPlayerPayConnect = await getOrgConnectInfo(req.user.organizationId);
-        const addPlayerPayTotal = subtotal + platformFee;
         const addPlayerPayParams: any = {
           customer: stripeCustomerId,
           line_items: lineItems,
@@ -4475,12 +4418,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             addOnIds: addOnIds ? JSON.stringify(addOnIds) : '',
           },
         };
-        if (addPlayerPayConnect.isConnected && addPlayerPayConnect.connectedAccountId) {
-          addPlayerPayParams.payment_intent_data = {
-            application_fee_amount: Math.round(addPlayerPayTotal * 0.01),
-            transfer_data: { destination: addPlayerPayConnect.connectedAccountId },
-          };
-        }
         session = await playerOrgStripe.checkout.sessions.create(addPlayerPayParams);
       }
       
@@ -15184,7 +15121,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!quoteOrgStripe) {
           return res.status(500).json({ error: "Payment processing is not configured for this organization" });
         }
-        const quoteConnectInfo = await getOrgConnectInfo(quote.organizationId);
         const quoteSessionParams: any = {
           payment_method_types: ['card'],
           line_items: lineItems,
@@ -15199,13 +15135,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             enrollmentIds: JSON.stringify(enrollmentIds),
           },
         };
-        if (quoteConnectInfo.isConnected && quoteConnectInfo.connectedAccountId) {
-          const quoteTotal = lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
-          quoteSessionParams.payment_intent_data = {
-            application_fee_amount: Math.round(quoteTotal * 0.01),
-            transfer_data: { destination: quoteConnectInfo.connectedAccountId },
-          };
-        }
         const session = await quoteOrgStripe.checkout.sessions.create(quoteSessionParams);
 
         return res.json({ paymentUrl: session.url });

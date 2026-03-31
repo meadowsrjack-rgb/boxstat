@@ -14524,7 +14524,7 @@ function StripeSettingsSection() {
     },
     onSuccess: (data: any) => {
       if (data.url) {
-        window.open(data.url, "_blank");
+        window.location.href = data.url;
       }
     },
     onError: () => {

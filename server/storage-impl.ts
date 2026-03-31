@@ -3093,6 +3093,8 @@ class DatabaseStorage implements IStorage {
         stripeSecretKey: org.stripeSecretKey,
         stripePublishableKey: org.stripePublishableKey,
         stripeWebhookSecret: org.stripeWebhookSecret,
+        stripeConnectedId: org.stripeConnectedId,
+        stripeConnectStatus: org.stripeConnectStatus,
         createdAt: org.createdAt ? new Date(org.createdAt) : new Date(),
         updatedAt: org.updatedAt ? new Date(org.updatedAt) : new Date(),
       };
@@ -3118,6 +3120,8 @@ class DatabaseStorage implements IStorage {
         stripeSecretKey: org.stripeSecretKey,
         stripePublishableKey: org.stripePublishableKey,
         stripeWebhookSecret: org.stripeWebhookSecret,
+        stripeConnectedId: org.stripeConnectedId,
+        stripeConnectStatus: org.stripeConnectStatus,
         createdAt: org.createdAt ? new Date(org.createdAt) : new Date(),
         updatedAt: org.updatedAt ? new Date(org.updatedAt) : new Date(),
       }));

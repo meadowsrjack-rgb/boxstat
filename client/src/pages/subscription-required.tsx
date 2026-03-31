@@ -25,9 +25,8 @@ export default function SubscriptionRequired() {
       apiRequest('/api/platform/verify-subscription', { method: 'POST' })
         .then((result: any) => {
           if (result.status === 'active') {
-            queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-            toast({ title: 'Subscription Activated', description: 'Your subscription is now active. Redirecting...' });
-            setTimeout(() => { window.location.href = '/admin-dashboard'; }, 1500);
+            queryClient.clear();
+            window.location.replace('/admin-dashboard');
           } else {
             setVerifying(false);
           }

@@ -246,6 +246,39 @@ async function getPlatformFeePercent(): Promise<number> {
   return 0;
 }
 
+async function applyConnectChargeParams(
+  sessionParams: any,
+  organizationId: string,
+  mode: 'payment' | 'subscription',
+  applicationFeeAmount?: number,
+) {
+  const connectInfo = await getOrgConnectInfo(organizationId);
+  if (!connectInfo.isConnected || !connectInfo.connectedAccountId) return;
+
+  if (mode === 'payment') {
+    sessionParams.payment_intent_data = {
+      ...(sessionParams.payment_intent_data || {}),
+      transfer_data: {
+        destination: connectInfo.connectedAccountId,
+      },
+    };
+    if (applicationFeeAmount && applicationFeeAmount > 0) {
+      sessionParams.payment_intent_data.application_fee_amount = applicationFeeAmount;
+    }
+  } else if (mode === 'subscription') {
+    sessionParams.subscription_data = {
+      ...(sessionParams.subscription_data || {}),
+      transfer_data: {
+        destination: connectInfo.connectedAccountId,
+      },
+    };
+    const feePercent = await getPlatformFeePercent();
+    if (feePercent > 0) {
+      sessionParams.subscription_data.application_fee_percent = feePercent;
+    }
+  }
+}
+
 // Helper function to generate stable UUID for pricing options
 function generateStablePricingOptionId(): string {
   return `po_${crypto.randomUUID()}`;
@@ -1634,6 +1667,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         metadata,
       };
 
+      await applyConnectChargeParams(sessionParams1, req.user.organizationId, mode);
+
       const session = await orgStripe.checkout.sessions.create(sessionParams1);
       
       res.json({
@@ -2084,6 +2119,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           receipt_email: user.email,
         };
       }
+
+      await applyConnectChargeParams(sessionParams, req.user.organizationId, checkoutMode, platformFee);
 
       const session = await orgStripe2.checkout.sessions.create(sessionParams);
 
@@ -3105,16 +3142,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? `${origin}/payment-success?canceled=true`
         : `${origin}/unified-account?payment=canceled`;
 
-      const cartSessionParams: any = {
-        customer: customerId,
-        line_items: [{
+      const cartLineItems: any[] = [{
+        price_data: {
+          currency: 'usd',
+          product_data: { name: program.name || program.title || 'Program' },
+          unit_amount: program.price,
+        },
+        quantity: 1,
+      }];
+
+      const cartFeePercent = await getPlatformFeePercent();
+      const cartPlatformFee = cartFeePercent > 0 ? Math.round(program.price * (cartFeePercent / 100)) : 0;
+      if (cartPlatformFee > 0) {
+        cartLineItems.push({
           price_data: {
             currency: 'usd',
-            product_data: { name: program.name || program.title || 'Program' },
-            unit_amount: program.price,
+            product_data: {
+              name: 'BoxStat Technology Fee',
+              description: `${cartFeePercent}% technology fee`,
+            },
+            unit_amount: cartPlatformFee,
           },
           quantity: 1,
-        }],
+        });
+      }
+
+      const cartSessionParams: any = {
+        customer: customerId,
+        line_items: cartLineItems,
         mode: 'payment',
         success_url: successUrl,
         cancel_url: cancelUrl,
@@ -3133,6 +3188,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pricingOptionName: '',
         },
       };
+
+      await applyConnectChargeParams(cartSessionParams, req.user.organizationId, 'payment', cartPlatformFee);
+
       const newSession = await orgStripe.checkout.sessions.create(cartSessionParams);
 
       if (!newSession.url) {
@@ -4338,6 +4396,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             addOnIds: addOnIds ? JSON.stringify(addOnIds) : '',
           },
         };
+
+        await applyConnectChargeParams(addPlayerSubParams, req.user.organizationId, 'subscription');
+
         session = await playerOrgStripe.checkout.sessions.create(addPlayerSubParams);
         
         console.log(`Created subscription checkout for bundle-to-monthly: ${pricingOptionName} -> Monthly after ${bundleDurationDays} days`);
@@ -4418,6 +4479,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             addOnIds: addOnIds ? JSON.stringify(addOnIds) : '',
           },
         };
+
+        await applyConnectChargeParams(addPlayerPayParams, req.user.organizationId, 'payment', platformFee);
+
         session = await playerOrgStripe.checkout.sessions.create(addPlayerPayParams);
       }
       
@@ -13188,13 +13252,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const existingItems = stripeSubscription.items.data;
               
               if (existingItems.length > 0) {
-                // Update the first item with new pricing
-                await stripe.subscriptions.update(stripeSubId, {
+                const updateParams: any = {
                   items: [{
                     id: existingItems[0].id,
                     price: newPriceId,
                   }],
-                  proration_behavior: 'none', // No immediate charge, applies at next billing
+                  proration_behavior: 'none',
                   application_fee_percent: await getPlatformFeePercent() || undefined,
                   metadata: {
                     migrated: 'true',
@@ -13204,7 +13267,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     parentUserId: userId,
                     programName: programName,
                   },
-                });
+                };
+                const subConnectInfo = await getOrgConnectInfo(orgId);
+                if (subConnectInfo.isConnected && subConnectInfo.connectedAccountId) {
+                  updateParams.transfer_data = { destination: subConnectInfo.connectedAccountId };
+                }
+                await stripe.subscriptions.update(stripeSubId, updateParams);
                 console.log(`✅ Stripe subscription ${stripeSubId} upgraded to ${programName} (${newPriceId})`);
                 stripeUpgradeResults.push({ subscriptionId: stripeSubId, success: true });
               } else {
@@ -15121,6 +15189,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!quoteOrgStripe) {
           return res.status(500).json({ error: "Payment processing is not configured for this organization" });
         }
+        const quoteFeePercent = await getPlatformFeePercent();
+        const quotePlatformFee = quoteFeePercent > 0 ? Math.round((quote.totalAmount || 0) * (quoteFeePercent / 100)) : 0;
+        if (quotePlatformFee > 0) {
+          lineItems.push({
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: 'BoxStat Technology Fee',
+                description: `${quoteFeePercent}% technology fee`,
+              },
+              unit_amount: quotePlatformFee,
+            },
+            quantity: 1,
+          });
+        }
+
         const quoteSessionParams: any = {
           payment_method_types: ['card'],
           line_items: lineItems,
@@ -15135,6 +15219,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             enrollmentIds: JSON.stringify(enrollmentIds),
           },
         };
+
+        await applyConnectChargeParams(quoteSessionParams, quote.organizationId, 'payment', quotePlatformFee);
+
         const session = await quoteOrgStripe.checkout.sessions.create(quoteSessionParams);
 
         return res.json({ paymentUrl: session.url });

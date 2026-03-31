@@ -42,7 +42,7 @@ PostgreSQL, hosted on Neon serverless, is used in conjunction with Drizzle ORM. 
 -   **Firebase Cloud Messaging**: Android push notifications.
 -   **Web Push (VAPID)**: PWA browser push notifications.
 -   **Resend**: Email service.
--   **Stripe / Stripe Connect (Express)**: Payment processing. Org gets 100% of payments directly. BoxStat charges a 2% technology fee as a visible line item on checkout (configurable via `boxstat_technology_fee_percent` platform setting). Each org onboards via Stripe Connect Express in admin dashboard "Payment Setup" — no raw API keys needed.
+-   **Stripe / Stripe Connect (Express)**: Payment processing using Connect destination charges. Org payments go to the org's connected Stripe account via `transfer_data.destination`, with BoxStat keeping the 2% technology fee via `application_fee_amount` (one-time) or `application_fee_percent` (subscriptions). The fee is also shown as a visible line item on checkout. Platform subscriptions (Growth/Pro/Enterprise plans) go directly to the BoxStat Stripe account. Each org onboards via Stripe Connect Express in admin dashboard "Payment Setup". Fee percent configurable via `boxstat_technology_fee_percent` platform setting.
 -   **Neon Database**: Serverless PostgreSQL hosting.
 -   **Drizzle ORM**: Database operations.
 -   **Multer**: File uploads.

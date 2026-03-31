@@ -3488,10 +3488,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/platform/verify-subscription', async (req: any, res) => {
+  app.post('/api/platform/verify-subscription', requireAuth, async (req: any, res) => {
     try {
       if (!stripe) return res.status(500).json({ error: 'Stripe not configured' });
-      if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
 
       const orgId = req.user.organizationId;
       if (!orgId) return res.status(400).json({ error: 'No organization' });

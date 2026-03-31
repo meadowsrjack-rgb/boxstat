@@ -748,6 +748,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     if (user) {
       (user as any).needsPassword = !user.password;
+      
+      // Include organization's platform subscription status for admin gating
+      if (user.organizationId) {
+        const org = await storage.getOrganization(user.organizationId);
+        if (org) {
+          (user as any).organizationPlatformSubscriptionStatus = (org as any).platformSubscriptionStatus ?? 'inactive';
+          (user as any).organizationPlatformPlan = (org as any).platformPlan ?? null;
+        }
+      }
     }
     
     res.json(user);

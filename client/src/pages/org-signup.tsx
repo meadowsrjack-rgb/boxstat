@@ -97,13 +97,11 @@ export default function OrgSignup() {
       if (response.url) {
         window.location.href = response.url;
       } else {
-        toast({ title: "Billing Setup Issue", description: "Could not redirect to payment. You can set up billing from your dashboard.", variant: "destructive" });
-        setTimeout(() => { window.location.href = "/dashboard"; }, 2000);
+        toast({ title: "Billing Setup Issue", description: "Could not redirect to payment. Please try again.", variant: "destructive" });
       }
     },
     onError: (error: any) => {
-      toast({ title: "Payment Setup Failed", description: error.message || "Could not set up billing. You can configure this later from your dashboard.", variant: "destructive" });
-      setTimeout(() => { window.location.href = "/dashboard"; }, 2000);
+      toast({ title: "Payment Setup Failed", description: error.message || "Could not set up billing. Please try again.", variant: "destructive" });
     },
   });
 
@@ -147,9 +145,6 @@ export default function OrgSignup() {
     checkoutMutation.mutate(planKey);
   };
 
-  const handleSkipBilling = () => {
-    window.location.href = "/dashboard";
-  };
 
   const stepTitles = ["Your Organization", "Your Information", "Create Password", "Choose Your Plan"];
   const stepIcons = [Building2, User, Lock, CreditCard];
@@ -398,12 +393,9 @@ export default function OrgSignup() {
                   )}
                 </Button>
 
-                <button
-                  onClick={handleSkipBilling}
-                  className="w-full text-center text-sm text-gray-500 hover:text-gray-300 transition-colors"
-                >
-                  Skip for now — set up billing later
-                </button>
+                <p className="w-full text-center text-xs text-gray-600">
+                  A subscription is required to access the admin dashboard.
+                </p>
               </div>
             )}
           </div>

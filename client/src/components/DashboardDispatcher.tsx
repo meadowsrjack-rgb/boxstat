@@ -30,6 +30,16 @@ export default function DashboardDispatcher() {
       return;
     }
 
+    // Gate admin users behind active platform subscription
+    if ((user as any)?.role === "admin") {
+      const subscriptionStatus = (user as any)?.organizationPlatformSubscriptionStatus;
+      if (subscriptionStatus !== "active") {
+        hasNavigated.current = true;
+        setLocation("/subscription-required");
+        return;
+      }
+    }
+
     hasNavigated.current = true;
 
     const userRole = (user as any)?.role;

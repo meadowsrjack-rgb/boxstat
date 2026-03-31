@@ -35,6 +35,7 @@ import ResetPassword from "@/pages/reset-password";
 import SetPassword from "@/pages/set-password";
 import OrgSignup from "@/pages/org-signup";
 console.log('[App] OrgSignup imported as:', typeof OrgSignup, OrgSignup);
+import SubscriptionRequired from "@/pages/subscription-required";
 
 import RosterManagement from "@/pages/roster-management";
 import ScheduleRequests from "@/pages/schedule-requests";
@@ -144,6 +145,41 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   return <Component />;
 }
 
+// Admin-only protected route that also gates on active platform subscription
+function ProtectedAdminRoute({ component: Component }: { component: React.ComponentType<any> }) {
+  const { user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  if (isLoading) {
+    const htmlLoader = document.getElementById('startup-loader');
+    if (htmlLoader) {
+      return null;
+    }
+    return (
+      <div className="min-h-screen-safe bg-white flex items-center justify-center">
+        <BanterLoader />
+      </div>
+    );
+  }
+
+  if (!user) {
+    setLocation("/");
+    return null;
+  }
+
+  if ((user as any)?.role !== "admin") {
+    setLocation("/home");
+    return null;
+  }
+
+  if ((user as any)?.organizationPlatformSubscriptionStatus !== "active") {
+    setLocation("/subscription-required");
+    return null;
+  }
+
+  return <Component />;
+}
+
 // Create protected route wrappers as proper components (not anonymous functions)
 const ProtectedUnifiedAccount = () => <ProtectedRoute component={UnifiedAccount} />;
 const ProtectedProfileGateway = () => <ProtectedRoute component={ProfileGateway} />;
@@ -151,8 +187,8 @@ const ProtectedClaimSubscription = () => <ProtectedRoute component={ClaimSubscri
 const ProtectedDashboardDispatcher = () => <ProtectedRoute component={DashboardDispatcher} />;
 const ProtectedAddPlayer = () => <ProtectedRoute component={AddPlayer} />;
 const ProtectedPlayerDashboard = () => <ProtectedRoute component={PlayerDashboard} />;
-const ProtectedAdminDashboard = () => <ProtectedRoute component={AdminDashboard} />;
-const ProtectedAdminProgramDetail = () => <ProtectedRoute component={AdminProgramDetail} />;
+const ProtectedAdminDashboard = () => <ProtectedAdminRoute component={AdminDashboard} />;
+const ProtectedAdminProgramDetail = () => <ProtectedAdminRoute component={AdminProgramDetail} />;
 const ProtectedCoachDashboard = () => <ProtectedRoute component={CoachDashboard} />;
 const ProtectedProfile = () => <ProtectedRoute component={Profile} />;
 const ProtectedSettingsPage = () => <ProtectedRoute component={SettingsPage} />;
@@ -437,6 +473,7 @@ function AppRouter() {
       <Route path="/home" component={ProtectedDashboardDispatcher} />
       <Route path="/profile-gateway" component={ProtectedProfileGateway} />
       <Route path="/claim-subscription" component={ProtectedClaimSubscription} />
+      <Route path="/subscription-required" component={SubscriptionRequired} />
       <Route path="/parent-dashboard" component={ProtectedUnifiedAccount} />
       <Route path="/account" component={AccountRoute} />
       <Route path="/unified-account" component={ProtectedUnifiedAccount} />

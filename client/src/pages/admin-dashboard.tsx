@@ -14519,8 +14519,7 @@ function StripeSettingsSection() {
 
   const onboardMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/stripe-connect/onboard");
-      return await res.json();
+      return await apiRequest("POST", "/api/stripe-connect/onboard");
     },
     onSuccess: (data: any) => {
       if (data.url) {
@@ -14534,8 +14533,7 @@ function StripeSettingsSection() {
 
   const dashboardMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("GET", "/api/stripe-connect/login-link");
-      return await res.json();
+      return await apiRequest("GET", "/api/stripe-connect/login-link");
     },
     onSuccess: (data: any) => {
       if (data.url) {

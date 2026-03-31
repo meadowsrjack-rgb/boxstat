@@ -14556,7 +14556,6 @@ function StripeSettingsSection() {
           <CreditCard className="w-5 h-5" />
           Payment Setup
         </CardTitle>
-        <CardDescription>Connect your bank account to receive payments from program enrollments and store purchases</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {connectLoading ? (

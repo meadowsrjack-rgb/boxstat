@@ -3032,7 +3032,15 @@ export default function UnifiedAccount() {
                             const item = suggestedAddOnProducts.find((s: any) => s.id === id);
                             return sum + (item?.price || 0);
                           }, 0);
-                          const totalPrice = basePrice + addOnsTotal;
+                          let discountAmount = 0;
+                          if (appliedCoupon) {
+                            if (appliedCoupon.discountType === 'percentage') {
+                              discountAmount = Math.round(basePrice * appliedCoupon.discountValue / 100);
+                            } else {
+                              discountAmount = appliedCoupon.discountValue;
+                            }
+                          }
+                          const totalPrice = Math.max(0, basePrice - discountAmount) + addOnsTotal;
                           
                           // Determine billing type display
                           const isBundle = !!selectedOption;
@@ -3080,6 +3088,12 @@ export default function UnifiedAccount() {
                                   </div>
                                 );
                               })}
+                              {discountAmount > 0 && (
+                                <div className="flex justify-between text-sm text-green-600">
+                                  <span>Discount ({appliedCoupon?.discountType === 'percentage' ? `${appliedCoupon?.discountValue}%` : `$${((appliedCoupon?.discountValue || 0) / 100).toFixed(2)}`})</span>
+                                  <span>-${(discountAmount / 100).toFixed(2)}</span>
+                                </div>
+                              )}
                               <div className="flex justify-between items-center pt-2 border-t border-gray-300">
                                 <span className="font-semibold">Total:</span>
                                 <div className="text-right">

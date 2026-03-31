@@ -3095,9 +3095,12 @@ class DatabaseStorage implements IStorage {
         stripeWebhookSecret: org.stripeWebhookSecret,
         stripeConnectedId: org.stripeConnectedId,
         stripeConnectStatus: org.stripeConnectStatus,
+        platformPlan: org.platformPlan,
+        platformSubscriptionId: org.platformSubscriptionId,
+        platformSubscriptionStatus: org.platformSubscriptionStatus,
         createdAt: org.createdAt ? new Date(org.createdAt) : new Date(),
         updatedAt: org.updatedAt ? new Date(org.updatedAt) : new Date(),
-      };
+      } as any;
     } catch (error) {
       console.error('Error fetching organization:', error);
       return undefined;
@@ -3122,6 +3125,9 @@ class DatabaseStorage implements IStorage {
         stripeWebhookSecret: org.stripeWebhookSecret,
         stripeConnectedId: org.stripeConnectedId,
         stripeConnectStatus: org.stripeConnectStatus,
+        platformPlan: org.platformPlan,
+        platformSubscriptionId: org.platformSubscriptionId,
+        platformSubscriptionStatus: org.platformSubscriptionStatus,
         createdAt: org.createdAt ? new Date(org.createdAt) : new Date(),
         updatedAt: org.updatedAt ? new Date(org.updatedAt) : new Date(),
       }));
@@ -3182,6 +3188,9 @@ class DatabaseStorage implements IStorage {
       if (updates.stripeWebhookSecret !== undefined) updateData.stripeWebhookSecret = updates.stripeWebhookSecret;
       if (updates.stripeConnectedId !== undefined) updateData.stripeConnectedId = updates.stripeConnectedId;
       if (updates.stripeConnectStatus !== undefined) updateData.stripeConnectStatus = updates.stripeConnectStatus;
+      if ((updates as any).platformPlan !== undefined) updateData.platformPlan = (updates as any).platformPlan;
+      if ((updates as any).platformSubscriptionId !== undefined) updateData.platformSubscriptionId = (updates as any).platformSubscriptionId;
+      if ((updates as any).platformSubscriptionStatus !== undefined) updateData.platformSubscriptionStatus = (updates as any).platformSubscriptionStatus;
       
       await db.update(schema.organizations)
         .set(updateData)

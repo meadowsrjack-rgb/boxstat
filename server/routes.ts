@@ -3476,8 +3476,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId,
           organizationId: orgId,
         },
-        success_url: `${baseUrl}/dashboard?subscription=success&plan=${plan}`,
-        cancel_url: `${baseUrl}/dashboard?subscription=cancelled`,
+        success_url: `${baseUrl}/subscription-required?subscription=success&plan=${plan}`,
+        cancel_url: `${baseUrl}/subscription-required?subscription=cancelled`,
       });
 
       console.log(`[Platform Subscription] Created checkout session for org ${orgId}, plan: ${plan}, session: ${session.id}`);
@@ -3485,6 +3485,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('[Platform Subscription] Error creating checkout:', error);
       res.status(500).json({ success: false, message: error.message || 'Failed to create checkout session' });
+    }
+  });
+
+  app.post('/api/platform/verify-subscription', async (req: any, res) => {
+    try {
+      if (!stripe) return res.status(500).json({ error: 'Stripe not configured' });
+      if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+
+      const orgId = req.user.organizationId;
+      if (!orgId) return res.status(400).json({ error: 'No organization' });
+
+      const org = await storage.getOrganization(orgId);
+      if (!org) return res.status(404).json({ error: 'Organization not found' });
+
+      if ((org as any).platformSubscriptionStatus === 'active') {
+        return res.json({ status: 'active', plan: (org as any).platformPlan });
+      }
+
+      const sessions = await stripe.checkout.sessions.list({
+        limit: 5,
+      });
+
+      const matchingSession = sessions.data.find(
+        (s) => s.metadata?.type === 'platform_subscription' &&
+               s.metadata?.organizationId === orgId &&
+               s.status === 'complete' &&
+               s.payment_status === 'paid'
+      );
+
+      if (matchingSession) {
+        const plan = matchingSession.metadata?.plan || 'growth';
+        const subId = (matchingSession as any).subscription;
+        await storage.updateOrganization(orgId, {
+          platformPlan: plan,
+          platformSubscriptionStatus: 'active',
+          platformSubscriptionId: subId || null,
+        } as any);
+        console.log(`[Platform Subscription] Verified and activated org ${orgId}, plan: ${plan}`);
+        return res.json({ status: 'active', plan });
+      }
+
+      return res.json({ status: 'inactive' });
+    } catch (error: any) {
+      console.error('[Platform Subscription] Verify error:', error.message);
+      res.status(500).json({ error: error.message });
     }
   });
 

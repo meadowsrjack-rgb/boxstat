@@ -1,9 +1,10 @@
+import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Loader2, LogOut } from "lucide-react";
+import { CreditCard, Loader2, LogOut, CheckCircle } from "lucide-react";
 import darkThemeLogo from "@assets/darktheme_1768878672908.png";
 
 const PLANS: Record<string, { name: string; price: string; families: string }> = {
@@ -15,6 +16,25 @@ const PLANS: Record<string, { name: string; price: string; families: string }> =
 export default function SubscriptionRequired() {
   const { user, logout } = useAuth();
   const { toast } = useToast();
+  const [verifying, setVerifying] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('subscription') === 'success') {
+      setVerifying(true);
+      apiRequest('/api/platform/verify-subscription', { method: 'POST' })
+        .then((result: any) => {
+          if (result.status === 'active') {
+            queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+            toast({ title: 'Subscription Activated', description: 'Your subscription is now active. Redirecting...' });
+            setTimeout(() => { window.location.href = '/admin-dashboard'; }, 1500);
+          } else {
+            setVerifying(false);
+          }
+        })
+        .catch(() => { setVerifying(false); });
+    }
+  }, []);
 
   const planKey = (user as any)?.organizationPlatformPlan || 'growth';
   const selectedPlan = PLANS[planKey] || PLANS.growth;
@@ -59,6 +79,16 @@ export default function SubscriptionRequired() {
         </button>
 
         <div className="w-full max-w-md bg-white/[0.04] border border-white/10 rounded-2xl p-8 text-center">
+          {verifying ? (
+            <>
+              <div className="w-14 h-14 rounded-full bg-green-600/20 border border-green-600/30 flex items-center justify-center mx-auto mb-6">
+                <Loader2 className="w-7 h-7 text-green-500 animate-spin" />
+              </div>
+              <h1 className="text-2xl font-bold text-white mb-2">Activating Subscription...</h1>
+              <p className="text-gray-400 text-sm mb-6">Verifying your payment with Stripe. This will only take a moment.</p>
+            </>
+          ) : (
+            <>
           <div className="w-14 h-14 rounded-full bg-red-600/20 border border-red-600/30 flex items-center justify-center mx-auto mb-6">
             <CreditCard className="w-7 h-7 text-red-500" />
           </div>
@@ -93,6 +123,8 @@ export default function SubscriptionRequired() {
             <LogOut className="w-4 h-4" />
             Sign out
           </button>
+            </>
+          )}
         </div>
       </div>
     </div>

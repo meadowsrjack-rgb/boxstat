@@ -181,10 +181,16 @@ const STRIPE_CACHE_TTL = 5 * 60 * 1000;
 async function getOrgConnectInfo(organizationId: string): Promise<{ connectedAccountId: string | null; isConnected: boolean }> {
   try {
     const org = await storage.getOrganization(organizationId);
-    if (org?.stripeConnectedId && org.stripeConnectStatus === 'active') {
+    if (!org) {
+      console.warn(`[Connect] Org ${organizationId} not found — cannot determine Connect status`);
+    } else if (!org.stripeConnectedId || org.stripeConnectStatus !== 'active') {
+      console.log(`[Connect] Org ${organizationId} is not Connect-enabled (status: ${org.stripeConnectStatus ?? 'none'})`);
+    } else {
       return { connectedAccountId: org.stripeConnectedId, isConnected: true };
     }
-  } catch (e) {}
+  } catch (e: any) {
+    console.warn(`[Connect] Failed to look up org ${organizationId} for Connect info:`, e?.message || e);
+  }
   return { connectedAccountId: null, isConnected: false };
 }
 
@@ -273,8 +279,11 @@ async function applyConnectChargeParams(
     };
     if (applicationFeeAmount && applicationFeeAmount > 0) {
       sessionParams.payment_intent_data.application_fee_amount = applicationFeeAmount;
-      console.log(`[Connect] Payment fee: ${applicationFeeAmount} cents`);
     }
+    console.log(`[Connect] payment_intent_data applied:`, {
+      transfer_data: sessionParams.payment_intent_data.transfer_data,
+      application_fee_amount: sessionParams.payment_intent_data.application_fee_amount,
+    });
   } else if (mode === 'subscription') {
     sessionParams.subscription_data = {
       ...(sessionParams.subscription_data || {}),
@@ -284,9 +293,17 @@ async function applyConnectChargeParams(
     };
     const feePercent = await getPlatformFeePercent();
     if (feePercent > 0) {
+      // Prefer percent-based fee for subscriptions so recurring charges are also covered
       sessionParams.subscription_data.application_fee_percent = feePercent;
-      console.log(`[Connect] Subscription fee: ${feePercent}%`);
+    } else if (applicationFeeAmount && applicationFeeAmount > 0) {
+      // Fall back to flat fee amount when no percent is configured
+      sessionParams.subscription_data.application_fee_amount = applicationFeeAmount;
     }
+    console.log(`[Connect] subscription_data applied:`, {
+      transfer_data: sessionParams.subscription_data.transfer_data,
+      application_fee_percent: sessionParams.subscription_data.application_fee_percent ?? null,
+      application_fee_amount: sessionParams.subscription_data.application_fee_amount ?? null,
+    });
   }
 }
 
@@ -1550,15 +1567,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log(`Stripe initialized in ${mode} mode (key: ${keyPrefix}...)`);
   }
   
+  // DEPRECATED: This endpoint is no longer used by the frontend.
+  // Use /api/payments/create-checkout instead for all new payment flows.
+  // Connect params are applied when organizationId is present in the request body.
   app.post("/api/create-payment-intent", async (req: any, res) => {
     if (!stripe) {
       return res.status(500).json({ error: "Stripe is not configured" });
     }
     
+    console.warn("[DEPRECATED] /api/create-payment-intent called — use /api/payments/create-checkout for new payment flows.");
+
     try {
-      const { amount, packageId, packageName } = req.body;
-      
-      const paymentIntent = await stripe.paymentIntents.create({
+      const { amount, packageId, packageName, organizationId } = req.body;
+
+      const intentParams: any = {
         amount: Math.round(amount), // Amount should already be in cents
         currency: "usd",
         metadata: {
@@ -1568,7 +1590,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         automatic_payment_methods: {
           enabled: true,
         },
-      });
+      };
+
+      // Apply Connect params if organizationId is provided and org is Connect-enabled
+      if (organizationId) {
+        const connectInfo = await getOrgConnectInfo(organizationId);
+        if (connectInfo.isConnected && connectInfo.connectedAccountId) {
+          intentParams.transfer_data = { destination: connectInfo.connectedAccountId };
+          const feePercent = await getPlatformFeePercent();
+          if (feePercent > 0) {
+            intentParams.application_fee_amount = Math.round(Math.round(amount) * (feePercent / 100));
+          }
+          console.log(`[Connect] create-payment-intent: applied transfer_data and application_fee_amount for org ${organizationId}`);
+        }
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create(intentParams);
       
       res.json({ clientSecret: paymentIntent.client_secret });
     } catch (error: any) {
@@ -1676,6 +1713,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         metadata.packageSelectionIds = unpaidSelections.map(s => s.id).join(',');
       }
       
+      // Calculate subtotal for platform fee (one-time payments only)
+      const legacySubtotal = mode === 'payment'
+        ? lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0)
+        : 0;
+      const legacyFeePercent = await getPlatformFeePercent();
+      const legacyPlatformFee = (mode === 'payment' && legacyFeePercent > 0)
+        ? Math.round(legacySubtotal * (legacyFeePercent / 100))
+        : 0;
+      if (legacyPlatformFee > 0) {
+        lineItems.push({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'BoxStat Technology Fee',
+              description: `${legacyFeePercent}% technology fee`,
+            },
+            unit_amount: legacyPlatformFee,
+          },
+          quantity: 1,
+        });
+      }
+
       const stripeCustomerId = await getOrCreateStripeCustomer(orgStripe, user);
       
       // Get origin for URLs
@@ -1690,7 +1749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         metadata,
       };
 
-      await applyConnectChargeParams(sessionParams1, req.user.organizationId, mode);
+      await applyConnectChargeParams(sessionParams1, req.user.organizationId, mode, legacyPlatformFee > 0 ? legacyPlatformFee : undefined);
 
       const session = await orgStripe.checkout.sessions.create(sessionParams1);
       

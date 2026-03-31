@@ -1640,6 +1640,7 @@ export default function UnifiedAccount() {
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
   const parentPhotoInputRef = useRef<HTMLInputElement>(null);
   const [parentPhotoUploading, setParentPhotoUploading] = useState(false);
+  const paymentSuccessHandledRef = useRef(false);
   
   const [coachProfileId, setCoachProfileId] = useState<string | null>(null);
   const [coachProfileOpen, setCoachProfileOpen] = useState(false);
@@ -1730,10 +1731,16 @@ export default function UnifiedAccount() {
 
   // Check for payment success in URL (including iOS auth token restoration)
   useEffect(() => {
+    // Guard against running multiple times (strict mode double-invoke, re-renders)
+    if (paymentSuccessHandledRef.current) return;
+
     const urlParams = new URLSearchParams(window.location.search);
+    const paymentParam = urlParams.get('payment');
     const sessionId = urlParams.get('session_id');
     const authToken = urlParams.get('auth_token');
-    
+
+    console.log('[Payment] useEffect running, payment param:', paymentParam, 'sessionId:', sessionId ? 'present' : 'absent');
+
     // If auth_token is present (iOS Stripe redirect), restore session first
     const isIOSRedirect = !!authToken;
     if (authToken) {
@@ -1747,65 +1754,58 @@ export default function UnifiedAccount() {
       window.history.replaceState({}, '', newUrl);
     }
     
-    if (urlParams.get('payment') === 'success' && sessionId) {
-      // Verify the session and create payment record
-      apiRequest('/api/payments/verify-session', {
-        method: 'POST',
-        data: { sessionId },
-      })
-        .then(data => {
-          if (data.success) {
-            toast({
-              title: "Payment Successful!",
-              description: "Thank you, your payment was successful!",
-            });
-            
-            // Refetch payment data
-            queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/payments/history'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/account/players'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-            
-            // For iOS, redirect to profile gateway to show the new player
-            if (isIOSRedirect) {
-              console.log('[iOS Payment] Redirecting to profile gateway...');
-              setTimeout(() => {
-                setLocation('/profile-selection');
-              }, 1500);
-            }
-          } else {
-            toast({
-              title: "Payment Verification",
-              description: data.message || "Payment is being processed.",
-              variant: "default",
-            });
-          }
-        })
-        .catch(error => {
-          console.error('Error verifying payment:', error);
-          toast({
-            title: "Payment Status",
-            description: "Payment completed. Refresh the page to see updates.",
-            variant: "default",
-          });
-        })
-        .finally(() => {
-          // Clean up the URL (only if not iOS redirect, which navigates away)
-          if (!isIOSRedirect) {
-            window.history.replaceState({}, '', '/unified-account');
-          }
-        });
-    } else if (urlParams.get('payment') === 'success') {
-      // Fallback for old URLs without session_id
+    if (paymentParam === 'success') {
+      // Mark as handled immediately to prevent duplicate toasts
+      paymentSuccessHandledRef.current = true;
+
+      // Show confirmation toast immediately — do not wait for verify-session
+      // The payment was already processed by the webhook; this is just confirmation UX
+      console.log('[Payment] Payment success detected, showing toast immediately');
       toast({
         title: "Payment Successful!",
-        description: "Your payment has been processed.",
+        description: "Thank you, your payment was successful!",
       });
+
+      // Invalidate caches so UI reflects the new purchase
       queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
       queryClient.invalidateQueries({ queryKey: ['/api/payments/history'] });
-      window.history.replaceState({}, '', '/unified-account');
-    } else if (urlParams.get('payment') === 'canceled') {
+      queryClient.invalidateQueries({ queryKey: ['/api/account/players'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+
+      // Clean up the URL right away (only if not iOS redirect, which navigates away)
+      if (!isIOSRedirect) {
+        window.history.replaceState({}, '', '/unified-account');
+      }
+
+      // Run verify-session in the background for backend processing only
+      if (sessionId) {
+        console.log('[Payment] Running verify-session in background for session:', sessionId);
+        try {
+          apiRequest('/api/payments/verify-session', {
+            method: 'POST',
+            data: { sessionId },
+          })
+            .then(data => {
+              console.log('[Payment] verify-session result:', data);
+              // For iOS, only redirect to profile gateway if payment was confirmed on backend
+              if (data?.success && isIOSRedirect) {
+                console.log('[iOS Payment] Redirecting to profile gateway...');
+                setTimeout(() => {
+                  setLocation('/profile-selection');
+                }, 1500);
+              }
+            })
+            .catch(error => {
+              console.error('[Payment] verify-session error (non-fatal, toast already shown):', error);
+            });
+        } catch (syncError) {
+          console.error('[Payment] verify-session sync error (non-fatal, toast already shown):', syncError);
+        }
+      }
+    } else if (paymentParam === 'canceled') {
       // Payment was canceled - show friendly message
+      paymentSuccessHandledRef.current = true;
+      console.log('[Payment] Payment canceled detected');
       toast({
         title: "Payment Canceled",
         description: "Your payment was canceled. You can try again when you're ready.",

@@ -2279,7 +2279,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const parentName = parent ? `${parent.firstName || ''} ${parent.lastName || ''}`.trim() : 'Unknown';
               await pushNotifications.notifyAllAdmins(storage, 
                 '💰 Payment Received',
-                `${parentName} paid $${amountDollars.toFixed(2)} for ${playerName}'s registration`
+                `${parentName} paid $${amountDollars.toFixed(2)} for ${playerName}'s registration`,
+                updatedPlayer.organizationId
               );
             } catch (notifError: any) {
               console.error('⚠️ Payment notification failed (non-fatal):', notifError.message);
@@ -2808,7 +2809,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const parentName = parent ? `${parent.firstName || ''} ${parent.lastName || ''}`.trim() : 'Unknown';
               await pushNotifications.notifyAllAdmins(storage,
                 '💰 Payment Received',
-                `${parentName} paid $${amountDollars.toFixed(2)} for ${playerName}'s registration`
+                `${parentName} paid $${amountDollars.toFixed(2)} for ${playerName}'s registration`,
+                updatedPlayer.organizationId
               );
             } catch (notifError: any) {
               console.error('⚠️ Payment notification failed (non-fatal):', notifError.message);
@@ -2914,7 +2916,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await pushNotifications.parentPaymentSuccessful(storage, userId, playerName, amountCents);
             await pushNotifications.notifyAllAdmins(storage,
               '💰 Payment Received',
-              `${payerName} paid $${amountDollars.toFixed(2)} for ${program?.name || 'a program'}`
+              `${payerName} paid $${amountDollars.toFixed(2)} for ${program?.name || 'a program'}`,
+              payer?.organizationId || organizationId
             );
           } catch (notifError: any) {
             console.error('⚠️ Payment notification failed (non-fatal):', notifError.message);
@@ -11533,7 +11536,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         await pushNotifications.notifyAllAdmins(storage,
           '📅 New Session Request',
-          `${playerName} requested ${createdEvents.length} ${recurringText}${program.name} ${sessionWord} starting ${dateStr} at ${timeStr}. Needs approval.`
+          `${playerName} requested ${createdEvents.length} ${recurringText}${program.name} ${sessionWord} starting ${dateStr} at ${timeStr}. Needs approval.`,
+          orgId
         );
       } catch (notifErr: any) {
         console.error('Schedule notification failed (non-fatal):', notifErr.message);

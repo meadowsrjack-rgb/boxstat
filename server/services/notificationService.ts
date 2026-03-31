@@ -257,10 +257,11 @@ export class NotificationService {
       console.log(`[Push Send] Step 2: 🔍 Looking up user email and finding all devices...`);
       let subscriptions: any[];
       try {
-        // First, get the user's email and parent_id
+        // First, get the user's email, parent_id, and organizationId
         const [targetUser] = await db.select({ 
           email: users.email,
-          parentId: users.parentId
+          parentId: users.parentId,
+          organizationId: users.organizationId
         })
           .from(users)
           .where(eq(users.id, userId))
@@ -291,12 +292,18 @@ export class NotificationService {
               eq(pushSubscriptions.isActive, true)
             ));
         } else {
-          console.log(`[Push Send] 📧 Lookup email: ${lookupEmail}`);
+          console.log(`[Push Send] 📧 Lookup email: ${lookupEmail}, org: ${targetUser?.organizationId}`);
           
-          // Find all users with this email
+          // Find all users with this email IN THE SAME ORGANIZATION
+          // This prevents cross-org notification leakage when the same
+          // person has accounts in multiple organizations.
+          const emailUserConditions = [eq(users.email, lookupEmail)];
+          if (targetUser?.organizationId) {
+            emailUserConditions.push(eq(users.organizationId, targetUser.organizationId));
+          }
           const emailUsers = await db.select({ id: users.id })
             .from(users)
-            .where(eq(users.email, lookupEmail));
+            .where(and(...emailUserConditions));
           
           const emailUserIds = emailUsers.map(u => u.id);
           console.log(`[Push Send] 👥 Found ${emailUserIds.length} user(s) with email ${lookupEmail}: [${emailUserIds.join(', ')}]`);

@@ -247,7 +247,7 @@ async function getPlatformFeePercent(): Promise<number> {
       return parseFloat(results[0].value);
     }
   } catch (e) {}
-  return 0;
+  return 2;
 }
 
 async function applyConnectChargeParams(
@@ -257,7 +257,12 @@ async function applyConnectChargeParams(
   applicationFeeAmount?: number,
 ) {
   const connectInfo = await getOrgConnectInfo(organizationId);
-  if (!connectInfo.isConnected || !connectInfo.connectedAccountId) return;
+  if (!connectInfo.isConnected || !connectInfo.connectedAccountId) {
+    console.log(`[Connect] Org ${organizationId} not connected, skipping Connect params`);
+    return;
+  }
+
+  console.log(`[Connect] Applying ${mode} Connect params for org ${organizationId} → ${connectInfo.connectedAccountId}`);
 
   if (mode === 'payment') {
     sessionParams.payment_intent_data = {
@@ -268,6 +273,7 @@ async function applyConnectChargeParams(
     };
     if (applicationFeeAmount && applicationFeeAmount > 0) {
       sessionParams.payment_intent_data.application_fee_amount = applicationFeeAmount;
+      console.log(`[Connect] Payment fee: ${applicationFeeAmount} cents`);
     }
   } else if (mode === 'subscription') {
     sessionParams.subscription_data = {
@@ -279,6 +285,7 @@ async function applyConnectChargeParams(
     const feePercent = await getPlatformFeePercent();
     if (feePercent > 0) {
       sessionParams.subscription_data.application_fee_percent = feePercent;
+      console.log(`[Connect] Subscription fee: ${feePercent}%`);
     }
   }
 }

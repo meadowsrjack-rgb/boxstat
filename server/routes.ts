@@ -5205,10 +5205,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const org = await storage.getOrganization(organizationId);
       if (!org) return res.status(404).json({ error: 'Organization not found' });
 
+      let connectStatus = org.stripeConnectStatus || 'not_started';
+
+      if (stripe && org.stripeConnectedId && connectStatus !== 'active') {
+        try {
+          const account = await stripe.accounts.retrieve(org.stripeConnectedId);
+          if (account.charges_enabled && account.details_submitted) {
+            connectStatus = 'active';
+            await storage.updateOrganization(organizationId, {
+              stripeConnectStatus: 'active',
+            });
+            console.log(`[Stripe Connect] Account ${org.stripeConnectedId} is now active for org ${organizationId}`);
+          } else if (account.details_submitted) {
+            connectStatus = 'pending_verification';
+          }
+        } catch (err: any) {
+          console.error('[Stripe Connect] Error checking account status:', err.message);
+        }
+      }
+
       res.json({
         connectedAccountId: org.stripeConnectedId ? 'acct_••••' + org.stripeConnectedId.slice(-4) : null,
-        status: org.stripeConnectStatus || 'not_started',
-        isConnected: org.stripeConnectStatus === 'active',
+        status: connectStatus,
+        isConnected: connectStatus === 'active',
       });
     } catch (error: any) {
       console.error('Error fetching Connect status:', error);

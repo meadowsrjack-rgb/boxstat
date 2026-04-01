@@ -1317,11 +1317,9 @@ function RecentTransactionsCard({ payments, users, programs, isAdmin }: any) {
     return (
       <Card data-testid="card-recent-transactions">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ArrowLeftRight className="w-5 h-5" />
+          <CardTitle className="text-sm font-semibold text-gray-900">
             Recent Transactions
           </CardTitle>
-          <CardDescription>View all payment transactions</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-gray-500">
@@ -1341,13 +1339,9 @@ function RecentTransactionsCard({ payments, users, programs, isAdmin }: any) {
     <>
       <Card data-testid="card-recent-transactions">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ArrowLeftRight className="w-5 h-5" />
+          <CardTitle className="text-sm font-semibold text-gray-900">
             Recent Transactions
           </CardTitle>
-          <CardDescription>
-            {sortedPayments.length} total transaction{sortedPayments.length !== 1 ? 's' : ''}
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-0">

@@ -2236,6 +2236,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  async function resolveOrgId(session: any, userId?: string, programId?: string): Promise<string> {
+    if (session?.metadata?.organizationId) return session.metadata.organizationId;
+    if (userId) {
+      const u = await storage.getUser(userId);
+      if (u?.organizationId) return u.organizationId;
+    }
+    if (programId) {
+      const p = await storage.getProgram(programId);
+      if (p?.organizationId) return p.organizationId;
+    }
+    return "default-org";
+  }
+  
   // Stripe webhook endpoint (PUBLIC - no authentication)
   app.post('/api/webhooks/stripe', express.raw({type: 'application/json'}), async (req: any, res) => {
     if (!stripe) {
@@ -2459,7 +2472,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (session.amount_total && userId) {
             try {
               await storage.createPayment({
-                organizationId: session.metadata?.organizationId || "default-org",
+                organizationId: await resolveOrgId(session, userId),
                 userId: userId,
                 playerId: playerId || undefined,
                 amount: session.amount_total,
@@ -2507,10 +2520,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (session.amount_total) {
             try {
               await storage.createPayment({
-                organizationId: session.metadata?.organizationId || "default-org",
+                organizationId: await resolveOrgId(session, userId, packageId),
                 userId: userId,
                 playerId: playerId || undefined,
-                amount: session.amount_total, // Store in cents (Stripe convention)
+                amount: session.amount_total,
                 currency: 'usd',
                 paymentType: program?.type || 'package',
                 status: 'completed',
@@ -2687,7 +2700,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (session.amount_total) {
           try {
             await storage.createPayment({
-              organizationId: session.metadata?.organizationId || "default-org",
+              organizationId: await resolveOrgId(session, userId),
               userId,
               amount: session.amount_total,
               currency: 'usd',
@@ -2949,7 +2962,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!alreadyProcessed && session.amount_total) {
           const program = await storage.getProgram(packageId);
           const payment = await storage.createPayment({
-            organizationId: session.metadata?.organizationId || "default-org",
+            organizationId: await resolveOrgId(session, userId, packageId),
             userId: userId,
             playerId: playerId || undefined,
             amount: session.amount_total,
@@ -3080,7 +3093,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (session.amount_total) {
             await storage.createPayment({
-              organizationId: session.metadata?.organizationId || "default-org",
+              organizationId: await resolveOrgId(session, userId),
               userId,
               amount: session.amount_total,
               currency: 'usd',

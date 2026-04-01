@@ -615,14 +615,12 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
         {step === "players" && <PlayersStep parents={parents} players={players} setPlayers={setPlayers} />}
         {step === "review"  && <ReviewStep parents={parents} players={players} onSend={send} isSending={isSending} />}
 
-        {step !== "review" && (
-          <div className="flex justify-between pt-6 mt-6 border-t border-border">
-            {stepIdx > 0
-              ? <Button variant="outline" onClick={back}>Back</Button>
-              : <span />}
-            <Button onClick={next}>Continue</Button>
-          </div>
-        )}
+        <div className="flex justify-between pt-6 mt-6 border-t border-border">
+          {stepIdx > 0
+            ? <Button variant="outline" onClick={back}>Back</Button>
+            : <span />}
+          {step !== "review" && <Button onClick={next}>Continue</Button>}
+        </div>
       </div>
     </div>
   );

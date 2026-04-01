@@ -63,9 +63,7 @@ import {
   Store,
   Truck,
   Monitor,
-  AlertOctagon,
   ShoppingCart,
-  BarChart3,
   Image as ImageIcon,
   X,
   Headphones,
@@ -713,21 +711,19 @@ export default function AdminDashboard() {
             {overviewStats?.store && overviewStats.store.totalProducts > 0 && (
               <Card className="border-l-4 border-l-orange-500">
                 <CardContent className="py-4 px-4">
-                  <div className="flex items-center justify-between mb-4">
+                  <div
+                    className="flex items-center justify-between mb-4 cursor-pointer group"
+                    onClick={() => setActiveTab("store")}
+                  >
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
                         <Store className="w-4 h-4 text-orange-600" />
                       </div>
-                      <p className="text-sm font-semibold text-gray-900">Store at a Glance</p>
+                      <p className="text-sm font-semibold text-gray-900 group-hover:text-orange-700 transition-colors">Store at a Glance</p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50 h-7 px-2"
-                      onClick={() => setActiveTab("store")}
-                    >
-                      View Store <ChevronRight className="w-3 h-3 ml-1" />
-                    </Button>
+                    <span className="text-xs text-orange-600 group-hover:text-orange-700 flex items-center gap-1 font-medium">
+                      View Store <ChevronRight className="w-3 h-3" />
+                    </span>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">

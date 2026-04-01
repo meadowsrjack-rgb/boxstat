@@ -709,19 +709,14 @@ export default function AdminDashboard() {
             </div>
 
             {overviewStats?.store && overviewStats.store.totalProducts > 0 && (
-              <Card className="border-l-4 border-l-orange-500">
+              <Card>
                 <CardContent className="py-4 px-4">
                   <div
                     className="flex items-center justify-between mb-4 cursor-pointer group"
                     onClick={() => setActiveTab("store")}
                   >
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <Store className="w-4 h-4 text-orange-600" />
-                      </div>
-                      <p className="text-sm font-semibold text-gray-900 group-hover:text-orange-700 transition-colors">Store at a Glance</p>
-                    </div>
-                    <span className="text-xs text-orange-600 group-hover:text-orange-700 flex items-center gap-1 font-medium">
+                    <p className="text-sm font-semibold text-gray-900">Store at a Glance</p>
+                    <span className="text-xs text-red-600 group-hover:text-red-700 flex items-center gap-1 font-medium">
                       View Store <ChevronRight className="w-3 h-3" />
                     </span>
                   </div>

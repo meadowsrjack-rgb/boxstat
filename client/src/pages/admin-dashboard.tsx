@@ -60,6 +60,12 @@ import {
   ShoppingBag,
   Package,
   Gift,
+  Store,
+  Truck,
+  Monitor,
+  AlertOctagon,
+  ShoppingCart,
+  BarChart3,
   Image as ImageIcon,
   X,
   Headphones,
@@ -703,6 +709,159 @@ export default function AdminDashboard() {
                 </Card>
               </div>
             </div>
+
+            {overviewStats?.store && overviewStats.store.totalProducts > 0 && (
+              <Card className="border-l-4 border-l-orange-500">
+                <CardContent className="py-4 px-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <Store className="w-4 h-4 text-orange-600" />
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900">Store at a Glance</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50 h-7 px-2"
+                      onClick={() => setActiveTab("store")}
+                    >
+                      View Store <ChevronRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                    <div className="bg-gray-50 rounded-lg p-3 text-center">
+                      <div className="flex items-center justify-center gap-1.5 mb-1">
+                        <ShoppingBag className="w-3.5 h-3.5 text-gray-500" />
+                        <p className="text-xs text-gray-500">Products</p>
+                      </div>
+                      <p className="text-lg font-bold text-gray-900">{overviewStats.store.totalProducts}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3 text-center">
+                      <div className="flex items-center justify-center gap-1.5 mb-1">
+                        <DollarSign className="w-3.5 h-3.5 text-gray-500" />
+                        <p className="text-xs text-gray-500">Store Revenue</p>
+                      </div>
+                      <p className="text-lg font-bold text-gray-900">
+                        ${((overviewStats.store.storeRevenue ?? 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3 text-center">
+                      <div className="flex items-center justify-center gap-1.5 mb-1">
+                        <ShoppingCart className="w-3.5 h-3.5 text-gray-500" />
+                        <p className="text-xs text-gray-500">Orders</p>
+                      </div>
+                      <p className="text-lg font-bold text-gray-900">{overviewStats.store.storeOrderCount}</p>
+                    </div>
+                    <div className={`rounded-lg p-3 text-center ${
+                      (overviewStats.store.lowStockCount + overviewStats.store.outOfStockCount) > 0
+                        ? 'bg-amber-50' : 'bg-gray-50'
+                    }`}>
+                      <div className="flex items-center justify-center gap-1.5 mb-1">
+                        <AlertTriangle className={`w-3.5 h-3.5 ${
+                          overviewStats.store.outOfStockCount > 0 ? 'text-red-500' :
+                          overviewStats.store.lowStockCount > 0 ? 'text-amber-500' : 'text-gray-500'
+                        }`} />
+                        <p className="text-xs text-gray-500">Stock Alerts</p>
+                      </div>
+                      <p className={`text-lg font-bold ${
+                        overviewStats.store.outOfStockCount > 0 ? 'text-red-600' :
+                        overviewStats.store.lowStockCount > 0 ? 'text-amber-600' : 'text-gray-900'
+                      }`}>
+                        {overviewStats.store.lowStockCount + overviewStats.store.outOfStockCount}
+                      </p>
+                    </div>
+                  </div>
+
+                  {overviewStats.store.pendingDispatchCount > 0 && (
+                    <div
+                      className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4 cursor-pointer hover:bg-red-100 transition-colors"
+                      onClick={() => setActiveTab("store")}
+                    >
+                      <Truck className="w-4 h-4 text-red-600 flex-shrink-0" />
+                      <p className="text-xs font-medium text-red-700 flex-1">
+                        {overviewStats.store.pendingDispatchCount} shippable {overviewStats.store.pendingDispatchCount === 1 ? 'order' : 'orders'} in last 30 days
+                      </p>
+                      <ChevronRight className="w-3.5 h-3.5 text-red-400" />
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    {overviewStats.store.products.map((product: any) => (
+                      <div
+                        key={product.id}
+                        className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+                        onClick={() => setActiveTab("store")}
+                      >
+                        {product.coverImageUrl ? (
+                          <img
+                            src={product.coverImageUrl}
+                            alt={product.name}
+                            className="w-9 h-9 rounded-md object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 bg-gray-100 rounded-md flex items-center justify-center flex-shrink-0">
+                            <Package className="w-4 h-4 text-gray-400" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-medium text-gray-900 truncate">{product.name}</p>
+                            {product.shippingRequired ? (
+                              <Truck className="w-3 h-3 text-gray-400 flex-shrink-0" title="Physical - requires shipping" />
+                            ) : (
+                              <Monitor className="w-3 h-3 text-blue-400 flex-shrink-0" title="Digital product" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-gray-500">
+                              ${((product.price ?? 0) / 100).toFixed(2)}
+                            </span>
+                            {product.inventorySizes.length > 0 && (
+                              <div className="flex items-center gap-0.5">
+                                {product.inventorySizes.map((size: string) => {
+                                  const qty = product.sizeStock?.[size] ?? 0;
+                                  return (
+                                    <span
+                                      key={size}
+                                      className={`text-[10px] px-1 py-0.5 rounded font-medium ${
+                                        qty <= 0 ? 'bg-red-100 text-red-700' :
+                                        qty <= 3 ? 'bg-amber-100 text-amber-700' :
+                                        'bg-green-100 text-green-700'
+                                      }`}
+                                      title={`${size}: ${qty} in stock`}
+                                    >
+                                      {size}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                            product.stockStatus === 'out' ? 'bg-red-100 text-red-700' :
+                            product.stockStatus === 'low' ? 'bg-amber-100 text-amber-700' :
+                            'bg-green-100 text-green-700'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${
+                              product.stockStatus === 'out' ? 'bg-red-500' :
+                              product.stockStatus === 'low' ? 'bg-amber-500' :
+                              'bg-green-500'
+                            }`} />
+                            {product.stockStatus === 'out' ? 'Out' :
+                             product.stockStatus === 'low' ? `${product.totalStock} left` :
+                             `${product.totalStock}`}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <RecentTransactionsCard payments={payments} users={users} programs={programs} isAdmin={currentUser?.role === 'admin' || hasAdminProfile} />
           </TabsContent>

@@ -7735,6 +7735,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const monthlyAwards = allAwards.filter(a => a.awardedAt && new Date(a.awardedAt) >= startOfMonth);
 
+      const storeProducts = await db.select().from(products)
+        .where(and(
+          eq(products.organizationId, organizationId),
+          eq(products.productCategory, 'goods')
+        ));
+      const activeStoreProducts = storeProducts.filter(p => p.isActive !== false);
+
+      const storeProductIds = activeStoreProducts.map(p => p.id);
+      let storeRevenue = 0;
+      let storeOrderCount = 0;
+      let pendingDispatchCount = 0;
+      if (storeProductIds.length > 0) {
+        const storePaymentsResult = await db.execute(
+          sql`SELECT SUM(p.amount) as total_revenue, COUNT(*) as order_count
+              FROM payments p
+              INNER JOIN products pr ON p.program_id = pr.id AND pr.product_category = 'goods'
+              WHERE p.organization_id = ${organizationId} AND p.status = 'completed'`
+        );
+        const storeRows = (storePaymentsResult.rows || storePaymentsResult) as any[];
+        storeRevenue = parseInt(storeRows[0]?.total_revenue) || 0;
+        storeOrderCount = parseInt(storeRows[0]?.order_count) || 0;
+
+        const pendingResult = await db.execute(
+          sql`SELECT COUNT(*) as count
+              FROM payments p
+              INNER JOIN products pr ON p.program_id = pr.id AND pr.product_category = 'goods'
+              WHERE p.organization_id = ${organizationId} AND p.status = 'completed'
+              AND pr.shipping_required = true
+              AND p.created_at >= NOW() - INTERVAL '30 days'`
+        );
+        const pendingRows = (pendingResult.rows || pendingResult) as any[];
+        pendingDispatchCount = parseInt(pendingRows[0]?.count) || 0;
+      }
+
+      let lowStockCount = 0;
+      let outOfStockCount = 0;
+      const storeProductSummaries = activeStoreProducts.map(p => {
+        const sizeStock = (p.sizeStock || {}) as Record<string, number>;
+        const sizes = p.inventorySizes || [];
+        const totalStock = p.inventoryCount ?? Object.values(sizeStock).reduce((sum, v) => sum + (v || 0), 0);
+        let stockStatus: 'in_stock' | 'low' | 'out' = 'in_stock';
+        if (totalStock <= 0) { stockStatus = 'out'; outOfStockCount++; }
+        else if (totalStock <= 5) { stockStatus = 'low'; lowStockCount++; }
+        return {
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          inventorySizes: sizes,
+          sizeStock,
+          totalStock,
+          stockStatus,
+          shippingRequired: p.shippingRequired ?? false,
+          isActive: p.isActive !== false,
+          coverImageUrl: p.coverImageUrl,
+        };
+      });
+
       const allPayments = await db.execute(
         sql`SELECT amount, paid_at, created_at FROM payments
             WHERE organization_id = ${organizationId} AND status = 'completed'`
@@ -7797,6 +7854,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         attendanceActual: totalAttended,
         awardsThisMonth: monthlyAwards.length,
         awardsAllTime: allAwards.length,
+        store: {
+          totalProducts: activeStoreProducts.length,
+          storeRevenue,
+          storeOrderCount,
+          pendingDispatchCount,
+          lowStockCount,
+          outOfStockCount,
+          products: storeProductSummaries,
+        },
       });
     } catch (error: any) {
       console.error('Error fetching overview stats:', error);

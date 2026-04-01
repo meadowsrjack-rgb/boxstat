@@ -116,6 +116,7 @@ import { ChevronDown } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { DateScrollPicker } from "react-date-wheel-picker";
+import { MigrationWizard } from "@/components/migration/MigrationWizard";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -399,6 +400,38 @@ export default function AdminDashboard() {
 
   const isLoading = orgLoading || usersLoading || teamsLoading || eventsLoading || programsLoading || enrollmentsLoading || awardDefinitionsLoading || paymentsLoading || divisionsLoading || evaluationsLoading || notificationsLoading;
 
+  // New-org onboarding: detect new org once, then persist onboarding mode until all steps done
+  const isNewOrg = !isLoading && programs.length === 0 && teams.length === 0 && 
+    users.filter((u: any) => u.role !== 'admin').length === 0;
+  const [onboardingMode, setOnboardingMode] = useState(false);
+  const hasRedirectedRef = useRef(false);
+  useEffect(() => {
+    if (isNewOrg && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
+      setOnboardingMode(true);
+      setActiveTab('migrations');
+    }
+  }, [isNewOrg]);
+
+  // Setup checklist: scoped to new-org onboarding mode, persists until all steps complete
+  const hasStoreProducts = programs.some((p: any) => p.productCategory === 'goods');
+  const onboardingSteps = [
+    { key: 'migrations', label: 'Invite Members', done: users.filter((u: any) => u.role !== 'admin').length > 0, tab: 'migrations' },
+    { key: 'programs', label: 'Create Programs', done: programs.filter((p: any) => p.productCategory !== 'goods').length > 0, tab: 'programs' },
+    { key: 'teams', label: 'Create Teams', done: teams.length > 0, tab: 'teams' },
+    { key: 'events', label: 'Schedule Events', done: events.length > 0, tab: 'events' },
+    { key: 'awards', label: 'Set Up Awards', done: awardDefinitions.length > 0, tab: 'awards' },
+    { key: 'store', label: 'Set Up Store', done: hasStoreProducts, tab: 'store' },
+  ];
+  const allStepsDone = onboardingSteps.every(s => s.done);
+  // Dismiss checklist once all steps are complete
+  useEffect(() => {
+    if (allStepsDone && onboardingMode) {
+      setOnboardingMode(false);
+    }
+  }, [allStepsDone, onboardingMode]);
+  const showOnboardingChecklist = onboardingMode && !allStepsDone;
+
   // Calculate stats
   // Accounts = unique emails (distinct registered people), Users = all profiles including linked ones
   const uniqueEmails = new Set(users.map((u: any) => u.email?.toLowerCase()).filter(Boolean));
@@ -599,6 +632,43 @@ export default function AdminDashboard() {
             <StorePurchaseBanner />
             <EnrollmentAssignmentBanner onNavigateToUsers={() => setActiveTab("users")} />
 
+            {/* New-org onboarding checklist */}
+            {showOnboardingChecklist && (
+              <Card className="border-blue-200 bg-blue-50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base text-blue-900 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Get your organization set up
+                  </CardTitle>
+                  <CardDescription className="text-blue-700">
+                    Complete these steps to get the most out of Boxstat.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {onboardingSteps.map((step, idx) => (
+                      <button
+                        key={step.key}
+                        onClick={() => setActiveTab(step.tab)}
+                        className={`flex items-center gap-2 p-3 rounded-lg border text-left text-sm transition-colors ${
+                          step.done
+                            ? 'bg-green-50 border-green-200 text-green-800 opacity-70'
+                            : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50/50'
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-xs font-medium ${
+                          step.done ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500 border border-gray-300'
+                        }`}>
+                          {step.done ? <CheckCircle2 className="w-3 h-3" /> : idx + 1}
+                        </div>
+                        <span className={step.done ? 'line-through' : ''}>{step.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Hero KPI Bar */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
               <Card data-testid="stat-revenue-year" className="border-l-4 border-l-red-500">
@@ -756,7 +826,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="migrations">
-            <MigrationsTab organization={organization} users={users} />
+            <MigrationsTab organization={organization} users={users} onboardingSteps={onboardingSteps} setActiveTab={setActiveTab} />
           </TabsContent>
         </Tabs>
       </div>
@@ -16136,7 +16206,7 @@ function WaiversTab({ organization }: any) {
 // Migrations Tab - Legacy Parent Stripe Data Management
 const MIGRATIONS_PAGE_SIZE = 50;
 
-function MigrationsTab({ organization, users }: any) {
+function MigrationsTab({ organization, users, onboardingSteps, setActiveTab }: any) {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -17007,8 +17077,70 @@ function MigrationsTab({ organization, users }: any) {
     }
   };
 
+  const [migrationsView, setMigrationsView] = useState<'wizard' | 'legacy'>('wizard');
+
   return (
-    <Card data-testid="migrations-tab">
+    <div className="space-y-6" data-testid="migrations-tab">
+      {/* View toggle */}
+      <div className="flex gap-2 border-b border-gray-200 pb-4">
+        <Button
+          variant={migrationsView === 'wizard' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setMigrationsView('wizard')}
+        >
+          <Users className="w-4 h-4 mr-2" />
+          Invite Parents & Players
+        </Button>
+        <Button
+          variant={migrationsView === 'legacy' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setMigrationsView('legacy')}
+        >
+          <ArrowLeftRight className="w-4 h-4 mr-2" />
+          Legacy Stripe Migrations
+        </Button>
+      </div>
+
+      {migrationsView === 'wizard' && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Migrate your organization</h2>
+            <p className="text-gray-500 mt-1">
+              Import existing parents and players into Boxstat and send them invite emails to claim their accounts.
+            </p>
+          </div>
+          <MigrationWizard
+            organizationId={organization?.id || ''}
+            organizationName={organization?.name}
+            onComplete={() => {
+              const nextStep = onboardingSteps.find(s => !s.done && s.key !== 'migrations');
+              if (nextStep) {
+                setActiveTab(nextStep.tab);
+              }
+            }}
+          />
+          <div className="flex justify-end pt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-gray-600"
+              onClick={() => {
+                const nextStep = onboardingSteps.find(s => !s.done && s.key !== 'migrations');
+                if (nextStep) {
+                  setActiveTab(nextStep.tab);
+                } else {
+                  setActiveTab('overview');
+                }
+              }}
+            >
+              Skip migration — I'll add members later
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {migrationsView === 'legacy' && (
+    <Card>
       <CardHeader>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
@@ -17731,6 +17863,8 @@ function MigrationsTab({ organization, users }: any) {
         </AlertDialogContent>
       </AlertDialog>
     </Card>
+      )}
+    </div>
   );
 }
 

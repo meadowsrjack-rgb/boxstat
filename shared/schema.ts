@@ -182,6 +182,14 @@ export interface User {
   // Status
   isActive: boolean;
   
+  // Invite / migration flow
+  inviteToken?: string;
+  inviteTokenExpiry?: string;
+  status?: string; // 'active' | 'invited'
+  activatedAt?: string;
+  subscriptionEndDate?: string;
+  parentEmail?: string;
+
   // User Preferences
   defaultDashboardView?: string; // "parent" or player ID for default landing page
   
@@ -285,6 +293,12 @@ export const users = pgTable("users", {
   ageGroups: text("age_groups"),
   medicalCertifications: text("medical_certifications"),
   languages: text("languages"),
+  inviteToken: varchar("invite_token", { length: 64 }),
+  inviteTokenExpiry: timestamp("invite_token_expiry", { mode: 'string' }),
+  status: varchar("status", { length: 20 }).default("active"),
+  activatedAt: timestamp("activated_at", { mode: 'string' }),
+  subscriptionEndDate: date("subscription_end_date"),
+  parentEmail: varchar("parent_email", { length: 255 }),
 });
 // NOTE: Email uniqueness is enforced via a partial unique index in the database
 // Only parent/account holder accounts (account_holder_id IS NULL) require unique emails

@@ -54,6 +54,7 @@ import CoachSettingsPage from "@/pages/coach-settings";
 import ParentSettingsPage from "@/pages/parent-settings";
 import TrophiesBadges from "@/pages/trophies-badges";
 import Skills from "@/pages/skills";
+import InviteClaim from "@/pages/invite-claim";
 import TestRoute from "@/pages/test-route";
 import TestDatePicker from "@/pages/test-datepicker";
 import NotFound from "@/pages/not-found";
@@ -540,6 +541,7 @@ function AppRouter() {
       <Route path="/trophies-badges" component={ProtectedTrophiesBadges} />
       <Route path="/skills" component={ProtectedSkills} />
       <Route path="/photo-upload" component={PhotoUpload} />
+      <Route path="/invite/:token" component={InviteClaim} />
       <Route path="/payments" component={PaymentsTab} />
       <Route path="/no-profiles" component={NoProfiles} />
       {/* New profile selection flow */}

@@ -1,5 +1,6 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
+import { z } from "zod";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { notionService } from "./notion";
@@ -13351,6 +13352,265 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // =============================================
+  // MIGRATION INVITE ROUTES (New parent/player invite wizard)
+  // =============================================
+
+  // Zod schemas for send-invites payload — IDs are numeric (frontend uses number keys)
+  const migrationPlayerSchema = z.object({
+    id: z.coerce.number().optional(),
+    parentId: z.coerce.number().nullable().optional(),
+    firstName: z.string().default(''),
+    lastName: z.string().default(''),
+    dateOfBirth: z.string().optional().nullable(),
+    subscriptionEndDate: z.string().transform(v => v === '' ? null : v).pipe(z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Date must be MM/DD/YYYY').nullable()).optional(),
+  });
+
+  const migrationParentSchema = z.object({
+    id: z.coerce.number().optional(),
+    firstName: z.string().default(''),
+    lastName: z.string().default(''),
+    email: z.string().email('Invalid parent email'),
+    phone: z.string().optional().nullable(),
+  });
+
+  const sendInvitesSchema = z.object({
+    parents: z.array(migrationParentSchema).min(1, 'At least one parent is required'),
+    players: z.array(migrationPlayerSchema).optional().default([]),
+  });
+
+  // POST /api/migration/send-invites
+  // Creates shadow user records and sends Resend invite emails
+  app.post('/api/migration/send-invites', requireAuth, async (req: any, res) => {
+    try {
+      const { role, organizationId } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can send migration invites' });
+      }
+
+      const parseResult = sendInvitesSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: 'Invalid payload', details: parseResult.error.flatten() });
+      }
+      const { parents, players } = parseResult.data;
+
+      const org = await storage.getOrganization(organizationId);
+      const orgName = org?.name || 'Your organization';
+
+      const { sendMigrationInvite } = await import('./emails/inviteEmail');
+
+      let invited = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+
+      for (const parent of parents) {
+        if (!parent.email?.trim()) {
+          skipped++;
+          errors.push(`Parent ${parent.firstName || '(unknown)'} has no email`);
+          continue;
+        }
+
+        try {
+          // Check if user already exists in this org
+          const existing = await storage.getUserByEmail(parent.email.toLowerCase(), organizationId);
+          let parentUserId: string;
+
+          // Derive players linked to this parent by numeric parentId
+          const linkedPlayers = Array.isArray(players) 
+            ? players.filter(p => p.parentId === parent.id)
+            : [];
+
+          let inviteToken: string;
+
+          const newExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+          if (existing) {
+            // User exists — skip if already active, re-invite if still pending
+            if (existing.status !== 'invited') {
+              skipped++;
+              errors.push(`${parent.email} already has an active account`);
+              continue;
+            }
+            parentUserId = existing.id;
+            // Always rotate token on re-invite so expired tokens are refreshed
+            inviteToken = crypto.randomBytes(32).toString('hex');
+            await storage.updateUser(parentUserId, { inviteToken, inviteTokenExpiry: newExpiry });
+
+            // Create any newly-linked players that don't already exist
+            const existingPlayers = await storage.getPlayersByParent(parentUserId);
+            for (const player of linkedPlayers) {
+              const alreadyExists = existingPlayers.some(
+                (ep: any) => ep.firstName === player.firstName && ep.lastName === player.lastName
+              );
+              if (!alreadyExists) {
+                const playerUserId = crypto.randomUUID();
+                let subEndDate: string | null = null;
+                if (player.subscriptionEndDate) {
+                  const parts = player.subscriptionEndDate.split('/');
+                  if (parts.length === 3) {
+                    subEndDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+                  }
+                }
+                await db.insert(users).values({
+                  id: playerUserId,
+                  firstName: player.firstName || null,
+                  lastName: player.lastName || null,
+                  email: parent.email.toLowerCase(),
+                  role: 'player',
+                  userType: 'player',
+                  organizationId,
+                  parentId: parentUserId,
+                  accountHolderId: parentUserId,
+                  parentEmail: parent.email.toLowerCase(),
+                  subscriptionEndDate: subEndDate,
+                  status: 'invited',
+                  isActive: true,
+                  hasRegistered: false,
+                });
+              }
+            }
+          } else {
+            // Create shadow parent user directly with invite fields
+            parentUserId = crypto.randomUUID();
+            inviteToken = crypto.randomBytes(32).toString('hex');
+
+            await db.insert(users).values({
+              id: parentUserId,
+              email: parent.email.toLowerCase(),
+              firstName: parent.firstName || null,
+              lastName: parent.lastName || null,
+              phoneNumber: parent.phone || null,
+              role: 'parent',
+              userType: 'parent',
+              organizationId,
+              inviteToken,
+              inviteTokenExpiry: newExpiry,
+              status: 'invited',
+              isActive: true,
+              hasRegistered: false,
+            });
+
+            // Create player child profiles linked to this parent.
+            // accountHolderId = parentUserId so child lookups work correctly
+            // with existing profile-resolution logic.
+            for (const player of linkedPlayers) {
+              const playerUserId = crypto.randomUUID();
+              // Convert MM/DD/YYYY to YYYY-MM-DD for date column
+              let subEndDate: string | null = null;
+              if (player.subscriptionEndDate) {
+                const parts = player.subscriptionEndDate.split('/');
+                if (parts.length === 3) {
+                  subEndDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+                }
+              }
+              await db.insert(users).values({
+                id: playerUserId,
+                firstName: player.firstName || null,
+                lastName: player.lastName || null,
+                email: parent.email.toLowerCase(),
+                role: 'player',
+                userType: 'player',
+                organizationId,
+                parentId: parentUserId,
+                accountHolderId: parentUserId,
+                parentEmail: parent.email.toLowerCase(),
+                subscriptionEndDate: subEndDate,
+                status: 'invited',
+                isActive: true,
+                hasRegistered: false,
+              });
+            }
+          }
+
+          // Send invite email for both new and re-invited parents
+          const inviteRecord = {
+            parent: { ...parent, id: parent.id },
+            players: linkedPlayers,
+          };
+          const result = await sendMigrationInvite(inviteRecord, inviteToken, orgName);
+
+          if (result.success) {
+            invited++;
+          } else {
+            skipped++;
+            errors.push(`Email to ${parent.email} failed: ${result.error}. Account created — re-import to retry.`);
+          }
+        } catch (err: any) {
+          skipped++;
+          errors.push(`Failed to process ${parent.email}: ${err.message}`);
+        }
+      }
+
+      res.json({ invited, skipped, errors });
+    } catch (error: any) {
+      console.error('Error in send-invites:', error);
+      res.status(500).json({ error: 'Failed to send invites', message: error.message });
+    }
+  });
+
+  // GET /api/migration/claim/:token — returns pre-filled user info for the claim page
+  app.get('/api/migration/claim/:token', async (req: any, res) => {
+    try {
+      const { token } = req.params;
+      const user = await storage.getUserByInviteToken(token);
+      if (!user) {
+        return res.status(404).json({ error: 'Invalid or expired invite link' });
+      }
+      if (user.inviteTokenExpiry && new Date(user.inviteTokenExpiry) < new Date()) {
+        return res.status(410).json({ error: 'Invite link has expired. Please contact your organization admin.' });
+      }
+      res.json({
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+      });
+    } catch (error: any) {
+      console.error('Error fetching claim info:', error);
+      res.status(500).json({ error: 'Failed to fetch invite info', message: error.message });
+    }
+  });
+
+  // POST /api/migration/claim/:token — sets password and activates account
+  app.post('/api/migration/claim/:token', async (req: any, res) => {
+    try {
+      const { token } = req.params;
+      const { password } = req.body;
+
+      if (!password || password.length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters' });
+      }
+
+      const user = await storage.getUserByInviteToken(token);
+      if (!user) {
+        return res.status(404).json({ error: 'Invalid or expired invite link' });
+      }
+      if (user.status !== 'invited') {
+        return res.status(400).json({ error: 'This account has already been activated' });
+      }
+      if (user.inviteTokenExpiry && new Date(user.inviteTokenExpiry) < new Date()) {
+        return res.status(410).json({ error: 'Invite link has expired. Please contact your organization admin.' });
+      }
+
+      const bcrypt = await import('bcrypt');
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      await storage.updateUser(user.id, {
+        password: hashedPassword,
+        status: 'active',
+        activatedAt: new Date().toISOString(),
+        inviteToken: null,
+        inviteTokenExpiry: null,
+        hasRegistered: true,
+        verified: true,
+      });
+
+      res.json({ success: true, email: user.email });
+    } catch (error: any) {
+      console.error('Error claiming invite:', error);
+      res.status(500).json({ error: 'Failed to activate account', message: error.message });
+    }
+  });
+
   // =============================================
   // LEGACY CLAIM ROUTES (For migrating users)
   // =============================================

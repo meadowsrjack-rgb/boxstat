@@ -110,6 +110,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string, organizationId: string): Promise<User | undefined>;
   getUserByEmailAnyOrg(email: string): Promise<User | undefined>;
+  getUserByInviteToken(token: string): Promise<User | undefined>;
   getUsersByOrganization(organizationId: string): Promise<User[]>;
   getUsersByTeam(teamId: string): Promise<User[]>;
   getUsersByRole(organizationId: string, role: string): Promise<User[]>;
@@ -1017,6 +1018,12 @@ class MemStorage implements IStorage {
   async getUserByEmailAnyOrg(email: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
       user => user.email === email && !user.accountHolderId
+    );
+  }
+
+  async getUserByInviteToken(token: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      user => user.inviteToken === token
     );
   }
   
@@ -3251,6 +3258,14 @@ class DatabaseStorage implements IStorage {
     return this.mapDbUserToUser(user);
   }
 
+  async getUserByInviteToken(token: string): Promise<User | undefined> {
+    const results = await db.select().from(schema.users).where(
+      eq(schema.users.inviteToken, token)
+    );
+    if (results.length === 0) return undefined;
+    return this.mapDbUserToUser(results[0]);
+  }
+
   async getUsersByOrganization(organizationId: string): Promise<User[]> {
     const results = await db.select().from(schema.users).where(eq(schema.users.organizationId, organizationId));
     const users = results.map(user => this.mapDbUserToUser(user));
@@ -3507,6 +3522,12 @@ class DatabaseStorage implements IStorage {
       coachingStyle: updates.coachingStyle,
       medicalCertifications: updates.medicalCertifications,
       languages: updates.languages,
+      inviteToken: updates.inviteToken,
+      inviteTokenExpiry: updates.inviteTokenExpiry,
+      status: updates.status,
+      activatedAt: updates.activatedAt,
+      subscriptionEndDate: updates.subscriptionEndDate,
+      parentEmail: updates.parentEmail,
       updatedAt: new Date().toISOString(),
     };
 
@@ -5824,6 +5845,12 @@ class DatabaseStorage implements IStorage {
       googleId: dbUser.googleId,
       appleId: dbUser.appleId,
       isActive: Boolean(dbUser.isActive),
+      inviteToken: dbUser.inviteToken,
+      inviteTokenExpiry: dbUser.inviteTokenExpiry,
+      status: dbUser.status,
+      activatedAt: dbUser.activatedAt,
+      subscriptionEndDate: dbUser.subscriptionEndDate,
+      parentEmail: dbUser.parentEmail,
       needsLegacyClaim: Boolean(dbUser.needsLegacyClaim),
       defaultDashboardView: dbUser.defaultDashboardView,
       flaggedForRosterChange: Boolean(dbUser.flaggedForRosterChange),

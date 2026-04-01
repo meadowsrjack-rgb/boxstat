@@ -12393,7 +12393,6 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="general">General</SelectItem>
-                            <SelectItem value="basketball">Basketball</SelectItem>
                             <SelectItem value="training">Training</SelectItem>
                             <SelectItem value="camps">Camps</SelectItem>
                             <SelectItem value="clinics">Clinics</SelectItem>
@@ -12420,7 +12419,6 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="basketball">Basketball</SelectItem>
                             <SelectItem value="target">Target</SelectItem>
                             <SelectItem value="tent">Tent (Camps)</SelectItem>
                             <SelectItem value="users">Users (Team)</SelectItem>

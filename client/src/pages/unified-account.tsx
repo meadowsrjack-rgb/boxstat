@@ -1667,6 +1667,35 @@ export default function UnifiedAccount() {
     }
   }, [shouldOpenPayment]);
 
+  // Handle eventId deep link from push notifications
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const eventIdParam = params.get('eventId');
+    if (!eventIdParam) return;
+
+    const fetchAndOpenEvent = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const res = await fetch(`/api/events/${eventIdParam}`, { credentials: 'include', headers });
+        if (res.ok) {
+          const event = await res.json();
+          setSelectedEvent(event);
+          setEventDetailOpen(true);
+        }
+      } catch (err) {
+        console.error('[Unified Account] Failed to fetch event for deep link', err);
+      } finally {
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('eventId');
+        window.history.replaceState({}, '', newUrl.toString());
+      }
+    };
+
+    fetchAndOpenEvent();
+  }, []);
+
   // Schedule request state - inline booking within active programs
   const [schedulingEnrollment, setSchedulingEnrollment] = useState<string | null>(null);
   const [scheduleDate, setScheduleDate] = useState<Date>(new Date());

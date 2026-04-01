@@ -122,6 +122,14 @@ export const initPushNotifications = async () => {
 
     const data = notification.notification.data;
     if (data?.url) {
+      // URL may include ?eventId=<id> for RSVP/check-in notifications.
+      // Navigating via window.location.href with the relative path (e.g.
+      // /home?eventId=123) reinitializes the app at that URL while preserving
+      // localStorage context (lastViewedProfileType, authToken, selectedPlayerId).
+      // DashboardDispatcher then reads lastViewedProfileType and forwards ?eventId
+      // to the correct dashboard, which auto-opens the EventDetailModal.
+      // NOTE: do NOT use getFullUrl() here — prepending the production domain
+      // would change the WebView origin and lose localStorage/session context.
       console.log('[Push Notification] Navigating to:', data.url);
       window.location.href = data.url;
     }

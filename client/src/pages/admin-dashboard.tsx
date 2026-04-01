@@ -289,6 +289,19 @@ export default function AdminDashboard() {
     }
   }, [currentUser, userLoading, profilesLoading, hasAdminProfile, setLocation]);
 
+  // Handle eventId deep link from push notifications at the page level
+  const [deepLinkEventId, setDeepLinkEventId] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('eventId');
+  });
+  useEffect(() => {
+    if (!deepLinkEventId) return;
+    setActiveTab('events');
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.delete('eventId');
+    window.history.replaceState({}, '', newUrl.toString());
+  }, [deepLinkEventId]);
+
   // Fetch organization data
   const { data: organization, isLoading: orgLoading } = useQuery<any>({
     queryKey: ["/api/organization"],
@@ -707,7 +720,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="events">
-            <EventsTab events={events} teams={teams} programs={programs} organization={organization} currentUser={currentUser} users={users} />
+            <EventsTab events={events} teams={teams} programs={programs} organization={organization} currentUser={currentUser} users={users} initialEventId={deepLinkEventId} onDeepLinkHandled={() => setDeepLinkEventId(null)} />
           </TabsContent>
 
           <TabsContent value="awards">
@@ -6011,7 +6024,7 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
 }
 
 // Events Tab - Full Implementation with Calendar and List View
-function EventsTab({ events, teams, programs, organization, currentUser, users }: any) {
+function EventsTab({ events, teams, programs, organization, currentUser, users, initialEventId, onDeepLinkHandled }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
@@ -6056,6 +6069,29 @@ function EventsTab({ events, teams, programs, organization, currentUser, users }
   const [deleteConfirmEvent, setDeleteConfirmEvent] = useState<any>(null);
   const [eventSortField, setEventSortField] = useState<string | null>(null);
   const [eventSortDirection, setEventSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Handle eventId deep link from push notifications (prop-driven, set by AdminDashboard on mount)
+  useEffect(() => {
+    if (!initialEventId) return;
+
+    const fetchAndOpenEvent = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const res = await fetch(`/api/events/${initialEventId}`, { credentials: 'include', headers });
+        if (res.ok) {
+          const event = await res.json();
+          setSelectedEventForDetails(event);
+          if (onDeepLinkHandled) onDeepLinkHandled();
+        }
+      } catch (err) {
+        console.error('[Admin EventsTab] Failed to fetch event for deep link', err);
+      }
+    };
+
+    fetchAndOpenEvent();
+  }, [initialEventId]);
 
   const handleEventSort = (field: string) => {
     if (eventSortField === field) {

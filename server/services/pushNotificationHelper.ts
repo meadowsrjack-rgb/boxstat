@@ -89,7 +89,7 @@ export const pushNotifications = {
       userId: playerId,
       title: "✅ You're Checked In!",
       message: `You've been checked in to ${event.title}`,
-      url: '/player-dashboard?tab=activity',
+      url: `/home?eventId=${eventId}`,
     });
   },
 
@@ -101,7 +101,7 @@ export const pushNotifications = {
       userId: playerId,
       title: "📍 Check-in Now Open",
       message: `Check-in is now open for ${event.title}`,
-      url: '/player-dashboard?tab=activity',
+      url: `/home?eventId=${eventId}`,
     });
   },
 
@@ -113,7 +113,7 @@ export const pushNotifications = {
       userId: playerId,
       title: "⏰ Check-in Closing Soon",
       message: `Check-in closes in ${minutesLeft} minutes for ${event.title}`,
-      url: '/player-dashboard?tab=activity',
+      url: `/home?eventId=${eventId}`,
     });
   },
 
@@ -125,7 +125,7 @@ export const pushNotifications = {
       userId: playerId,
       title: "📍 You're Near the Venue",
       message: `You're within check-in distance for ${event.title} - ready to check in?`,
-      url: '/player-dashboard?tab=activity',
+      url: `/home?eventId=${eventId}`,
     });
   },
 
@@ -137,7 +137,7 @@ export const pushNotifications = {
       userId: playerId,
       title: "📋 RSVP Requested",
       message: `Please RSVP for ${event.title} on ${new Date(event.startTime).toLocaleDateString()}`,
-      url: '/player-dashboard?tab=activity',
+      url: `/home?eventId=${eventId}`,
     });
   },
 
@@ -149,7 +149,7 @@ export const pushNotifications = {
       userId: playerId,
       title: "📋 RSVP Reminder",
       message: `Don't forget to RSVP for ${event.title} by ${dueDate}`,
-      url: '/player-dashboard?tab=activity',
+      url: `/home?eventId=${eventId}`,
     });
   },
 
@@ -183,7 +183,7 @@ export const pushNotifications = {
       userId: playerId,
       title: "⏰ Event Reminder",
       message: `${event.title} starts in ${timeText}`,
-      url: '/player-dashboard?tab=activity',
+      url: `/home?eventId=${eventId}`,
     });
   },
 
@@ -199,7 +199,7 @@ export const pushNotifications = {
       userId: parentId,
       title: "📋 RSVP Needed",
       message: `${playerName} has an RSVP pending for ${event.title}`,
-      url: '/unified-account?tab=home',
+      url: `/home?eventId=${eventId}`,
     });
   },
 
@@ -211,7 +211,7 @@ export const pushNotifications = {
       userId: parentId,
       title: "✅ Player Checked In",
       message: `${playerName} checked in to ${event.title}`,
-      url: '/unified-account?tab=home',
+      url: `/home?eventId=${eventId}`,
     });
   },
 
@@ -304,7 +304,7 @@ export const pushNotifications = {
       userId: coachId,
       title: "📋 RSVP Summary",
       message: `${confirmedCount} player${confirmedCount === 1 ? '' : 's'} confirmed for ${event.title}`,
-      url: '/coach-dashboard?tab=calendar',
+      url: `/home?eventId=${eventId}`,
     });
   },
 
@@ -316,7 +316,7 @@ export const pushNotifications = {
       userId: coachId,
       title: "⚠️ Low Attendance",
       message: `Only ${confirmedCount} player${confirmedCount === 1 ? '' : 's'} confirmed for ${event.title}`,
-      url: '/coach-dashboard?tab=calendar',
+      url: `/home?eventId=${eventId}`,
     });
   },
 
@@ -328,7 +328,7 @@ export const pushNotifications = {
       userId: coachId,
       title: "✅ Player Check-in",
       message: `${playerName} checked in to ${event.title}`,
-      url: '/coach-dashboard?tab=calendar',
+      url: `/home?eventId=${eventId}`,
     });
   },
 
@@ -341,7 +341,7 @@ export const pushNotifications = {
       userId: coachId,
       title: "⏰ Session Reminder",
       message: `Your session ${event.title} starts in ${timeText}`,
-      url: '/coach-dashboard?tab=calendar',
+      url: `/home?eventId=${eventId}`,
     });
   },
 

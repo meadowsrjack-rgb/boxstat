@@ -55,6 +55,10 @@ export default function DashboardDispatcher() {
     const lastViewedProfile = localStorage.getItem("lastViewedProfileType");
     const lastSelectedPlayerId = localStorage.getItem("selectedPlayerId");
 
+    const currentParams = new URLSearchParams(window.location.search);
+    const eventId = currentParams.get("eventId");
+    const eventSuffix = eventId ? `?eventId=${eventId}` : "";
+
     const goToPlayerDashboard = (playerId: string, asParent: boolean) => {
       localStorage.setItem("selectedPlayerId", playerId);
       if (asParent) {
@@ -62,13 +66,13 @@ export default function DashboardDispatcher() {
       } else {
         localStorage.removeItem("viewingAsParent");
       }
-      setLocation("/player-dashboard");
+      setLocation(`/player-dashboard${eventSuffix}`);
     };
 
     const goToParentDashboard = () => {
       localStorage.removeItem("selectedPlayerId");
       localStorage.removeItem("viewingAsParent");
-      setLocation("/parent-dashboard");
+      setLocation(`/unified-account${eventSuffix}`);
     };
 
     if (defaultDashboardView) {
@@ -76,10 +80,10 @@ export default function DashboardDispatcher() {
         goToPlayerDashboard(activeProfileId, isParent || isAdmin);
         return;
       } else if (defaultDashboardView === "coach" && (isCoach || isAdmin)) {
-        setLocation("/coach-dashboard");
+        setLocation(`/coach-dashboard${eventSuffix}`);
         return;
       } else if (defaultDashboardView === "admin" && isAdmin) {
-        setLocation("/admin-dashboard");
+        setLocation(`/admin-dashboard${eventSuffix}`);
         return;
       } else if (defaultDashboardView === "parent") {
         goToParentDashboard();
@@ -92,10 +96,10 @@ export default function DashboardDispatcher() {
         goToPlayerDashboard(lastSelectedPlayerId, isParent || isAdmin);
         return;
       } else if (lastViewedProfile === "coach" && (isCoach || isAdmin)) {
-        setLocation("/coach-dashboard");
+        setLocation(`/coach-dashboard${eventSuffix}`);
         return;
       } else if (lastViewedProfile === "admin" && isAdmin) {
-        setLocation("/admin-dashboard");
+        setLocation(`/admin-dashboard${eventSuffix}`);
         return;
       } else if (lastViewedProfile === "parent") {
         goToParentDashboard();

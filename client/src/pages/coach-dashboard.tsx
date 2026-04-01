@@ -162,6 +162,34 @@ export default function CoachDashboard() {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [eventDetailOpen, setEventDetailOpen] = useState(false);
 
+  // Handle eventId deep link from push notifications
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const eventIdParam = urlParams.get('eventId');
+    if (!eventIdParam) return;
+
+    const fetchAndOpenEvent = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const res = await fetch(`/api/events/${eventIdParam}`, { credentials: 'include', headers });
+        if (res.ok) {
+          const event = await res.json();
+          setSelectedEvent(event);
+          setEventDetailOpen(true);
+        }
+      } catch (err) {
+        console.error('[Coach Dashboard] Failed to fetch event for deep link', err);
+      } finally {
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('eventId');
+        window.history.replaceState({}, '', newUrl.toString());
+      }
+    };
+
+    fetchAndOpenEvent();
+  }, []);
 
   // Roster row modals
   const [evalOpen, setEvalOpen] = useState(false);

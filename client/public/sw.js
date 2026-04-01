@@ -160,6 +160,10 @@ self.addEventListener('notificationclick', (event) => {
     return;
   }
 
+  // urlToOpen may be /home?eventId=<id> for RSVP/check-in push notifications.
+  // The app's DashboardDispatcher reads lastViewedProfileType from localStorage
+  // and forwards ?eventId to the correct dashboard, which auto-opens the
+  // EventDetailModal for that event.
   const urlToOpen = event.notification.data?.url || '/';
 
   event.waitUntil(

@@ -16218,6 +16218,29 @@ function MigrationsTab({ organization, users, onboardingSteps, setActiveTab }: a
   const [isUploading, setIsUploading] = useState(false);
   const [uploadType, setUploadType] = useState<'subscriptions' | 'payments'>('subscriptions');
   const [selectedMigrationIds, setSelectedMigrationIds] = useState<Set<number>>(new Set());
+  const [migrationsView, setMigrationsView] = useState<'wizard' | 'legacy'>('wizard');
+  const [migrationMode, setMigrationMode] = useState<'stripe' | 'manual'>('manual');
+  const [migrationItems, setMigrationItems] = useState<Array<{
+    itemId: string; 
+    itemType: 'program' | 'store'; 
+    itemName: string;
+    paymentType?: 'subscription' | 'payment';
+    paymentDate?: string;
+    expiryDate?: string;
+    amountPaid?: number;
+    stripePriceId?: string;
+    nextDueDate?: string;
+  }>>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [selectedItemType, setSelectedItemType] = useState<'program' | 'store'>('program');
+  const [selectedPaymentType, setSelectedPaymentType] = useState<'subscription' | 'payment'>('subscription');
+  const [paymentDate, setPaymentDate] = useState<string>("");
+  const [expiryDate, setExpiryDate] = useState<string>("");
+  const [amountPaid, setAmountPaid] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
+  const [referenceNumber, setReferenceNumber] = useState<string>("");
+  const [sourceSystem, setSourceSystem] = useState<string>("");
+  const [migrationNotes, setMigrationNotes] = useState<string>("");
 
   const { data: migrations = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/migrations'],
@@ -16226,6 +16249,46 @@ function MigrationsTab({ organization, users, onboardingSteps, setActiveTab }: a
   const { data: programs = [] } = useQuery<any[]>({
     queryKey: ['/api/programs'],
   });
+
+  const stripeSchema = z.object({
+    email: z.string().email("Valid email required"),
+    stripeCustomerId: z.string().min(1, "Stripe Customer ID required"),
+    stripeSubscriptionIds: z.string().min(1, "At least one Stripe Subscription ID required"),
+  });
+  
+  const manualSchema = z.object({
+    email: z.string().email("Valid email required"),
+    stripeCustomerId: z.string().optional(),
+    stripeSubscriptionIds: z.string().optional(),
+  });
+  
+  const form = useForm({
+    resolver: zodResolver(migrationMode === 'stripe' ? stripeSchema : manualSchema),
+    defaultValues: {
+      email: "",
+      stripeCustomerId: "",
+      stripeSubscriptionIds: "",
+    },
+  });
+
+  const filteredMigrations = migrations.filter((m: any) => {
+    const itemNames = (m.items || []).map((item: any) => item.itemName || '').join(' ');
+    return m.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.stripeCustomerId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      itemNames?.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredMigrations.length / MIGRATIONS_PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * MIGRATIONS_PAGE_SIZE;
+  const endIndex = startIndex + MIGRATIONS_PAGE_SIZE;
+  const paginatedMigrations = filteredMigrations.slice(startIndex, endIndex);
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const storeProducts = programs.filter((p: any) => p.type === 'One-Time' || p.type === 'Store');
   const programProducts = programs.filter((p: any) => p.type !== 'One-Time' && p.type !== 'Store');
@@ -16299,78 +16362,6 @@ function MigrationsTab({ organization, users, onboardingSteps, setActiveTab }: a
       setSelectedMigrationIds(new Set(ids));
     }
   };
-
-  // Migration entry mode: 'stripe' for clubs with Stripe history, 'manual' for clubs without
-  const [migrationMode, setMigrationMode] = useState<'stripe' | 'manual'>('manual');
-  
-  // Items for this migration (itemId, itemType) - each item is added individually
-  const [migrationItems, setMigrationItems] = useState<Array<{
-    itemId: string; 
-    itemType: 'program' | 'store'; 
-    itemName: string;
-    paymentType?: 'subscription' | 'payment';
-    paymentDate?: string;
-    expiryDate?: string;
-    amountPaid?: number;
-    stripePriceId?: string;
-    nextDueDate?: string;
-  }>>([]);
-  const [selectedProductId, setSelectedProductId] = useState<string>("");
-  const [selectedItemType, setSelectedItemType] = useState<'program' | 'store'>('program');
-  const [selectedPaymentType, setSelectedPaymentType] = useState<'subscription' | 'payment'>('subscription');
-  const [paymentDate, setPaymentDate] = useState<string>("");
-  const [expiryDate, setExpiryDate] = useState<string>("");
-  const [amountPaid, setAmountPaid] = useState<string>("");
-  
-  // Manual entry additional fields
-  const [paymentMethod, setPaymentMethod] = useState<string>("");
-  const [referenceNumber, setReferenceNumber] = useState<string>("");
-  const [sourceSystem, setSourceSystem] = useState<string>("");
-  const [migrationNotes, setMigrationNotes] = useState<string>("");
-
-  // Dynamic schema based on migration mode
-  const stripeSchema = z.object({
-    email: z.string().email("Valid email required"),
-    stripeCustomerId: z.string().min(1, "Stripe Customer ID required"),
-    stripeSubscriptionIds: z.string().min(1, "At least one Stripe Subscription ID required"),
-  });
-  
-  const manualSchema = z.object({
-    email: z.string().email("Valid email required"),
-    stripeCustomerId: z.string().optional(),
-    stripeSubscriptionIds: z.string().optional(),
-  });
-  
-  const form = useForm({
-    resolver: zodResolver(migrationMode === 'stripe' ? stripeSchema : manualSchema),
-    defaultValues: {
-      email: "",
-      stripeCustomerId: "",
-      stripeSubscriptionIds: "",
-    },
-  });
-
-  const filteredMigrations = migrations.filter((m: any) => {
-    const itemNames = (m.items || []).map((item: any) => item.itemName || '').join(' ');
-    return m.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.stripeCustomerId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      itemNames?.toLowerCase().includes(searchTerm.toLowerCase());
-  });
-
-  // Pagination calculations
-  const totalPages = Math.max(1, Math.ceil(filteredMigrations.length / MIGRATIONS_PAGE_SIZE));
-  // Guard against currentPage exceeding totalPages (e.g., after deletion or data refresh)
-  const safePage = Math.min(currentPage, totalPages);
-  const startIndex = (safePage - 1) * MIGRATIONS_PAGE_SIZE;
-  const endIndex = startIndex + MIGRATIONS_PAGE_SIZE;
-  const paginatedMigrations = filteredMigrations.slice(startIndex, endIndex);
-  
-  // Auto-correct currentPage if it exceeds totalPages (using useEffect to avoid render loop)
-  useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
 
   // Reset page when search changes
   const handleSearchChange = (value: string) => {
@@ -17076,8 +17067,6 @@ function MigrationsTab({ organization, users, onboardingSteps, setActiveTab }: a
       handleCsvUpload();
     }
   };
-
-  const [migrationsView, setMigrationsView] = useState<'wizard' | 'legacy'>('wizard');
 
   return (
     <div className="space-y-6" data-testid="migrations-tab">

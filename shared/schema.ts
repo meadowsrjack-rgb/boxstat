@@ -440,6 +440,7 @@ export const products = pgTable("products", {
   iconName: varchar("icon_name"), // Icon identifier for display
   coverImageUrl: varchar("cover_image_url"), // Cover photo for program overview
   requiredGearProductIds: text("required_gear_product_ids").array().default(sql`ARRAY[]::text[]`), // Store product IDs required for this program
+  code: varchar(), // Short import code (e.g. "SKA", "THU12") for CSV/XLSX bulk import matching
   seasonStartDate: timestamp("season_start_date", { mode: 'string' }), // Program season start
   seasonEndDate: timestamp("season_end_date", { mode: 'string' }), // Program season end
   // Store-specific fields (for physical goods)
@@ -568,6 +569,7 @@ export const teams = pgTable("teams", {
   organization: text(),
   location: text(),
   scheduleLink: varchar("schedule_link"),
+  code: varchar(), // Short import code (e.g. "THU12") for CSV/XLSX bulk import matching
   rosterSize: integer("roster_size").default(0),
   active: boolean().default(true),
   notes: text(),
@@ -1332,6 +1334,7 @@ export interface Team {
   id: number;
   organizationId?: string;
   name: string;
+  code?: string;
   programId?: string;
   programType?: string;
   divisionId?: number;
@@ -1369,6 +1372,7 @@ export const insertTeamSchema = z.object({
   rosterSize: z.number().optional(),
   active: z.boolean().default(true),
   notes: z.string().optional(),
+  code: z.string().optional(),
 });
 
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
@@ -1762,6 +1766,7 @@ export interface Product {
   id: string;
   organizationId: string;
   name: string;
+  code?: string; // Short import/matching code (e.g., "BBALL-2025")
   slug?: string; // Unique key for internal mapping/API (e.g., "youth_club_fnh_package")
   description?: string;
   type?: string; // "Subscription", "One-Time", "Program", "Add-On"
@@ -1884,6 +1889,7 @@ export const insertProductSchema = z.object({
   iconName: z.string().optional(), // Icon identifier
   coverImageUrl: z.string().nullish(),
   requiredGearProductIds: z.array(z.string()).default([]),
+  code: z.string().optional(),
   seasonStartDate: z.string().optional(),
   seasonEndDate: z.string().optional(),
   // Store-specific fields

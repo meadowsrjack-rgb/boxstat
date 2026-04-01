@@ -3693,6 +3693,7 @@ class DatabaseStorage implements IStorage {
     const dbTeam = {
       organizationId: team.organizationId,
       name: team.name,
+      code: team.code ?? null,
       programId: team.programId,
       programType: team.programType,
       divisionId: team.divisionId,
@@ -3719,6 +3720,7 @@ class DatabaseStorage implements IStorage {
     const dbUpdates: any = {
       organizationId: updates.organizationId,
       name: updates.name,
+      code: updates.code !== undefined ? (updates.code || null) : undefined,
       programId: updates.programId,
       programType: updates.programType,
       divisionId: updates.divisionId,
@@ -4564,6 +4566,7 @@ class DatabaseStorage implements IStorage {
       id,
       organizationId: program.organizationId,
       name: program.name,
+      code: program.code ?? null,
       slug: program.slug,
       description: program.description,
       type: program.type,
@@ -4627,6 +4630,7 @@ class DatabaseStorage implements IStorage {
   async updateProgram(id: string, updates: Partial<Program>): Promise<Program | undefined> {
     const dbUpdates: any = {
       name: updates.name,
+      code: updates.code !== undefined ? (updates.code || null) : undefined,
       slug: updates.slug,
       description: updates.description,
       type: updates.type,
@@ -5845,6 +5849,7 @@ class DatabaseStorage implements IStorage {
       id: dbTeam.id,
       organizationId: dbTeam.organizationId || this.defaultOrgId,
       name: dbTeam.name,
+      code: dbTeam.code ?? undefined,
       programId: dbTeam.programId,
       programType: dbTeam.programType,
       divisionId: dbTeam.divisionId,
@@ -6118,6 +6123,7 @@ class DatabaseStorage implements IStorage {
       id: dbProgram.id,
       organizationId: dbProgram.organizationId,
       name: dbProgram.name,
+      code: dbProgram.code ?? undefined,
       slug: dbProgram.slug,
       description: dbProgram.description,
       type: dbProgram.type,

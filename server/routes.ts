@@ -15703,6 +15703,301 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // =============================================
+  // BULK USER IMPORT ENDPOINT
+  // =============================================
+
+  app.post('/api/users/bulk-import', requireAuth, async (req: any, res) => {
+    try {
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ error: 'Only admins can bulk import users' });
+      }
+
+      const { organizationId } = req.user;
+      const { users: rawUsersToImport, sendWelcomeEmails = true } = req.body;
+
+      if (!Array.isArray(rawUsersToImport) || rawUsersToImport.length === 0) {
+        return res.status(400).json({ error: 'No users provided' });
+      }
+
+      const VALID_ROLES = ['parent', 'player', 'coach', 'admin'];
+      const VALID_STATUSES = ['active', 'inactive'];
+
+      // Normalize role and status server-side (lowercase + allowlist) for consistency
+      const usersToImport: BulkImportRow[] = rawUsersToImport.map((u: Record<string, unknown>) => {
+        const role = (String(u.role || 'player')).toLowerCase().trim();
+        const status = (String(u.status || 'active')).toLowerCase().trim();
+        return {
+          firstName: String(u.firstName || ''),
+          lastName: String(u.lastName || ''),
+          email: String(u.email || '').trim(),
+          phone: String(u.phone || ''),
+          role: (VALID_ROLES.includes(role) ? role : 'player') as BulkImportRow['role'],
+          status: (VALID_STATUSES.includes(status) ? status : 'active') as BulkImportRow['status'],
+          teamName: String(u.teamName || ''),
+          teamCode: String(u.teamCode || ''),
+          programName: String(u.programName || ''),
+          programCode: String(u.programCode || ''),
+          parentEmail: String(u.parentEmail || ''),
+          startDate: String(u.startDate || ''),
+          endDate: String(u.endDate || ''),
+        };
+      });
+
+      // Fetch all teams and programs for this org for code/name matching
+      const orgTeams = await storage.getTeamsByOrganization(organizationId);
+      const orgPrograms = await storage.getProgramsByOrganization(organizationId);
+
+      // Get the org name for welcome email
+      const org = await storage.getOrganization(organizationId);
+      const orgName = org?.name || 'your organization';
+
+      let successCount = 0;
+      let emailsSent = 0;
+      const errors: string[] = [];
+
+      // Track created parents by email for child linking (used when linking players to parents)
+      const parentsByEmail: Record<string, { id: string; organizationId: string; accountHolderId?: string }> = {};
+
+      // First pass: create parents
+      const parents = usersToImport.filter((u: BulkImportRow) => u.role === 'parent');
+      for (const userData of parents) {
+        try {
+          const email = userData.email?.trim() || '';
+          if (!email && !userData.firstName) {
+            errors.push(`Skipped user with no email or name`);
+            continue;
+          }
+
+          // Check for existing user by email within this organization only
+          let existingUser = null;
+          if (email) {
+            existingUser = await storage.getUserByEmail(email, organizationId);
+          }
+
+          if (existingUser) {
+            // Track existing parent for child linking but do not count as created
+            if (email) parentsByEmail[email.toLowerCase()] = { id: existingUser.id, organizationId: existingUser.organizationId || organizationId, accountHolderId: existingUser.accountHolderId };
+            continue;
+          } else {
+            const magicLinkToken = crypto.randomBytes(32).toString('hex');
+            const magicLinkExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+            const teamId = resolveTeamId(userData, orgTeams);
+            const newId = crypto.randomUUID();
+
+            await db.insert(users).values({
+              id: newId,
+              organizationId,
+              email: email || null,
+              firstName: userData.firstName || '',
+              lastName: userData.lastName || '',
+              role: 'parent',
+              phoneNumber: userData.phone || null,
+              teamId: teamId ?? null,
+              isActive: userData.status === 'inactive' ? false : true,
+              verified: true,
+              magicLinkToken,
+              magicLinkExpiry: magicLinkExpiry.toISOString(),
+              needsLegacyClaim: false,
+            });
+
+            // Handle program enrollment (parent is their own accountHolder)
+            await handleProgramEnrollment(newId, organizationId, userData, orgPrograms, newId);
+
+            successCount++;
+
+            // Cache for child linking
+            if (email) {
+              parentsByEmail[email.toLowerCase()] = { id: newId, organizationId };
+            }
+
+            // Send welcome email only to newly created users
+            if (sendWelcomeEmails && email) {
+              const emailResult = await emailService.sendWelcomeEmail({
+                email,
+                firstName: userData.firstName || '',
+                magicLinkToken,
+                organizationName: orgName,
+              });
+              if (emailResult.success) emailsSent++;
+            }
+          }
+        } catch (err: any) {
+          errors.push(`Failed to create parent ${userData.email || userData.firstName}: ${err.message}`);
+        }
+      }
+
+      // Second pass: create players, coaches, and admins
+      const nonParents = usersToImport.filter((u: BulkImportRow) => u.role !== 'parent');
+      for (const userData of nonParents) {
+        try {
+          const email = userData.email?.trim() || '';
+          if (!email && !userData.firstName) {
+            errors.push(`Skipped user with no email or name`);
+            continue;
+          }
+
+          // Check for existing user within this organization only
+          let existingUser = null;
+          if (email) {
+            existingUser = await storage.getUserByEmail(email, organizationId);
+          }
+          if (existingUser) {
+            // Skip without counting as created
+            continue;
+          }
+
+          const magicLinkToken = crypto.randomBytes(32).toString('hex');
+          const magicLinkExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+          const teamId = resolveTeamId(userData, orgTeams);
+
+          // Link to parent by parentEmail — only within this organization
+          let parentId: string | null = null;
+          let accountHolderId: string | null = null;
+          if (userData.parentEmail) {
+            const parentEmail = userData.parentEmail.toLowerCase().trim();
+            // Try cache first (populated from current import batch), then org-scoped DB lookup
+            const parentUser = parentsByEmail[parentEmail] || await storage.getUserByEmail(userData.parentEmail, organizationId);
+            if (parentUser && parentUser.organizationId === organizationId) {
+              parentId = parentUser.id;
+              accountHolderId = parentUser.accountHolderId || parentUser.id;
+            }
+          }
+
+          const newId = crypto.randomUUID();
+          await db.insert(users).values({
+            id: newId,
+            organizationId,
+            email: email || null,
+            firstName: userData.firstName || '',
+            lastName: userData.lastName || '',
+            role: userData.role,
+            phoneNumber: userData.phone || null,
+            teamId: teamId ?? null,
+            isActive: userData.status === 'inactive' ? false : true,
+            verified: true,
+            magicLinkToken,
+            magicLinkExpiry: magicLinkExpiry.toISOString(),
+            needsLegacyClaim: false,
+            parentId: parentId,
+            accountHolderId: accountHolderId,
+          });
+          // accountHolderId: use the resolved parent if available, otherwise the user is their own accountHolder
+          const enrollmentAccountHolderId = accountHolderId || newId;
+          await handleProgramEnrollment(newId, organizationId, userData, orgPrograms, enrollmentAccountHolderId);
+
+          successCount++;
+
+          if (sendWelcomeEmails && email) {
+            const emailResult = await emailService.sendWelcomeEmail({
+              email,
+              firstName: userData.firstName || '',
+              magicLinkToken,
+              organizationName: orgName,
+            });
+            if (emailResult.success) emailsSent++;
+          }
+        } catch (err: any) {
+          errors.push(`Failed to create ${userData.role || 'user'} ${userData.email || userData.firstName}: ${err.message}`);
+        }
+      }
+
+      res.json({
+        success: true,
+        created: successCount,
+        emailsSent,
+        errors,
+      });
+    } catch (error: any) {
+      console.error('Bulk import error:', error);
+      res.status(500).json({ error: 'Bulk import failed', details: error.message });
+    }
+  });
+
+  interface BulkImportRow {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    role: 'parent' | 'player' | 'coach' | 'admin';
+    status: 'active' | 'inactive';
+    teamName: string;
+    teamCode: string;
+    programName: string;
+    programCode: string;
+    parentEmail: string;
+    startDate: string;
+    endDate: string;
+  }
+
+  interface OrgTeam { id: number; name: string; code?: string | null }
+  interface OrgProgram { id: string; name: string; code?: string | null; productCategory?: string | null }
+
+  function resolveTeamId(userData: BulkImportRow, orgTeams: OrgTeam[]): number | null {
+    // Try by code first, then by name
+    if (userData.teamCode) {
+      const t = orgTeams.find(t => t.code && t.code.toLowerCase() === userData.teamCode.toLowerCase());
+      if (t) return t.id;
+    }
+    if (userData.teamName) {
+      const t = orgTeams.find(t => t.name.toLowerCase() === userData.teamName.toLowerCase());
+      if (t) return t.id;
+    }
+    return null;
+  }
+
+  async function handleProgramEnrollment(userId: string, organizationId: string, userData: BulkImportRow, orgPrograms: OrgProgram[], accountHolderId: string) {
+    // Restrict to service/program products only (not physical goods) to avoid cross-category enrollment
+    const servicePrograms = orgPrograms.filter(p => !p.productCategory || p.productCategory === 'service');
+
+    // Resolve program by code, then name
+    let programId: string | undefined;
+    if (userData.programCode) {
+      const p = servicePrograms.find(p => p.code && p.code.toLowerCase() === userData.programCode.toLowerCase());
+      if (p) programId = p.id;
+    }
+    if (!programId && userData.programName) {
+      const p = servicePrograms.find(p => p.name.toLowerCase() === userData.programName.toLowerCase());
+      if (p) programId = p.id;
+    }
+
+    if (programId) {
+      const existing = await db.select({ id: productEnrollments.id })
+        .from(productEnrollments)
+        .where(and(
+          eq(productEnrollments.profileId, userId),
+          eq(productEnrollments.programId, programId),
+          eq(productEnrollments.status, 'active')
+        ))
+        .limit(1);
+
+      if (existing.length === 0) {
+        const parseDate = (raw: string | undefined): string | null => {
+          if (!raw) return null;
+          try {
+            const d = new Date(raw);
+            if (isNaN(d.getTime())) return null;
+            return d.toISOString();
+          } catch {
+            return null;
+          }
+        };
+        await db.insert(productEnrollments).values({
+          organizationId,
+          programId,
+          profileId: userId,
+          accountHolderId,
+          status: 'active',
+          source: 'admin',
+          startDate: parseDate(userData.startDate),
+          endDate: parseDate(userData.endDate),
+        });
+      }
+    }
+  }
+
+  // =============================================
   // HTTP SERVER SETUP
   // =============================================
   

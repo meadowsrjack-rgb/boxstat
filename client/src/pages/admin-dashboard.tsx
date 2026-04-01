@@ -1649,7 +1649,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   });
 
   const downloadUserTemplate = () => {
-    const csvContent = "First name,Last name,Email,Phone,Role,Status,Team,Program,Start Date,End Date\nJohn,Doe,player@example.com,555-0100,player,active,Thunder U12,Skills Academy,2025-01-15,2025-06-30\nJane,Smith,coach@example.com,555-0101,coach,active,,,,\nBob,Johnson,parent@example.com,555-0102,parent,active,,Youth Club,2025-03-01,2025-12-31";
+    const csvContent = "First name,Last name,Email,Phone,Role,Status,Team,Team Code,Program,Program Code,Parent Email,Start Date,End Date\nJohn,Doe,player@example.com,555-0100,player,active,Thunder U12,THU12,Skills Academy,SKA,,2025-01-15,2025-06-30\nJane,Smith,coach@example.com,555-0101,coach,active,,,,,,,\nBob,Johnson,parent@example.com,555-0102,parent,active,,,Youth Club,YC,,2025-03-01,2025-12-31";
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1659,10 +1659,198 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     window.URL.revokeObjectURL(url);
   };
 
+  const parseCsvRow = (line: string): string[] => {
+    const values: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        inQuotes = !inQuotes;
+      } else if (ch === ',' && !inQuotes) {
+        values.push(current.trim());
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    values.push(current.trim());
+    return values;
+  };
+
+  const rowToUserData = (headers: string[], values: string[]) => {
+    const row: any = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index] || '';
+    });
+    return {
+      firstName: row['first name'] || row['firstname'] || row['first_name'] || '',
+      lastName: row['last name'] || row['lastname'] || row['last_name'] || '',
+      email: row['email'] || '',
+      phone: row['phone'] || row['phonenumber'] || row['phone number'] || '',
+      role: (row['role'] || 'player').toLowerCase(),
+      status: row['status'] || 'active',
+      teamName: row['team'] || row['team name'] || '',
+      teamCode: row['team code'] || row['teamcode'] || '',
+      programName: row['program'] || row['program name'] || '',
+      programCode: row['program code'] || row['programcode'] || '',
+      parentEmail: row['parent email'] || row['parentemail'] || '',
+      startDate: row['start date'] || row['startdate'] || row['enrolled'] || '',
+      endDate: row['end date'] || row['enddate'] || '',
+    };
+  };
+
   const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const isXlsx = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+
+    if (isXlsx) {
+      // XLSX parsing via backend bulk-import endpoint
+      const arrayBuffer = await file.arrayBuffer();
+      const XLSX = await import('xlsx');
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+
+      const usersToImport: any[] = [];
+
+      // Sheet order: Parents first, then Players, Coaches, Admins
+      const sheetOrder = ['Parents', 'Players', 'Coaches', 'Admins'];
+      const roleMap: Record<string, string> = {
+        'Parents': 'parent',
+        'Players': 'player',
+        'Coaches': 'coach',
+        'Admins': 'admin',
+      };
+
+      // Canonicalize header cells: strip asterisks, newlines, parentheticals, collapse whitespace
+      const canonicalizeHeader = (s: any): string => {
+        if (s === null || s === undefined) return '';
+        return s.toString()
+          .replace(/\n/g, ' ')
+          .replace(/\*+/g, '')
+          .replace(/\([^)]*\)/g, '')
+          .replace(/[^a-z0-9 ]/gi, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .toLowerCase();
+      };
+
+      // Header keywords used to detect the real header row (substring match)
+      const HEADER_KEYWORDS = ['email', 'first name', 'last name'];
+
+      for (const sheetName of sheetOrder) {
+        if (!workbook.SheetNames.includes(sheetName)) continue;
+        const sheet = workbook.Sheets[sheetName];
+
+        // Parse all rows with raw array output to find real header row dynamically
+        const rawRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+        // Checks if a canonicalized cell closely matches a keyword (not buried in long text)
+        const cellMatchesKw = (cell: string, kw: string) =>
+          cell === kw || (cell.startsWith(kw) && cell.length < kw.length + 15) || (cell.endsWith(kw) && cell.length < kw.length + 15);
+
+        // Find row where at least 2 keywords appear as their own header cells (not buried in instructions)
+        let headerRowIdx = 0;
+        for (let i = 0; i < Math.min(rawRows.length, 10); i++) {
+          const rowCanon = rawRows[i].map((c: any) => canonicalizeHeader(c));
+          const matchCount = HEADER_KEYWORDS.filter(kw =>
+            rowCanon.some((cell: string) => cellMatchesKw(cell, kw))
+          ).length;
+          if (matchCount >= 2) {
+            headerRowIdx = i;
+            break;
+          }
+        }
+
+        const headers: string[] = rawRows[headerRowIdx].map((c: any) => canonicalizeHeader(c));
+        const dataRows = rawRows.slice(headerRowIdx + 1);
+
+        // Find column index: prefer exact match, then substring match
+        const findColIdx = (keys: string[]): number => {
+          for (const k of keys) {
+            const exactIdx = headers.indexOf(k);
+            if (exactIdx !== -1) return exactIdx;
+          }
+          for (const k of keys) {
+            const subIdx = headers.findIndex((h: string) => h.includes(k));
+            if (subIdx !== -1) return subIdx;
+          }
+          return -1;
+        };
+
+        const getCol = (row: any[], keys: string[]) => {
+          const idx = findColIdx(keys);
+          if (idx === -1) return '';
+          const v = row[idx];
+          if (v === null || v === undefined || v === '') return '';
+          // Handle Excel date serial numbers for date fields
+          if (typeof v === 'number' && keys.some(kk => kk.includes('date'))) {
+            try {
+              const d = XLSX.SSF.parse_date_code(v);
+              if (d) return `${d.y}-${String(d.m).padStart(2, '0')}-${String(d.d).padStart(2, '0')}`;
+            } catch {}
+          }
+          return v.toString().trim();
+        };
+
+        for (const row of dataRows) {
+          const email = getCol(row, ['email']);
+          const firstName = getCol(row, ['first name', 'firstname']);
+          const lastName = getCol(row, ['last name', 'lastname']);
+          if (!email && !firstName) continue;
+
+          // Use sheet name as the authoritative role source. Only override with cell value if it's an allowlisted role.
+          const sheetRole = roleMap[sheetName] || 'player';
+          const cellRole = (getCol(row, ['role']) || '').toLowerCase().trim();
+          const VALID_IMPORT_ROLES = ['parent', 'player', 'coach', 'admin'];
+          const role = VALID_IMPORT_ROLES.includes(cellRole) ? cellRole : sheetRole;
+          const status = (getCol(row, ['account status', 'status']) || 'active').toLowerCase();
+
+          usersToImport.push({
+            firstName,
+            lastName,
+            email,
+            phone: getCol(row, ['phone']),
+            role,
+            status: ['active', 'inactive'].includes(status) ? status : 'active',
+            teamName: getCol(row, ['team name']),
+            teamCode: getCol(row, ['team code']),
+            programName: getCol(row, ['program name']),
+            programCode: getCol(row, ['program code']),
+            parentEmail: getCol(row, ['parent email']),
+            startDate: getCol(row, ['payment start date', 'start date', 'subscription start']),
+            endDate: getCol(row, ['payment end date', 'end date', 'subscription end']),
+          });
+        }
+      }
+
+      if (usersToImport.length === 0) {
+        toast({ title: "No users found", description: "The XLSX file did not contain any valid rows in the Parents, Players, Coaches, or Admins sheets.", variant: "destructive" });
+        return;
+      }
+
+      toast({ title: `Processing ${usersToImport.length} users from XLSX...` });
+
+      try {
+        const data = await apiRequest('POST', '/api/users/bulk-import', { users: usersToImport });
+
+        queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+
+        const errorMsg = data.errors?.length > 0 ? ` ${data.errors.length} error(s).` : '';
+        toast({
+          title: "Bulk Import Complete",
+          description: `Created ${data.created} users, ${data.emailsSent} welcome emails sent.${errorMsg}`,
+          variant: data.errors?.length > 0 ? "destructive" : "default",
+        });
+        setIsBulkUploadOpen(false);
+      } catch (err: any) {
+        toast({ title: "Import Failed", description: err.message || "Unknown error", variant: "destructive" });
+      }
+      return;
+    }
+
+    // CSV path
     const reader = new FileReader();
     reader.onload = async (event) => {
       const text = event.target?.result as string;
@@ -1677,92 +1865,31 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
         return;
       }
 
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const headers = parseCsvRow(lines[0]).map(h => h.trim().toLowerCase());
       const dataLines = lines.slice(1);
       
       toast({ title: `Processing ${dataLines.length} users from CSV...` });
-      
-      let successCount = 0;
-      let errorCount = 0;
-      
-      for (const line of dataLines) {
-        const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
-        const userData: any = {};
-        
-        headers.forEach((header, index) => {
-          userData[header] = values[index] || '';
+
+      const usersToImport = dataLines.map(line => {
+        const values = parseCsvRow(line);
+        return rowToUserData(headers, values);
+      }).filter(u => u.email || u.firstName);
+
+      try {
+        const data = await apiRequest('POST', '/api/users/bulk-import', { users: usersToImport });
+
+        queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+
+        const errorMsg = data.errors?.length > 0 ? ` ${data.errors.length} error(s).` : '';
+        toast({
+          title: "Bulk Upload Complete",
+          description: `Created ${data.created} users, ${data.emailsSent} welcome emails sent.${errorMsg}`,
+          variant: data.errors?.length > 0 ? "destructive" : "default",
         });
-        
-        const firstName = userData['first name'] || userData['firstname'] || '';
-        const lastName = userData['last name'] || userData['lastname'] || '';
-        const email = userData['email'] || '';
-        const phone = userData['phone'] || userData['phonenumber'] || '';
-        const role = userData['role'] || 'player';
-        const status = userData['status'] || 'active';
-        const teamName = userData['team'] || '';
-        const programName = userData['program'] || '';
-        const startDate = userData['start date'] || userData['startdate'] || userData['enrolled'] || '';
-        const endDate = userData['end date'] || userData['enddate'] || '';
-        
-        let teamId = undefined;
-        if (teamName) {
-          const team = teams.find((t: any) => t.name.toLowerCase() === teamName.toLowerCase());
-          if (team) teamId = team.id;
-        }
-        
-        let programId = undefined;
-        if (programName) {
-          const program = programs?.find((p: any) => p.name.toLowerCase() === programName.toLowerCase() && p.productCategory === 'service');
-          if (program) programId = program.id;
-        }
-        
-        try {
-          const res = await apiRequest("POST", "/api/users", {
-            organizationId: organization.id,
-            email: email,
-            firstName: firstName,
-            lastName: lastName,
-            role: role,
-            phoneNumber: phone || undefined,
-            teamId: teamId,
-            isActive: status.toLowerCase() === 'active',
-            verified: false,
-          });
-          
-          if (programId) {
-            const newUser = await res.json();
-            if (newUser?.id) {
-              await apiRequest('PATCH', `/api/users/${newUser.id}`, {
-                enrollmentsToAdd: [programId],
-                ...(teamId ? { teamIds: [teamId] } : {}),
-                ...(startDate || endDate ? {
-                  newEnrollmentDates: {
-                    [programId]: {
-                      startDate: startDate || undefined,
-                      endDate: endDate || undefined,
-                    }
-                  }
-                } : {}),
-              });
-            }
-          }
-          
-          successCount++;
-        } catch (error) {
-          console.error(`Failed to create user ${email}:`, error);
-          errorCount++;
-        }
+        setIsBulkUploadOpen(false);
+      } catch (err: any) {
+        toast({ title: "Upload Failed", description: err.message || "Unknown error", variant: "destructive" });
       }
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      
-      toast({ 
-        title: "Bulk Upload Complete", 
-        description: `Successfully created ${successCount} users. ${errorCount > 0 ? `${errorCount} failed.` : ''}`,
-        variant: errorCount > 0 ? "destructive" : "default"
-      });
-      
-      setIsBulkUploadOpen(false);
     };
     reader.readAsText(file);
   };
@@ -2001,10 +2128,10 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                 <DialogTitle>Bulk Upload Users</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <p className="text-sm text-gray-600">Upload a CSV file with columns: First name, Last name, Email, Phone, Role, Status, Team</p>
+                <p className="text-sm text-gray-600">Upload a CSV or XLSX file. For XLSX, include sheets named <strong>Parents</strong>, <strong>Players</strong>, <strong>Coaches</strong>, and/or <strong>Admins</strong>. Columns: First name, Last name, Email, Phone, Role, Status, Team, Team Code, Program, Program Code, Parent Email, Start Date, End Date.</p>
                 <Input
                   type="file"
-                  accept=".csv"
+                  accept=".csv,.xlsx,.xls"
                   onChange={handleBulkUpload}
                   data-testid="input-csv-upload"
                 />
@@ -4743,6 +4870,7 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
       rosterSize: 0,
       active: true,
       notes: "",
+      code: "",
     },
   });
 
@@ -4993,6 +5121,21 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
                           <FormControl>
                             <Input {...field} placeholder="High School Black" data-testid="input-team-name" />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="code"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Team Code</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ""} placeholder="e.g. THU12" data-testid="input-team-code" />
+                          </FormControl>
+                          <FormDescription>Short code used for bulk import matching</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -5261,6 +5404,18 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
                         onChange={(e) => setEditingTeam({...editingTeam, name: e.target.value})}
                         data-testid="input-edit-team-name"
                       />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-team-code">Team Code</Label>
+                      <Input
+                        id="edit-team-code"
+                        value={editingTeam.code || ""}
+                        onChange={(e) => setEditingTeam({...editingTeam, code: e.target.value})}
+                        placeholder="e.g. THU12"
+                        data-testid="input-edit-team-code"
+                      />
+                      <p className="text-xs text-gray-500">Short code used for bulk import matching</p>
                     </div>
 
                     <div className="space-y-2">
@@ -5539,6 +5694,7 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Team Name</TableHead>
+                  <TableHead>Code</TableHead>
                   <TableHead>Program</TableHead>
                   <TableHead>Division</TableHead>
                   <TableHead>Coaches</TableHead>
@@ -5556,6 +5712,13 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
                     <TableRow key={team.id} data-testid={`row-team-${team.id}`}>
                       <TableCell className="font-medium" data-testid={`text-team-name-${team.id}`}>
                         {team.name}
+                      </TableCell>
+                      <TableCell data-testid={`text-team-code-${team.id}`}>
+                        {team.code ? (
+                          <Badge variant="outline" className="font-mono text-xs">{team.code}</Badge>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
                       </TableCell>
                       <TableCell data-testid={`text-program-${team.id}`}>
                         {program ? (
@@ -11297,6 +11460,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       }>,
       scheduleRequestEnabled: false,
       sessionLengthMinutes: undefined as number | undefined,
+      code: "",
     },
   });
 
@@ -11436,6 +11600,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       ),
       scheduleRequestEnabled: program.scheduleRequestEnabled || false,
       sessionLengthMinutes: program.sessionLengthMinutes,
+      code: program.code || "",
     });
     setExpandedPricingOptions(new Set());
     setIsDialogOpen(true);
@@ -11481,6 +11646,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
         pricingOptions: [],
         scheduleRequestEnabled: false,
         sessionLengthMinutes: undefined,
+        code: "",
       });
     } else if (!editingProgram) {
       // Opening dialog for NEW program - reset to clean defaults
@@ -11519,6 +11685,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
         pricingOptions: [],
         scheduleRequestEnabled: false,
         sessionLengthMinutes: undefined,
+        code: "",
       });
     }
   };
@@ -11892,6 +12059,20 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                       <FormControl>
                         <Input {...field} placeholder="High School Club" data-testid="input-program-name" />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Program Code</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ""} placeholder="e.g. SKA" data-testid="input-program-code" />
+                      </FormControl>
+                      <FormDescription>Short code used for bulk import matching</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -13308,6 +13489,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                   />
                 </TableHead>
                 <TableHead>Name</TableHead>
+                <TableHead>Code</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Teams</TableHead>
                 <TableHead>Status</TableHead>
@@ -13337,6 +13519,13 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                           <div className="text-xs text-gray-500 truncate max-w-[200px]">{program.description}</div>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell data-testid={`text-program-code-${program.id}`}>
+                      {program.code ? (
+                        <Badge variant="outline" className="font-mono text-xs">{program.code}</Badge>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">{formatPrice(program.price)}</div>

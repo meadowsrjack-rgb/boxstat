@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CheckCircle2, AlertCircle, Loader2, X, Plus, Users, Baby, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import type { MigrationParent, MigrationPlayer, MigrationResult } from "@shared/types/migration";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -553,14 +554,7 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
   const send = async () => {
     setIsSending(true);
     try {
-      const res = await fetch("/api/migration/send-invites", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ parents, players }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data: MigrationResult = await res.json();
+      const data: MigrationResult = await apiRequest("POST", "/api/migration/send-invites", { parents, players });
       setResult(data);
       setDone(true);
       onComplete?.(data);

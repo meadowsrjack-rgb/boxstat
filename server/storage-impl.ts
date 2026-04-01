@@ -6006,7 +6006,7 @@ class DatabaseStorage implements IStorage {
       id: dbPayment.id.toString(),
       organizationId: dbPayment.organizationId || this.defaultOrgId,
       userId: dbPayment.userId,
-      playerId: dbPayment.playerId, // For per-player billing: which specific player this payment covers
+      playerId: dbPayment.playerId,
       amount: dbPayment.amount,
       currency: dbPayment.currency || 'usd',
       paymentType: dbPayment.paymentType,
@@ -6015,6 +6015,7 @@ class DatabaseStorage implements IStorage {
       dueDate: dbPayment.dueDate,
       paidAt: dbPayment.paidAt ? new Date(dbPayment.paidAt) : undefined,
       createdAt: new Date(dbPayment.createdAt),
+      fulfillmentStatus: dbPayment.fulfillmentStatus || 'pending',
     };
   }
 

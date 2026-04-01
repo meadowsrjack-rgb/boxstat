@@ -596,7 +596,7 @@ export default function AdminDashboard() {
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             <CrmMessageBanner onNavigateToCrm={() => { setCrmSubTab("messages"); setActiveTab("messages"); }} />
-            <StorePurchaseBanner onNavigateToStore={() => setActiveTab("store")} />
+            <StorePurchaseBanner />
             <EnrollmentAssignmentBanner onNavigateToUsers={() => setActiveTab("users")} />
 
             {/* Hero KPI Bar */}
@@ -709,149 +709,11 @@ export default function AdminDashboard() {
             </div>
 
             {overviewStats?.store && overviewStats.store.totalProducts > 0 && (
-              <Card>
-                <CardContent className="py-4 px-4">
-                  <div
-                    className="flex items-center justify-between mb-4 cursor-pointer group"
-                    onClick={() => setActiveTab("store")}
-                  >
-                    <p className="text-sm font-semibold text-gray-900">Store at a Glance</p>
-                    <span className="text-xs text-red-600 group-hover:text-red-700 flex items-center gap-1 font-medium">
-                      View Store <ChevronRight className="w-3 h-3" />
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                    <div className="bg-gray-50 rounded-lg p-3 text-center">
-                      <div className="flex items-center justify-center gap-1.5 mb-1">
-                        <ShoppingBag className="w-3.5 h-3.5 text-gray-500" />
-                        <p className="text-xs text-gray-500">Products</p>
-                      </div>
-                      <p className="text-lg font-bold text-gray-900">{overviewStats.store.totalProducts}</p>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-3 text-center">
-                      <div className="flex items-center justify-center gap-1.5 mb-1">
-                        <DollarSign className="w-3.5 h-3.5 text-gray-500" />
-                        <p className="text-xs text-gray-500">Store Revenue</p>
-                      </div>
-                      <p className="text-lg font-bold text-gray-900">
-                        ${((overviewStats.store.storeRevenue ?? 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                      </p>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-3 text-center">
-                      <div className="flex items-center justify-center gap-1.5 mb-1">
-                        <ShoppingCart className="w-3.5 h-3.5 text-gray-500" />
-                        <p className="text-xs text-gray-500">Orders</p>
-                      </div>
-                      <p className="text-lg font-bold text-gray-900">{overviewStats.store.storeOrderCount}</p>
-                    </div>
-                    <div className={`rounded-lg p-3 text-center ${
-                      (overviewStats.store.lowStockCount + overviewStats.store.outOfStockCount) > 0
-                        ? 'bg-amber-50' : 'bg-gray-50'
-                    }`}>
-                      <div className="flex items-center justify-center gap-1.5 mb-1">
-                        <AlertTriangle className={`w-3.5 h-3.5 ${
-                          overviewStats.store.outOfStockCount > 0 ? 'text-red-500' :
-                          overviewStats.store.lowStockCount > 0 ? 'text-amber-500' : 'text-gray-500'
-                        }`} />
-                        <p className="text-xs text-gray-500">Stock Alerts</p>
-                      </div>
-                      <p className={`text-lg font-bold ${
-                        overviewStats.store.outOfStockCount > 0 ? 'text-red-600' :
-                        overviewStats.store.lowStockCount > 0 ? 'text-amber-600' : 'text-gray-900'
-                      }`}>
-                        {overviewStats.store.lowStockCount + overviewStats.store.outOfStockCount}
-                      </p>
-                    </div>
-                  </div>
-
-                  {overviewStats.store.pendingDispatchCount > 0 && (
-                    <div
-                      className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4 cursor-pointer hover:bg-red-100 transition-colors"
-                      onClick={() => setActiveTab("store")}
-                    >
-                      <Truck className="w-4 h-4 text-red-600 flex-shrink-0" />
-                      <p className="text-xs font-medium text-red-700 flex-1">
-                        {overviewStats.store.pendingDispatchCount} shippable {overviewStats.store.pendingDispatchCount === 1 ? 'order' : 'orders'} in last 30 days
-                      </p>
-                      <ChevronRight className="w-3.5 h-3.5 text-red-400" />
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    {overviewStats.store.products.map((product: any) => (
-                      <div
-                        key={product.id}
-                        className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
-                        onClick={() => setActiveTab("store")}
-                      >
-                        {product.coverImageUrl ? (
-                          <img
-                            src={product.coverImageUrl}
-                            alt={product.name}
-                            className="w-9 h-9 rounded-md object-cover flex-shrink-0"
-                          />
-                        ) : (
-                          <div className="w-9 h-9 bg-gray-100 rounded-md flex items-center justify-center flex-shrink-0">
-                            <Package className="w-4 h-4 text-gray-400" />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-medium text-gray-900 truncate">{product.name}</p>
-                            {product.shippingRequired ? (
-                              <Truck className="w-3 h-3 text-gray-400 flex-shrink-0" title="Physical - requires shipping" />
-                            ) : (
-                              <Monitor className="w-3 h-3 text-blue-400 flex-shrink-0" title="Digital product" />
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs text-gray-500">
-                              ${((product.price ?? 0) / 100).toFixed(2)}
-                            </span>
-                            {product.inventorySizes.length > 0 && (
-                              <div className="flex items-center gap-0.5">
-                                {product.inventorySizes.map((size: string) => {
-                                  const qty = product.sizeStock?.[size] ?? 0;
-                                  return (
-                                    <span
-                                      key={size}
-                                      className={`text-[10px] px-1 py-0.5 rounded font-medium ${
-                                        qty <= 0 ? 'bg-red-100 text-red-700' :
-                                        qty <= 3 ? 'bg-amber-100 text-amber-700' :
-                                        'bg-green-100 text-green-700'
-                                      }`}
-                                      title={`${size}: ${qty} in stock`}
-                                    >
-                                      {size}
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
-                            product.stockStatus === 'out' ? 'bg-red-100 text-red-700' :
-                            product.stockStatus === 'low' ? 'bg-amber-100 text-amber-700' :
-                            'bg-green-100 text-green-700'
-                          }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${
-                              product.stockStatus === 'out' ? 'bg-red-500' :
-                              product.stockStatus === 'low' ? 'bg-amber-500' :
-                              'bg-green-500'
-                            }`} />
-                            {product.stockStatus === 'out' ? 'Out' :
-                             product.stockStatus === 'low' ? `${product.totalStock} left` :
-                             `${product.totalStock}`}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              <StoreAtAGlance
+                storeStats={overviewStats.store}
+                onNavigateToStore={() => setActiveTab("store")}
+                programs={programs}
+              />
             )}
 
             <RecentTransactionsCard payments={payments} users={users} programs={programs} isAdmin={currentUser?.role === 'admin' || hasAdminProfile} />
@@ -1018,6 +880,231 @@ function StatCard({ title, value, icon, subtitle, testId }: any) {
           </div>
           <div className="text-primary">{icon}</div>
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function StoreAtAGlance({ storeStats, onNavigateToStore, programs }: { storeStats: any; onNavigateToStore: () => void; programs: any[] }) {
+  const { toast } = useToast();
+  const { data: pendingOrdersData, refetch: refetchOrders } = useQuery<any>({
+    queryKey: ['/api/admin/pending-orders'],
+  });
+
+  const markDelivered = useMutation({
+    mutationFn: async (paymentId: number) => {
+      const res = await apiRequest('PATCH', `/api/admin/payments/${paymentId}/fulfillment`, { fulfillmentStatus: 'delivered' });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Order marked as delivered" });
+      refetchOrders();
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/overview-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
+    },
+    onError: () => {
+      toast({ title: "Failed to update order", variant: "destructive" });
+    },
+  });
+
+  const markPending = useMutation({
+    mutationFn: async (paymentId: number) => {
+      const res = await apiRequest('PATCH', `/api/admin/payments/${paymentId}/fulfillment`, { fulfillmentStatus: 'pending' });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Order marked as pending" });
+      refetchOrders();
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/overview-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
+    },
+    onError: () => {
+      toast({ title: "Failed to update order", variant: "destructive" });
+    },
+  });
+
+  const orders = pendingOrdersData?.orders || [];
+
+  return (
+    <Card id="store-at-a-glance">
+      <CardContent className="py-4 px-4">
+        <div
+          className="flex items-center justify-between mb-4 cursor-pointer group"
+          onClick={onNavigateToStore}
+        >
+          <p className="text-sm font-semibold text-gray-900">Store at a Glance</p>
+          <span className="text-xs text-red-600 group-hover:text-red-700 flex items-center gap-1 font-medium">
+            View Store <ChevronRight className="w-3 h-3" />
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          <div className="bg-gray-50 rounded-lg p-3 text-center">
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <ShoppingBag className="w-3.5 h-3.5 text-gray-500" />
+              <p className="text-xs text-gray-500">Products</p>
+            </div>
+            <p className="text-lg font-bold text-gray-900">{storeStats.totalProducts}</p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3 text-center">
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <DollarSign className="w-3.5 h-3.5 text-gray-500" />
+              <p className="text-xs text-gray-500">Store Revenue</p>
+            </div>
+            <p className="text-lg font-bold text-gray-900">
+              ${((storeStats.storeRevenue ?? 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3 text-center">
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <ShoppingCart className="w-3.5 h-3.5 text-gray-500" />
+              <p className="text-xs text-gray-500">Orders</p>
+            </div>
+            <p className="text-lg font-bold text-gray-900">{storeStats.storeOrderCount}</p>
+          </div>
+          <div className={`rounded-lg p-3 text-center ${
+            (storeStats.lowStockCount + storeStats.outOfStockCount) > 0
+              ? 'bg-amber-50' : 'bg-gray-50'
+          }`}>
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <AlertTriangle className={`w-3.5 h-3.5 ${
+                storeStats.outOfStockCount > 0 ? 'text-red-500' :
+                storeStats.lowStockCount > 0 ? 'text-amber-500' : 'text-gray-500'
+              }`} />
+              <p className="text-xs text-gray-500">Stock Alerts</p>
+            </div>
+            <p className={`text-lg font-bold ${
+              storeStats.outOfStockCount > 0 ? 'text-red-600' :
+              storeStats.lowStockCount > 0 ? 'text-amber-600' : 'text-gray-900'
+            }`}>
+              {storeStats.lowStockCount + storeStats.outOfStockCount}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-2 mb-4">
+          {storeStats.products.map((product: any) => (
+            <div
+              key={product.id}
+              className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+              onClick={onNavigateToStore}
+            >
+              {product.coverImageUrl ? (
+                <img src={product.coverImageUrl} alt={product.name} className="w-9 h-9 rounded-md object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-9 h-9 bg-gray-100 rounded-md flex items-center justify-center flex-shrink-0">
+                  <Package className="w-4 h-4 text-gray-400" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-medium text-gray-900 truncate">{product.name}</p>
+                  {product.shippingRequired ? (
+                    <Truck className="w-3 h-3 text-gray-400 flex-shrink-0" title="Physical - requires shipping" />
+                  ) : (
+                    <Monitor className="w-3 h-3 text-blue-400 flex-shrink-0" title="Digital product" />
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs text-gray-500">${((product.price ?? 0) / 100).toFixed(2)}</span>
+                  {product.inventorySizes.length > 0 && (
+                    <div className="flex items-center gap-0.5">
+                      {product.inventorySizes.map((size: string) => {
+                        const qty = product.sizeStock?.[size] ?? 0;
+                        return (
+                          <span
+                            key={size}
+                            className={`text-[10px] px-1 py-0.5 rounded font-medium ${
+                              qty <= 0 ? 'bg-red-100 text-red-700' :
+                              qty <= 3 ? 'bg-amber-100 text-amber-700' :
+                              'bg-green-100 text-green-700'
+                            }`}
+                            title={`${size}: ${qty} in stock`}
+                          >
+                            {size}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                  product.stockStatus === 'out' ? 'bg-red-100 text-red-700' :
+                  product.stockStatus === 'low' ? 'bg-amber-100 text-amber-700' :
+                  'bg-green-100 text-green-700'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    product.stockStatus === 'out' ? 'bg-red-500' :
+                    product.stockStatus === 'low' ? 'bg-amber-500' :
+                    'bg-green-500'
+                  }`} />
+                  {product.stockStatus === 'out' ? 'Out' :
+                   product.stockStatus === 'low' ? `${product.totalStock} left` :
+                   `${product.totalStock}`}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {orders.length > 0 && (
+          <div>
+            <p className="text-sm font-semibold text-gray-900 mb-3">Recent Orders</p>
+            <div className="space-y-0">
+              {orders.map((order: any) => (
+                <div key={order.paymentId} className="flex items-center justify-between py-2.5 border-b last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium text-gray-900 truncate">{order.buyerName}</p>
+                      {order.fulfillmentStatus === 'delivered' ? (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px] px-1.5 py-0">
+                          <CheckCircle2 className="w-3 h-3 mr-0.5" /> Delivered
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] px-1.5 py-0">
+                          <Clock className="w-3 h-3 mr-0.5" /> Pending
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs text-gray-500 truncate">{order.productName}</p>
+                      <span className="text-xs text-gray-400">•</span>
+                      <p className="text-xs text-gray-500">${((order.amount ?? 0) / 100).toFixed(2)}</p>
+                      <span className="text-xs text-gray-400">•</span>
+                      <p className="text-xs text-gray-500">{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : ''}</p>
+                    </div>
+                  </div>
+                  <div className="ml-3 flex-shrink-0">
+                    {order.fulfillmentStatus === 'delivered' ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs text-gray-500 hover:text-amber-700"
+                        onClick={() => markPending.mutate(order.paymentId)}
+                        disabled={markPending.isPending}
+                      >
+                        Undo
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs text-green-700 border-green-200 hover:bg-green-50"
+                        onClick={() => markDelivered.mutate(order.paymentId)}
+                        disabled={markDelivered.isPending}
+                      >
+                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                        Mark Delivered
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -1194,26 +1281,37 @@ function RecentTransactionsCard({ payments, users, programs, isAdmin }: any) {
   };
   
   const getPaymentTypeBadge = (payment: any) => {
-    // Check payment type (case-insensitive) and also check the associated program's type
     const paymentTypeLC = (payment.paymentType || '').toLowerCase();
     const isSubscription = paymentTypeLC === "subscription" || 
       payment.paymentType === "Subscription" ||
       (payment.billingModel && payment.billingModel === "Subscription");
     
-    // Also check if the linked program is a subscription
     const program = payment.programId ? programs.find((p: any) => String(p.id) === String(payment.programId)) : null;
     const programIsSubscription = program?.type === "Subscription";
+    const isStoreItem = program?.productCategory === 'goods';
     
     const showAsSubscription = isSubscription || programIsSubscription;
     
     return (
-      <Badge 
-        variant="outline" 
-        className={showAsSubscription ? "bg-purple-50 text-purple-700 border-purple-200" : "bg-blue-50 text-blue-700 border-blue-200"}
-        data-testid={`badge-type-${payment.id}`}
-      >
-        {showAsSubscription ? "Subscription" : "One-Time"}
-      </Badge>
+      <>
+        <Badge 
+          variant="outline" 
+          className={showAsSubscription ? "bg-purple-50 text-purple-700 border-purple-200" : "bg-blue-50 text-blue-700 border-blue-200"}
+          data-testid={`badge-type-${payment.id}`}
+        >
+          {showAsSubscription ? "Subscription" : "One-Time"}
+        </Badge>
+        {isStoreItem && payment.fulfillmentStatus === 'delivered' && (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            Delivered
+          </Badge>
+        )}
+        {isStoreItem && payment.fulfillmentStatus !== 'delivered' && (
+          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+            Pending
+          </Badge>
+        )}
+      </>
     );
   };
   

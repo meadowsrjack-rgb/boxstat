@@ -7550,6 +7550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         programId: payments.programId,
         createdAt: payments.createdAt,
         status: payments.status,
+        fulfillmentStatus: payments.fulfillmentStatus,
       })
         .from(payments)
         .innerJoin(products, eq(payments.programId, products.id))
@@ -7557,29 +7558,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
           eq(payments.organizationId, organizationId),
           eq(payments.status, 'completed'),
           eq(products.productCategory, 'goods'),
-          gte(payments.createdAt, sql`NOW() - INTERVAL '30 days'`)
+          gte(payments.createdAt, sql`NOW() - INTERVAL '90 days'`)
         ))
         .orderBy(desc(payments.createdAt))
         .limit(50);
 
       const enriched = await Promise.all(recentOrders.map(async (order: any) => {
         const buyer = await storage.getUser(order.playerId || order.userId);
+        const product = await storage.getProgram(order.programId);
         return {
           ...order,
           buyerName: buyer ? `${buyer.firstName || ''} ${buyer.lastName || ''}`.trim() : 'Unknown',
+          productName: product?.name || order.description || 'Store Item',
+          shippingRequired: product?.shippingRequired ?? false,
         };
       }));
 
+      const pendingOrders = enriched.filter(o => o.fulfillmentStatus !== 'delivered');
+
       res.json({
-        pendingCount: enriched.length,
-        orders: enriched.slice(0, 5),
-        latestBuyerName: enriched[0]?.buyerName || null,
-        latestDescription: enriched[0]?.description || null,
-        latestCreatedAt: enriched[0]?.createdAt || null,
+        pendingCount: pendingOrders.length,
+        orders: enriched,
+        latestBuyerName: pendingOrders[0]?.buyerName || null,
+        latestDescription: pendingOrders[0]?.description || null,
+        latestCreatedAt: pendingOrders[0]?.createdAt || null,
       });
     } catch (error: any) {
       console.error('Error fetching pending orders:', error);
       res.status(500).json({ error: 'Failed to fetch pending orders' });
+    }
+  });
+
+  app.patch('/api/admin/payments/:id/fulfillment', requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role, id: userId } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(userId, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+      const paymentId = parseInt(req.params.id);
+      const { fulfillmentStatus } = req.body;
+      if (!['pending', 'delivered'].includes(fulfillmentStatus)) {
+        return res.status(400).json({ error: 'Invalid fulfillment status' });
+      }
+      await db.update(payments)
+        .set({ fulfillmentStatus })
+        .where(and(
+          eq(payments.id, paymentId),
+          eq(payments.organizationId, organizationId)
+        ));
+      res.json({ success: true, paymentId, fulfillmentStatus });
+    } catch (error: any) {
+      console.error('Error updating fulfillment status:', error);
+      res.status(500).json({ error: 'Failed to update fulfillment status' });
     }
   });
 
@@ -7762,8 +7793,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               FROM payments p
               INNER JOIN products pr ON p.program_id = pr.id AND pr.product_category = 'goods'
               WHERE p.organization_id = ${organizationId} AND p.status = 'completed'
-              AND pr.shipping_required = true
-              AND p.created_at >= NOW() - INTERVAL '30 days'`
+              AND (p.fulfillment_status IS NULL OR p.fulfillment_status = 'pending')`
         );
         const pendingRows = (pendingResult.rows || pendingResult) as any[];
         pendingDispatchCount = parseInt(pendingRows[0]?.count) || 0;

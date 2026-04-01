@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Package, ArrowRight, X } from "lucide-react";
+import { Package, ArrowDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
@@ -18,6 +18,13 @@ export default function StorePurchaseBanner({ onNavigateToStore }: { onNavigateT
   });
 
   if (dismissed || !data || data.pendingCount === 0) return null;
+
+  const scrollToStoreGlance = () => {
+    const el = document.getElementById('store-at-a-glance');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   return (
     <div className="relative bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-xl p-4 mb-4 shadow-sm">
@@ -43,17 +50,15 @@ export default function StorePurchaseBanner({ onNavigateToStore }: { onNavigateT
               {data.latestBuyerName}: {data.latestDescription}
             </p>
           )}
-          {onNavigateToStore && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-2 h-8 px-3 text-red-700 hover:text-red-900 hover:bg-red-100 font-medium"
-              onClick={onNavigateToStore}
-            >
-              View Orders
-              <ArrowRight className="w-3.5 h-3.5 ml-1" />
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-2 h-8 px-3 text-red-700 hover:text-red-900 hover:bg-red-100 font-medium"
+            onClick={scrollToStoreGlance}
+          >
+            View Orders
+            <ArrowDown className="w-3.5 h-3.5 ml-1" />
+          </Button>
         </div>
       </div>
     </div>

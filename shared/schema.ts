@@ -880,6 +880,7 @@ export const payments = pgTable("payments", {
   packageId: varchar("package_id"), // linked package/program
   programId: varchar("program_id"), // linked program
   organizationId: varchar("organization_id"), // organization
+  fulfillmentStatus: varchar("fulfillment_status").default('pending'), // 'pending', 'delivered' — for store (goods) orders
 });
 
 // Refunds table
@@ -1739,6 +1740,7 @@ export interface Payment {
   dueDate?: string;
   paidAt?: Date;
   createdAt: Date;
+  fulfillmentStatus?: string;
 }
 
 export const insertPaymentSchema = z.object({

@@ -1648,15 +1648,24 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     },
   });
 
-  const downloadUserTemplate = () => {
-    const csvContent = "First name,Last name,Email,Phone,Role,Status,Team,Team Code,Program,Program Code,Parent Email,Start Date,End Date\nJohn,Doe,player@example.com,555-0100,player,active,Thunder U12,THU12,Skills Academy,SKA,,2025-01-15,2025-06-30\nJane,Smith,coach@example.com,555-0101,coach,active,,,,,,,\nBob,Johnson,parent@example.com,555-0102,parent,active,,,Youth Club,YC,,2025-03-01,2025-12-31";
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'users-template.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
+  const downloadUserTemplate = async () => {
+    const XLSX = await import('xlsx');
+    const headers = ["First name", "Last name", "Email", "Phone", "Role", "Status", "Team", "Team Code", "Program", "Program Code", "Parent Email", "Start Date", "End Date"];
+    const wb = XLSX.utils.book_new();
+
+    const parentsData = [headers, ["Bob", "Johnson", "parent@example.com", "555-0102", "parent", "active", "", "", "Youth Club", "YC", "", "2025-03-01", "2025-12-31"]];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(parentsData), "Parents");
+
+    const playersData = [headers, ["John", "Doe", "player@example.com", "555-0100", "player", "active", "Thunder U12", "THU12", "Skills Academy", "SKA", "parent@example.com", "2025-01-15", "2025-06-30"]];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(playersData), "Players");
+
+    const coachesData = [headers, ["Jane", "Smith", "coach@example.com", "555-0101", "coach", "active", "Thunder U12", "", "", "", "", "", ""]];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(coachesData), "Coaches");
+
+    const adminsData = [headers, ["Admin", "User", "admin2@example.com", "555-0103", "admin", "active", "", "", "", "", "", "", ""]];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(adminsData), "Admins");
+
+    XLSX.writeFile(wb, "users-template.xlsx");
   };
 
   const parseCsvRow = (line: string): string[] => {
@@ -2137,7 +2146,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                 />
                 <Button variant="outline" className="w-full" onClick={downloadUserTemplate} data-testid="button-download-template">
                   <Download className="w-4 h-4 mr-2" />
-                  Download CSV Template
+                  Download XLSX Template
                 </Button>
               </div>
             </DialogContent>

@@ -971,6 +971,7 @@ function StoreAtAGlance({ storeStats, onNavigateToStore, programs }: { storeStat
       refetchOrders();
       queryClient.invalidateQueries({ queryKey: ['/api/admin/overview-stats'] });
       queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/pending-orders'] });
     },
     onError: () => {
       toast({ title: "Failed to update order", variant: "destructive" });
@@ -1928,6 +1929,10 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
       if (variables.teamId || variables.divisionId || variables.teamIds) {
         queryClient.invalidateQueries({ queryKey: ["/api/events"] });
         queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      }
+      // Invalidate pending assignments banner if team assignment changed
+      if ('teamId' in variables || 'teamIds' in variables) {
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/pending-assignments'] });
       }
       setUpdatingUserId(null);
       // Only show toast and close dialog if updating from edit dialog (more than just isActive)
@@ -6260,6 +6265,7 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
                                     queryClient.invalidateQueries({ queryKey: ["/api/enrollments"] });
                                     queryClient.invalidateQueries({ queryKey: [`/api/profile/${player.id}`] });
                                     queryClient.invalidateQueries({ queryKey: ["/api/profile", player.id] });
+                                    queryClient.invalidateQueries({ queryKey: ['/api/admin/pending-assignments'] });
                                     toast({ 
                                       title: checked 
                                         ? `Added ${player.firstName} ${player.lastName} to ${selectedTeam.name}`
@@ -18377,6 +18383,7 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
                                         queryClient.invalidateQueries({ queryKey: ["/api/admin/enrollments"] });
                                         queryClient.invalidateQueries({ queryKey: ["/api/product-enrollments"] });
                                         queryClient.invalidateQueries({ queryKey: ["/api/enrollments"] });
+                                        queryClient.invalidateQueries({ queryKey: ['/api/admin/pending-assignments'] });
                                         toast({ 
                                           title: checked 
                                             ? `Added ${player.firstName} ${player.lastName} to ${selectedTeam.name}`

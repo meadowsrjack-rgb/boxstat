@@ -148,7 +148,7 @@ function ParentsStep({
 
   return (
     <div className="space-y-4">
-      <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-lg p-3 text-sm text-blue-800">Boxstat will email each parent an invite — they set up their account so they can enroll their players.</div>
+      <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-lg p-3 text-sm text-blue-800">BoxStat will email each parent an invite — they set up their account so they can enroll their players.</div>
       <Tabs defaultValue="manual">
         <TabsList className="mb-4">
           <TabsTrigger value="manual">Enter manually</TabsTrigger>

@@ -44,7 +44,6 @@ import Training from "@/pages/training";
 import TrainingLibrary from "@/pages/training-library";
 import Profile from "@/pages/profile";
 import FamilyManagement from "@/pages/family-management";
-import ClaimSubscription from "@/pages/claim-subscription";
 import CoachTeamMessages from "@/pages/coach-team-messages";
 import CoachParentMessages from "@/pages/coach-parent-messages";
 import PlayerTeamChat from "@/pages/player-team-chat";
@@ -184,7 +183,6 @@ function ProtectedAdminRoute({ component: Component }: { component: React.Compon
 // Create protected route wrappers as proper components (not anonymous functions)
 const ProtectedUnifiedAccount = () => <ProtectedRoute component={UnifiedAccount} />;
 const ProtectedProfileGateway = () => <ProtectedRoute component={ProfileGateway} />;
-const ProtectedClaimSubscription = () => <ProtectedRoute component={ClaimSubscription} />;
 const ProtectedDashboardDispatcher = () => <ProtectedRoute component={DashboardDispatcher} />;
 const ProtectedAddPlayer = () => <ProtectedRoute component={AddPlayer} />;
 const ProtectedPlayerDashboard = () => <ProtectedRoute component={PlayerDashboard} />;
@@ -473,7 +471,6 @@ function AppRouter() {
       {/* Protected routes */}
       <Route path="/home" component={ProtectedDashboardDispatcher} />
       <Route path="/profile-gateway" component={ProtectedProfileGateway} />
-      <Route path="/claim-subscription" component={ProtectedClaimSubscription} />
       <Route path="/subscription-required" component={SubscriptionRequired} />
       <Route path="/parent-dashboard" component={ProtectedUnifiedAccount} />
       <Route path="/account" component={AccountRoute} />

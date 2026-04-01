@@ -23,13 +23,6 @@ export default function DashboardDispatcher() {
       return;
     }
 
-    // Check if user needs to claim legacy subscriptions
-    if ((user as any)?.needsLegacyClaim) {
-      hasNavigated.current = true;
-      setLocation("/claim-subscription");
-      return;
-    }
-
     // Gate admin users behind active platform subscription
     if ((user as any)?.role === "admin") {
       const subscriptionStatus = (user as any)?.organizationPlatformSubscriptionStatus;

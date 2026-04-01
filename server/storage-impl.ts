@@ -1048,6 +1048,9 @@ class MemStorage implements IStorage {
     // Include coaches assigned via team record
     if (team) {
       if (team.coachId) userIds.add(String(team.coachId));
+      if (team.headCoachIds?.length) {
+        team.headCoachIds.forEach((id: string) => userIds.add(String(id)));
+      }
       if (team.assistantCoachIds?.length) {
         team.assistantCoachIds.forEach((id: string) => userIds.add(String(id)));
       }
@@ -3323,9 +3326,10 @@ class DatabaseStorage implements IStorage {
       )
     );
 
-    // Also include coaches assigned via teams.coachId / teams.assistantCoachIds
+    // Also include coaches assigned via teams.coachId / teams.headCoachIds / teams.assistantCoachIds
     const teamRecord = await db.select({
       coachId: schema.teams.coachId,
+      headCoachIds: schema.teams.headCoachIds,
       assistantCoachIds: schema.teams.assistantCoachIds,
     }).from(schema.teams).where(eq(schema.teams.id, teamIdNum)).limit(1);
     
@@ -3334,8 +3338,11 @@ class DatabaseStorage implements IStorage {
     membershipUserIds.forEach(m => allUserIds.add(m.profileId));
     legacyResults.forEach(u => allUserIds.add(u.id));
     if (teamRecord.length > 0) {
-      const { coachId, assistantCoachIds } = teamRecord[0];
+      const { coachId, headCoachIds, assistantCoachIds } = teamRecord[0];
       if (coachId) allUserIds.add(String(coachId));
+      if (headCoachIds?.length) {
+        headCoachIds.forEach((id: string) => allUserIds.add(String(id)));
+      }
       if (assistantCoachIds?.length) {
         assistantCoachIds.forEach((id: string) => allUserIds.add(String(id)));
       }

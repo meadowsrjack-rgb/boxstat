@@ -8363,6 +8363,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const eventTeam = await storage.getTeam(String(event.teamId));
       if (eventTeam) {
         if (eventTeam.coachId) teamMemberIds.add(String(eventTeam.coachId));
+        if (eventTeam.headCoachIds?.length) {
+          eventTeam.headCoachIds.forEach((id: string) => teamMemberIds.add(String(id)));
+        }
         if ((eventTeam as any).assistantCoachIds?.length) {
           (eventTeam as any).assistantCoachIds.forEach((id: any) => teamMemberIds.add(String(id)));
         }
@@ -8383,6 +8386,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const teamObj = allTeams.find((t: any) => String(t.id) === String(teamId));
         if (teamObj) {
           if (teamObj.coachId) targetedTeamMemberIds.add(String(teamObj.coachId));
+          if (teamObj.headCoachIds?.length) {
+            teamObj.headCoachIds.forEach((id: any) => targetedTeamMemberIds.add(String(id)));
+          }
           if (teamObj.assistantCoachIds?.length) {
             teamObj.assistantCoachIds.forEach((id: any) => targetedTeamMemberIds.add(String(id)));
           }

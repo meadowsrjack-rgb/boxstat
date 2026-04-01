@@ -148,10 +148,7 @@ function ParentsStep({
 
   return (
     <div className="space-y-4">
-      <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-lg p-3 text-sm text-blue-800">
-        One row per family. Boxstat will email each parent an invite — they set up their account and enroll their players. Subscription dates go in the next step.
-      </div>
-
+      <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-lg p-3 text-sm text-blue-800">Boxstat will email each parent an invite — they set up their account so they can enroll their players.</div>
       <Tabs defaultValue="manual">
         <TabsList className="mb-4">
           <TabsTrigger value="manual">Enter manually</TabsTrigger>
@@ -175,7 +172,6 @@ function ParentsStep({
 
         <TabsContent value="manual" />
       </Tabs>
-
       <div className="border border-border rounded-lg overflow-hidden">
         <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
           <thead>
@@ -212,7 +208,6 @@ function ParentsStep({
           </tbody>
         </table>
       </div>
-
       <button
         onClick={add}
         className="w-full py-2 border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:border-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1"

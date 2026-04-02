@@ -1798,7 +1798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const processingFeeSubtotal1 = lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
       const processingFee1 = calculateStripeProcessingFee(processingFeeSubtotal1);
       if (processingFee1 > 0) {
-        lineItems.push({
+        const processingFeeItem1: any = {
           price_data: {
             currency: 'usd',
             product_data: {
@@ -1808,7 +1808,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             unit_amount: processingFee1,
           },
           quantity: 1,
-        });
+        };
+        if (mode === 'subscription') {
+          const existingRecurring = lineItems[0]?.price_data?.recurring;
+          if (existingRecurring) {
+            processingFeeItem1.price_data.recurring = existingRecurring;
+          }
+        }
+        lineItems.push(processingFeeItem1);
       }
 
       const stripeCustomerId = await getOrCreateStripeCustomer(orgStripe, user);
@@ -4589,18 +4596,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        const bundleProcessingSubtotal = addInvoiceItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0)
-          + (selectedPricingOption.monthlyPrice || 0);
-        const bundleProcessingFee = calculateStripeProcessingFee(bundleProcessingSubtotal);
-        if (bundleProcessingFee > 0) {
+        const bundleOneTimeSubtotal = addInvoiceItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
+        const bundleOneTimeProcFee = calculateStripeProcessingFee(bundleOneTimeSubtotal);
+        if (bundleOneTimeProcFee > 0) {
           addInvoiceItems.push({
             price_data: {
               currency: 'usd',
               product_data: { name: 'Processing Fee' },
-              unit_amount: bundleProcessingFee,
+              unit_amount: bundleOneTimeProcFee,
             },
             quantity: 1,
-            description: 'Card processing fee',
+            description: 'Card processing fee (one-time)',
           });
         }
 
@@ -4619,6 +4625,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
               quantity: 1,
             }];
         
+        if (!monthlyPriceId && selectedPricingOption.monthlyPrice > 0) {
+          const monthlyProcFee = calculateStripeProcessingFee(selectedPricingOption.monthlyPrice);
+          if (monthlyProcFee > 0) {
+            subscriptionLineItems.push({
+              price_data: {
+                currency: 'usd',
+                product_data: {
+                  name: 'Processing Fee',
+                  description: 'Card processing fee',
+                },
+                unit_amount: monthlyProcFee,
+                recurring: { interval: 'month' as const },
+              },
+              quantity: 1,
+            });
+          }
+        }
+
         const addPlayerSubParams: any = {
           customer: stripeCustomerId,
           line_items: subscriptionLineItems,

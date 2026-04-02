@@ -5178,1189 +5178,6 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   );
 }
 
-// Teams Tab - Full Implementation
-function TeamsTab({ teams, users, divisions, programs, organization }: any) {
-  const { toast } = useToast();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState<any>(null);
-  const [editingTeam, setEditingTeam] = useState<any>(null);
-  const [deleteConfirmTeam, setDeleteConfirmTeam] = useState<any>(null);
-  const [teamRoster, setTeamRoster] = useState<string[]>([]);
-  const [rosterLoading, setRosterLoading] = useState(false);
-  const [rosterSearch, setRosterSearch] = useState('');
-  const tableRef = useDragScroll();
-
-  const coaches = users.filter((u: any) => u.role === "coach");
-  const players = users.filter((u: any) => u.role === "player");
-  
-  // Fetch team roster when editing begins
-  useEffect(() => {
-    if (editingTeam?.id) {
-      setRosterLoading(true);
-      // Get players assigned to this team from users data
-      const assignedPlayers = users.filter((u: any) => {
-        if (u.role !== 'player') return false;
-        const userTeamIds = Array.isArray(u.teamIds) ? u.teamIds : u.teamId ? [u.teamId] : [];
-        return userTeamIds.includes(editingTeam.id);
-      }).map((u: any) => u.id);
-      setTeamRoster(assignedPlayers);
-      setRosterLoading(false);
-    } else {
-      setTeamRoster([]);
-    }
-  }, [editingTeam?.id, users]);
-
-  const form = useForm<any>({
-    resolver: zodResolver(insertTeamSchema),
-    defaultValues: {
-      organizationId: organization?.id || "",
-      name: "",
-      programId: "",
-      programType: "",
-      divisionId: undefined as number | undefined,
-      coachId: "",
-      headCoachIds: [] as string[],
-      assistantCoachIds: [] as string[],
-      season: "",
-      organization: "",
-      location: "",
-      scheduleLink: "",
-      rosterSize: 0,
-      active: true,
-      notes: "",
-      code: "",
-    },
-  });
-
-  const createTeam = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/teams", { 
-        ...data, 
-        organizationId: organization.id,
-        coachId: data.headCoachIds?.[0] || data.coachId || null,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-      toast({ title: "Team created successfully" });
-      setIsDialogOpen(false);
-      form.reset();
-    },
-    onError: () => {
-      toast({ title: "Failed to create team", variant: "destructive" });
-    },
-  });
-
-  const deleteTeam = useMutation({
-    mutationFn: async (id: string) => {
-      return await apiRequest("DELETE", `/api/teams/${id}`, {});
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-      toast({ title: "Team deleted successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to delete team", variant: "destructive" });
-    },
-  });
-
-  const updateTeam = useMutation({
-    mutationFn: async ({ id, ...data }: any) => {
-      const payload = { ...data };
-      if (payload.headCoachIds?.length) {
-        payload.coachId = payload.headCoachIds[0];
-      }
-      return await apiRequest("PATCH", `/api/teams/${id}`, payload);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-      toast({ title: "Team updated successfully" });
-      setEditingTeam(null);
-    },
-    onError: () => {
-      toast({ title: "Failed to update team", variant: "destructive" });
-    },
-  });
-  
-  // Update roster assignments mutation
-  const updateRoster = useMutation({
-    mutationFn: async ({ teamId, playerIds }: { teamId: number; playerIds: string[] }) => {
-      // Get current roster
-      const currentRoster = users.filter((u: any) => {
-        if (u.role !== 'player') return false;
-        const userTeamIds = Array.isArray(u.teamIds) ? u.teamIds : u.teamId ? [u.teamId] : [];
-        return userTeamIds.includes(teamId);
-      }).map((u: any) => u.id);
-      
-      // Find players to add and remove
-      const toAdd = playerIds.filter(id => !currentRoster.includes(id));
-      const toRemove = currentRoster.filter((id: string) => !playerIds.includes(id));
-      
-      // Add new players
-      for (const playerId of toAdd) {
-        const player = users.find((u: any) => u.id === playerId);
-        if (player) {
-          const currentTeamIds = Array.isArray(player.teamIds) ? player.teamIds : player.teamId ? [player.teamId] : [];
-          await apiRequest("PATCH", `/api/users/${playerId}`, {
-            teamIds: [...currentTeamIds, teamId],
-            teamId: currentTeamIds[0] || teamId
-          });
-        }
-      }
-      
-      // Remove players
-      for (const playerId of toRemove) {
-        const player = users.find((u: any) => u.id === playerId);
-        if (player) {
-          const currentTeamIds = Array.isArray(player.teamIds) ? player.teamIds : player.teamId ? [player.teamId] : [];
-          const newTeamIds = currentTeamIds.filter((id: number) => id !== teamId);
-          await apiRequest("PATCH", `/api/users/${playerId}`, {
-            teamIds: newTeamIds,
-            teamId: newTeamIds[0] || null
-          });
-        }
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-      toast({ title: "Roster updated successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to update roster", variant: "destructive" });
-    },
-  });
-
-  const downloadTeamTemplate = () => {
-    const csvContent = "Team Name,Division,Age Group,Coach Email\nThunder U12,Recreational,U12,coach@example.com\nLightning U14,Competitive,U14,coach2@example.com\nStorm U16,Competitive,U16,";
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'teams-template.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target?.result as string;
-      const lines = text.split('\n').filter(line => line.trim());
-      
-      if (lines.length < 2) {
-        toast({ 
-          title: "Invalid CSV", 
-          description: "CSV file must contain headers and at least one row of data",
-          variant: "destructive" 
-        });
-        return;
-      }
-
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-      const dataLines = lines.slice(1);
-      
-      toast({ title: `Processing ${dataLines.length} teams from CSV...` });
-      
-      let successCount = 0;
-      let errorCount = 0;
-      
-      for (const line of dataLines) {
-        const values = line.split(',').map(v => v.trim());
-        const teamData: any = {};
-        
-        headers.forEach((header, index) => {
-          teamData[header] = values[index] || '';
-        });
-        
-        // Map CSV column names to our data model
-        const teamName = teamData['team name'] || teamData['name'] || '';
-        const division = teamData['division'] || '';
-        const ageGroup = teamData['age group'] || teamData['agegroup'] || '';
-        const coachEmail = teamData['coach email'] || teamData['coachemail'] || '';
-        
-        // Find coach by email if provided
-        let coachId = undefined;
-        if (coachEmail) {
-          const coach = coaches.find((c: any) => c.email === coachEmail);
-          if (coach) {
-            coachId = coach.id;
-          }
-        }
-        
-        try {
-          await apiRequest("POST", "/api/teams", {
-            organizationId: organization.id,
-            name: teamName,
-            division: division || undefined,
-            ageGroup: ageGroup || undefined,
-            coachIds: coachId ? [coachId] : [],
-            color: "#1E40AF",
-            roster: []
-          });
-          successCount++;
-        } catch (error) {
-          console.error(`Failed to create team ${teamName}:`, error);
-          errorCount++;
-        }
-      }
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-      
-      toast({ 
-        title: "Bulk Upload Complete", 
-        description: `Successfully created ${successCount} teams. ${errorCount > 0 ? `${errorCount} failed.` : ''}`,
-        variant: errorCount > 0 ? "destructive" : "default"
-      });
-      
-      setIsBulkUploadOpen(false);
-    };
-    reader.readAsText(file);
-  };
-
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Team Management</CardTitle>
-            <CardDescription>Create teams, manage rosters, and assign coaches</CardDescription>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" data-testid="button-bulk-upload-teams" className="w-full sm:w-auto">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Bulk Upload
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Bulk Upload Teams</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <p className="text-sm text-gray-600">Upload a CSV file with columns: Team Name, Division, Age Group, Coach Email</p>
-                  <Input
-                    type="file"
-                    accept=".csv"
-                    onChange={handleBulkUpload}
-                    data-testid="input-team-csv-upload"
-                  />
-                  <Button variant="outline" className="w-full" onClick={downloadTeamTemplate} data-testid="button-download-team-template">
-                    <Download className="w-4 h-4 mr-2" />
-                    Download CSV Template
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-create-team" className="w-full sm:w-auto">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Team
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Create New Team</DialogTitle>
-                </DialogHeader>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit((data) => createTeam.mutate(data))} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Team Name *</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="High School Black" data-testid="input-team-name" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="code"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Team Code</FormLabel>
-                          <FormControl>
-                            <Input {...field} value={field.value || ""} placeholder="e.g. THU12" data-testid="input-team-code" />
-                          </FormControl>
-                          <FormDescription>Short code used for bulk import matching</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="programId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Program *</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || ""}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-team-program">
-                                <SelectValue placeholder="Select a program" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {(programs || []).map((program: any) => (
-                                <SelectItem key={program.id} value={program.id}>
-                                  {program.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>Teams belong to a program</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="division"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Division</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field}
-                              value={field.value || ""}
-                              placeholder="e.g., U10, U12, Varsity"
-                              data-testid="input-team-division"
-                            />
-                          </FormControl>
-                          <FormDescription>Optional age division</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="headCoachIds"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Head Coach(es)</FormLabel>
-                          <FormDescription>Select one or more head coaches</FormDescription>
-                          <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2" data-testid="checkbox-group-head-coaches">
-                            {coaches.length === 0 ? (
-                              <p className="text-sm text-gray-500">No coaches available</p>
-                            ) : (
-                              coaches.map((coach: any) => {
-                                const currentValue = field.value || [];
-                                const isChecked = Array.isArray(currentValue) && currentValue.includes(coach.id);
-                                return (
-                                  <div key={coach.id} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      checked={isChecked}
-                                      onCheckedChange={(checked) => {
-                                        if (checked) {
-                                          field.onChange([...currentValue, coach.id]);
-                                        } else {
-                                          field.onChange(currentValue.filter((id: string) => id !== coach.id));
-                                        }
-                                      }}
-                                      data-testid={`checkbox-head-coach-${coach.id}`}
-                                    />
-                                    <Label className="text-sm font-normal cursor-pointer">
-                                      {coach.firstName} {coach.lastName}
-                                    </Label>
-                                  </div>
-                                );
-                              })
-                            )}
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="assistantCoachIds"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Assistant Coaches</FormLabel>
-                          <FormDescription>Select assistant coaches for this team</FormDescription>
-                          <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2" data-testid="checkbox-group-assistant-coaches">
-                            {coaches.length === 0 ? (
-                              <p className="text-sm text-gray-500">No coaches available</p>
-                            ) : (
-                              coaches.map((coach: any) => {
-                                const currentValue = field.value || [];
-                                const isChecked = Array.isArray(currentValue) && currentValue.includes(coach.id);
-                                return (
-                                  <div key={coach.id} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      checked={isChecked}
-                                      onCheckedChange={(checked) => {
-                                        if (checked) {
-                                          field.onChange([...currentValue, coach.id]);
-                                        } else {
-                                          field.onChange(currentValue.filter((id: string) => id !== coach.id));
-                                        }
-                                      }}
-                                      data-testid={`checkbox-assistant-coach-${coach.id}`}
-                                    />
-                                    <Label className="text-sm font-normal cursor-pointer">
-                                      {coach.firstName} {coach.lastName}
-                                    </Label>
-                                  </div>
-                                );
-                              })
-                            )}
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="season"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Season</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="Winter 2025" data-testid="input-team-season" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="organization"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Club/Brand</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="Basketball Academy" data-testid="input-team-organization" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="location"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Facility Location</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Main Gym" data-testid="input-team-location" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="scheduleLink"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Schedule Link</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="url" placeholder="https://..." data-testid="input-team-schedule-link" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="rosterSize"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Roster Size</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              type="number" 
-                              placeholder="0" 
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                              data-testid="input-team-roster-size" 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="active"
-                      render={({ field }) => (
-                        <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                          <div className="space-y-0.5">
-                            <FormLabel className="text-base">Active</FormLabel>
-                            <FormDescription>
-                              Is this team currently active?
-                            </FormDescription>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              data-testid="switch-team-active"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="notes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Notes</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} placeholder="Internal team notes..." rows={3} data-testid="input-team-notes" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <Button type="submit" className="w-full" disabled={createTeam.isPending} data-testid="button-submit-team">
-                      {createTeam.isPending ? "Creating..." : "Create Team"}
-                    </Button>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-
-            {/* Edit Team Dialog */}
-            <Dialog open={!!editingTeam} onOpenChange={(open) => !open && setEditingTeam(null)}>
-              <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Edit Team</DialogTitle>
-                </DialogHeader>
-                {editingTeam && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-team-name">Team Name *</Label>
-                      <Input
-                        id="edit-team-name"
-                        value={editingTeam.name || ""}
-                        onChange={(e) => setEditingTeam({...editingTeam, name: e.target.value})}
-                        data-testid="input-edit-team-name"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-team-code">Team Code</Label>
-                      <Input
-                        id="edit-team-code"
-                        value={editingTeam.code || ""}
-                        onChange={(e) => setEditingTeam({...editingTeam, code: e.target.value})}
-                        placeholder="e.g. THU12"
-                        data-testid="input-edit-team-code"
-                      />
-                      <p className="text-xs text-gray-500">Short code used for bulk import matching</p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-team-program-type">Program Type</Label>
-                      <Select
-                        value={editingTeam.programType || "none"}
-                        onValueChange={(value) => setEditingTeam({...editingTeam, programType: value === "none" ? null : value})}
-                      >
-                        <SelectTrigger id="edit-team-program-type" data-testid="select-edit-team-program-type">
-                          <SelectValue placeholder="Select program type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          <SelectItem value="Team">Team</SelectItem>
-                          <SelectItem value="Skills">Skills</SelectItem>
-                          <SelectItem value="FNH">FNH</SelectItem>
-                          <SelectItem value="Camp">Camp</SelectItem>
-                          <SelectItem value="Training">Training</SelectItem>
-                          <SelectItem value="Special">Special</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-team-division">Division</Label>
-                      <Input
-                        id="edit-team-division"
-                        value={editingTeam.division || ""}
-                        onChange={(e) => setEditingTeam({...editingTeam, division: e.target.value})}
-                        placeholder="e.g., U10, U12, Varsity"
-                        data-testid="input-edit-team-division"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Head Coach(es)</Label>
-                      <p className="text-xs text-gray-500">Select one or more head coaches</p>
-                      <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2" data-testid="checkbox-group-edit-head-coaches">
-                        {coaches.length === 0 ? (
-                          <p className="text-sm text-gray-500">No coaches available</p>
-                        ) : (
-                          coaches.map((coach: any) => {
-                            const headIds = editingTeam.headCoachIds || (editingTeam.coachId ? [editingTeam.coachId] : []);
-                            return (
-                              <div key={coach.id} className="flex items-center space-x-2">
-                                <Checkbox
-                                  checked={headIds.includes(coach.id)}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      setEditingTeam({...editingTeam, headCoachIds: [...headIds, coach.id], coachId: headIds[0] || coach.id});
-                                    } else {
-                                      const newIds = headIds.filter((id: string) => id !== coach.id);
-                                      setEditingTeam({...editingTeam, headCoachIds: newIds, coachId: newIds[0] || null});
-                                    }
-                                  }}
-                                  data-testid={`checkbox-edit-head-coach-${coach.id}`}
-                                />
-                                <Label className="text-sm font-normal cursor-pointer">
-                                  {coach.firstName} {coach.lastName}
-                                </Label>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Assistant Coaches</Label>
-                      <p className="text-xs text-gray-500">Select assistant coaches for this team</p>
-                      <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2" data-testid="checkbox-group-edit-assistant-coaches">
-                        {coaches.length === 0 ? (
-                          <p className="text-sm text-gray-500">No coaches available</p>
-                        ) : (
-                          coaches.map((coach: any) => (
-                            <div key={coach.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                checked={(editingTeam.assistantCoachIds || []).includes(coach.id)}
-                                onCheckedChange={(checked) => {
-                                  const currentValue = editingTeam.assistantCoachIds || [];
-                                  if (checked) {
-                                    setEditingTeam({...editingTeam, assistantCoachIds: [...currentValue, coach.id]});
-                                  } else {
-                                    setEditingTeam({...editingTeam, assistantCoachIds: currentValue.filter((id: string) => id !== coach.id)});
-                                  }
-                                }}
-                                data-testid={`checkbox-edit-assistant-coach-${coach.id}`}
-                              />
-                              <Label className="text-sm font-normal cursor-pointer">
-                                {coach.firstName} {coach.lastName}
-                              </Label>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-team-season">Season</Label>
-                        <Input
-                          id="edit-team-season"
-                          value={editingTeam.season || ""}
-                          onChange={(e) => setEditingTeam({...editingTeam, season: e.target.value})}
-                          placeholder="Winter 2025"
-                          data-testid="input-edit-team-season"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-team-organization">Club/Brand</Label>
-                        <Input
-                          id="edit-team-organization"
-                          value={editingTeam.organization || ""}
-                          onChange={(e) => setEditingTeam({...editingTeam, organization: e.target.value})}
-                          placeholder="Basketball Academy"
-                          data-testid="input-edit-team-organization"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-team-location">Facility Location</Label>
-                      <Input
-                        id="edit-team-location"
-                        value={editingTeam.location || ""}
-                        onChange={(e) => setEditingTeam({...editingTeam, location: e.target.value})}
-                        placeholder="Main Gym"
-                        data-testid="input-edit-team-location"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-team-schedule-link">Schedule Link</Label>
-                      <Input
-                        id="edit-team-schedule-link"
-                        value={editingTeam.scheduleLink || ""}
-                        onChange={(e) => setEditingTeam({...editingTeam, scheduleLink: e.target.value})}
-                        type="url"
-                        placeholder="https://..."
-                        data-testid="input-edit-team-schedule-link"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-team-roster-size">Roster Size</Label>
-                      <Input
-                        id="edit-team-roster-size"
-                        value={editingTeam.rosterSize || 0}
-                        onChange={(e) => setEditingTeam({...editingTeam, rosterSize: parseInt(e.target.value) || 0})}
-                        type="number"
-                        placeholder="0"
-                        data-testid="input-edit-team-roster-size"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <Label className="text-base">Active</Label>
-                        <p className="text-sm text-gray-500">Is this team currently active?</p>
-                      </div>
-                      <Switch
-                        checked={editingTeam.active !== false}
-                        onCheckedChange={(checked) => setEditingTeam({...editingTeam, active: checked})}
-                        data-testid="switch-edit-team-active"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-team-notes">Notes</Label>
-                      <Textarea
-                        id="edit-team-notes"
-                        value={editingTeam.notes || ""}
-                        onChange={(e) => setEditingTeam({...editingTeam, notes: e.target.value})}
-                        placeholder="Internal team notes..."
-                        rows={3}
-                        data-testid="input-edit-team-notes"
-                      />
-                    </div>
-
-                    {/* Roster Management Section */}
-                    <div className="space-y-2 border-t pt-4">
-                      <div className="flex items-center justify-between">
-                        <Label>Team Roster ({teamRoster.length} players)</Label>
-                        {updateRoster.isPending && (
-                          <span className="text-xs text-blue-600">Saving roster...</span>
-                        )}
-                      </div>
-                      {rosterLoading ? (
-                        <div className="border rounded-md p-4 text-center text-gray-500">
-                          Loading roster...
-                        </div>
-                      ) : (
-                        <div className="border rounded-md max-h-64 overflow-y-auto" data-testid="edit-team-roster">
-                          {/* Current Roster */}
-                          {teamRoster.length > 0 && (
-                            <div className="p-2 border-b bg-blue-50">
-                              <p className="text-xs font-semibold text-blue-700 mb-2">Currently Assigned:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {teamRoster.map(playerId => {
-                                  const player = players.find((p: any) => p.id === playerId);
-                                  return player ? (
-                                    <div key={playerId} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                                      <span>{player.firstName} {player.lastName}</span>
-                                      <button
-                                        type="button"
-                                        className="ml-1 text-blue-600 hover:text-blue-800"
-                                        onClick={() => setTeamRoster(teamRoster.filter(id => id !== playerId))}
-                                        data-testid={`button-remove-roster-${playerId}`}
-                                      >
-                                        ×
-                                      </button>
-                                    </div>
-                                  ) : null;
-                                })}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Available Players */}
-                          <div className="p-2 space-y-1">
-                            <p className="text-xs font-semibold text-gray-500 mb-2">Add Players:</p>
-                            {players.length === 0 ? (
-                              <p className="text-sm text-gray-500">No players available</p>
-                            ) : (
-                              players.map((player: any) => {
-                                const isOnRoster = teamRoster.includes(player.id);
-                                return (
-                                  <div key={player.id} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      checked={isOnRoster}
-                                      onCheckedChange={(checked) => {
-                                        if (checked) {
-                                          setTeamRoster([...teamRoster, player.id]);
-                                        } else {
-                                          setTeamRoster(teamRoster.filter(id => id !== player.id));
-                                        }
-                                      }}
-                                      data-testid={`checkbox-roster-${player.id}`}
-                                    />
-                                    <label className={`text-sm cursor-pointer ${isOnRoster ? 'text-blue-700 font-medium' : ''}`}>
-                                      {player.firstName} {player.lastName}
-                                      {player.division && <span className="text-gray-400 ml-1">({player.division})</span>}
-                                    </label>
-                                  </div>
-                                );
-                              })
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        className="flex-1"
-                        onClick={async () => {
-                          await updateTeam.mutateAsync(editingTeam);
-                          await updateRoster.mutateAsync({ teamId: editingTeam.id, playerIds: teamRoster });
-                        }}
-                        disabled={updateTeam.isPending || updateRoster.isPending}
-                        data-testid="button-submit-edit-team"
-                      >
-                        {updateTeam.isPending || updateRoster.isPending ? "Saving..." : "Save Changes"}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div ref={tableRef} className="overflow-x-auto hide-scrollbar drag-scroll">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Team Name</TableHead>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Program</TableHead>
-                  <TableHead>Division</TableHead>
-                  <TableHead>Coaches</TableHead>
-                  <TableHead>Roster</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {teams.map((team: any) => {
-                  const coach = users.find((u: any) => u.id === team.coachId);
-                  const division = (divisions || []).find((d: any) => d.id === team.divisionId);
-                  const program = (programs || []).find((p: any) => p.id === team.programId);
-                  return (
-                    <TableRow key={team.id} data-testid={`row-team-${team.id}`}>
-                      <TableCell className="font-medium" data-testid={`text-team-name-${team.id}`}>
-                        {team.name}
-                      </TableCell>
-                      <TableCell data-testid={`text-team-code-${team.id}`}>
-                        {team.code ? (
-                          <Badge variant="outline" className="font-mono text-xs">{team.code}</Badge>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell data-testid={`text-program-${team.id}`}>
-                        {program ? (
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                            {program.name}
-                          </Badge>
-                        ) : (
-                          <span className="text-gray-400">No program</span>
-                        )}
-                      </TableCell>
-                      <TableCell data-testid={`text-division-${team.id}`}>
-                        {division?.name || "-"}
-                      </TableCell>
-                      <TableCell data-testid={`text-coach-${team.id}`}>
-                        {(() => {
-                          const headIds = team.headCoachIds?.length ? team.headCoachIds : (team.coachId ? [team.coachId] : []);
-                          const assistantIds = team.assistantCoachIds || [];
-                          const allCoachIds = [...new Set([...headIds, ...assistantIds])];
-                          if (allCoachIds.length === 0) return <span className="text-gray-400">Unassigned</span>;
-                          return (
-                            <div className="space-y-1">
-                              {headIds.map((id: string) => {
-                                const c = users.find((u: any) => u.id === id);
-                                return c ? (
-                                  <div key={id} className="flex items-center gap-1">
-                                    <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] px-1">HC</Badge>
-                                    <span className="text-xs">{c.firstName} {c.lastName}</span>
-                                  </div>
-                                ) : null;
-                              })}
-                              {assistantIds.filter((id: string) => !headIds.includes(id)).map((id: string) => {
-                                const c = users.find((u: any) => u.id === id);
-                                return c ? (
-                                  <div key={id} className="flex items-center gap-1">
-                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] px-1">AC</Badge>
-                                    <span className="text-xs">{c.firstName} {c.lastName}</span>
-                                  </div>
-                                ) : null;
-                              })}
-                            </div>
-                          );
-                        })()}
-                      </TableCell>
-                      <TableCell data-testid={`text-roster-${team.id}`}>
-                        {team.rosterCount || 0}
-                      </TableCell>
-                      <TableCell data-testid={`status-active-${team.id}`}>
-                        <Badge 
-                          variant={team.active ? "default" : "secondary"}
-                          className={team.active ? "bg-green-100 text-green-700 border-green-200" : "bg-gray-100 text-gray-500 border-gray-200"}
-                        >
-                          {team.active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => setSelectedTeam(team)}
-                            data-testid={`button-view-roster-${team.id}`}
-                            title="View/Manage Roster"
-                          >
-                            <Users className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => setEditingTeam(team)}
-                            data-testid={`button-edit-team-${team.id}`}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => setDeleteConfirmTeam(team)}
-                            data-testid={`button-delete-team-${team.id}`}
-                          >
-                            <Trash2 className="w-4 h-4 text-red-600" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-      {/* Roster Management Dialog */}
-      {selectedTeam && (
-        <Dialog open={!!selectedTeam} onOpenChange={() => { setSelectedTeam(null); setRosterSearch(''); }}>
-          <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Manage Roster - {selectedTeam.name}</DialogTitle>
-              <CardDescription>
-                Select or deselect players to add or remove them from this team
-              </CardDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              {/* Coaching Staff Summary */}
-              <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
-                <p className="text-sm font-medium text-gray-700">Coaching Staff</p>
-                <div className="flex flex-wrap gap-2">
-                  {(() => {
-                    const headIds = selectedTeam.headCoachIds?.length ? selectedTeam.headCoachIds : (selectedTeam.coachId ? [selectedTeam.coachId] : []);
-                    const assistantIds = selectedTeam.assistantCoachIds || [];
-                    if (headIds.length === 0 && assistantIds.length === 0) {
-                      return <span className="text-xs text-gray-400">No coaches assigned</span>;
-                    }
-                    return (
-                      <>
-                        {headIds.map((id: string) => {
-                          const c = users.find((u: any) => u.id === id);
-                          return c ? (
-                            <Badge key={id} className="bg-red-100 text-red-700 border-red-200">
-                              HC: {c.firstName} {c.lastName}
-                            </Badge>
-                          ) : null;
-                        })}
-                        {assistantIds.filter((id: string) => !headIds.includes(id)).map((id: string) => {
-                          const c = users.find((u: any) => u.id === id);
-                          return c ? (
-                            <Badge key={id} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                              AC: {c.firstName} {c.lastName}
-                            </Badge>
-                          ) : null;
-                        })}
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
-
-              {/* Search */}
-              <Input
-                placeholder="Search players by name..."
-                value={rosterSearch}
-                onChange={(e) => setRosterSearch(e.target.value)}
-                data-testid="input-roster-search"
-              />
-
-              {/* Current Roster */}
-              {(() => {
-                const rosterPlayers = players.filter((p: any) => {
-                  const userTeamIds = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
-                  return userTeamIds.includes(selectedTeam.id) || p.teamId === selectedTeam.id;
-                });
-                return rosterPlayers.length > 0 ? (
-                  <div className="border rounded-lg p-3 bg-green-50">
-                    <p className="text-xs font-semibold text-green-700 mb-2">Current Roster ({rosterPlayers.length} players)</p>
-                    <div className="flex flex-wrap gap-1">
-                      {rosterPlayers.map((player: any) => (
-                        <div key={player.id} className="inline-flex items-center gap-1 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                          <span>{player.firstName} {player.lastName}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null;
-              })()}
-
-              <div className="max-h-72 overflow-y-auto border rounded-lg">
-                {players.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-8">No players available</p>
-                ) : (
-                  (() => {
-                    const filteredPlayers = rosterSearch.trim()
-                      ? players.filter((p: any) => `${p.firstName} ${p.lastName}`.toLowerCase().includes(rosterSearch.toLowerCase()))
-                      : players;
-                    return filteredPlayers.length === 0 ? (
-                      <p className="text-sm text-gray-500 text-center py-4">No players match your search</p>
-                    ) : (
-                      filteredPlayers.map((player: any) => {
-                        const userTeamIds = Array.isArray(player.teamIds) ? player.teamIds : player.teamId ? [player.teamId] : [];
-                        const isOnTeam = userTeamIds.includes(selectedTeam.id) || player.teamId === selectedTeam.id;
-                        return (
-                          <div 
-                            key={player.id} 
-                            className={`flex items-center justify-between p-3 hover:bg-gray-50 border-b last:border-b-0 ${isOnTeam ? 'bg-green-50' : ''}`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <Checkbox 
-                                checked={isOnTeam}
-                                onCheckedChange={async (checked) => {
-                                  try {
-                                    if (checked) {
-                                      await apiRequest("POST", `/api/teams/${selectedTeam.id}/assign-player`, {
-                                        playerId: player.id
-                                      });
-                                    } else {
-                                      await apiRequest("POST", `/api/teams/${selectedTeam.id}/remove-player`, {
-                                        playerId: player.id
-                                      });
-                                    }
-                                    queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-                                    queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-                                    queryClient.invalidateQueries({ queryKey: ["/api/users", player.id, "team"] });
-                                    queryClient.invalidateQueries({ queryKey: ["/api/users", player.id, "teams"] });
-                                    queryClient.invalidateQueries({ queryKey: ["/api/users", player.id, "program-memberships"] });
-                                    queryClient.invalidateQueries({ queryKey: ["/api/admin/enrollments"] });
-                                    queryClient.invalidateQueries({ queryKey: ["/api/product-enrollments"] });
-                                    queryClient.invalidateQueries({ queryKey: ["/api/enrollments"] });
-                                    queryClient.invalidateQueries({ queryKey: [`/api/profile/${player.id}`] });
-                                    queryClient.invalidateQueries({ queryKey: ["/api/profile", player.id] });
-                                    queryClient.invalidateQueries({ queryKey: ['/api/admin/pending-assignments'] });
-                                    toast({ 
-                                      title: checked 
-                                        ? `Added ${player.firstName} ${player.lastName} to ${selectedTeam.name}`
-                                        : `Removed ${player.firstName} ${player.lastName} from ${selectedTeam.name}`
-                                    });
-                                  } catch (error) {
-                                    toast({ 
-                                      title: "Failed to update player assignment",
-                                      variant: "destructive"
-                                    });
-                                  }
-                                }}
-                                data-testid={`checkbox-player-${player.id}`}
-                              />
-                              <div>
-                                <p className={`text-sm ${isOnTeam ? 'font-medium text-green-700' : ''}`}>{player.firstName} {player.lastName}</p>
-                                {player.email && <p className="text-xs text-gray-400">{player.email}</p>}
-                                {player.teamId && player.teamId !== selectedTeam.id && (
-                                  <p className="text-xs text-gray-500">
-                                    Also on: {teams.find((t: any) => t.id === player.teamId)?.name || "Unknown Team"}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            {isOnTeam && (
-                              <Badge variant="default" className="bg-green-100 text-green-700 border-green-200">
-                                On Team
-                              </Badge>
-                            )}
-                          </div>
-                        );
-                      })
-                    );
-                  })()
-                )}
-              </div>
-              <div className="text-sm text-gray-600">
-                <strong>Roster Count:</strong> {players.filter((p: any) => {
-                  const userTeamIds = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
-                  return userTeamIds.includes(selectedTeam.id) || p.teamId === selectedTeam.id;
-                }).length} players
-                {selectedTeam.rosterSize > 0 && <span className="text-gray-400"> / {selectedTeam.rosterSize} max</span>}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-      
-      {/* Delete Team Confirmation Dialog */}
-      <AlertDialog open={!!deleteConfirmTeam} onOpenChange={(open) => !open && setDeleteConfirmTeam(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Team</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{deleteConfirmTeam?.name}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
-              onClick={() => {
-                deleteTeam.mutate(deleteConfirmTeam.id);
-                setDeleteConfirmTeam(null);
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  );
-}
-
 // Events Tab - Full Implementation with Calendar and List View
 function EventsTab({ events, teams, programs, organization, currentUser, users, initialEventId, onDeepLinkHandled }: any) {
   const { toast } = useToast();
@@ -15695,18 +14512,27 @@ function CommunicationsTab({ notifications, users, teams, divisions, organizatio
   );
 }
 
-// Teams By Program Tab - shows teams grouped by program
+// Teams By Program Tab - shows teams grouped by program (redesigned)
 function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }: any) {
   const { toast } = useToast();
-  const [selectedTeam, setSelectedTeam] = useState<any>(null);
-  const [rosterSearch, setRosterSearch] = useState('');
-  const [manageTab, setManageTab] = useState<'roster' | 'coaches'>('roster');
-  const [addTeamOpen, setAddTeamOpen] = useState(false);
-  const [newTeam, setNewTeam] = useState({ name: '', programId: '', division: '', season: '', location: '', notes: '' });
-  const [addTeamError, setAddTeamError] = useState('');
   const programs = allPrograms.filter((p: any) => p.productCategory === 'service' || !p.productCategory);
   const players = (users || []).filter((u: any) => u.role === 'player');
   const coaches = (users || []).filter((u: any) => u.role === 'coach');
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [editingTeam, setEditingTeam] = useState<any>(null);
+  const [deletingTeam, setDeletingTeam] = useState<any>(null);
+  const [expandedPrograms, setExpandedPrograms] = useState<Record<string, boolean>>({});
+  const [editorTab, setEditorTab] = useState<'details' | 'roster' | 'coaches'>('details');
+  const [playerSearch, setPlayerSearch] = useState('');
+  const [coachSearch, setCoachSearch] = useState('');
+  const [editorForm, setEditorForm] = useState<any>({});
+
+  const PRESET_COLORS = ['#DC2626', '#2563EB', '#16A34A', '#7C3AED', '#F59E0B', '#EC4899', '#0891B2', '#1D4ED8', '#4F46E5', '#059669'];
+  const COACH_ROLES: Record<string, string> = { HC: 'Head Coach', AC: 'Assistant Coach', TM: 'Team Manager', SC: 'Strength Coach' };
+
+  const isProgramExpanded = (id: string) => expandedPrograms[id] !== false;
+  const toggleProgram = (id: string) => setExpandedPrograms(p => ({ ...p, [id]: !isProgramExpanded(id) }));
 
   const createTeamMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -15714,540 +14540,879 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-      toast({ title: "Team created", description: `"${newTeam.name}" has been created successfully.` });
-      setNewTeam({ name: '', programId: '', division: '', season: '', location: '', notes: '' });
-      setAddTeamError('');
-      setAddTeamOpen(false);
+      toast({ title: "Team created successfully" });
+      setEditingTeam(null);
     },
     onError: (err: any) => {
       toast({ title: "Error", description: err?.message || "Failed to create team.", variant: "destructive" });
     },
   });
-  
-  const getTeamsForProgram = (programId: string) => {
-    return teams.filter((t: any) => String(t.programId) === String(programId));
+
+  const updateTeamMutation = useMutation({
+    mutationFn: async ({ id, ...data }: any) => {
+      return await apiRequest("PATCH", `/api/teams/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      toast({ title: "Team updated successfully" });
+      setEditingTeam(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to update team", variant: "destructive" });
+    },
+  });
+
+  const deleteTeamMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/teams/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      toast({ title: "Team deleted successfully" });
+      setDeletingTeam(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to delete team", variant: "destructive" });
+    },
+  });
+
+  const openEditor = (team: any) => {
+    setEditorForm({
+      name: team.name || '',
+      programId: team.programId || '',
+      division: team.division || '',
+      season: team.season || '',
+      location: team.location || '',
+      color: team.color || '#DC2626',
+      notes: team.notes || '',
+      headCoachIds: team.headCoachIds?.length ? team.headCoachIds : (team.coachId ? [team.coachId] : []),
+      assistantCoachIds: team.assistantCoachIds || [],
+      managerIds: team.managerIds || [],
+      strengthCoachIds: team.strengthCoachIds || [],
+    });
+    setEditorTab('details');
+    setPlayerSearch('');
+    setCoachSearch('');
+    setEditingTeam(team);
   };
 
-  const unassignedTeams = teams.filter((t: any) => !t.programId || !programs.some((p: any) => String(p.id) === String(t.programId)));
+  const openNewTeamEditor = (programId?: string) => {
+    setEditorForm({
+      name: '',
+      programId: programId || '',
+      division: '',
+      season: '',
+      location: '',
+      color: '#DC2626',
+      notes: '',
+      headCoachIds: [],
+      assistantCoachIds: [],
+      managerIds: [],
+      strengthCoachIds: [],
+    });
+    setEditorTab('details');
+    setPlayerSearch('');
+    setCoachSearch('');
+    setEditingTeam({ _new: true, programId: programId || '' });
+  };
 
-  const renderTeamRow = (team: any) => {
-    const rosterCount = players.filter((p: any) => {
+  const handleEditorSave = () => {
+    if (!editorForm.name?.trim()) return;
+    const payload: any = {
+      name: editorForm.name.trim(),
+      programId: editorForm.programId || undefined,
+      division: editorForm.division || undefined,
+      season: editorForm.season || undefined,
+      location: editorForm.location || undefined,
+      color: editorForm.color || undefined,
+      notes: editorForm.notes || undefined,
+      headCoachIds: editorForm.headCoachIds || [],
+      assistantCoachIds: editorForm.assistantCoachIds || [],
+      managerIds: editorForm.managerIds || [],
+      strengthCoachIds: editorForm.strengthCoachIds || [],
+      coachId: editorForm.headCoachIds?.[0] || null,
+    };
+    if (organization?.id) payload.organizationId = String(organization.id);
+    if (editingTeam?._new) {
+      createTeamMutation.mutate(payload);
+    } else {
+      updateTeamMutation.mutate({ id: editingTeam.id, ...payload });
+    }
+  };
+
+  const handleDuplicate = (team: any) => {
+    const headIds = team.headCoachIds?.length ? team.headCoachIds : (team.coachId ? [team.coachId] : []);
+    const payload: any = {
+      name: `${team.name} (Copy)`,
+      programId: team.programId || undefined,
+      division: team.division || undefined,
+      season: team.season || undefined,
+      location: team.location || undefined,
+      color: team.color || undefined,
+      notes: team.notes || undefined,
+      headCoachIds: headIds,
+      assistantCoachIds: team.assistantCoachIds || [],
+      managerIds: team.managerIds || [],
+      strengthCoachIds: team.strengthCoachIds || [],
+      coachId: headIds[0] || null,
+    };
+    if (organization?.id) payload.organizationId = String(organization.id);
+    createTeamMutation.mutate(payload);
+    toast({ title: `Duplicated "${team.name}"` });
+  };
+
+  const getTeamPlayers = (team: any) => {
+    return players.filter((p: any) => {
       const ids = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
       return ids.includes(team.id) || p.teamId === team.id;
-    }).length;
-    const headIds = team.headCoachIds?.length ? team.headCoachIds : (team.coachId ? [team.coachId] : []);
-    const assistantIds = (team.assistantCoachIds || []).filter((id: string) => !headIds.includes(id));
-    const allCoachIds = [...headIds, ...assistantIds];
-    const coachNames = allCoachIds.map((id: string) => {
-      const c = (users || []).find((u: any) => u.id === id);
-      return c ? `${c.firstName} ${c.lastName}` : null;
-    }).filter(Boolean);
-
-    return (
-      <div 
-        key={team.id} 
-        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
-        onClick={() => { setSelectedTeam(team); setRosterSearch(''); }}
-      >
-        <div className="flex items-center gap-3">
-          <Users className="w-4 h-4 text-gray-500" />
-          <div>
-            <div className="font-medium text-gray-900">{team.name}</div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
-              <span className="text-xs text-gray-500">{rosterCount} player{rosterCount !== 1 ? 's' : ''}</span>
-              {coachNames.length > 0 && (
-                <span className="text-xs text-gray-500">{coachNames.join(', ')}</span>
-              )}
-            </div>
-          </div>
-        </div>
-        <ChevronRight className="w-4 h-4 text-gray-400" />
-      </div>
-    );
+    });
   };
 
-  const handleAddTeamSubmit = () => {
-    const raw: any = { name: newTeam.name.trim() };
-    if (organization?.id) raw.organizationId = String(organization.id);
-    if (newTeam.programId) raw.programId = newTeam.programId;
-    if (newTeam.division) raw.division = newTeam.division;
-    if (newTeam.season) raw.season = newTeam.season;
-    if (newTeam.location) raw.location = newTeam.location;
-    if (newTeam.notes) raw.notes = newTeam.notes;
-    const result = insertTeamSchema.safeParse(raw);
-    if (!result.success) {
-      const nameError = result.error.issues.find((i) => i.path.includes('name'));
-      setAddTeamError(nameError ? nameError.message : 'Please check the form and try again.');
-      return;
+  const filteredTeams = searchQuery.trim()
+    ? teams.filter((t: any) =>
+        t.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.division?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : teams;
+
+  const getTeamsForProgram = (programId: string) =>
+    filteredTeams.filter((t: any) => String(t.programId) === String(programId));
+
+  const unassignedTeams = filteredTeams.filter((t: any) =>
+    !t.programId || !programs.some((p: any) => String(p.id) === String(t.programId))
+  );
+
+  const totalPlayers = new Set(
+    teams.flatMap((t: any) => getTeamPlayers(t).map((p: any) => p.id))
+  ).size;
+  const avgRoster = teams.length ? Math.round(teams.reduce((s: number, t: any) => s + getTeamPlayers(t).length, 0) / teams.length) : 0;
+
+  const isEditorNew = editingTeam?._new === true;
+  const editingTeamPlayers = editingTeam && !isEditorNew ? getTeamPlayers(editingTeam) : [];
+  const editingTeamHeadIds: string[] = editorForm.headCoachIds || [];
+  const editingTeamAssistantIds: string[] = (editorForm.assistantCoachIds || []).filter((id: string) => !editingTeamHeadIds.includes(id));
+  const editingTeamManagerIds: string[] = (editorForm.managerIds || []).filter((id: string) => !editingTeamHeadIds.includes(id) && !editingTeamAssistantIds.includes(id));
+  const editingTeamStrengthIds: string[] = (editorForm.strengthCoachIds || []).filter((id: string) => !editingTeamHeadIds.includes(id) && !editingTeamAssistantIds.includes(id) && !editingTeamManagerIds.includes(id));
+  const editingTeamAllCoachIds = [...editingTeamHeadIds, ...editingTeamAssistantIds, ...editingTeamManagerIds, ...editingTeamStrengthIds];
+
+  const filteredPlayerSearch = players.filter((p: any) => {
+    const name = `${p.firstName} ${p.lastName}`.toLowerCase();
+    return !playerSearch.trim() || name.includes(playerSearch.toLowerCase()) || p.email?.toLowerCase().includes(playerSearch.toLowerCase());
+  });
+
+  const filteredCoachSearch = coaches.filter((c: any) => {
+    const name = `${c.firstName} ${c.lastName}`.toLowerCase();
+    return !coachSearch.trim() || name.includes(coachSearch.toLowerCase()) || c.email?.toLowerCase().includes(coachSearch.toLowerCase());
+  });
+
+  const updateCoachRole = async (coachId: string, role: string) => {
+    if (!editingTeam || isEditorNew) return;
+    const currentHeadIds = [...(editorForm.headCoachIds || [])];
+    const currentAssistantIds = [...(editorForm.assistantCoachIds || [])];
+    const currentManagerIds = [...(editorForm.managerIds || [])];
+    const currentStrengthIds = [...(editorForm.strengthCoachIds || [])];
+
+    [currentHeadIds, currentAssistantIds, currentManagerIds, currentStrengthIds].forEach(arr => {
+      const idx = arr.indexOf(coachId);
+      if (idx !== -1) arr.splice(idx, 1);
+    });
+
+    if (role === 'HC') currentHeadIds.push(coachId);
+    else if (role === 'AC') currentAssistantIds.push(coachId);
+    else if (role === 'TM') currentManagerIds.push(coachId);
+    else if (role === 'SC') currentStrengthIds.push(coachId);
+
+    setEditorForm((f: any) => ({
+      ...f,
+      headCoachIds: currentHeadIds,
+      assistantCoachIds: currentAssistantIds,
+      managerIds: currentManagerIds,
+      strengthCoachIds: currentStrengthIds,
+    }));
+
+    try {
+      await apiRequest("PATCH", `/api/teams/${editingTeam.id}`, {
+        headCoachIds: currentHeadIds,
+        assistantCoachIds: currentAssistantIds,
+        managerIds: currentManagerIds,
+        strengthCoachIds: currentStrengthIds,
+        coachId: currentHeadIds[0] || null,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+    } catch {
+      toast({ title: "Failed to update coach role", variant: "destructive" });
     }
-    setAddTeamError('');
-    createTeamMutation.mutate(result.data);
+  };
+
+  const toggleCoach = async (coachId: string, assign: boolean) => {
+    if (!editingTeam || isEditorNew) return;
+    const currentHeadIds = [...(editorForm.headCoachIds || [])];
+    const currentAssistantIds = [...(editorForm.assistantCoachIds || [])];
+    const currentManagerIds = [...(editorForm.managerIds || [])];
+    const currentStrengthIds = [...(editorForm.strengthCoachIds || [])];
+
+    const isAlreadyAssigned = currentHeadIds.includes(coachId) || currentAssistantIds.includes(coachId) ||
+      currentManagerIds.includes(coachId) || currentStrengthIds.includes(coachId);
+
+    if (assign) {
+      if (!isAlreadyAssigned) currentAssistantIds.push(coachId);
+    } else {
+      [currentHeadIds, currentAssistantIds, currentManagerIds, currentStrengthIds].forEach(arr => {
+        const idx = arr.indexOf(coachId);
+        if (idx !== -1) arr.splice(idx, 1);
+      });
+    }
+
+    setEditorForm((f: any) => ({
+      ...f,
+      headCoachIds: currentHeadIds,
+      assistantCoachIds: currentAssistantIds,
+      managerIds: currentManagerIds,
+      strengthCoachIds: currentStrengthIds,
+    }));
+
+    try {
+      await apiRequest("PATCH", `/api/teams/${editingTeam.id}`, {
+        headCoachIds: currentHeadIds,
+        assistantCoachIds: currentAssistantIds,
+        managerIds: currentManagerIds,
+        strengthCoachIds: currentStrengthIds,
+        coachId: currentHeadIds[0] || null,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      toast({ title: assign ? `Added coach to team` : `Removed coach from team` });
+    } catch {
+      toast({ title: "Failed to update coaching staff", variant: "destructive" });
+    }
+  };
+
+  const togglePlayer = async (player: any, isOnTeam: boolean) => {
+    if (!editingTeam || isEditorNew) return;
+    try {
+      if (isOnTeam) {
+        await apiRequest("POST", `/api/teams/${editingTeam.id}/remove-player`, { playerId: player.id });
+      } else {
+        await apiRequest("POST", `/api/teams/${editingTeam.id}/assign-player`, { playerId: player.id });
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      toast({ title: isOnTeam ? `Removed ${player.firstName} ${player.lastName} from team` : `Added ${player.firstName} ${player.lastName} to team` });
+    } catch {
+      toast({ title: "Failed to update roster", variant: "destructive" });
+    }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900">Teams by Program</h2>
+    <div className="space-y-6 pb-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Teams</h2>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {teams.length} team{teams.length !== 1 ? 's' : ''} · {totalPlayers} unique player{totalPlayers !== 1 ? 's' : ''} across all rosters
+          </p>
+        </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline">{teams.length} total teams</Badge>
-          <Button size="sm" onClick={() => setAddTeamOpen(true)}>
-            <Plus className="w-4 h-4 mr-1" />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search teams..."
+              className="pl-9 w-48 h-9 text-sm"
+            />
+          </div>
+          <Button size="sm" onClick={() => openNewTeamEditor()} className="bg-red-600 hover:bg-red-700 text-white">
+            <Plus className="w-4 h-4 mr-1.5" />
             Add Team
           </Button>
         </div>
       </div>
 
-      <Dialog open={addTeamOpen} onOpenChange={(open) => { setAddTeamOpen(open); if (!open) { setAddTeamError(''); } }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add New Team</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="new-team-name">Team Name <span className="text-red-500">*</span></Label>
-              <Input
-                id="new-team-name"
-                placeholder="e.g. U10 Red"
-                value={newTeam.name}
-                onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
-                className={addTeamError ? 'border-red-500' : ''}
-              />
-              {addTeamError && <p className="text-xs text-red-500 mt-1">{addTeamError}</p>}
-            </div>
-            <div>
-              <Label htmlFor="new-team-program">Program</Label>
-              <Select value={newTeam.programId} onValueChange={(val) => setNewTeam({ ...newTeam, programId: val === '__none__' ? '' : val })}>
-                <SelectTrigger id="new-team-program">
-                  <SelectValue placeholder="Select a program" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">No program</SelectItem>
-                  {programs.map((p: any) => (
-                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="new-team-division">Division</Label>
-              <Input
-                id="new-team-division"
-                placeholder="e.g. U10, U12"
-                value={newTeam.division}
-                onChange={(e) => setNewTeam({ ...newTeam, division: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="new-team-season">Season</Label>
-              <Input
-                id="new-team-season"
-                placeholder="e.g. Fall 2025"
-                value={newTeam.season}
-                onChange={(e) => setNewTeam({ ...newTeam, season: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="new-team-location">Location</Label>
-              <Input
-                id="new-team-location"
-                placeholder="e.g. Main Field"
-                value={newTeam.location}
-                onChange={(e) => setNewTeam({ ...newTeam, location: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="new-team-notes">Notes</Label>
-              <Textarea
-                id="new-team-notes"
-                placeholder="Optional notes about this team"
-                value={newTeam.notes}
-                onChange={(e) => setNewTeam({ ...newTeam, notes: e.target.value })}
-                rows={3}
-              />
-            </div>
+      {/* Stats row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Total Teams', value: teams.length, color: 'text-gray-900' },
+          { label: 'Programs', value: programs.length, color: 'text-blue-600' },
+          { label: 'Players Assigned', value: totalPlayers, color: 'text-green-600' },
+          { label: 'Avg Roster', value: avgRoster, color: 'text-amber-600' },
+        ].map((stat, i) => (
+          <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{stat.label}</p>
+            <p className={`text-2xl font-bold mt-1 ${stat.color}`}>{stat.value}</p>
           </div>
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => { setAddTeamOpen(false); setAddTeamError(''); }}>Cancel</Button>
-            <Button onClick={handleAddTeamSubmit} disabled={createTeamMutation.isPending}>
-              {createTeamMutation.isPending ? 'Creating...' : 'Create Team'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        ))}
+      </div>
 
-      {programs.map((program: any) => {
-        const programTeams = getTeamsForProgram(program.id);
-        if (programTeams.length === 0) return null;
-        return (
-          <Card key={program.id}>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Layers className="w-4 h-4 text-red-600" />
-                <h3 className="font-semibold text-gray-900">{program.name}</h3>
-                <Badge variant="secondary" className="text-xs">{programTeams.length} team{programTeams.length !== 1 ? 's' : ''}</Badge>
-              </div>
-              <div className="space-y-2">
-                {programTeams.map(renderTeamRow)}
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+      {/* Program sections */}
+      <div>
+        {programs.map((program: any) => {
+          const programTeams = getTeamsForProgram(program.id);
+          if (programTeams.length === 0 && searchQuery.trim()) return null;
+          const expanded = isProgramExpanded(String(program.id));
+          return (
+            <div key={program.id} className="mb-6">
+              <button
+                onClick={() => toggleProgram(String(program.id))}
+                className="w-full flex items-center justify-between px-4 py-3 bg-white rounded-xl border border-gray-200 hover:border-gray-300 transition-colors mb-3"
+              >
+                <div className="flex items-center gap-3">
+                  <Layers className="w-4 h-4 text-gray-400" />
+                  <span className="font-semibold text-gray-900 text-sm">{program.name}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[11px] font-semibold">
+                    {programTeams.length} team{programTeams.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); openNewTeamEditor(String(program.id)); }}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-red-50 hover:text-red-600 text-gray-500 text-xs font-medium transition-colors"
+                  >
+                    <Plus className="w-3 h-3" /> Add
+                  </button>
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${expanded ? '' : '-rotate-90'}`} />
+                </div>
+              </button>
+              {expanded && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pl-0 sm:pl-2">
+                  {programTeams.map((team: any) => {
+                    const teamPlayers = getTeamPlayers(team);
+                    const headIds = team.headCoachIds?.length ? team.headCoachIds : (team.coachId ? [team.coachId] : []);
+                    const assistantIds = (team.assistantCoachIds || []).filter((id: string) => !headIds.includes(id));
+                    const managerIds = (team.managerIds || []).filter((id: string) => !headIds.includes(id) && !assistantIds.includes(id));
+                    const strengthIds = (team.strengthCoachIds || []).filter((id: string) => !headIds.includes(id) && !assistantIds.includes(id) && !managerIds.includes(id));
+                    const allCoachIds = [...headIds, ...assistantIds, ...managerIds, ...strengthIds];
+                    const coachLabels = allCoachIds.slice(0, 2).map((id: string) => {
+                      const c = (users || []).find((u: any) => u.id === id);
+                      const role = headIds.includes(id) ? 'HC' : assistantIds.includes(id) ? 'AC' : managerIds.includes(id) ? 'TM' : 'SC';
+                      return c ? `${role}: ${c.firstName} ${c.lastName}` : null;
+                    }).filter(Boolean);
+                    const avatarPlayers = teamPlayers.slice(0, 4);
+                    return (
+                      <div
+                        key={team.id}
+                        className="group relative bg-white rounded-xl border border-gray-200/80 p-4 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer"
+                        style={{ borderLeft: `4px solid ${team.color || '#9CA3AF'}` }}
+                        onClick={() => openEditor(team)}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: team.color || '#9CA3AF' }} />
+                            <h4 className="font-semibold text-gray-900 text-sm">{team.name}</h4>
+                          </div>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); openEditor(team); }}
+                              className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+                              title="Edit team"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDuplicate(team); }}
+                              className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-500"
+                              title="Duplicate team"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setDeletingTeam(team); }}
+                              className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"
+                              title="Delete team"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          {team.division && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">
+                              {team.division}
+                            </span>
+                          )}
+                          {team.season && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-600">
+                              {team.season}
+                            </span>
+                          )}
+                          {team.location && (
+                            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-600">
+                              <MapPin className="w-2 h-2" /> {team.location}
+                            </span>
+                          )}
+                        </div>
+                        {coachLabels.length > 0 && (
+                          <div className="mb-2">
+                            {coachLabels.map((label: any, i: number) => (
+                              <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-700 mr-1 mb-1">
+                                {label}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <Users className="w-3 h-3" />
+                            <span>{teamPlayers.length} player{teamPlayers.length !== 1 ? 's' : ''}</span>
+                          </div>
+                          <div className="flex -space-x-1.5">
+                            {avatarPlayers.slice(0, 3).map((p: any, i: number) => {
+                              const initials = `${p.firstName?.[0] || ''}${p.lastName?.[0] || ''}`.toUpperCase();
+                              return (
+                                <div key={p.id || i} className="w-5 h-5 rounded-full bg-gray-200 border border-white flex items-center justify-center text-[8px] font-bold text-gray-600" title={`${p.firstName} ${p.lastName}`}>
+                                  {initials}
+                                </div>
+                              );
+                            })}
+                            {teamPlayers.length > 3 && (
+                              <div className="w-5 h-5 rounded-full bg-gray-300 border border-white flex items-center justify-center text-[8px] font-bold text-gray-600">
+                                +{teamPlayers.length - 3}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {programTeams.length === 0 && (
+                    <div className="col-span-full text-center py-8 text-gray-400 text-sm">
+                      No teams yet.{' '}
+                      <button onClick={() => openNewTeamEditor(String(program.id))} className="text-red-500 hover:underline font-medium">Create one</button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
 
-      {unassignedTeams.length > 0 && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Users className="w-4 h-4 text-gray-400" />
-              <h3 className="font-semibold text-gray-500">Unassigned Teams</h3>
-              <Badge variant="secondary" className="text-xs">{unassignedTeams.length}</Badge>
-            </div>
-            <div className="space-y-2">
-              {unassignedTeams.map(renderTeamRow)}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+        {/* Unassigned teams */}
+        {unassignedTeams.length > 0 && (
+          <div className="mb-6">
+            <button
+              onClick={() => toggleProgram('__unassigned__')}
+              className="w-full flex items-center justify-between px-4 py-3 bg-white rounded-xl border border-gray-200 hover:border-gray-300 transition-colors mb-3"
+            >
+              <div className="flex items-center gap-3">
+                <Users className="w-4 h-4 text-gray-400" />
+                <span className="font-semibold text-gray-500 text-sm">Unassigned Teams</span>
+                <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[11px] font-semibold">
+                  {unassignedTeams.length}
+                </span>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isProgramExpanded('__unassigned__') ? '' : '-rotate-90'}`} />
+            </button>
+            {isProgramExpanded('__unassigned__') && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pl-0 sm:pl-2">
+                {unassignedTeams.map((team: any) => {
+                  const teamPlayers = getTeamPlayers(team);
+                  const headIds = team.headCoachIds?.length ? team.headCoachIds : (team.coachId ? [team.coachId] : []);
+                  const assistantIds = (team.assistantCoachIds || []).filter((id: string) => !headIds.includes(id));
+                  const managerIds = (team.managerIds || []).filter((id: string) => !headIds.includes(id) && !assistantIds.includes(id));
+                  const strengthIds = (team.strengthCoachIds || []).filter((id: string) => !headIds.includes(id) && !assistantIds.includes(id) && !managerIds.includes(id));
+                  const allCoachIds = [...headIds, ...assistantIds, ...managerIds, ...strengthIds];
+                  const coachLabels = allCoachIds.slice(0, 2).map((id: string) => {
+                    const c = (users || []).find((u: any) => u.id === id);
+                    const role = headIds.includes(id) ? 'HC' : assistantIds.includes(id) ? 'AC' : managerIds.includes(id) ? 'TM' : 'SC';
+                    return c ? `${role}: ${c.firstName} ${c.lastName}` : null;
+                  }).filter(Boolean);
+                  return (
+                    <div
+                      key={team.id}
+                      className="group relative bg-white rounded-xl border border-gray-200/80 p-4 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer"
+                      style={{ borderLeft: `4px solid ${team.color || '#9CA3AF'}` }}
+                      onClick={() => openEditor(team)}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: team.color || '#9CA3AF' }} />
+                          <h4 className="font-semibold text-gray-900 text-sm">{team.name}</h4>
+                        </div>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={(e) => { e.stopPropagation(); openEditor(team); }} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Edit team"><Edit className="w-3.5 h-3.5" /></button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDuplicate(team); }} className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-500" title="Duplicate team"><Copy className="w-3.5 h-3.5" /></button>
+                          <button onClick={(e) => { e.stopPropagation(); setDeletingTeam(team); }} className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500" title="Delete team"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {team.division && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">{team.division}</span>
+                        )}
+                        {team.season && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-600">{team.season}</span>
+                        )}
+                        {team.location && (
+                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-600">
+                            <MapPin className="w-2 h-2" /> {team.location}
+                          </span>
+                        )}
+                      </div>
+                      {coachLabels.length > 0 && (
+                        <div className="mb-2">
+                          {coachLabels.map((label: any, i: number) => (
+                            <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-700 mr-1 mb-1">{label}</span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <Users className="w-3 h-3" />
+                          <span>{teamPlayers.length} player{teamPlayers.length !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div className="flex -space-x-1.5">
+                          {teamPlayers.slice(0, 3).map((p: any, i: number) => {
+                            const initials = `${p.firstName?.[0] || ''}${p.lastName?.[0] || ''}`.toUpperCase();
+                            return (
+                              <div key={p.id || i} className="w-5 h-5 rounded-full bg-gray-200 border border-white flex items-center justify-center text-[8px] font-bold text-gray-600" title={`${p.firstName} ${p.lastName}`}>
+                                {initials}
+                              </div>
+                            );
+                          })}
+                          {teamPlayers.length > 3 && (
+                            <div className="w-5 h-5 rounded-full bg-gray-100 border border-white flex items-center justify-center text-[8px] font-bold text-gray-500">
+                              +{teamPlayers.length - 3}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {teams.length === 0 && (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-semibold mb-2">No Teams Yet</h3>
-            <p className="text-gray-600">Teams will appear here once created and assigned to programs.</p>
-          </CardContent>
-        </Card>
+        <div className="text-center py-16 text-gray-400">
+          <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+          <h3 className="text-lg font-semibold text-gray-600 mb-2">No Teams Yet</h3>
+          <p className="text-sm mb-4">Teams will appear here once created and assigned to programs.</p>
+          <Button size="sm" onClick={() => openNewTeamEditor()} className="bg-red-600 hover:bg-red-700 text-white">
+            <Plus className="w-4 h-4 mr-1.5" /> Create First Team
+          </Button>
+        </div>
       )}
 
-      {selectedTeam && (
-        <Dialog open={!!selectedTeam} onOpenChange={() => { setSelectedTeam(null); setRosterSearch(''); setManageTab('roster'); }}>
-          <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Manage Team - {selectedTeam.name}</DialogTitle>
-              <CardDescription>
-                Manage players and coaching staff for this team
-              </CardDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="flex gap-2 border-b">
-                <button
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${manageTab === 'roster' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-                  onClick={() => setManageTab('roster')}
-                >
-                  Players
-                </button>
-                <button
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${manageTab === 'coaches' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-                  onClick={() => setManageTab('coaches')}
-                >
-                  Coaches
-                </button>
+      {/* Team Editor Modal */}
+      {editingTeam && (
+        <Dialog open={!!editingTeam} onOpenChange={() => setEditingTeam(null)}>
+          <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col p-0">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex-shrink-0">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">
+                  {isEditorNew ? 'Create New Team' : `Edit Team — ${editingTeam.name}`}
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {isEditorNew ? 'Set up a new team under a program' : 'Update team details, roster & coaching staff'}
+                </p>
               </div>
+            </div>
 
-              {manageTab === 'coaches' && (
-                <div className="space-y-4">
-                  <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
-                    <p className="text-sm font-medium text-gray-700">Current Coaching Staff</p>
-                    <div className="flex flex-wrap gap-2">
-                      {(() => {
-                        const headIds = selectedTeam.headCoachIds?.length ? selectedTeam.headCoachIds : (selectedTeam.coachId ? [selectedTeam.coachId] : []);
-                        const assistantIds = selectedTeam.assistantCoachIds || [];
-                        if (headIds.length === 0 && assistantIds.length === 0) {
-                          return <span className="text-xs text-gray-400">No coaches assigned</span>;
-                        }
-                        return (
-                          <>
-                            {headIds.map((id: string) => {
-                              const c = (users || []).find((u: any) => u.id === id);
-                              return c ? (
-                                <Badge key={id} className="bg-red-100 text-red-700 border-red-200">
-                                  HC: {c.firstName} {c.lastName}
-                                </Badge>
-                              ) : null;
-                            })}
-                            {assistantIds.filter((id: string) => !headIds.includes(id)).map((id: string) => {
-                              const c = (users || []).find((u: any) => u.id === id);
-                              return c ? (
-                                <Badge key={id} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                  AC: {c.firstName} {c.lastName}
-                                </Badge>
-                              ) : null;
-                            })}
-                          </>
-                        );
-                      })()}
+            {/* Tabs */}
+            <div className="flex border-b border-gray-100 px-6 bg-white flex-shrink-0">
+              {[
+                { key: 'details', label: 'Details' },
+                { key: 'roster', label: isEditorNew ? 'Roster' : `Roster (${editingTeamPlayers.length})` },
+                { key: 'coaches', label: isEditorNew ? 'Coaches' : `Coaches (${editingTeamAllCoachIds.length})` },
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setEditorTab(tab.key as any)}
+                  className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    editorTab === tab.key
+                      ? 'border-red-500 text-red-600'
+                      : 'border-transparent text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {editorTab === 'details' && (
+                <div className="space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-700 mb-1.5 block">Team Name <span className="text-red-500">*</span></Label>
+                      <Input
+                        value={editorForm.name || ''}
+                        onChange={e => setEditorForm((f: any) => ({ ...f, name: e.target.value }))}
+                        placeholder="e.g. U10 Red"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-700 mb-1.5 block">Program</Label>
+                      <Select
+                        value={editorForm.programId || '__none__'}
+                        onValueChange={val => setEditorForm((f: any) => ({ ...f, programId: val === '__none__' ? '' : val }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a program" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">No program</SelectItem>
+                          {programs.map((p: any) => (
+                            <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
-                  <Input
-                    placeholder="Search coaches by name..."
-                    value={rosterSearch}
-                    onChange={(e) => setRosterSearch(e.target.value)}
-                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-700 mb-1.5 block">Division</Label>
+                      <Input value={editorForm.division || ''} onChange={e => setEditorForm((f: any) => ({ ...f, division: e.target.value }))} placeholder="e.g. U10, U12" />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-700 mb-1.5 block">Season</Label>
+                      <Input value={editorForm.season || ''} onChange={e => setEditorForm((f: any) => ({ ...f, season: e.target.value }))} placeholder="e.g. Fall 2025" />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-700 mb-1.5 block">Location</Label>
+                      <Input value={editorForm.location || ''} onChange={e => setEditorForm((f: any) => ({ ...f, location: e.target.value }))} placeholder="e.g. Main Court" />
+                    </div>
+                  </div>
 
-                  <div className="max-h-72 overflow-y-auto border rounded-lg">
-                    {coaches.length === 0 ? (
-                      <p className="text-sm text-gray-500 text-center py-8">No coaches available</p>
-                    ) : (
-                      (() => {
-                        const filteredCoaches = rosterSearch.trim()
-                          ? coaches.filter((c: any) => `${c.firstName} ${c.lastName}`.toLowerCase().includes(rosterSearch.toLowerCase()))
-                          : coaches;
-                        return filteredCoaches.length === 0 ? (
-                          <p className="text-sm text-gray-500 text-center py-4">No coaches match your search</p>
-                        ) : (
-                          filteredCoaches.map((coach: any) => {
-                            const headIds = selectedTeam.headCoachIds?.length ? selectedTeam.headCoachIds : (selectedTeam.coachId ? [selectedTeam.coachId] : []);
-                            const assistantIds = selectedTeam.assistantCoachIds || [];
-                            const isHead = headIds.includes(coach.id);
-                            const isAssistant = assistantIds.includes(coach.id);
-                            const isAssigned = isHead || isAssistant;
-                            return (
-                              <div 
-                                key={coach.id} 
-                                className={`flex items-center justify-between p-3 hover:bg-gray-50 border-b last:border-b-0 ${isAssigned ? 'bg-blue-50' : ''}`}
+                  {/* Team Color */}
+                  <div>
+                    <Label className="text-xs font-semibold text-gray-700 mb-2 block">Team Color</Label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {PRESET_COLORS.map(c => (
+                        <button
+                          key={c}
+                          onClick={() => setEditorForm((f: any) => ({ ...f, color: c }))}
+                          className="w-7 h-7 rounded-full border-2 transition-all duration-150 flex items-center justify-center"
+                          style={{
+                            backgroundColor: c,
+                            borderColor: editorForm.color === c ? '#111' : 'transparent',
+                            transform: editorForm.color === c ? 'scale(1.15)' : 'scale(1)',
+                          }}
+                        >
+                          {editorForm.color === c && <Check className="w-3 h-3 text-white" />}
+                        </button>
+                      ))}
+                      <input
+                        type="color"
+                        value={editorForm.color || '#DC2626'}
+                        onChange={e => setEditorForm((f: any) => ({ ...f, color: e.target.value }))}
+                        className="w-7 h-7 rounded-full border border-gray-200 cursor-pointer overflow-hidden p-0"
+                        title="Custom color"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <Label className="text-xs font-semibold text-gray-700 mb-1.5 block">Notes</Label>
+                    <Textarea
+                      value={editorForm.notes || ''}
+                      onChange={e => setEditorForm((f: any) => ({ ...f, notes: e.target.value }))}
+                      rows={3}
+                      placeholder="Any additional info about this team..."
+                    />
+                  </div>
+                </div>
+              )}
+
+              {editorTab === 'roster' && (
+                <div className="space-y-4">
+                  {isEditorNew ? (
+                    <p className="text-sm text-gray-500 text-center py-4">Save the team first, then manage its roster here.</p>
+                  ) : (
+                    <>
+                      {editingTeamPlayers.length > 0 && (
+                        <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                          <p className="text-xs font-semibold text-green-700 mb-2">Current Roster — {editingTeamPlayers.length} player{editingTeamPlayers.length !== 1 ? 's' : ''}</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {editingTeamPlayers.map((p: any) => (
+                              <button
+                                key={p.id}
+                                onClick={() => togglePlayer(p, true)}
+                                className="inline-flex items-center gap-1 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium hover:bg-red-100 hover:text-red-700 transition-colors group"
                               >
+                                {p.firstName} {p.lastName}
+                                <X className="w-2.5 h-2.5 group-hover:text-red-600" />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                        <Input
+                          value={playerSearch}
+                          onChange={e => setPlayerSearch(e.target.value)}
+                          placeholder="Search players by name or email..."
+                          className="pl-9"
+                        />
+                      </div>
+                      <div className="border border-gray-200 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
+                        {filteredPlayerSearch.length === 0 ? (
+                          <p className="text-sm text-gray-500 text-center py-8">No players found</p>
+                        ) : filteredPlayerSearch.map((p: any) => {
+                          const userTeamIds = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
+                          const isOnTeam = userTeamIds.includes(editingTeam.id) || p.teamId === editingTeam.id;
+                          return (
+                            <button
+                              key={p.id}
+                              onClick={() => togglePlayer(p, isOnTeam)}
+                              className={`w-full flex items-center justify-between px-4 py-2.5 text-left border-b last:border-b-0 transition-colors ${isOnTeam ? 'bg-green-50' : 'hover:bg-gray-50'}`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${isOnTeam ? 'bg-red-500 border-red-500' : 'border-gray-300'}`}>
+                                  {isOnTeam && <Check className="w-2.5 h-2.5 text-white" />}
+                                </div>
+                                <div>
+                                  <p className={`text-sm ${isOnTeam ? 'font-semibold text-green-700' : 'text-gray-900'}`}>{p.firstName} {p.lastName}</p>
+                                  {p.email && <p className="text-[11px] text-gray-400">{p.email}</p>}
+                                </div>
+                              </div>
+                              {isOnTeam && <Badge className="bg-green-100 text-green-700 border-green-200 text-[10px]">On Team</Badge>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {editorTab === 'coaches' && (
+                <div className="space-y-4">
+                  {isEditorNew ? (
+                    <p className="text-sm text-gray-500 text-center py-4">Save the team first, then manage coaches here.</p>
+                  ) : (
+                    <>
+                      {editingTeamAllCoachIds.length > 0 && (
+                        <div className="border border-gray-200 rounded-xl divide-y">
+                          {editingTeamAllCoachIds.map((coachId: string) => {
+                            const coach = (users || []).find((u: any) => u.id === coachId);
+                            if (!coach) return null;
+                            const currentRole = editingTeamHeadIds.includes(coachId) ? 'HC'
+                              : editingTeamAssistantIds.includes(coachId) ? 'AC'
+                              : editingTeamManagerIds.includes(coachId) ? 'TM'
+                              : 'SC';
+                            return (
+                              <div key={coachId} className="flex items-center justify-between px-4 py-3">
                                 <div className="flex items-center gap-3">
-                                  <Checkbox 
-                                    checked={isAssigned}
-                                    onCheckedChange={async (checked) => {
-                                      try {
-                                        const currentHeadIds = selectedTeam.headCoachIds?.length ? [...selectedTeam.headCoachIds] : (selectedTeam.coachId ? [selectedTeam.coachId] : []);
-                                        const currentAssistantIds = [...(selectedTeam.assistantCoachIds || [])];
-                                        
-                                        if (checked) {
-                                          if (!currentAssistantIds.includes(coach.id) && !currentHeadIds.includes(coach.id)) {
-                                            currentAssistantIds.push(coach.id);
-                                          }
-                                        } else {
-                                          const headIdx = currentHeadIds.indexOf(coach.id);
-                                          if (headIdx !== -1) currentHeadIds.splice(headIdx, 1);
-                                          const asstIdx = currentAssistantIds.indexOf(coach.id);
-                                          if (asstIdx !== -1) currentAssistantIds.splice(asstIdx, 1);
-                                        }
-                                        
-                                        await apiRequest("PATCH", `/api/teams/${selectedTeam.id}`, {
-                                          headCoachIds: currentHeadIds,
-                                          assistantCoachIds: currentAssistantIds,
-                                          coachId: currentHeadIds[0] || null,
-                                        });
-                                        
-                                        setSelectedTeam((prev: any) => ({
-                                          ...prev,
-                                          headCoachIds: currentHeadIds,
-                                          assistantCoachIds: currentAssistantIds,
-                                          coachId: currentHeadIds[0] || null,
-                                        }));
-                                        
-                                        queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-                                        toast({ 
-                                          title: checked 
-                                            ? `Added ${coach.firstName} ${coach.lastName} as coach`
-                                            : `Removed ${coach.firstName} ${coach.lastName} from coaching staff`
-                                        });
-                                      } catch (error) {
-                                        toast({ title: "Failed to update coaching staff", variant: "destructive" });
-                                      }
-                                    }}
-                                  />
+                                  <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-600 uppercase">
+                                    {`${coach.firstName?.[0] || ''}${coach.lastName?.[0] || ''}`}
+                                  </div>
                                   <div>
-                                    <p className={`text-sm ${isAssigned ? 'font-medium text-blue-700' : ''}`}>{coach.firstName} {coach.lastName}</p>
-                                    {coach.email && <p className="text-xs text-gray-400">{coach.email}</p>}
+                                    <p className="text-sm font-medium text-gray-900">{coach.firstName} {coach.lastName}</p>
+                                    {coach.email && <p className="text-[11px] text-gray-400">{coach.email}</p>}
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  {isAssigned && (
-                                    <Select
-                                      value={isHead ? 'head' : 'assistant'}
-                                      onValueChange={async (val) => {
-                                        try {
-                                          const currentHeadIds = selectedTeam.headCoachIds?.length ? [...selectedTeam.headCoachIds] : (selectedTeam.coachId ? [selectedTeam.coachId] : []);
-                                          const currentAssistantIds = [...(selectedTeam.assistantCoachIds || [])];
-                                          
-                                          const hIdx = currentHeadIds.indexOf(coach.id);
-                                          if (hIdx !== -1) currentHeadIds.splice(hIdx, 1);
-                                          const aIdx = currentAssistantIds.indexOf(coach.id);
-                                          if (aIdx !== -1) currentAssistantIds.splice(aIdx, 1);
-                                          
-                                          if (val === 'head') {
-                                            currentHeadIds.push(coach.id);
-                                          } else {
-                                            currentAssistantIds.push(coach.id);
-                                          }
-                                          
-                                          await apiRequest("PATCH", `/api/teams/${selectedTeam.id}`, {
-                                            headCoachIds: currentHeadIds,
-                                            assistantCoachIds: currentAssistantIds,
-                                            coachId: currentHeadIds[0] || null,
-                                          });
-                                          
-                                          setSelectedTeam((prev: any) => ({
-                                            ...prev,
-                                            headCoachIds: currentHeadIds,
-                                            assistantCoachIds: currentAssistantIds,
-                                            coachId: currentHeadIds[0] || null,
-                                          }));
-                                          
-                                          queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-                                          toast({ title: `Updated ${coach.firstName} ${coach.lastName} to ${val === 'head' ? 'Head Coach' : 'Assistant Coach'}` });
-                                        } catch (error) {
-                                          toast({ title: "Failed to update coach role", variant: "destructive" });
-                                        }
-                                      }}
-                                    >
-                                      <SelectTrigger className="w-32 h-8 text-xs">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="head">Head Coach</SelectItem>
-                                        <SelectItem value="assistant">Assistant</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  )}
+                                  <Select value={currentRole} onValueChange={val => updateCoachRole(coachId, val)}>
+                                    <SelectTrigger className="w-36 h-8 text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {Object.entries(COACH_ROLES).map(([k, v]) => (
+                                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <button
+                                    onClick={() => toggleCoach(coachId, false)}
+                                    className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
                                 </div>
                               </div>
                             );
-                          })
-                        );
-                      })()
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {manageTab === 'roster' && (
-                <div className="space-y-4">
-                  <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
-                    <p className="text-sm font-medium text-gray-700">Coaching Staff</p>
-                    <div className="flex flex-wrap gap-2">
-                      {(() => {
-                        const headIds = selectedTeam.headCoachIds?.length ? selectedTeam.headCoachIds : (selectedTeam.coachId ? [selectedTeam.coachId] : []);
-                        const assistantIds = selectedTeam.assistantCoachIds || [];
-                        if (headIds.length === 0 && assistantIds.length === 0) {
-                          return <span className="text-xs text-gray-400">No coaches assigned</span>;
-                        }
-                        return (
-                          <>
-                            {headIds.map((id: string) => {
-                              const c = (users || []).find((u: any) => u.id === id);
-                              return c ? (
-                                <Badge key={id} className="bg-red-100 text-red-700 border-red-200">
-                                  HC: {c.firstName} {c.lastName}
-                                </Badge>
-                              ) : null;
-                            })}
-                            {assistantIds.filter((id: string) => !headIds.includes(id)).map((id: string) => {
-                              const c = (users || []).find((u: any) => u.id === id);
-                              return c ? (
-                                <Badge key={id} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                  AC: {c.firstName} {c.lastName}
-                                </Badge>
-                              ) : null;
-                            })}
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
-
-                  <Input
-                    placeholder="Search players by name..."
-                    value={rosterSearch}
-                    onChange={(e) => setRosterSearch(e.target.value)}
-                  />
-
-                  {(() => {
-                    const rosterPlayers = players.filter((p: any) => {
-                      const userTeamIds = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
-                      return userTeamIds.includes(selectedTeam.id) || p.teamId === selectedTeam.id;
-                    });
-                    return rosterPlayers.length > 0 ? (
-                      <div className="border rounded-lg p-3 bg-green-50">
-                        <p className="text-xs font-semibold text-green-700 mb-2">Current Roster ({rosterPlayers.length} players)</p>
-                        <div className="flex flex-wrap gap-1">
-                          {rosterPlayers.map((player: any) => (
-                            <div key={player.id} className="inline-flex items-center gap-1 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                              <span>{player.firstName} {player.lastName}</span>
-                            </div>
-                          ))}
+                          })}
                         </div>
+                      )}
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                        <Input
+                          value={coachSearch}
+                          onChange={e => setCoachSearch(e.target.value)}
+                          placeholder="Search coaches to add..."
+                          className="pl-9"
+                        />
                       </div>
-                    ) : null;
-                  })()}
-
-                  <div className="max-h-72 overflow-y-auto border rounded-lg">
-                    {players.length === 0 ? (
-                      <p className="text-sm text-gray-500 text-center py-8">No players available</p>
-                    ) : (
-                      (() => {
-                        const filteredPlayers = rosterSearch.trim()
-                          ? players.filter((p: any) => `${p.firstName} ${p.lastName}`.toLowerCase().includes(rosterSearch.toLowerCase()))
-                          : players;
-                        return filteredPlayers.length === 0 ? (
-                          <p className="text-sm text-gray-500 text-center py-4">No players match your search</p>
-                        ) : (
-                          filteredPlayers.map((player: any) => {
-                            const userTeamIds = Array.isArray(player.teamIds) ? player.teamIds : player.teamId ? [player.teamId] : [];
-                            const isOnTeam = userTeamIds.includes(selectedTeam.id) || player.teamId === selectedTeam.id;
-                            return (
-                              <div 
-                                key={player.id} 
-                                className={`flex items-center justify-between p-3 hover:bg-gray-50 border-b last:border-b-0 ${isOnTeam ? 'bg-green-50' : ''}`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <Checkbox 
-                                    checked={isOnTeam}
-                                    onCheckedChange={async (checked) => {
-                                      try {
-                                        if (checked) {
-                                          await apiRequest("POST", `/api/teams/${selectedTeam.id}/assign-player`, { playerId: player.id });
-                                        } else {
-                                          await apiRequest("POST", `/api/teams/${selectedTeam.id}/remove-player`, { playerId: player.id });
-                                        }
-                                        queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-                                        queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-                                        queryClient.invalidateQueries({ queryKey: ["/api/admin/enrollments"] });
-                                        queryClient.invalidateQueries({ queryKey: ["/api/product-enrollments"] });
-                                        queryClient.invalidateQueries({ queryKey: ["/api/enrollments"] });
-                                        queryClient.invalidateQueries({ queryKey: ['/api/admin/pending-assignments'] });
-                                        toast({ 
-                                          title: checked 
-                                            ? `Added ${player.firstName} ${player.lastName} to ${selectedTeam.name}`
-                                            : `Removed ${player.firstName} ${player.lastName} from ${selectedTeam.name}`
-                                        });
-                                      } catch (error) {
-                                        toast({ title: "Failed to update player assignment", variant: "destructive" });
-                                      }
-                                    }}
-                                  />
-                                  <div>
-                                    <p className={`text-sm ${isOnTeam ? 'font-medium text-green-700' : ''}`}>{player.firstName} {player.lastName}</p>
-                                    {player.email && <p className="text-xs text-gray-400">{player.email}</p>}
-                                  </div>
-                                </div>
-                                {isOnTeam && (
-                                  <Badge variant="default" className="bg-green-100 text-green-700 border-green-200">On Team</Badge>
-                                )}
+                      <div className="border border-gray-200 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
+                        {filteredCoachSearch.filter((c: any) => !editingTeamAllCoachIds.includes(c.id)).length === 0 ? (
+                          <p className="text-sm text-gray-400 text-center py-4">
+                            {coaches.length === editingTeamAllCoachIds.length ? 'All coaches assigned' : 'No coaches found'}
+                          </p>
+                        ) : filteredCoachSearch.filter((c: any) => !editingTeamAllCoachIds.includes(c.id)).map((coach: any) => (
+                          <button
+                            key={coach.id}
+                            onClick={() => toggleCoach(coach.id, true)}
+                            className="w-full flex items-center justify-between px-4 py-2.5 text-left border-b last:border-b-0 hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-600 uppercase">
+                                {`${coach.firstName?.[0] || ''}${coach.lastName?.[0] || ''}`}
                               </div>
-                            );
-                          })
-                        );
-                      })()
-                    )}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    <strong>Roster Count:</strong> {players.filter((p: any) => {
-                      const userTeamIds = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
-                      return userTeamIds.includes(selectedTeam.id) || p.teamId === selectedTeam.id;
-                    }).length} players
-                    {selectedTeam.rosterSize > 0 && <span className="text-gray-400"> / {selectedTeam.rosterSize} max</span>}
-                  </div>
+                              <div>
+                                <p className="text-sm text-gray-900">{coach.firstName} {coach.lastName}</p>
+                                {coach.email && <p className="text-[11px] text-gray-400">{coach.email}</p>}
+                              </div>
+                            </div>
+                            <span className="text-xs text-red-500 font-medium flex items-center gap-1">
+                              <Plus className="w-3 h-3" /> Add
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex-shrink-0">
+              <div className="text-xs text-gray-400">
+                {isEditorNew ? '' : `${editingTeamPlayers.length} player${editingTeamPlayers.length !== 1 ? 's' : ''} · ${editingTeamAllCoachIds.length} coach${editingTeamAllCoachIds.length !== 1 ? 'es' : ''}`}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setEditingTeam(null)}>Cancel</Button>
+                <Button
+                  onClick={handleEditorSave}
+                  disabled={!editorForm.name?.trim() || createTeamMutation.isPending || updateTeamMutation.isPending}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {createTeamMutation.isPending || updateTeamMutation.isPending ? 'Saving...' : isEditorNew ? 'Create Team' : 'Save Changes'}
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deletingTeam} onOpenChange={() => setDeletingTeam(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Team</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{deletingTeam?.name}</strong>? This will remove all roster assignments. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteTeamMutation.mutate(String(deletingTeam?.id))}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleteTeamMutation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

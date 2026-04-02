@@ -579,11 +579,14 @@ export const teams = pgTable("teams", {
   coachId: varchar("coach_id"),
   headCoachIds: varchar("head_coach_ids").array().default(sql`ARRAY[]::varchar[]`),
   assistantCoachIds: varchar("assistant_coach_ids").array().default(sql`ARRAY[]::varchar[]`),
+  managerIds: varchar("manager_ids").array().default(sql`ARRAY[]::varchar[]`),
+  strengthCoachIds: varchar("strength_coach_ids").array().default(sql`ARRAY[]::varchar[]`),
   season: text(),
   organization: text(),
   location: text(),
   scheduleLink: varchar("schedule_link"),
   code: varchar(), // Short import code (e.g. "THU12") for CSV/XLSX bulk import matching
+  color: varchar("color"), // Team color hex code (e.g. "#DC2626")
   rosterSize: integer("roster_size").default(0),
   active: boolean().default(true),
   notes: text(),
@@ -1380,6 +1383,8 @@ export const insertTeamSchema = z.object({
   coachId: z.string().optional(),
   headCoachIds: z.array(z.string()).default([]),
   assistantCoachIds: z.array(z.string()).default([]),
+  managerIds: z.array(z.string()).default([]),
+  strengthCoachIds: z.array(z.string()).default([]),
   season: z.string().optional(),
   organization: z.string().optional(),
   location: z.string().optional(),
@@ -1388,6 +1393,7 @@ export const insertTeamSchema = z.object({
   active: z.boolean().default(true),
   notes: z.string().optional(),
   code: z.string().optional(),
+  color: z.string().optional(),
 });
 
 export type InsertTeam = z.infer<typeof insertTeamSchema>;

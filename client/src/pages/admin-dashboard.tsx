@@ -7035,7 +7035,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                 <Plus className="w-4 h-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto bg-[#1a2332] text-slate-200 border-slate-700 [&>button]:text-slate-400 [&>button:hover]:text-slate-200">
+            <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
               <DialogHeader className="sr-only">
                 <DialogTitle>Create New Event</DialogTitle>
               </DialogHeader>
@@ -7044,7 +7044,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                   console.log('📍 Creating event with data:', data);
                   createEvent.mutate(data);
                 })} className="space-y-5">
-                  <span className="inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider bg-teal-900/50 text-teal-400 rounded-full border border-teal-700/50">New Event</span>
+                  <span className="inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider bg-teal-50 text-teal-700 rounded-full border border-teal-200">New Event</span>
 
                   <FormField
                     control={form.control}
@@ -7052,7 +7052,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <Input {...field} placeholder="Event title..." className="bg-[#243044] border-slate-600 text-slate-200 text-lg h-12 placeholder:text-slate-500 focus-visible:ring-slate-500" data-testid="input-event-title" />
+                          <Input {...field} placeholder="Event title..." className="text-lg h-12" data-testid="input-event-title" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -7067,14 +7067,14 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                         name="type"
                         render={({ field }) => (
                           <FormItem>
-                            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Event Type</label>
+                            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Event Type</label>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
-                                <SelectTrigger className="bg-[#243044] border-slate-600 text-slate-200" data-testid="select-event-type">
+                                <SelectTrigger data-testid="select-event-type">
                                   <SelectValue />
                                 </SelectTrigger>
                               </FormControl>
-                              <SelectContent className="bg-[#1a2332] border-slate-600">
+                              <SelectContent>
 
                                 <SelectItem value="game">Game</SelectItem>
                                 <SelectItem value="tournament">Tournament</SelectItem>
@@ -7104,16 +7104,16 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                       />
 
                       <div className="space-y-3">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Date & Time</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Date & Time</label>
                         <div className="grid grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
                             name="startTime"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-slate-300 text-sm">Start</FormLabel>
+                                <FormLabel className="text-sm">Start</FormLabel>
                                 <FormControl>
-                                  <Input {...field} type="datetime-local" className="bg-[#243044] border-slate-600 text-slate-200 [color-scheme:dark] focus-visible:ring-slate-500" data-testid="input-event-start" />
+                                  <Input {...field} type="datetime-local" data-testid="input-event-start" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -7124,9 +7124,9 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                             name="endTime"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-slate-300 text-sm">End</FormLabel>
+                                <FormLabel className="text-sm">End</FormLabel>
                                 <FormControl>
-                                  <Input {...field} type="datetime-local" className="bg-[#243044] border-slate-600 text-slate-200 [color-scheme:dark] focus-visible:ring-slate-500" data-testid="input-event-end" />
+                                  <Input {...field} type="datetime-local" data-testid="input-event-end" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -7136,11 +7136,11 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                       </div>
 
                       <div className="space-y-3">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Location</label>
-                        <div className="flex rounded-lg overflow-hidden w-fit border border-slate-700">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Location</label>
+                        <div className="flex rounded-lg overflow-hidden w-fit border">
                           <button
                             type="button"
-                            className={`px-4 py-2 text-sm font-medium transition-colors ${locationType === 'physical' ? 'bg-slate-600 text-white' : 'bg-[#243044] text-slate-400 hover:bg-[#2a3a52]'}`}
+                            className={`px-4 py-2 text-sm font-medium transition-colors ${locationType === 'physical' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
                             onClick={() => {
                               setLocationType('physical');
                               form.setValue("location", "");
@@ -7153,7 +7153,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                           </button>
                           <button
                             type="button"
-                            className={`px-4 py-2 text-sm font-medium transition-colors ${locationType === 'online' ? 'bg-slate-600 text-white' : 'bg-[#243044] text-slate-400 hover:bg-[#2a3a52]'}`}
+                            className={`px-4 py-2 text-sm font-medium transition-colors ${locationType === 'online' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
                             onClick={() => {
                               setLocationType('online');
                               form.setValue("location", "Online");
@@ -7183,7 +7183,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                     className="w-full"
                                   />
                                 </FormControl>
-                                <p className="text-xs text-slate-500">Search and select a location — enables GPS check-in geo-fencing</p>
+                                <p className="text-xs text-muted-foreground">Search and select a location — enables GPS check-in geo-fencing</p>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -7195,9 +7195,9 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                             render={({ field }) => (
                               <FormItem>
                                 <FormControl>
-                                  <Input {...field} placeholder="https://zoom.us/j/..." className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500 focus-visible:ring-slate-500" data-testid="input-event-meeting-link" />
+                                  <Input {...field} placeholder="https://zoom.us/j/..." data-testid="input-event-meeting-link" />
                                 </FormControl>
-                                <p className="text-xs text-slate-500">Paste a Zoom, Google Meet, or other meeting link</p>
+                                <p className="text-xs text-muted-foreground">Paste a Zoom, Google Meet, or other meeting link</p>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -7206,7 +7206,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                       </div>
 
                       <div className="space-y-3">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Audience</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Audience</label>
                         <div className="grid grid-cols-3 gap-2">
                           {[
                             { value: 'all', label: 'Everyone' },
@@ -7222,7 +7222,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                               className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                                 String(form.watch("targetType")) === opt.value
                                   ? 'bg-blue-600 text-white'
-                                  : 'bg-[#243044] text-slate-300 border border-slate-600 hover:bg-[#2a3a52]'
+                                  : 'border bg-background hover:bg-muted'
                               }`}
                               onClick={() => {
                                 form.setValue("targetType", opt.value as any);
@@ -7244,9 +7244,8 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                               placeholder="Search by name, email, or role..."
                               value={createEventUserSearch}
                               onChange={(e) => setCreateEventUserSearch(e.target.value)}
-                              className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500 focus-visible:ring-slate-500"
                             />
-                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                            <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
                               {allUsers.filter((u: any) => u.isActive).filter((user: any) => {
                                 const q = createEventUserSearch.toLowerCase();
                                 if (!q) return true;
@@ -7269,19 +7268,19 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                     }}
                                     data-testid={`checkbox-user-${user.id}`}
                                   />
-                                  <label className="text-sm cursor-pointer text-slate-300">
+                                  <label className="text-sm cursor-pointer">
                                     {user.firstName} {user.lastName} - {user.role} ({user.email})
                                   </label>
                                 </div>
                               ))}
                             </div>
-                            <p className="text-xs text-slate-500">{selectedUsers.length} user(s) selected</p>
+                            <p className="text-xs text-muted-foreground">{selectedUsers.length} user(s) selected</p>
                           </div>
                         )}
 
                         {String(form.watch("targetType")) === "team" && (
                           <div className="space-y-2">
-                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                            <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
                               {teams.map((team: any) => (
                                 <div key={team.id} className="flex items-center space-x-2">
                                   <Checkbox
@@ -7295,19 +7294,19 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                     }}
                                     data-testid={`checkbox-team-${team.id}`}
                                   />
-                                  <label className="text-sm cursor-pointer text-slate-300">
+                                  <label className="text-sm cursor-pointer">
                                     {team.name}{team.programType ? ` (${team.programType})` : ''}
                                   </label>
                                 </div>
                               ))}
                             </div>
-                            <p className="text-xs text-slate-500">{selectedTeams.length} team(s) selected</p>
+                            <p className="text-xs text-muted-foreground">{selectedTeams.length} team(s) selected</p>
                           </div>
                         )}
 
                         {String(form.watch("targetType")) === "division" && (
                           <div className="space-y-2">
-                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                            <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
                               {divisions.filter((d: any) => d.isActive).map((division: any) => (
                                 <div key={division.id} className="flex items-center space-x-2">
                                   <Checkbox
@@ -7321,19 +7320,19 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                     }}
                                     data-testid={`checkbox-division-${division.id}`}
                                   />
-                                  <label className="text-sm cursor-pointer text-slate-300">
+                                  <label className="text-sm cursor-pointer">
                                     {division.name} {division.ageRange ? `(${division.ageRange})` : ''}
                                   </label>
                                 </div>
                               ))}
                             </div>
-                            <p className="text-xs text-slate-500">{selectedDivisions.length} division(s) selected</p>
+                            <p className="text-xs text-muted-foreground">{selectedDivisions.length} division(s) selected</p>
                           </div>
                         )}
 
                         {String(form.watch("targetType")) === "program" && (
                           <div className="space-y-2">
-                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                            <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
                               {programs.filter((p: any) => p.isActive && p.productCategory === 'service').map((program: any) => (
                                 <div key={program.id} className="flex items-center space-x-2">
                                   <Checkbox
@@ -7347,19 +7346,19 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                     }}
                                     data-testid={`checkbox-program-${program.id}`}
                                   />
-                                  <label className="text-sm cursor-pointer text-slate-300">
+                                  <label className="text-sm cursor-pointer">
                                     {program.name}
                                   </label>
                                 </div>
                               ))}
                             </div>
-                            <p className="text-xs text-slate-500">{selectedPrograms.length} program(s) selected</p>
+                            <p className="text-xs text-muted-foreground">{selectedPrograms.length} program(s) selected</p>
                           </div>
                         )}
 
                         {String(form.watch("targetType")) === "role" && (
                           <div className="space-y-2">
-                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                            <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2 !space-y-2">
                               {["player", "parent", "coach", "admin"].map((role) => (
                                 <div key={role} className="flex items-center space-x-2">
                                   <Checkbox
@@ -7373,26 +7372,26 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                     }}
                                     data-testid={`checkbox-role-${role}`}
                                   />
-                                  <label className="text-sm cursor-pointer capitalize text-slate-300">
+                                  <label className="text-sm cursor-pointer capitalize">
                                     {role}
                                   </label>
                                 </div>
                               ))}
                             </div>
-                            <p className="text-xs text-slate-500">{selectedRoles.length} role(s) selected</p>
+                            <p className="text-xs text-muted-foreground">{selectedRoles.length} role(s) selected</p>
                           </div>
                         )}
                       </div>
 
                       <div className="space-y-3">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Description</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Description</label>
                         <FormField
                           control={form.control}
                           name="description"
                           render={({ field }) => (
                             <FormItem>
                               <FormControl>
-                                <Textarea {...field} placeholder="Optional notes or instructions for attendees..." className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500 focus-visible:ring-slate-500 min-h-[80px]" data-testid="input-event-description" />
+                                <Textarea {...field} placeholder="Optional notes or instructions for attendees..." className="min-h-[80px]" data-testid="input-event-description" />
                               </FormControl>
                             </FormItem>
                           )}
@@ -7403,12 +7402,12 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                     {/* Right Column */}
                     <div className="lg:col-span-2 space-y-5">
                       <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Timezone</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Timezone</label>
                         <Select value={eventTimezone} onValueChange={setEventTimezone}>
-                          <SelectTrigger className="bg-[#243044] border-slate-600 text-slate-200" data-testid="select-event-timezone">
+                          <SelectTrigger data-testid="select-event-timezone">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-[#1a2332] border-slate-600">
+                          <SelectContent>
                             {TIMEZONE_OPTIONS.map((tz) => (
                               <SelectItem key={tz.value} value={tz.value}>
                                 {tz.label}
@@ -7416,12 +7415,12 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                             ))}
                           </SelectContent>
                         </Select>
-                        <p className="text-xs text-slate-500">Auto-adjusts for daylight saving</p>
+                        <p className="text-xs text-muted-foreground">Auto-adjusts for daylight saving</p>
                       </div>
 
-                      <div className="rounded-lg border border-slate-700 p-4 space-y-3">
+                      <div className="rounded-lg border p-4 space-y-3">
                         <div className="flex items-center justify-between">
-                          <Label htmlFor="recurring-toggle" className="font-medium cursor-pointer text-slate-200">Recurring event</Label>
+                          <Label htmlFor="recurring-toggle" className="font-medium cursor-pointer">Recurring event</Label>
                           <Switch
                             id="recurring-toggle"
                             checked={isRecurring}
@@ -7444,8 +7443,8 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                   type="button"
                                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                                     recurrenceFrequency === opt.value
-                                      ? 'bg-slate-600 text-white'
-                                      : 'bg-[#243044] text-slate-300 border border-slate-600 hover:bg-[#2a3a52]'
+                                      ? 'bg-primary text-primary-foreground'
+                                      : 'border bg-background hover:bg-muted'
                                   }`}
                                   onClick={() => {
                                     setRecurrenceFrequency(opt.value as 'daily' | 'weekly' | 'biweekly' | 'monthly');
@@ -7476,7 +7475,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                     className={`w-9 h-9 rounded text-xs font-medium transition-colors ${
                                       recurrenceDays.includes(day)
                                         ? 'bg-blue-600 text-white'
-                                        : 'bg-[#243044] text-slate-400 border border-slate-600 hover:bg-[#2a3a52]'
+                                        : 'border bg-background text-muted-foreground hover:bg-muted'
                                     }`}
                                     onClick={() => {
                                       if (recurrenceDays.includes(day)) {
@@ -7496,14 +7495,14 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                             <div className="grid grid-cols-2 gap-2">
                               <button
                                 type="button"
-                                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${recurrenceEndType === 'count' ? 'bg-slate-600 text-white' : 'bg-[#243044] text-slate-300 border border-slate-600 hover:bg-[#2a3a52]'}`}
+                                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${recurrenceEndType === 'count' ? 'bg-primary text-primary-foreground' : 'border bg-background hover:bg-muted'}`}
                                 onClick={() => setRecurrenceEndType('count')}
                               >
                                 After # events
                               </button>
                               <button
                                 type="button"
-                                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${recurrenceEndType === 'date' ? 'bg-slate-600 text-white' : 'bg-[#243044] text-slate-300 border border-slate-600 hover:bg-[#2a3a52]'}`}
+                                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${recurrenceEndType === 'date' ? 'bg-primary text-primary-foreground' : 'border bg-background hover:bg-muted'}`}
                                 onClick={() => setRecurrenceEndType('date')}
                               >
                                 On date
@@ -7515,10 +7514,10 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                 value={String(recurrenceCount)}
                                 onValueChange={(value) => setRecurrenceCount(parseInt(value))}
                               >
-                                <SelectTrigger className="bg-[#243044] border-slate-600 text-slate-200" data-testid="select-recurrence-count">
+                                <SelectTrigger data-testid="select-recurrence-count">
                                   <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="bg-[#1a2332] border-slate-600">
+                                <SelectContent>
                                   {[2, 3, 4, 5, 6, 7, 8, 10, 12, 16, 20, 24, 30, 40, 52].map((count) => (
                                     <SelectItem key={count} value={String(count)}>
                                       {count} events
@@ -7532,14 +7531,13 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                   type="date"
                                   value={recurrenceEndDate}
                                   onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                                  className="bg-[#243044] border-slate-600 text-slate-200 [color-scheme:dark] focus-visible:ring-slate-500"
                                   data-testid="input-recurrence-end-date"
                                 />
-                                <p className="text-xs text-slate-500">Events will be created until this date</p>
+                                <p className="text-xs text-muted-foreground">Events will be created until this date</p>
                               </div>
                             )}
 
-                            <p className="text-xs text-slate-500 border-t border-slate-700 pt-2">
+                            <p className="text-xs text-muted-foreground border-t pt-2">
                               {recurrenceDays.length > 0 ? (
                                 <>Repeats {recurrenceDays.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ')} {recurrenceFrequency === 'biweekly' ? 'every 2 weeks' : 'weekly'}{recurrenceEndType === 'count' ? ` — ${recurrenceCount} total` : recurrenceEndDate ? ` until ${new Date(recurrenceEndDate).toLocaleDateString()}` : ''}</>
                               ) : (
@@ -7550,10 +7548,10 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between rounded-lg border border-slate-700 p-4">
+                      <div className="flex items-center justify-between rounded-lg border p-4">
                         <div className="space-y-0.5">
-                          <Label htmlFor="player-rsvp-toggle" className="font-medium cursor-pointer text-slate-200">Player self-RSVP</Label>
-                          <p className="text-xs text-slate-500">
+                          <Label htmlFor="player-rsvp-toggle" className="font-medium cursor-pointer">Player self-RSVP</Label>
+                          <p className="text-xs text-muted-foreground">
                             {playerRsvpEnabled
                               ? "Players can RSVP themselves"
                               : "Only parent/guardian can RSVP"}
@@ -7575,14 +7573,14 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between border-t border-slate-700 pt-4">
-                    <p className="text-sm text-slate-500">
+                  <div className="flex items-center justify-between border-t pt-4">
+                    <p className="text-sm text-muted-foreground">
                       {(!form.watch("title") || !form.watch("startTime") || !form.watch("endTime") || !form.watch("location")) &&
                         `Missing: ${[!form.watch("title") && 'title', !form.watch("startTime") && 'dates', !form.watch("endTime") && 'dates', !form.watch("location") && 'location'].filter(Boolean).join(', ')}`
                       }
                     </p>
                     <div className="flex gap-3">
-                      <Button type="button" variant="outline" className="bg-transparent border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-slate-200" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                      <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                       <Button type="submit" disabled={createEvent.isPending || !form.watch("title") || !form.watch("startTime") || !form.watch("endTime") || !form.watch("location")} data-testid="button-submit-event">
                         {createEvent.isPending ? "Creating..." : "Create Event"}
                       </Button>
@@ -7596,13 +7594,13 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
           {/* Edit Event Dialog */}
           {editingEvent && (
             <Dialog open={!!editingEvent} onOpenChange={(open) => { if (!open) { setEditingEvent(null); setEditEventUserSearch(""); setEditIsRecurring(false); setEditRecurrenceFrequency('weekly'); setEditRecurrenceCount(4); setEditRecurrenceDays([]); setEditRecurrenceEndType('count'); setEditRecurrenceEndDate(''); }}}>
-              <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto bg-[#1a2332] text-slate-200 border-slate-700 [&>button]:text-slate-400 [&>button:hover]:text-slate-200">
+              <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                 <DialogHeader className="sr-only">
                   <DialogTitle>Edit Event</DialogTitle>
                 </DialogHeader>
                 {editingEvent && (
                 <div className="space-y-5">
-                  <span className="inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider bg-amber-900/50 text-amber-400 rounded-full border border-amber-700/50">Edit Event</span>
+                  <span className="inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider bg-amber-50 text-amber-700 rounded-full border border-amber-200">Edit Event</span>
 
                   <div className="space-y-2">
                     <Input
@@ -7610,7 +7608,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                       defaultValue={editingEvent.title || ""}
                       onChange={(e) => setEditingEvent({...editingEvent, title: e.target.value})}
                       placeholder="Event title..."
-                      className="bg-[#243044] border-slate-600 text-slate-200 text-lg h-12 placeholder:text-slate-500 focus-visible:ring-slate-500"
+                      className="text-lg h-12"
                       data-testid="input-edit-event-title"
                     />
                   </div>
@@ -7619,15 +7617,15 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                     {/* Left Column */}
                     <div className="lg:col-span-3 space-y-5">
                       <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Event Type</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Event Type</label>
                         <Select
                           value={editingEvent.type || "practice"}
                           onValueChange={(value) => setEditingEvent({...editingEvent, type: value})}
                         >
-                          <SelectTrigger className="bg-[#243044] border-slate-600 text-slate-200" id="edit-event-type" data-testid="select-edit-event-type">
+                          <SelectTrigger id="edit-event-type" data-testid="select-edit-event-type">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-[#1a2332] border-slate-600">
+                          <SelectContent>
 
                                 <SelectItem value="game">Game</SelectItem>
                                 <SelectItem value="tournament">Tournament</SelectItem>
@@ -7654,27 +7652,25 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                       </div>
 
                       <div className="space-y-3">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Date & Time</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Date & Time</label>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label className="text-slate-300 text-sm">Start</Label>
+                            <Label className="text-sm">Start</Label>
                             <Input
                               id="edit-event-startTime"
                               type="datetime-local"
                               value={editingEvent.startTime || ""}
                               onChange={(e) => setEditingEvent({...editingEvent, startTime: e.target.value})}
-                              className="bg-[#243044] border-slate-600 text-slate-200 [color-scheme:dark] focus-visible:ring-slate-500"
                               data-testid="input-edit-event-startTime"
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-slate-300 text-sm">End</Label>
+                            <Label className="text-sm">End</Label>
                             <Input
                               id="edit-event-endTime"
                               type="datetime-local"
                               value={editingEvent.endTime || ""}
                               onChange={(e) => setEditingEvent({...editingEvent, endTime: e.target.value})}
-                              className="bg-[#243044] border-slate-600 text-slate-200 [color-scheme:dark] focus-visible:ring-slate-500"
                               data-testid="input-edit-event-endTime"
                             />
                           </div>
@@ -7682,11 +7678,11 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                       </div>
 
                       <div className="space-y-3">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Location</label>
-                        <div className="flex rounded-lg overflow-hidden w-fit border border-slate-700">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Location</label>
+                        <div className="flex rounded-lg overflow-hidden w-fit border">
                           <button
                             type="button"
-                            className={`px-4 py-2 text-sm font-medium transition-colors ${editLocationType === 'physical' ? 'bg-slate-600 text-white' : 'bg-[#243044] text-slate-400 hover:bg-[#2a3a52]'}`}
+                            className={`px-4 py-2 text-sm font-medium transition-colors ${editLocationType === 'physical' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
                             onClick={() => {
                               setEditLocationType('physical');
                               setEditingEvent({...editingEvent, location: '', meetingLink: '', latitude: undefined, longitude: undefined});
@@ -7696,7 +7692,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                           </button>
                           <button
                             type="button"
-                            className={`px-4 py-2 text-sm font-medium transition-colors ${editLocationType === 'online' ? 'bg-slate-600 text-white' : 'bg-[#243044] text-slate-400 hover:bg-[#2a3a52]'}`}
+                            className={`px-4 py-2 text-sm font-medium transition-colors ${editLocationType === 'online' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
                             onClick={() => {
                               setEditLocationType('online');
                               setEditingEvent({...editingEvent, location: 'Online', latitude: undefined, longitude: undefined});
@@ -7720,7 +7716,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                               placeholder="Search for a venue or address..."
                               className="w-full"
                             />
-                            <p className="text-xs text-slate-500">Search and select a location — enables GPS check-in geo-fencing</p>
+                            <p className="text-xs text-muted-foreground">Search and select a location — enables GPS check-in geo-fencing</p>
                           </>
                         ) : (
                           <>
@@ -7728,16 +7724,15 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                               value={editingEvent.meetingLink || ""}
                               onChange={(e) => setEditingEvent({...editingEvent, meetingLink: e.target.value})}
                               placeholder="https://zoom.us/j/..."
-                              className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500 focus-visible:ring-slate-500"
                               data-testid="input-edit-event-meeting-link"
                             />
-                            <p className="text-xs text-slate-500">Paste a Zoom, Google Meet, or other meeting link</p>
+                            <p className="text-xs text-muted-foreground">Paste a Zoom, Google Meet, or other meeting link</p>
                           </>
                         )}
                       </div>
 
                       <div className="space-y-3">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Audience</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Audience</label>
                         <div className="grid grid-cols-3 gap-2">
                           {[
                             { value: 'all', label: 'Everyone' },
@@ -7753,7 +7748,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                               className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                                 (editingEvent.targetType || 'all') === opt.value
                                   ? 'bg-blue-600 text-white'
-                                  : 'bg-[#243044] text-slate-300 border border-slate-600 hover:bg-[#2a3a52]'
+                                  : 'border bg-background hover:bg-muted'
                               }`}
                               onClick={() => setEditingEvent({...editingEvent, targetType: opt.value, targetIds: []})}
                             >
@@ -7764,7 +7759,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
 
                         {editingEvent.targetType === "team" && (
                           <div className="space-y-2">
-                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                            <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
                               {teams.map((team: any) => (
                                 <div key={team.id} className="flex items-center space-x-2">
                                   <Checkbox
@@ -7779,18 +7774,18 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                     }}
                                     data-testid={`checkbox-edit-team-${team.id}`}
                                   />
-                                  <label className="text-sm cursor-pointer text-slate-300">
+                                  <label className="text-sm cursor-pointer">
                                     {team.name}{team.programType ? ` (${team.programType})` : ''}
                                   </label>
                                 </div>
                               ))}
                             </div>
-                            <p className="text-xs text-slate-500">{(editingEvent.targetIds || []).length} team(s) selected</p>
+                            <p className="text-xs text-muted-foreground">{(editingEvent.targetIds || []).length} team(s) selected</p>
                           </div>
                         )}
                         {editingEvent.targetType === "program" && (
                           <div className="space-y-2">
-                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                            <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
                               {programs.filter((p: any) => p.isActive && p.productCategory === 'service').map((program: any) => (
                                 <div key={program.id} className="flex items-center space-x-2">
                                   <Checkbox
@@ -7805,16 +7800,16 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                     }}
                                     data-testid={`checkbox-edit-program-${program.id}`}
                                   />
-                                  <label className="text-sm cursor-pointer text-slate-300">{program.name}</label>
+                                  <label className="text-sm cursor-pointer">{program.name}</label>
                                 </div>
                               ))}
                             </div>
-                            <p className="text-xs text-slate-500">{(editingEvent.targetIds || []).length} program(s) selected</p>
+                            <p className="text-xs text-muted-foreground">{(editingEvent.targetIds || []).length} program(s) selected</p>
                           </div>
                         )}
                         {editingEvent.targetType === "role" && (
                           <div className="space-y-2">
-                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                            <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
                               {[{id: 'player', name: 'Player'}, {id: 'parent', name: 'Parent'}, {id: 'coach', name: 'Coach'}, {id: 'admin', name: 'Admin'}].map((role) => (
                                 <div key={role.id} className="flex items-center space-x-2">
                                   <Checkbox
@@ -7829,11 +7824,11 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                     }}
                                     data-testid={`checkbox-edit-role-${role.id}`}
                                   />
-                                  <label className="text-sm cursor-pointer text-slate-300">{role.name}</label>
+                                  <label className="text-sm cursor-pointer">{role.name}</label>
                                 </div>
                               ))}
                             </div>
-                            <p className="text-xs text-slate-500">{(editingEvent.targetIds || []).length} role(s) selected</p>
+                            <p className="text-xs text-muted-foreground">{(editingEvent.targetIds || []).length} role(s) selected</p>
                           </div>
                         )}
                         {editingEvent.targetType === "user" && (
@@ -7842,9 +7837,8 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                               placeholder="Search by name, email, or role..."
                               value={editEventUserSearch}
                               onChange={(e) => setEditEventUserSearch(e.target.value)}
-                              className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500 focus-visible:ring-slate-500"
                             />
-                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                            <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
                               {allUsers.filter((u: any) => u.isActive).filter((user: any) => {
                                 const q = editEventUserSearch.toLowerCase();
                                 if (!q) return true;
@@ -7868,18 +7862,18 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                     }}
                                     data-testid={`checkbox-edit-user-${user.id}`}
                                   />
-                                  <label className="text-sm cursor-pointer text-slate-300">
+                                  <label className="text-sm cursor-pointer">
                                     {user.firstName} {user.lastName} ({user.email})
                                   </label>
                                 </div>
                               ))}
                             </div>
-                            <p className="text-xs text-slate-500">{(editingEvent.targetIds || []).length} user(s) selected</p>
+                            <p className="text-xs text-muted-foreground">{(editingEvent.targetIds || []).length} user(s) selected</p>
                           </div>
                         )}
                         {editingEvent.targetType === "division" && (
                           <div className="space-y-2">
-                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                            <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
                               {divisions.filter((d: any) => d.isActive).map((division: any) => (
                                 <div key={division.id} className="flex items-center space-x-2">
                                   <Checkbox
@@ -7894,25 +7888,25 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                     }}
                                     data-testid={`checkbox-edit-division-${division.id}`}
                                   />
-                                  <label className="text-sm cursor-pointer text-slate-300">
+                                  <label className="text-sm cursor-pointer">
                                     {division.name} {division.ageRange ? `(${division.ageRange})` : ''}
                                   </label>
                                 </div>
                               ))}
                             </div>
-                            <p className="text-xs text-slate-500">{(editingEvent.targetIds || []).length} division(s) selected</p>
+                            <p className="text-xs text-muted-foreground">{(editingEvent.targetIds || []).length} division(s) selected</p>
                           </div>
                         )}
                       </div>
 
                       <div className="space-y-3">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Description</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Description</label>
                         <Textarea
                           id="edit-event-description"
                           defaultValue={editingEvent.description || ""}
                           onChange={(e) => setEditingEvent({...editingEvent, description: e.target.value})}
                           placeholder="Optional notes or instructions for attendees..."
-                          className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500 focus-visible:ring-slate-500 min-h-[80px]"
+                          className="min-h-[80px]"
                           data-testid="input-edit-event-description"
                         />
                       </div>
@@ -7921,15 +7915,15 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                     {/* Right Column */}
                     <div className="lg:col-span-2 space-y-5">
                       <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Timezone</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Timezone</label>
                         <Select
                           value={editingEvent.timezone || 'America/Los_Angeles'}
                           onValueChange={(value) => setEditingEvent({...editingEvent, timezone: value})}
                         >
-                          <SelectTrigger className="bg-[#243044] border-slate-600 text-slate-200" data-testid="select-edit-event-timezone">
+                          <SelectTrigger data-testid="select-edit-event-timezone">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-[#1a2332] border-slate-600">
+                          <SelectContent>
                             {TIMEZONE_OPTIONS.map((tz) => (
                               <SelectItem key={tz.value} value={tz.value}>
                                 {tz.label}
@@ -7937,12 +7931,12 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                             ))}
                           </SelectContent>
                         </Select>
-                        <p className="text-xs text-slate-500">Auto-adjusts for daylight saving</p>
+                        <p className="text-xs text-muted-foreground">Auto-adjusts for daylight saving</p>
                       </div>
 
-                      <div className="rounded-lg border border-slate-700 p-4 space-y-3">
+                      <div className="rounded-lg border p-4 space-y-3">
                         <div className="flex items-center justify-between">
-                          <Label htmlFor="edit-recurring-toggle" className="font-medium cursor-pointer text-slate-200">Recurring event</Label>
+                          <Label htmlFor="edit-recurring-toggle" className="font-medium cursor-pointer">Recurring event</Label>
                           <Switch
                             id="edit-recurring-toggle"
                             checked={editIsRecurring}
@@ -7965,8 +7959,8 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                   type="button"
                                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                                     editRecurrenceFrequency === opt.value
-                                      ? 'bg-slate-600 text-white'
-                                      : 'bg-[#243044] text-slate-300 border border-slate-600 hover:bg-[#2a3a52]'
+                                      ? 'bg-primary text-primary-foreground'
+                                      : 'border bg-background hover:bg-muted'
                                   }`}
                                   onClick={() => {
                                     setEditRecurrenceFrequency(opt.value as 'daily' | 'weekly' | 'biweekly' | 'monthly');
@@ -7997,7 +7991,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                     className={`w-9 h-9 rounded text-xs font-medium transition-colors ${
                                       editRecurrenceDays.includes(day)
                                         ? 'bg-blue-600 text-white'
-                                        : 'bg-[#243044] text-slate-400 border border-slate-600 hover:bg-[#2a3a52]'
+                                        : 'border bg-background text-muted-foreground hover:bg-muted'
                                     }`}
                                     onClick={() => {
                                       if (editRecurrenceDays.includes(day)) {
@@ -8017,14 +8011,14 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                             <div className="grid grid-cols-2 gap-2">
                               <button
                                 type="button"
-                                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${editRecurrenceEndType === 'count' ? 'bg-slate-600 text-white' : 'bg-[#243044] text-slate-300 border border-slate-600 hover:bg-[#2a3a52]'}`}
+                                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${editRecurrenceEndType === 'count' ? 'bg-primary text-primary-foreground' : 'border bg-background hover:bg-muted'}`}
                                 onClick={() => setEditRecurrenceEndType('count')}
                               >
                                 After # events
                               </button>
                               <button
                                 type="button"
-                                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${editRecurrenceEndType === 'date' ? 'bg-slate-600 text-white' : 'bg-[#243044] text-slate-300 border border-slate-600 hover:bg-[#2a3a52]'}`}
+                                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${editRecurrenceEndType === 'date' ? 'bg-primary text-primary-foreground' : 'border bg-background hover:bg-muted'}`}
                                 onClick={() => setEditRecurrenceEndType('date')}
                               >
                                 On date
@@ -8036,10 +8030,10 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                 value={String(editRecurrenceCount)}
                                 onValueChange={(value) => setEditRecurrenceCount(parseInt(value))}
                               >
-                                <SelectTrigger className="bg-[#243044] border-slate-600 text-slate-200" data-testid="select-edit-recurrence-count">
+                                <SelectTrigger data-testid="select-edit-recurrence-count">
                                   <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="bg-[#1a2332] border-slate-600">
+                                <SelectContent>
                                   {[2, 3, 4, 5, 6, 7, 8, 10, 12, 16, 20, 24, 30, 40, 52].map((count) => (
                                     <SelectItem key={count} value={String(count)}>
                                       {count} events
@@ -8053,7 +8047,6 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                   type="date"
                                   value={editRecurrenceEndDate}
                                   onChange={(e) => setEditRecurrenceEndDate(e.target.value)}
-                                  className="bg-[#243044] border-slate-600 text-slate-200 [color-scheme:dark] focus-visible:ring-slate-500"
                                   data-testid="input-edit-recurrence-end-date"
                                 />
                               </div>
@@ -8062,10 +8055,10 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between rounded-lg border border-slate-700 p-4">
+                      <div className="flex items-center justify-between rounded-lg border p-4">
                         <div className="space-y-0.5">
-                          <Label htmlFor="edit-player-rsvp-toggle" className="font-medium cursor-pointer text-slate-200">Player self-RSVP</Label>
-                          <p className="text-xs text-slate-500">
+                          <Label htmlFor="edit-player-rsvp-toggle" className="font-medium cursor-pointer">Player self-RSVP</Label>
+                          <p className="text-xs text-muted-foreground">
                             {editingEvent.playerRsvpEnabled !== false
                               ? "Players can RSVP themselves"
                               : "Only parent/guardian can RSVP"}
@@ -8087,14 +8080,14 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between border-t border-slate-700 pt-4">
-                    <p className="text-sm text-slate-500">
+                  <div className="flex items-center justify-between border-t pt-4">
+                    <p className="text-sm text-muted-foreground">
                       {(!editingEvent.title?.trim() || !editingEvent.startTime || !editingEvent.endTime || !editingEvent.location?.trim()) &&
                         `Missing: ${[!editingEvent.title?.trim() && 'title', !editingEvent.startTime && 'dates', !editingEvent.endTime && 'dates', !editingEvent.location?.trim() && 'location'].filter(Boolean).join(', ')}`
                       }
                     </p>
                     <div className="flex gap-3">
-                      <Button type="button" variant="outline" className="bg-transparent border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-slate-200" onClick={() => { setEditingEvent(null); setEditEventUserSearch(""); setEditIsRecurring(false); setEditRecurrenceFrequency('weekly'); setEditRecurrenceCount(4); setEditRecurrenceDays([]); setEditRecurrenceEndType('count'); setEditRecurrenceEndDate(''); }}>Cancel</Button>
+                      <Button type="button" variant="outline" onClick={() => { setEditingEvent(null); setEditEventUserSearch(""); setEditIsRecurring(false); setEditRecurrenceFrequency('weekly'); setEditRecurrenceCount(4); setEditRecurrenceDays([]); setEditRecurrenceEndType('count'); setEditRecurrenceEndDate(''); }}>Cancel</Button>
                       <Button
                         type="button"
                         onClick={async () => {

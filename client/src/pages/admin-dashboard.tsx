@@ -963,8 +963,7 @@ function StoreAtAGlance({ storeStats, onNavigateToStore, programs }: { storeStat
 
   const markDelivered = useMutation({
     mutationFn: async (paymentId: number) => {
-      const res = await apiRequest('PATCH', `/api/admin/payments/${paymentId}/fulfillment`, { fulfillmentStatus: 'delivered' });
-      return res.json();
+      return await apiRequest('PATCH', `/api/admin/payments/${paymentId}/fulfillment`, { fulfillmentStatus: 'delivered' });
     },
     onSuccess: () => {
       toast({ title: "Order marked as delivered" });
@@ -980,8 +979,7 @@ function StoreAtAGlance({ storeStats, onNavigateToStore, programs }: { storeStat
 
   const markPending = useMutation({
     mutationFn: async (paymentId: number) => {
-      const res = await apiRequest('PATCH', `/api/admin/payments/${paymentId}/fulfillment`, { fulfillmentStatus: 'pending' });
-      return res.json();
+      return await apiRequest('PATCH', `/api/admin/payments/${paymentId}/fulfillment`, { fulfillmentStatus: 'pending' });
     },
     onSuccess: () => {
       toast({ title: "Order marked as pending" });

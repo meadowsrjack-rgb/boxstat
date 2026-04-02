@@ -4741,7 +4741,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        const addPlayerProcessingSubtotal = lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
+        const addPlayerProcessingSubtotal = subtotal + platformFee;
         const addPlayerProcessingFee = calculateStripeProcessingFee(addPlayerProcessingSubtotal);
         if (addPlayerProcessingFee > 0) {
           lineItems.push({

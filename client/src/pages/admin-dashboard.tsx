@@ -7035,554 +7035,559 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                 <Plus className="w-4 h-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-[95vw] w-full">
-              <DialogHeader>
+            <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto bg-[#1a2332] text-slate-200 border-slate-700 [&>button]:text-slate-400 [&>button:hover]:text-slate-200">
+              <DialogHeader className="sr-only">
                 <DialogTitle>Create New Event</DialogTitle>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit((data) => {
                   console.log('📍 Creating event with data:', data);
                   createEvent.mutate(data);
-                })} className="space-y-4">
+                })} className="space-y-5">
+                  <span className="inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider bg-teal-900/50 text-teal-400 rounded-full border border-teal-700/50">New Event</span>
+
                   <FormField
                     control={form.control}
                     name="title"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Event Title</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Team Practice" data-testid="input-event-title" />
+                          <Input {...field} placeholder="Event title..." className="bg-[#243044] border-slate-600 text-slate-200 text-lg h-12 placeholder:text-slate-500 focus-visible:ring-slate-500" data-testid="input-event-title" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Event Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-event-type">
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="game">Game</SelectItem>
-                            <SelectItem value="tournament">Tournament</SelectItem>
-                            <SelectItem value="camp">Camp</SelectItem>
-                            <SelectItem value="exhibition">Exhibition</SelectItem>
-                            <SelectItem value="practice">Practice</SelectItem>
-                            <SelectItem value="skills">Skills</SelectItem>
-                            <SelectItem value="workshop">Workshop</SelectItem>
-                            <SelectItem value="talk">Talk</SelectItem>
-                            <SelectItem value="combine">Combine</SelectItem>
-                            <SelectItem value="training">Training</SelectItem>
-                            <SelectItem value="meeting">Meeting</SelectItem>
-                            <SelectItem value="course">Course</SelectItem>
-                            <SelectItem value="tryout">Tryout</SelectItem>
-                            <SelectItem value="skills-assessment">Skills Assessment</SelectItem>
-                            <SelectItem value="team-building">Team Building</SelectItem>
-                            <SelectItem value="parent-meeting">Parent Meeting</SelectItem>
-                            <SelectItem value="equipment-pickup">Equipment Pickup</SelectItem>
-                            <SelectItem value="photo-day">Photo Day</SelectItem>
-                            <SelectItem value="award-ceremony">Award Ceremony</SelectItem>
-                            <SelectItem value="fnh">FNH</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="startTime"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Start Time</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="datetime-local" data-testid="input-event-start" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="endTime"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>End Time</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="datetime-local" data-testid="input-event-end" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Timezone</Label>
-                    <Select value={eventTimezone} onValueChange={setEventTimezone}>
-                      <SelectTrigger data-testid="select-event-timezone">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TIMEZONE_OPTIONS.map((tz) => (
-                          <SelectItem key={tz.value} value={tz.value}>
-                            {tz.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-500">
-                      Times will automatically adjust for daylight saving changes
-                    </p>
-                  </div>
-                  
-                  {/* Recurring Event Options */}
-                  <div className="border rounded-lg p-4 space-y-3 bg-gray-50">
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id="recurring-toggle"
-                        checked={isRecurring}
-                        onCheckedChange={setIsRecurring}
-                        data-testid="switch-recurring"
+
+                  <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                    {/* Left Column */}
+                    <div className="lg:col-span-3 space-y-5">
+                      <FormField
+                        control={form.control}
+                        name="type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Event Type</label>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="bg-[#243044] border-slate-600 text-slate-200" data-testid="select-event-type">
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="bg-[#1a2332] border-slate-600">
+
+                                <SelectItem value="game">Game</SelectItem>
+                                <SelectItem value="tournament">Tournament</SelectItem>
+                                <SelectItem value="camp">Camp</SelectItem>
+                                <SelectItem value="exhibition">Exhibition</SelectItem>
+                                <SelectItem value="practice">Practice</SelectItem>
+                                <SelectItem value="skills">Skills</SelectItem>
+                                <SelectItem value="workshop">Workshop</SelectItem>
+                                <SelectItem value="talk">Talk</SelectItem>
+                                <SelectItem value="combine">Combine</SelectItem>
+                                <SelectItem value="training">Training</SelectItem>
+                                <SelectItem value="meeting">Meeting</SelectItem>
+                                <SelectItem value="course">Course</SelectItem>
+                                <SelectItem value="tryout">Tryout</SelectItem>
+                                <SelectItem value="skills-assessment">Skills Assessment</SelectItem>
+                                <SelectItem value="team-building">Team Building</SelectItem>
+                                <SelectItem value="parent-meeting">Parent Meeting</SelectItem>
+                                <SelectItem value="equipment-pickup">Equipment Pickup</SelectItem>
+                                <SelectItem value="photo-day">Photo Day</SelectItem>
+                                <SelectItem value="award-ceremony">Award Ceremony</SelectItem>
+                                <SelectItem value="fnh">FNH</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                      <Label htmlFor="recurring-toggle" className="font-medium cursor-pointer">
-                        Make this a recurring event
-                      </Label>
-                    </div>
-                    
-                    {isRecurring && (
-                      <div className="space-y-4 pt-2">
+
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Date & Time</label>
                         <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Frequency</Label>
-                            <Select
-                              value={recurrenceFrequency}
-                              onValueChange={(value: 'daily' | 'weekly' | 'biweekly' | 'monthly') => {
-                                setRecurrenceFrequency(value);
-                                // Clear day selection when switching to non-weekly
-                                if (value !== 'weekly' && value !== 'biweekly') {
-                                  setRecurrenceDays([]);
-                                }
+                          <FormField
+                            control={form.control}
+                            name="startTime"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-slate-300 text-sm">Start</FormLabel>
+                                <FormControl>
+                                  <Input {...field} type="datetime-local" className="bg-[#243044] border-slate-600 text-slate-200 [color-scheme:dark] focus-visible:ring-slate-500" data-testid="input-event-start" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="endTime"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-slate-300 text-sm">End</FormLabel>
+                                <FormControl>
+                                  <Input {...field} type="datetime-local" className="bg-[#243044] border-slate-600 text-slate-200 [color-scheme:dark] focus-visible:ring-slate-500" data-testid="input-event-end" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Location</label>
+                        <div className="flex rounded-lg overflow-hidden w-fit border border-slate-700">
+                          <button
+                            type="button"
+                            className={`px-4 py-2 text-sm font-medium transition-colors ${locationType === 'physical' ? 'bg-slate-600 text-white' : 'bg-[#243044] text-slate-400 hover:bg-[#2a3a52]'}`}
+                            onClick={() => {
+                              setLocationType('physical');
+                              form.setValue("location", "");
+                              form.setValue("meetingLink", "");
+                              form.setValue("latitude", undefined as any);
+                              form.setValue("longitude", undefined as any);
+                            }}
+                          >
+                            Physical
+                          </button>
+                          <button
+                            type="button"
+                            className={`px-4 py-2 text-sm font-medium transition-colors ${locationType === 'online' ? 'bg-slate-600 text-white' : 'bg-[#243044] text-slate-400 hover:bg-[#2a3a52]'}`}
+                            onClick={() => {
+                              setLocationType('online');
+                              form.setValue("location", "Online");
+                              form.setValue("latitude", undefined as any);
+                              form.setValue("longitude", undefined as any);
+                            }}
+                          >
+                            Online
+                          </button>
+                        </div>
+
+                        {locationType === 'physical' ? (
+                          <FormField
+                            control={form.control}
+                            name="location"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <LocationSearch
+                                    value={field.value || ""}
+                                    onLocationSelect={(location) => {
+                                      field.onChange(location.name);
+                                      form.setValue("latitude", location.lat ?? undefined as any);
+                                      form.setValue("longitude", location.lng ?? undefined as any);
+                                    }}
+                                    placeholder="Search for a venue or address..."
+                                    className="w-full"
+                                  />
+                                </FormControl>
+                                <p className="text-xs text-slate-500">Search and select a location — enables GPS check-in geo-fencing</p>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        ) : (
+                          <FormField
+                            control={form.control}
+                            name="meetingLink"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input {...field} placeholder="https://zoom.us/j/..." className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500 focus-visible:ring-slate-500" data-testid="input-event-meeting-link" />
+                                </FormControl>
+                                <p className="text-xs text-slate-500">Paste a Zoom, Google Meet, or other meeting link</p>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Audience</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { value: 'all', label: 'Everyone' },
+                            { value: 'program', label: 'Program' },
+                            { value: 'team', label: 'Team' },
+                            { value: 'user', label: 'User' },
+                            { value: 'role', label: 'Role' },
+                            { value: 'division', label: 'Division' },
+                          ].map(opt => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                                String(form.watch("targetType")) === opt.value
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-[#243044] text-slate-300 border border-slate-600 hover:bg-[#2a3a52]'
+                              }`}
+                              onClick={() => {
+                                form.setValue("targetType", opt.value as any);
+                                setSelectedUsers([]);
+                                setSelectedTeams([]);
+                                setSelectedDivisions([]);
+                                setSelectedPrograms([]);
+                                setSelectedRoles([]);
                               }}
                             >
-                              <SelectTrigger data-testid="select-recurrence-frequency">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="daily">Daily</SelectItem>
-                                <SelectItem value="weekly">Weekly</SelectItem>
-                                <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
-                                <SelectItem value="monthly">Monthly</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <Label>Ends</Label>
-                            <Select
-                              value={recurrenceEndType}
-                              onValueChange={(value: 'count' | 'date') => setRecurrenceEndType(value)}
-                            >
-                              <SelectTrigger data-testid="select-recurrence-end-type">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="count">After # of events</SelectItem>
-                                <SelectItem value="date">On specific date</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
+                              {opt.label}
+                            </button>
+                          ))}
                         </div>
-                        
-                        {/* Day of Week Selection - Only for weekly/biweekly */}
-                        {(recurrenceFrequency === 'weekly' || recurrenceFrequency === 'biweekly') && (
+
+                        {String(form.watch("targetType")) === "user" && (
                           <div className="space-y-2">
-                            <Label>Repeat On</Label>
-                            <div className="flex flex-wrap gap-2">
-                              {[
-                                { day: 0, label: 'Sun' },
-                                { day: 1, label: 'Mon' },
-                                { day: 2, label: 'Tue' },
-                                { day: 3, label: 'Wed' },
-                                { day: 4, label: 'Thu' },
-                                { day: 5, label: 'Fri' },
-                                { day: 6, label: 'Sat' },
-                              ].map(({ day, label }) => (
-                                <Button
-                                  key={day}
-                                  type="button"
-                                  variant={recurrenceDays.includes(day) ? "default" : "outline"}
-                                  size="sm"
-                                  className={`w-12 ${recurrenceDays.includes(day) ? 'bg-red-600 hover:bg-red-700' : ''}`}
-                                  onClick={() => {
-                                    if (recurrenceDays.includes(day)) {
-                                      setRecurrenceDays(recurrenceDays.filter(d => d !== day));
-                                    } else {
-                                      setRecurrenceDays([...recurrenceDays, day]);
-                                    }
-                                  }}
-                                  data-testid={`btn-day-${label.toLowerCase()}`}
-                                >
-                                  {label}
-                                </Button>
+                            <Input
+                              placeholder="Search by name, email, or role..."
+                              value={createEventUserSearch}
+                              onChange={(e) => setCreateEventUserSearch(e.target.value)}
+                              className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500 focus-visible:ring-slate-500"
+                            />
+                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                              {allUsers.filter((u: any) => u.isActive).filter((user: any) => {
+                                const q = createEventUserSearch.toLowerCase();
+                                if (!q) return true;
+                                return (
+                                  (user.firstName || "").toLowerCase().includes(q) ||
+                                  (user.lastName || "").toLowerCase().includes(q) ||
+                                  (user.email || "").toLowerCase().includes(q) ||
+                                  (user.role || "").toLowerCase().includes(q)
+                                );
+                              }).map((user: any) => (
+                                <div key={user.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    checked={selectedUsers.includes(user.id)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setSelectedUsers([...selectedUsers, user.id]);
+                                      } else {
+                                        setSelectedUsers(selectedUsers.filter(id => id !== user.id));
+                                      }
+                                    }}
+                                    data-testid={`checkbox-user-${user.id}`}
+                                  />
+                                  <label className="text-sm cursor-pointer text-slate-300">
+                                    {user.firstName} {user.lastName} - {user.role} ({user.email})
+                                  </label>
+                                </div>
                               ))}
                             </div>
-                            <p className="text-xs text-gray-500">Select which days of the week this event repeats</p>
+                            <p className="text-xs text-slate-500">{selectedUsers.length} user(s) selected</p>
                           </div>
                         )}
-                        
-                        {/* End Condition */}
-                        {recurrenceEndType === 'count' ? (
+
+                        {String(form.watch("targetType")) === "team" && (
                           <div className="space-y-2">
-                            <Label>Number of Occurrences</Label>
-                            <Select
-                              value={String(recurrenceCount)}
-                              onValueChange={(value) => setRecurrenceCount(parseInt(value))}
-                            >
-                              <SelectTrigger data-testid="select-recurrence-count">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {[2, 3, 4, 5, 6, 7, 8, 10, 12, 16, 20, 24, 30, 40, 52].map((count) => (
-                                  <SelectItem key={count} value={String(count)}>
-                                    {count} events
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <Label>End Date</Label>
-                            <Input
-                              type="date"
-                              value={recurrenceEndDate}
-                              onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                              data-testid="input-recurrence-end-date"
-                            />
-                            <p className="text-xs text-gray-500">Events will be created until this date</p>
+                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                              {teams.map((team: any) => (
+                                <div key={team.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    checked={selectedTeams.includes(String(team.id))}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setSelectedTeams([...selectedTeams, String(team.id)]);
+                                      } else {
+                                        setSelectedTeams(selectedTeams.filter(id => id !== String(team.id)));
+                                      }
+                                    }}
+                                    data-testid={`checkbox-team-${team.id}`}
+                                  />
+                                  <label className="text-sm cursor-pointer text-slate-300">
+                                    {team.name}{team.programType ? ` (${team.programType})` : ''}
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-xs text-slate-500">{selectedTeams.length} team(s) selected</p>
                           </div>
                         )}
-                        
-                        <p className="text-xs text-gray-500 border-t pt-2">
-                          {recurrenceDays.length > 0 ? (
-                            <>This will create events every {recurrenceDays.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ')} {recurrenceFrequency === 'biweekly' ? 'every 2 weeks' : 'weekly'}{recurrenceEndType === 'count' ? ` (${recurrenceCount} total)` : recurrenceEndDate ? ` until ${new Date(recurrenceEndDate).toLocaleDateString()}` : ''}.</>
-                          ) : (
-                            <>This will create events {recurrenceFrequency === 'daily' ? 'every day' : recurrenceFrequency === 'weekly' ? 'every week' : recurrenceFrequency === 'biweekly' ? 'every 2 weeks' : 'every month'}{recurrenceEndType === 'count' ? ` (${recurrenceCount} total)` : recurrenceEndDate ? ` until ${new Date(recurrenceEndDate).toLocaleDateString()}` : ''}.</>
+
+                        {String(form.watch("targetType")) === "division" && (
+                          <div className="space-y-2">
+                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                              {divisions.filter((d: any) => d.isActive).map((division: any) => (
+                                <div key={division.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    checked={selectedDivisions.includes(String(division.id))}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setSelectedDivisions([...selectedDivisions, String(division.id)]);
+                                      } else {
+                                        setSelectedDivisions(selectedDivisions.filter(id => id !== String(division.id)));
+                                      }
+                                    }}
+                                    data-testid={`checkbox-division-${division.id}`}
+                                  />
+                                  <label className="text-sm cursor-pointer text-slate-300">
+                                    {division.name} {division.ageRange ? `(${division.ageRange})` : ''}
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-xs text-slate-500">{selectedDivisions.length} division(s) selected</p>
+                          </div>
+                        )}
+
+                        {String(form.watch("targetType")) === "program" && (
+                          <div className="space-y-2">
+                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                              {programs.filter((p: any) => p.isActive && p.productCategory === 'service').map((program: any) => (
+                                <div key={program.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    checked={selectedPrograms.includes(String(program.id))}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setSelectedPrograms([...selectedPrograms, String(program.id)]);
+                                      } else {
+                                        setSelectedPrograms(selectedPrograms.filter(id => id !== String(program.id)));
+                                      }
+                                    }}
+                                    data-testid={`checkbox-program-${program.id}`}
+                                  />
+                                  <label className="text-sm cursor-pointer text-slate-300">
+                                    {program.name}
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-xs text-slate-500">{selectedPrograms.length} program(s) selected</p>
+                          </div>
+                        )}
+
+                        {String(form.watch("targetType")) === "role" && (
+                          <div className="space-y-2">
+                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                              {["player", "parent", "coach", "admin"].map((role) => (
+                                <div key={role} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    checked={selectedRoles.includes(role)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setSelectedRoles([...selectedRoles, role]);
+                                      } else {
+                                        setSelectedRoles(selectedRoles.filter(r => r !== role));
+                                      }
+                                    }}
+                                    data-testid={`checkbox-role-${role}`}
+                                  />
+                                  <label className="text-sm cursor-pointer capitalize text-slate-300">
+                                    {role}
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-xs text-slate-500">{selectedRoles.length} role(s) selected</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Description</label>
+                        <FormField
+                          control={form.control}
+                          name="description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Textarea {...field} placeholder="Optional notes or instructions for attendees..." className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500 focus-visible:ring-slate-500 min-h-[80px]" data-testid="input-event-description" />
+                              </FormControl>
+                            </FormItem>
                           )}
-                        </p>
+                        />
                       </div>
-                    )}
-                  </div>
-                  
-                  {/* Player RSVP Toggle */}
-                  <div className="border rounded-lg p-4 bg-gray-50">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="player-rsvp-toggle" className="font-medium cursor-pointer">
-                          Allow Player Self-RSVP
-                        </Label>
-                        <p className="text-xs text-gray-500">
-                          {playerRsvpEnabled 
-                            ? "Players can RSVP to this event themselves" 
-                            : "Only parent/guardian can RSVP for players"}
-                        </p>
-                      </div>
-                      <Switch
-                        id="player-rsvp-toggle"
-                        checked={playerRsvpEnabled}
-                        onCheckedChange={setPlayerRsvpEnabled}
-                        data-testid="switch-player-rsvp"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <FormLabel>Location <span className="text-red-500">*</span></FormLabel>
-                    <div className="flex border rounded-lg overflow-hidden w-fit">
-                      <button
-                        type="button"
-                        className={`px-4 py-2 text-sm font-medium transition-colors ${locationType === 'physical' ? 'bg-primary text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
-                        onClick={() => {
-                          setLocationType('physical');
-                          form.setValue("location", "");
-                          form.setValue("meetingLink", "");
-                          form.setValue("latitude", undefined as any);
-                          form.setValue("longitude", undefined as any);
-                        }}
-                      >
-                        Physical
-                      </button>
-                      <button
-                        type="button"
-                        className={`px-4 py-2 text-sm font-medium transition-colors ${locationType === 'online' ? 'bg-primary text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
-                        onClick={() => {
-                          setLocationType('online');
-                          form.setValue("location", "Online");
-                          form.setValue("latitude", undefined as any);
-                          form.setValue("longitude", undefined as any);
-                        }}
-                      >
-                        Online
-                      </button>
                     </div>
 
-                    {locationType === 'physical' ? (
-                      <FormField
-                        control={form.control}
-                        name="location"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <LocationSearch
-                                value={field.value || ""}
-                                onLocationSelect={(location) => {
-                                  field.onChange(location.name);
-                                  form.setValue("latitude", location.lat ?? undefined as any);
-                                  form.setValue("longitude", location.lng ?? undefined as any);
-                                }}
-                                placeholder="Search for a location..."
-                                className="w-full"
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Search and select a location for accurate check-in geo-fencing
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    ) : (
-                      <FormField
-                        control={form.control}
-                        name="meetingLink"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Input {...field} placeholder="https://zoom.us/j/..." data-testid="input-event-meeting-link" />
-                            </FormControl>
-                            <FormDescription>
-                              Paste a Zoom, Google Meet, or other meeting link
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
-                  </div>
-                  <FormField
-                    control={form.control}
-                    name="targetType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Event For</FormLabel>
-                        <Select onValueChange={(value) => {
-                          field.onChange(value);
-                          setSelectedUsers([]);
-                          setSelectedTeams([]);
-                          setSelectedDivisions([]);
-                          setSelectedPrograms([]);
-                          setSelectedRoles([]);
-                        }} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-event-target">
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="all">Everyone</SelectItem>
-                            <SelectItem value="program">Program(s)</SelectItem>
-                            <SelectItem value="team">Team(s)</SelectItem>
-                            <SelectItem value="user">Specific User(s)</SelectItem>
-                            <SelectItem value="role">Role(s)</SelectItem>
-                            <SelectItem value="division">Division(s)</SelectItem>
+                    {/* Right Column */}
+                    <div className="lg:col-span-2 space-y-5">
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Timezone</label>
+                        <Select value={eventTimezone} onValueChange={setEventTimezone}>
+                          <SelectTrigger className="bg-[#243044] border-slate-600 text-slate-200" data-testid="select-event-timezone">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#1a2332] border-slate-600">
+                            {TIMEZONE_OPTIONS.map((tz) => (
+                              <SelectItem key={tz.value} value={tz.value}>
+                                {tz.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
-                        <FormDescription>Who should see this event?</FormDescription>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  {String(form.watch("targetType")) === "user" && (
-                    <div className="space-y-2">
-                      <Label>Select Users</Label>
-                      <Input
-                        placeholder="Search by name, email, or role..."
-                        value={createEventUserSearch}
-                        onChange={(e) => setCreateEventUserSearch(e.target.value)}
-                        className="mb-2"
+                        <p className="text-xs text-slate-500">Auto-adjusts for daylight saving</p>
+                      </div>
+
+                      <div className="rounded-lg border border-slate-700 p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="recurring-toggle" className="font-medium cursor-pointer text-slate-200">Recurring event</Label>
+                          <Switch
+                            id="recurring-toggle"
+                            checked={isRecurring}
+                            onCheckedChange={setIsRecurring}
+                            data-testid="switch-recurring"
+                          />
+                        </div>
+
+                        {isRecurring && (
+                          <div className="space-y-4 pt-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              {[
+                                { value: 'daily', label: 'Daily' },
+                                { value: 'weekly', label: 'Weekly' },
+                                { value: 'biweekly', label: '2 Weeks' },
+                                { value: 'monthly', label: 'Monthly' },
+                              ].map(opt => (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                                    recurrenceFrequency === opt.value
+                                      ? 'bg-slate-600 text-white'
+                                      : 'bg-[#243044] text-slate-300 border border-slate-600 hover:bg-[#2a3a52]'
+                                  }`}
+                                  onClick={() => {
+                                    setRecurrenceFrequency(opt.value as 'daily' | 'weekly' | 'biweekly' | 'monthly');
+                                    if (opt.value !== 'weekly' && opt.value !== 'biweekly') {
+                                      setRecurrenceDays([]);
+                                    }
+                                  }}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+
+                            {(recurrenceFrequency === 'weekly' || recurrenceFrequency === 'biweekly') && (
+                              <div className="flex flex-wrap gap-1">
+                                {[
+                                  { day: 0, label: 'Su' },
+                                  { day: 1, label: 'Mo' },
+                                  { day: 2, label: 'Tu' },
+                                  { day: 3, label: 'We' },
+                                  { day: 4, label: 'Th' },
+                                  { day: 5, label: 'Fr' },
+                                  { day: 6, label: 'Sa' },
+                                ].map(({ day, label }) => (
+                                  <button
+                                    key={day}
+                                    type="button"
+                                    className={`w-9 h-9 rounded text-xs font-medium transition-colors ${
+                                      recurrenceDays.includes(day)
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-[#243044] text-slate-400 border border-slate-600 hover:bg-[#2a3a52]'
+                                    }`}
+                                    onClick={() => {
+                                      if (recurrenceDays.includes(day)) {
+                                        setRecurrenceDays(recurrenceDays.filter(d => d !== day));
+                                      } else {
+                                        setRecurrenceDays([...recurrenceDays, day]);
+                                      }
+                                    }}
+                                    data-testid={`btn-day-${['sun','mon','tue','wed','thu','fri','sat'][day]}`}
+                                  >
+                                    {label}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${recurrenceEndType === 'count' ? 'bg-slate-600 text-white' : 'bg-[#243044] text-slate-300 border border-slate-600 hover:bg-[#2a3a52]'}`}
+                                onClick={() => setRecurrenceEndType('count')}
+                              >
+                                After # events
+                              </button>
+                              <button
+                                type="button"
+                                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${recurrenceEndType === 'date' ? 'bg-slate-600 text-white' : 'bg-[#243044] text-slate-300 border border-slate-600 hover:bg-[#2a3a52]'}`}
+                                onClick={() => setRecurrenceEndType('date')}
+                              >
+                                On date
+                              </button>
+                            </div>
+
+                            {recurrenceEndType === 'count' ? (
+                              <Select
+                                value={String(recurrenceCount)}
+                                onValueChange={(value) => setRecurrenceCount(parseInt(value))}
+                              >
+                                <SelectTrigger className="bg-[#243044] border-slate-600 text-slate-200" data-testid="select-recurrence-count">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#1a2332] border-slate-600">
+                                  {[2, 3, 4, 5, 6, 7, 8, 10, 12, 16, 20, 24, 30, 40, 52].map((count) => (
+                                    <SelectItem key={count} value={String(count)}>
+                                      {count} events
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <div className="space-y-2">
+                                <Input
+                                  type="date"
+                                  value={recurrenceEndDate}
+                                  onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                                  className="bg-[#243044] border-slate-600 text-slate-200 [color-scheme:dark] focus-visible:ring-slate-500"
+                                  data-testid="input-recurrence-end-date"
+                                />
+                                <p className="text-xs text-slate-500">Events will be created until this date</p>
+                              </div>
+                            )}
+
+                            <p className="text-xs text-slate-500 border-t border-slate-700 pt-2">
+                              {recurrenceDays.length > 0 ? (
+                                <>Repeats {recurrenceDays.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ')} {recurrenceFrequency === 'biweekly' ? 'every 2 weeks' : 'weekly'}{recurrenceEndType === 'count' ? ` — ${recurrenceCount} total` : recurrenceEndDate ? ` until ${new Date(recurrenceEndDate).toLocaleDateString()}` : ''}</>
+                              ) : (
+                                <>Repeats {recurrenceFrequency === 'daily' ? 'every day' : recurrenceFrequency === 'weekly' ? 'every week' : recurrenceFrequency === 'biweekly' ? 'every 2 weeks' : 'every month'}{recurrenceEndType === 'count' ? ` — ${recurrenceCount} total` : recurrenceEndDate ? ` until ${new Date(recurrenceEndDate).toLocaleDateString()}` : ''}</>
+                              )}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between rounded-lg border border-slate-700 p-4">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="player-rsvp-toggle" className="font-medium cursor-pointer text-slate-200">Player self-RSVP</Label>
+                          <p className="text-xs text-slate-500">
+                            {playerRsvpEnabled
+                              ? "Players can RSVP themselves"
+                              : "Only parent/guardian can RSVP"}
+                          </p>
+                        </div>
+                        <Switch
+                          id="player-rsvp-toggle"
+                          checked={playerRsvpEnabled}
+                          onCheckedChange={setPlayerRsvpEnabled}
+                          data-testid="switch-player-rsvp"
+                        />
+                      </div>
+
+                      <EventWindowsConfigurator
+                        eventStartTime={form.watch("startTime") ? new Date(form.watch("startTime")) : undefined}
+                        windows={eventWindows}
+                        onChange={setEventWindows}
                       />
-                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                        {allUsers.filter((u: any) => u.isActive).filter((user: any) => {
-                          const q = createEventUserSearch.toLowerCase();
-                          if (!q) return true;
-                          return (
-                            (user.firstName || "").toLowerCase().includes(q) ||
-                            (user.lastName || "").toLowerCase().includes(q) ||
-                            (user.email || "").toLowerCase().includes(q) ||
-                            (user.role || "").toLowerCase().includes(q)
-                          );
-                        }).map((user: any) => (
-                          <div key={user.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={selectedUsers.includes(user.id)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedUsers([...selectedUsers, user.id]);
-                                } else {
-                                  setSelectedUsers(selectedUsers.filter(id => id !== user.id));
-                                }
-                              }}
-                              data-testid={`checkbox-user-${user.id}`}
-                            />
-                            <label className="text-sm cursor-pointer">
-                              {user.firstName} {user.lastName} - {user.role} ({user.email})
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-500">{selectedUsers.length} user(s) selected</p>
                     </div>
-                  )}
-                  
-                  {String(form.watch("targetType")) === "team" && (
-                    <div className="space-y-2">
-                      <Label>Select Teams</Label>
-                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                        {teams.map((team: any) => (
-                          <div key={team.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={selectedTeams.includes(String(team.id))}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedTeams([...selectedTeams, String(team.id)]);
-                                } else {
-                                  setSelectedTeams(selectedTeams.filter(id => id !== String(team.id)));
-                                }
-                              }}
-                              data-testid={`checkbox-team-${team.id}`}
-                            />
-                            <label className="text-sm cursor-pointer">
-                              {team.name}{team.programType ? ` (${team.programType})` : ''}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-500">{selectedTeams.length} team(s) selected</p>
-                    </div>
-                  )}
-                  
-                  {String(form.watch("targetType")) === "division" && (
-                    <div className="space-y-2">
-                      <Label>Select Divisions</Label>
-                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                        {divisions.filter((d: any) => d.isActive).map((division: any) => (
-                          <div key={division.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={selectedDivisions.includes(String(division.id))}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedDivisions([...selectedDivisions, String(division.id)]);
-                                } else {
-                                  setSelectedDivisions(selectedDivisions.filter(id => id !== String(division.id)));
-                                }
-                              }}
-                              data-testid={`checkbox-division-${division.id}`}
-                            />
-                            <label className="text-sm cursor-pointer">
-                              {division.name} {division.ageRange ? `(${division.ageRange})` : ''}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-500">{selectedDivisions.length} division(s) selected</p>
-                    </div>
-                  )}
-                  
-                  {String(form.watch("targetType")) === "program" && (
-                    <div className="space-y-2">
-                      <Label>Select Programs</Label>
-                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                        {programs.filter((p: any) => p.isActive && p.productCategory === 'service').map((program: any) => (
-                          <div key={program.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={selectedPrograms.includes(String(program.id))}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedPrograms([...selectedPrograms, String(program.id)]);
-                                } else {
-                                  setSelectedPrograms(selectedPrograms.filter(id => id !== String(program.id)));
-                                }
-                              }}
-                              data-testid={`checkbox-program-${program.id}`}
-                            />
-                            <label className="text-sm cursor-pointer">
-                              {program.name}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-500">{selectedPrograms.length} program(s) selected</p>
-                    </div>
-                  )}
-                  
-                  {String(form.watch("targetType")) === "role" && (
-                    <div className="space-y-2">
-                      <Label>Select Roles</Label>
-                      <div className="border rounded-md p-3 space-y-2">
-                        {["player", "parent", "coach", "admin"].map((role) => (
-                          <div key={role} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={selectedRoles.includes(role)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedRoles([...selectedRoles, role]);
-                                } else {
-                                  setSelectedRoles(selectedRoles.filter(r => r !== role));
-                                }
-                              }}
-                              data-testid={`checkbox-role-${role}`}
-                            />
-                            <label className="text-sm cursor-pointer capitalize">
-                              {role}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-500">{selectedRoles.length} role(s) selected</p>
-                    </div>
-                  )}
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} data-testid="input-event-description" />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="border-t pt-4">
-                    <EventWindowsConfigurator
-                      eventStartTime={form.watch("startTime") ? new Date(form.watch("startTime")) : undefined}
-                      windows={eventWindows}
-                      onChange={setEventWindows}
-                    />
                   </div>
-                  
-                  <Button type="submit" className="w-full" disabled={createEvent.isPending || !form.watch("title") || !form.watch("startTime") || !form.watch("endTime") || !form.watch("location")} data-testid="button-submit-event">
-                    {createEvent.isPending ? "Creating..." : "Create Event"}
-                  </Button>
+
+                  <div className="flex items-center justify-between border-t border-slate-700 pt-4">
+                    <p className="text-sm text-slate-500">
+                      {(!form.watch("title") || !form.watch("startTime") || !form.watch("endTime") || !form.watch("location")) &&
+                        `Missing: ${[!form.watch("title") && 'title', !form.watch("startTime") && 'dates', !form.watch("endTime") && 'dates', !form.watch("location") && 'location'].filter(Boolean).join(', ')}`
+                      }
+                    </p>
+                    <div className="flex gap-3">
+                      <Button type="button" variant="outline" className="bg-transparent border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-slate-200" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                      <Button type="submit" disabled={createEvent.isPending || !form.watch("title") || !form.watch("startTime") || !form.watch("endTime") || !form.watch("location")} data-testid="button-submit-event">
+                        {createEvent.isPending ? "Creating..." : "Create Event"}
+                      </Button>
+                    </div>
+                  </div>
                 </form>
               </Form>
             </DialogContent>
@@ -7591,598 +7596,619 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
           {/* Edit Event Dialog */}
           {editingEvent && (
             <Dialog open={!!editingEvent} onOpenChange={(open) => { if (!open) { setEditingEvent(null); setEditEventUserSearch(""); setEditIsRecurring(false); setEditRecurrenceFrequency('weekly'); setEditRecurrenceCount(4); setEditRecurrenceDays([]); setEditRecurrenceEndType('count'); setEditRecurrenceEndDate(''); }}}>
-              <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
+              <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto bg-[#1a2332] text-slate-200 border-slate-700 [&>button]:text-slate-400 [&>button:hover]:text-slate-200">
+                <DialogHeader className="sr-only">
                   <DialogTitle>Edit Event</DialogTitle>
                 </DialogHeader>
                 {editingEvent && (
-                <div className="space-y-4">
+                <div className="space-y-5">
+                  <span className="inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider bg-amber-900/50 text-amber-400 rounded-full border border-amber-700/50">Edit Event</span>
+
                   <div className="space-y-2">
-                    <Label htmlFor="edit-event-title">Event Title</Label>
                     <Input
                       id="edit-event-title"
                       defaultValue={editingEvent.title || ""}
                       onChange={(e) => setEditingEvent({...editingEvent, title: e.target.value})}
+                      placeholder="Event title..."
+                      className="bg-[#243044] border-slate-600 text-slate-200 text-lg h-12 placeholder:text-slate-500 focus-visible:ring-slate-500"
                       data-testid="input-edit-event-title"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-event-type">Event Type</Label>
-                    <Select
-                      value={editingEvent.type || "practice"}
-                      onValueChange={(value) => setEditingEvent({...editingEvent, type: value})}
-                    >
-                      <SelectTrigger id="edit-event-type" data-testid="select-edit-event-type">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="game">Game</SelectItem>
-                        <SelectItem value="tournament">Tournament</SelectItem>
-                        <SelectItem value="camp">Camp</SelectItem>
-                        <SelectItem value="exhibition">Exhibition</SelectItem>
-                        <SelectItem value="practice">Practice</SelectItem>
-                        <SelectItem value="skills">Skills</SelectItem>
-                        <SelectItem value="workshop">Workshop</SelectItem>
-                        <SelectItem value="talk">Talk</SelectItem>
-                        <SelectItem value="combine">Combine</SelectItem>
-                        <SelectItem value="training">Training</SelectItem>
-                        <SelectItem value="meeting">Meeting</SelectItem>
-                        <SelectItem value="course">Course</SelectItem>
-                        <SelectItem value="tryout">Tryout</SelectItem>
-                        <SelectItem value="skills-assessment">Skills Assessment</SelectItem>
-                        <SelectItem value="team-building">Team Building</SelectItem>
-                        <SelectItem value="parent-meeting">Parent Meeting</SelectItem>
-                        <SelectItem value="equipment-pickup">Equipment Pickup</SelectItem>
-                        <SelectItem value="photo-day">Photo Day</SelectItem>
-                        <SelectItem value="award-ceremony">Award Ceremony</SelectItem>
-                        <SelectItem value="fnh">FNH</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-event-startTime">Start Time</Label>
-                      <Input
-                        id="edit-event-startTime"
-                        type="datetime-local"
-                        value={editingEvent.startTime || ""}
-                        onChange={(e) => setEditingEvent({...editingEvent, startTime: e.target.value})}
-                        data-testid="input-edit-event-startTime"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-event-endTime">End Time</Label>
-                      <Input
-                        id="edit-event-endTime"
-                        type="datetime-local"
-                        value={editingEvent.endTime || ""}
-                        onChange={(e) => setEditingEvent({...editingEvent, endTime: e.target.value})}
-                        data-testid="input-edit-event-endTime"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Timezone</Label>
-                    <Select
-                      value={editingEvent.timezone || 'America/Los_Angeles'}
-                      onValueChange={(value) => setEditingEvent({...editingEvent, timezone: value})}
-                    >
-                      <SelectTrigger data-testid="select-edit-event-timezone">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TIMEZONE_OPTIONS.map((tz) => (
-                          <SelectItem key={tz.value} value={tz.value}>
-                            {tz.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-500">
-                      Times will automatically adjust for daylight saving changes
-                    </p>
-                  </div>
-                  
-                  {/* Recurring Event Options */}
-                  <div className="border rounded-lg p-4 space-y-3 bg-gray-50">
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id="edit-recurring-toggle"
-                        checked={editIsRecurring}
-                        onCheckedChange={setEditIsRecurring}
-                        data-testid="switch-edit-recurring"
-                      />
-                      <Label htmlFor="edit-recurring-toggle" className="font-medium cursor-pointer">
-                        Make this a recurring event
-                      </Label>
-                    </div>
-                    
-                    {editIsRecurring && (
-                      <div className="space-y-4 pt-2">
+
+                  <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                    {/* Left Column */}
+                    <div className="lg:col-span-3 space-y-5">
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Event Type</label>
+                        <Select
+                          value={editingEvent.type || "practice"}
+                          onValueChange={(value) => setEditingEvent({...editingEvent, type: value})}
+                        >
+                          <SelectTrigger className="bg-[#243044] border-slate-600 text-slate-200" id="edit-event-type" data-testid="select-edit-event-type">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#1a2332] border-slate-600">
+
+                                <SelectItem value="game">Game</SelectItem>
+                                <SelectItem value="tournament">Tournament</SelectItem>
+                                <SelectItem value="camp">Camp</SelectItem>
+                                <SelectItem value="exhibition">Exhibition</SelectItem>
+                                <SelectItem value="practice">Practice</SelectItem>
+                                <SelectItem value="skills">Skills</SelectItem>
+                                <SelectItem value="workshop">Workshop</SelectItem>
+                                <SelectItem value="talk">Talk</SelectItem>
+                                <SelectItem value="combine">Combine</SelectItem>
+                                <SelectItem value="training">Training</SelectItem>
+                                <SelectItem value="meeting">Meeting</SelectItem>
+                                <SelectItem value="course">Course</SelectItem>
+                                <SelectItem value="tryout">Tryout</SelectItem>
+                                <SelectItem value="skills-assessment">Skills Assessment</SelectItem>
+                                <SelectItem value="team-building">Team Building</SelectItem>
+                                <SelectItem value="parent-meeting">Parent Meeting</SelectItem>
+                                <SelectItem value="equipment-pickup">Equipment Pickup</SelectItem>
+                                <SelectItem value="photo-day">Photo Day</SelectItem>
+                                <SelectItem value="award-ceremony">Award Ceremony</SelectItem>
+                                <SelectItem value="fnh">FNH</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Date & Time</label>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label>Frequency</Label>
-                            <Select
-                              value={editRecurrenceFrequency}
-                              onValueChange={(value: 'daily' | 'weekly' | 'biweekly' | 'monthly') => {
-                                setEditRecurrenceFrequency(value);
-                                if (value !== 'weekly' && value !== 'biweekly') {
-                                  setEditRecurrenceDays([]);
-                                }
-                              }}
-                            >
-                              <SelectTrigger data-testid="select-edit-recurrence-frequency">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="daily">Daily</SelectItem>
-                                <SelectItem value="weekly">Weekly</SelectItem>
-                                <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
-                                <SelectItem value="monthly">Monthly</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <Label className="text-slate-300 text-sm">Start</Label>
+                            <Input
+                              id="edit-event-startTime"
+                              type="datetime-local"
+                              value={editingEvent.startTime || ""}
+                              onChange={(e) => setEditingEvent({...editingEvent, startTime: e.target.value})}
+                              className="bg-[#243044] border-slate-600 text-slate-200 [color-scheme:dark] focus-visible:ring-slate-500"
+                              data-testid="input-edit-event-startTime"
+                            />
                           </div>
-                          
                           <div className="space-y-2">
-                            <Label>Ends</Label>
-                            <Select
-                              value={editRecurrenceEndType}
-                              onValueChange={(value: 'count' | 'date') => setEditRecurrenceEndType(value)}
-                            >
-                              <SelectTrigger data-testid="select-edit-recurrence-end-type">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="count">After # of events</SelectItem>
-                                <SelectItem value="date">On specific date</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <Label className="text-slate-300 text-sm">End</Label>
+                            <Input
+                              id="edit-event-endTime"
+                              type="datetime-local"
+                              value={editingEvent.endTime || ""}
+                              onChange={(e) => setEditingEvent({...editingEvent, endTime: e.target.value})}
+                              className="bg-[#243044] border-slate-600 text-slate-200 [color-scheme:dark] focus-visible:ring-slate-500"
+                              data-testid="input-edit-event-endTime"
+                            />
                           </div>
                         </div>
-                        
-                        {(editRecurrenceFrequency === 'weekly' || editRecurrenceFrequency === 'biweekly') && (
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Location</label>
+                        <div className="flex rounded-lg overflow-hidden w-fit border border-slate-700">
+                          <button
+                            type="button"
+                            className={`px-4 py-2 text-sm font-medium transition-colors ${editLocationType === 'physical' ? 'bg-slate-600 text-white' : 'bg-[#243044] text-slate-400 hover:bg-[#2a3a52]'}`}
+                            onClick={() => {
+                              setEditLocationType('physical');
+                              setEditingEvent({...editingEvent, location: '', meetingLink: '', latitude: undefined, longitude: undefined});
+                            }}
+                          >
+                            Physical
+                          </button>
+                          <button
+                            type="button"
+                            className={`px-4 py-2 text-sm font-medium transition-colors ${editLocationType === 'online' ? 'bg-slate-600 text-white' : 'bg-[#243044] text-slate-400 hover:bg-[#2a3a52]'}`}
+                            onClick={() => {
+                              setEditLocationType('online');
+                              setEditingEvent({...editingEvent, location: 'Online', latitude: undefined, longitude: undefined});
+                            }}
+                          >
+                            Online
+                          </button>
+                        </div>
+                        {editLocationType === 'physical' ? (
+                          <>
+                            <LocationSearch
+                              value={editingEvent.location === 'Online' ? '' : (editingEvent.location || "")}
+                              onLocationSelect={(location) => {
+                                setEditingEvent({
+                                  ...editingEvent,
+                                  location: location.name,
+                                  latitude: location.lat ?? undefined,
+                                  longitude: location.lng ?? undefined
+                                });
+                              }}
+                              placeholder="Search for a venue or address..."
+                              className="w-full"
+                            />
+                            <p className="text-xs text-slate-500">Search and select a location — enables GPS check-in geo-fencing</p>
+                          </>
+                        ) : (
+                          <>
+                            <Input
+                              value={editingEvent.meetingLink || ""}
+                              onChange={(e) => setEditingEvent({...editingEvent, meetingLink: e.target.value})}
+                              placeholder="https://zoom.us/j/..."
+                              className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500 focus-visible:ring-slate-500"
+                              data-testid="input-edit-event-meeting-link"
+                            />
+                            <p className="text-xs text-slate-500">Paste a Zoom, Google Meet, or other meeting link</p>
+                          </>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Audience</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { value: 'all', label: 'Everyone' },
+                            { value: 'program', label: 'Program' },
+                            { value: 'team', label: 'Team' },
+                            { value: 'user', label: 'User' },
+                            { value: 'role', label: 'Role' },
+                            { value: 'division', label: 'Division' },
+                          ].map(opt => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                                (editingEvent.targetType || 'all') === opt.value
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-[#243044] text-slate-300 border border-slate-600 hover:bg-[#2a3a52]'
+                              }`}
+                              onClick={() => setEditingEvent({...editingEvent, targetType: opt.value, targetIds: []})}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {editingEvent.targetType === "team" && (
                           <div className="space-y-2">
-                            <Label>Repeat On</Label>
-                            <div className="flex flex-wrap gap-2">
-                              {[
-                                { day: 0, label: 'Sun' },
-                                { day: 1, label: 'Mon' },
-                                { day: 2, label: 'Tue' },
-                                { day: 3, label: 'Wed' },
-                                { day: 4, label: 'Thu' },
-                                { day: 5, label: 'Fri' },
-                                { day: 6, label: 'Sat' },
-                              ].map(({ day, label }) => (
-                                <Button
-                                  key={day}
-                                  type="button"
-                                  variant={editRecurrenceDays.includes(day) ? "default" : "outline"}
-                                  size="sm"
-                                  className={`w-12 ${editRecurrenceDays.includes(day) ? 'bg-red-600 hover:bg-red-700' : ''}`}
-                                  onClick={() => {
-                                    if (editRecurrenceDays.includes(day)) {
-                                      setEditRecurrenceDays(editRecurrenceDays.filter(d => d !== day));
-                                    } else {
-                                      setEditRecurrenceDays([...editRecurrenceDays, day]);
-                                    }
-                                  }}
-                                  data-testid={`btn-edit-day-${label.toLowerCase()}`}
-                                >
-                                  {label}
-                                </Button>
+                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                              {teams.map((team: any) => (
+                                <div key={team.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    checked={(editingEvent.targetIds || []).includes(String(team.id))}
+                                    onCheckedChange={(checked) => {
+                                      const currentIds = editingEvent.targetIds || [];
+                                      if (checked) {
+                                        setEditingEvent({...editingEvent, targetIds: [...currentIds, String(team.id)]});
+                                      } else {
+                                        setEditingEvent({...editingEvent, targetIds: currentIds.filter((id: string) => id !== String(team.id))});
+                                      }
+                                    }}
+                                    data-testid={`checkbox-edit-team-${team.id}`}
+                                  />
+                                  <label className="text-sm cursor-pointer text-slate-300">
+                                    {team.name}{team.programType ? ` (${team.programType})` : ''}
+                                  </label>
+                                </div>
                               ))}
                             </div>
-                            <p className="text-xs text-gray-500">Select which days of the week this event repeats</p>
+                            <p className="text-xs text-slate-500">{(editingEvent.targetIds || []).length} team(s) selected</p>
                           </div>
                         )}
-                        
-                        {editRecurrenceEndType === 'count' ? (
+                        {editingEvent.targetType === "program" && (
                           <div className="space-y-2">
-                            <Label>Number of Occurrences</Label>
-                            <Select
-                              value={String(editRecurrenceCount)}
-                              onValueChange={(value) => setEditRecurrenceCount(parseInt(value))}
-                            >
-                              <SelectTrigger data-testid="select-edit-recurrence-count">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {[2, 3, 4, 5, 6, 7, 8, 10, 12, 16, 20, 24, 30, 40, 52].map((count) => (
-                                  <SelectItem key={count} value={String(count)}>
-                                    {count} events
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                              {programs.filter((p: any) => p.isActive && p.productCategory === 'service').map((program: any) => (
+                                <div key={program.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    checked={(editingEvent.targetIds || []).includes(String(program.id))}
+                                    onCheckedChange={(checked) => {
+                                      const currentIds = editingEvent.targetIds || [];
+                                      if (checked) {
+                                        setEditingEvent({...editingEvent, targetIds: [...currentIds, String(program.id)]});
+                                      } else {
+                                        setEditingEvent({...editingEvent, targetIds: currentIds.filter((id: string) => id !== String(program.id))});
+                                      }
+                                    }}
+                                    data-testid={`checkbox-edit-program-${program.id}`}
+                                  />
+                                  <label className="text-sm cursor-pointer text-slate-300">{program.name}</label>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-xs text-slate-500">{(editingEvent.targetIds || []).length} program(s) selected</p>
                           </div>
-                        ) : (
+                        )}
+                        {editingEvent.targetType === "role" && (
                           <div className="space-y-2">
-                            <Label>End Date</Label>
+                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                              {[{id: 'player', name: 'Player'}, {id: 'parent', name: 'Parent'}, {id: 'coach', name: 'Coach'}, {id: 'admin', name: 'Admin'}].map((role) => (
+                                <div key={role.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    checked={(editingEvent.targetIds || []).includes(role.id)}
+                                    onCheckedChange={(checked) => {
+                                      const currentIds = editingEvent.targetIds || [];
+                                      if (checked) {
+                                        setEditingEvent({...editingEvent, targetIds: [...currentIds, role.id]});
+                                      } else {
+                                        setEditingEvent({...editingEvent, targetIds: currentIds.filter((id: string) => id !== role.id)});
+                                      }
+                                    }}
+                                    data-testid={`checkbox-edit-role-${role.id}`}
+                                  />
+                                  <label className="text-sm cursor-pointer text-slate-300">{role.name}</label>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-xs text-slate-500">{(editingEvent.targetIds || []).length} role(s) selected</p>
+                          </div>
+                        )}
+                        {editingEvent.targetType === "user" && (
+                          <div className="space-y-2">
                             <Input
-                              type="date"
-                              value={editRecurrenceEndDate}
-                              onChange={(e) => setEditRecurrenceEndDate(e.target.value)}
-                              data-testid="input-edit-recurrence-end-date"
+                              placeholder="Search by name, email, or role..."
+                              value={editEventUserSearch}
+                              onChange={(e) => setEditEventUserSearch(e.target.value)}
+                              className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500 focus-visible:ring-slate-500"
                             />
+                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                              {allUsers.filter((u: any) => u.isActive).filter((user: any) => {
+                                const q = editEventUserSearch.toLowerCase();
+                                if (!q) return true;
+                                return (
+                                  (user.firstName || "").toLowerCase().includes(q) ||
+                                  (user.lastName || "").toLowerCase().includes(q) ||
+                                  (user.email || "").toLowerCase().includes(q) ||
+                                  (user.role || "").toLowerCase().includes(q)
+                                );
+                              }).map((user: any) => (
+                                <div key={user.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    checked={(editingEvent.targetIds || []).includes(String(user.id))}
+                                    onCheckedChange={(checked) => {
+                                      const currentIds = editingEvent.targetIds || [];
+                                      if (checked) {
+                                        setEditingEvent({...editingEvent, targetIds: [...currentIds, String(user.id)]});
+                                      } else {
+                                        setEditingEvent({...editingEvent, targetIds: currentIds.filter((id: string) => id !== String(user.id))});
+                                      }
+                                    }}
+                                    data-testid={`checkbox-edit-user-${user.id}`}
+                                  />
+                                  <label className="text-sm cursor-pointer text-slate-300">
+                                    {user.firstName} {user.lastName} ({user.email})
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-xs text-slate-500">{(editingEvent.targetIds || []).length} user(s) selected</p>
+                          </div>
+                        )}
+                        {editingEvent.targetType === "division" && (
+                          <div className="space-y-2">
+                            <div className="border border-slate-600 rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                              {divisions.filter((d: any) => d.isActive).map((division: any) => (
+                                <div key={division.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    checked={(editingEvent.targetIds || []).includes(String(division.id))}
+                                    onCheckedChange={(checked) => {
+                                      const currentIds = editingEvent.targetIds || [];
+                                      if (checked) {
+                                        setEditingEvent({...editingEvent, targetIds: [...currentIds, String(division.id)]});
+                                      } else {
+                                        setEditingEvent({...editingEvent, targetIds: currentIds.filter((id: string) => id !== String(division.id))});
+                                      }
+                                    }}
+                                    data-testid={`checkbox-edit-division-${division.id}`}
+                                  />
+                                  <label className="text-sm cursor-pointer text-slate-300">
+                                    {division.name} {division.ageRange ? `(${division.ageRange})` : ''}
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-xs text-slate-500">{(editingEvent.targetIds || []).length} division(s) selected</p>
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
 
-                  <div className="space-y-3">
-                    <Label>Location <span className="text-red-500">*</span></Label>
-                    <div className="flex border rounded-lg overflow-hidden w-fit">
-                      <button
-                        type="button"
-                        className={`px-4 py-2 text-sm font-medium transition-colors ${editLocationType === 'physical' ? 'bg-primary text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
-                        onClick={() => {
-                          setEditLocationType('physical');
-                          setEditingEvent({...editingEvent, location: '', meetingLink: '', latitude: undefined, longitude: undefined});
-                        }}
-                      >
-                        Physical
-                      </button>
-                      <button
-                        type="button"
-                        className={`px-4 py-2 text-sm font-medium transition-colors ${editLocationType === 'online' ? 'bg-primary text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
-                        onClick={() => {
-                          setEditLocationType('online');
-                          setEditingEvent({...editingEvent, location: 'Online', latitude: undefined, longitude: undefined});
-                        }}
-                      >
-                        Online
-                      </button>
-                    </div>
-                    {editLocationType === 'physical' ? (
-                      <>
-                        <LocationSearch
-                          value={editingEvent.location === 'Online' ? '' : (editingEvent.location || "")}
-                          onLocationSelect={(location) => {
-                            setEditingEvent({
-                              ...editingEvent,
-                              location: location.name,
-                              latitude: location.lat ?? undefined,
-                              longitude: location.lng ?? undefined
-                            });
-                          }}
-                          placeholder="Search for a location..."
-                          className="w-full"
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Description</label>
+                        <Textarea
+                          id="edit-event-description"
+                          defaultValue={editingEvent.description || ""}
+                          onChange={(e) => setEditingEvent({...editingEvent, description: e.target.value})}
+                          placeholder="Optional notes or instructions for attendees..."
+                          className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500 focus-visible:ring-slate-500 min-h-[80px]"
+                          data-testid="input-edit-event-description"
                         />
-                        <p className="text-xs text-gray-500">Search and select a location for accurate check-in geo-fencing</p>
-                      </>
-                    ) : (
-                      <>
-                        <Input
-                          value={editingEvent.meetingLink || ""}
-                          onChange={(e) => setEditingEvent({...editingEvent, meetingLink: e.target.value})}
-                          placeholder="https://zoom.us/j/..."
-                          data-testid="input-edit-event-meeting-link"
+                      </div>
+                    </div>
+
+                    {/* Right Column */}
+                    <div className="lg:col-span-2 space-y-5">
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Timezone</label>
+                        <Select
+                          value={editingEvent.timezone || 'America/Los_Angeles'}
+                          onValueChange={(value) => setEditingEvent({...editingEvent, timezone: value})}
+                        >
+                          <SelectTrigger className="bg-[#243044] border-slate-600 text-slate-200" data-testid="select-edit-event-timezone">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#1a2332] border-slate-600">
+                            {TIMEZONE_OPTIONS.map((tz) => (
+                              <SelectItem key={tz.value} value={tz.value}>
+                                {tz.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-slate-500">Auto-adjusts for daylight saving</p>
+                      </div>
+
+                      <div className="rounded-lg border border-slate-700 p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="edit-recurring-toggle" className="font-medium cursor-pointer text-slate-200">Recurring event</Label>
+                          <Switch
+                            id="edit-recurring-toggle"
+                            checked={editIsRecurring}
+                            onCheckedChange={setEditIsRecurring}
+                            data-testid="switch-edit-recurring"
+                          />
+                        </div>
+
+                        {editIsRecurring && (
+                          <div className="space-y-4 pt-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              {[
+                                { value: 'daily', label: 'Daily' },
+                                { value: 'weekly', label: 'Weekly' },
+                                { value: 'biweekly', label: '2 Weeks' },
+                                { value: 'monthly', label: 'Monthly' },
+                              ].map(opt => (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                                    editRecurrenceFrequency === opt.value
+                                      ? 'bg-slate-600 text-white'
+                                      : 'bg-[#243044] text-slate-300 border border-slate-600 hover:bg-[#2a3a52]'
+                                  }`}
+                                  onClick={() => {
+                                    setEditRecurrenceFrequency(opt.value as 'daily' | 'weekly' | 'biweekly' | 'monthly');
+                                    if (opt.value !== 'weekly' && opt.value !== 'biweekly') {
+                                      setEditRecurrenceDays([]);
+                                    }
+                                  }}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+
+                            {(editRecurrenceFrequency === 'weekly' || editRecurrenceFrequency === 'biweekly') && (
+                              <div className="flex flex-wrap gap-1">
+                                {[
+                                  { day: 0, label: 'Su' },
+                                  { day: 1, label: 'Mo' },
+                                  { day: 2, label: 'Tu' },
+                                  { day: 3, label: 'We' },
+                                  { day: 4, label: 'Th' },
+                                  { day: 5, label: 'Fr' },
+                                  { day: 6, label: 'Sa' },
+                                ].map(({ day, label }) => (
+                                  <button
+                                    key={day}
+                                    type="button"
+                                    className={`w-9 h-9 rounded text-xs font-medium transition-colors ${
+                                      editRecurrenceDays.includes(day)
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-[#243044] text-slate-400 border border-slate-600 hover:bg-[#2a3a52]'
+                                    }`}
+                                    onClick={() => {
+                                      if (editRecurrenceDays.includes(day)) {
+                                        setEditRecurrenceDays(editRecurrenceDays.filter(d => d !== day));
+                                      } else {
+                                        setEditRecurrenceDays([...editRecurrenceDays, day]);
+                                      }
+                                    }}
+                                    data-testid={`btn-edit-day-${['sun','mon','tue','wed','thu','fri','sat'][day]}`}
+                                  >
+                                    {label}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${editRecurrenceEndType === 'count' ? 'bg-slate-600 text-white' : 'bg-[#243044] text-slate-300 border border-slate-600 hover:bg-[#2a3a52]'}`}
+                                onClick={() => setEditRecurrenceEndType('count')}
+                              >
+                                After # events
+                              </button>
+                              <button
+                                type="button"
+                                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${editRecurrenceEndType === 'date' ? 'bg-slate-600 text-white' : 'bg-[#243044] text-slate-300 border border-slate-600 hover:bg-[#2a3a52]'}`}
+                                onClick={() => setEditRecurrenceEndType('date')}
+                              >
+                                On date
+                              </button>
+                            </div>
+
+                            {editRecurrenceEndType === 'count' ? (
+                              <Select
+                                value={String(editRecurrenceCount)}
+                                onValueChange={(value) => setEditRecurrenceCount(parseInt(value))}
+                              >
+                                <SelectTrigger className="bg-[#243044] border-slate-600 text-slate-200" data-testid="select-edit-recurrence-count">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#1a2332] border-slate-600">
+                                  {[2, 3, 4, 5, 6, 7, 8, 10, 12, 16, 20, 24, 30, 40, 52].map((count) => (
+                                    <SelectItem key={count} value={String(count)}>
+                                      {count} events
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <div className="space-y-2">
+                                <Input
+                                  type="date"
+                                  value={editRecurrenceEndDate}
+                                  onChange={(e) => setEditRecurrenceEndDate(e.target.value)}
+                                  className="bg-[#243044] border-slate-600 text-slate-200 [color-scheme:dark] focus-visible:ring-slate-500"
+                                  data-testid="input-edit-recurrence-end-date"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between rounded-lg border border-slate-700 p-4">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="edit-player-rsvp-toggle" className="font-medium cursor-pointer text-slate-200">Player self-RSVP</Label>
+                          <p className="text-xs text-slate-500">
+                            {editingEvent.playerRsvpEnabled !== false
+                              ? "Players can RSVP themselves"
+                              : "Only parent/guardian can RSVP"}
+                          </p>
+                        </div>
+                        <Switch
+                          id="edit-player-rsvp-toggle"
+                          checked={editingEvent.playerRsvpEnabled !== false}
+                          onCheckedChange={(checked) => setEditingEvent({...editingEvent, playerRsvpEnabled: checked})}
+                          data-testid="switch-edit-player-rsvp"
                         />
-                        <p className="text-xs text-gray-500">Paste a Zoom, Google Meet, or other meeting link</p>
-                      </>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-event-targetType">Event For</Label>
-                    <Select
-                      value={editingEvent.targetType || "all"}
-                      onValueChange={(value) => setEditingEvent({...editingEvent, targetType: value})}
-                    >
-                      <SelectTrigger id="edit-event-targetType" data-testid="select-edit-event-targetType">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Everyone</SelectItem>
-                        <SelectItem value="program">Specific Program</SelectItem>
-                        <SelectItem value="team">Specific Team</SelectItem>
-                        <SelectItem value="user">Specific User</SelectItem>
-                        <SelectItem value="role">Specific Role</SelectItem>
-                        <SelectItem value="division">Specific Division</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {editingEvent.targetType === "team" && (
-                    <div className="space-y-2">
-                      <Label>Select Teams</Label>
-                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                        {teams.map((team: any) => (
-                          <div key={team.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={(editingEvent.targetIds || []).includes(String(team.id))}
-                              onCheckedChange={(checked) => {
-                                const currentIds = editingEvent.targetIds || [];
-                                if (checked) {
-                                  setEditingEvent({...editingEvent, targetIds: [...currentIds, String(team.id)]});
-                                } else {
-                                  setEditingEvent({...editingEvent, targetIds: currentIds.filter((id: string) => id !== String(team.id))});
-                                }
-                              }}
-                              data-testid={`checkbox-edit-team-${team.id}`}
-                            />
-                            <label className="text-sm cursor-pointer">
-                              {team.name}{team.programType ? ` (${team.programType})` : ''}
-                            </label>
-                          </div>
-                        ))}
                       </div>
-                      <p className="text-xs text-gray-500">{(editingEvent.targetIds || []).length} team(s) selected</p>
-                    </div>
-                  )}
-                  {editingEvent.targetType === "program" && (
-                    <div className="space-y-2">
-                      <Label>Select Programs</Label>
-                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                        {programs.filter((p: any) => p.isActive && p.productCategory === 'service').map((program: any) => (
-                          <div key={program.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={(editingEvent.targetIds || []).includes(String(program.id))}
-                              onCheckedChange={(checked) => {
-                                const currentIds = editingEvent.targetIds || [];
-                                if (checked) {
-                                  setEditingEvent({...editingEvent, targetIds: [...currentIds, String(program.id)]});
-                                } else {
-                                  setEditingEvent({...editingEvent, targetIds: currentIds.filter((id: string) => id !== String(program.id))});
-                                }
-                              }}
-                              data-testid={`checkbox-edit-program-${program.id}`}
-                            />
-                            <label className="text-sm cursor-pointer">{program.name}</label>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-500">{(editingEvent.targetIds || []).length} program(s) selected</p>
-                    </div>
-                  )}
-                  {editingEvent.targetType === "role" && (
-                    <div className="space-y-2">
-                      <Label>Select Roles</Label>
-                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                        {[{id: 'player', name: 'Player'}, {id: 'parent', name: 'Parent'}, {id: 'coach', name: 'Coach'}, {id: 'admin', name: 'Admin'}].map((role) => (
-                          <div key={role.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={(editingEvent.targetIds || []).includes(role.id)}
-                              onCheckedChange={(checked) => {
-                                const currentIds = editingEvent.targetIds || [];
-                                if (checked) {
-                                  setEditingEvent({...editingEvent, targetIds: [...currentIds, role.id]});
-                                } else {
-                                  setEditingEvent({...editingEvent, targetIds: currentIds.filter((id: string) => id !== role.id)});
-                                }
-                              }}
-                              data-testid={`checkbox-edit-role-${role.id}`}
-                            />
-                            <label className="text-sm cursor-pointer">{role.name}</label>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-500">{(editingEvent.targetIds || []).length} role(s) selected</p>
-                    </div>
-                  )}
-                  {editingEvent.targetType === "user" && (
-                    <div className="space-y-2">
-                      <Label>Select Users</Label>
-                      <Input
-                        placeholder="Search by name, email, or role..."
-                        value={editEventUserSearch}
-                        onChange={(e) => setEditEventUserSearch(e.target.value)}
-                        className="mb-2"
-                      />
-                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                        {allUsers.filter((u: any) => u.isActive).filter((user: any) => {
-                          const q = editEventUserSearch.toLowerCase();
-                          if (!q) return true;
-                          return (
-                            (user.firstName || "").toLowerCase().includes(q) ||
-                            (user.lastName || "").toLowerCase().includes(q) ||
-                            (user.email || "").toLowerCase().includes(q) ||
-                            (user.role || "").toLowerCase().includes(q)
-                          );
-                        }).map((user: any) => (
-                          <div key={user.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={(editingEvent.targetIds || []).includes(String(user.id))}
-                              onCheckedChange={(checked) => {
-                                const currentIds = editingEvent.targetIds || [];
-                                if (checked) {
-                                  setEditingEvent({...editingEvent, targetIds: [...currentIds, String(user.id)]});
-                                } else {
-                                  setEditingEvent({...editingEvent, targetIds: currentIds.filter((id: string) => id !== String(user.id))});
-                                }
-                              }}
-                              data-testid={`checkbox-edit-user-${user.id}`}
-                            />
-                            <label className="text-sm cursor-pointer">
-                              {user.firstName} {user.lastName} ({user.email})
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-500">{(editingEvent.targetIds || []).length} user(s) selected</p>
-                    </div>
-                  )}
-                  {editingEvent.targetType === "division" && (
-                    <div className="space-y-2">
-                      <Label>Select Divisions</Label>
-                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                        {divisions.filter((d: any) => d.isActive).map((division: any) => (
-                          <div key={division.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={(editingEvent.targetIds || []).includes(String(division.id))}
-                              onCheckedChange={(checked) => {
-                                const currentIds = editingEvent.targetIds || [];
-                                if (checked) {
-                                  setEditingEvent({...editingEvent, targetIds: [...currentIds, String(division.id)]});
-                                } else {
-                                  setEditingEvent({...editingEvent, targetIds: currentIds.filter((id: string) => id !== String(division.id))});
-                                }
-                              }}
-                              data-testid={`checkbox-edit-division-${division.id}`}
-                            />
-                            <label className="text-sm cursor-pointer">
-                              {division.name} {division.ageRange ? `(${division.ageRange})` : ''}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-500">{(editingEvent.targetIds || []).length} division(s) selected</p>
-                    </div>
-                  )}
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-event-description">Description</Label>
-                    <Textarea
-                      id="edit-event-description"
-                      defaultValue={editingEvent.description || ""}
-                      onChange={(e) => setEditingEvent({...editingEvent, description: e.target.value})}
-                      data-testid="input-edit-event-description"
-                    />
-                  </div>
-                  
-                  {/* Player RSVP Toggle */}
-                  <div className="border rounded-lg p-4 bg-gray-50">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="edit-player-rsvp-toggle" className="font-medium cursor-pointer">
-                          Allow Player Self-RSVP
-                        </Label>
-                        <p className="text-xs text-gray-500">
-                          {editingEvent.playerRsvpEnabled !== false
-                            ? "Players can RSVP to this event themselves" 
-                            : "Only parent/guardian can RSVP for players"}
-                        </p>
-                      </div>
-                      <Switch
-                        id="edit-player-rsvp-toggle"
-                        checked={editingEvent.playerRsvpEnabled !== false}
-                        onCheckedChange={(checked) => setEditingEvent({...editingEvent, playerRsvpEnabled: checked})}
-                        data-testid="switch-edit-player-rsvp"
+
+                      <EventWindowsConfigurator
+                        eventStartTime={editingEvent.startTime ? new Date(editingEvent.startTime) : undefined}
+                        windows={editEventWindows}
+                        onChange={setEditEventWindows}
                       />
                     </div>
                   </div>
-                  
 
-                  <div className="border-t pt-4">
-                    <EventWindowsConfigurator
-                      eventStartTime={editingEvent.startTime ? new Date(editingEvent.startTime) : undefined}
-                      windows={editEventWindows}
-                      onChange={setEditEventWindows}
-                    />
-                  </div>
-                  
-                  <Button
-                    type="button"
-                    className="w-full"
-                    onClick={async () => {
-                      if (editIsRecurring) {
-                        if ((editRecurrenceFrequency === 'weekly' || editRecurrenceFrequency === 'biweekly') && editRecurrenceDays.length === 0) {
-                          toast({ title: "Please select at least one day of the week", variant: "destructive" });
-                          return;
-                        }
-                        if (editRecurrenceEndType === 'date' && !editRecurrenceEndDate) {
-                          toast({ title: "Please select an end date for recurring events", variant: "destructive" });
-                          return;
-                        }
+                  <div className="flex items-center justify-between border-t border-slate-700 pt-4">
+                    <p className="text-sm text-slate-500">
+                      {(!editingEvent.title?.trim() || !editingEvent.startTime || !editingEvent.endTime || !editingEvent.location?.trim()) &&
+                        `Missing: ${[!editingEvent.title?.trim() && 'title', !editingEvent.startTime && 'dates', !editingEvent.endTime && 'dates', !editingEvent.location?.trim() && 'location'].filter(Boolean).join(', ')}`
                       }
+                    </p>
+                    <div className="flex gap-3">
+                      <Button type="button" variant="outline" className="bg-transparent border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-slate-200" onClick={() => { setEditingEvent(null); setEditEventUserSearch(""); setEditIsRecurring(false); setEditRecurrenceFrequency('weekly'); setEditRecurrenceCount(4); setEditRecurrenceDays([]); setEditRecurrenceEndType('count'); setEditRecurrenceEndDate(''); }}>Cancel</Button>
+                      <Button
+                        type="button"
+                        onClick={async () => {
+                          if (editIsRecurring) {
+                            if ((editRecurrenceFrequency === 'weekly' || editRecurrenceFrequency === 'biweekly') && editRecurrenceDays.length === 0) {
+                              toast({ title: "Please select at least one day of the week", variant: "destructive" });
+                              return;
+                            }
+                            if (editRecurrenceEndType === 'date' && !editRecurrenceEndDate) {
+                              toast({ title: "Please select an end date for recurring events", variant: "destructive" });
+                              return;
+                            }
+                          }
 
-                      const etz = editingEvent.timezone || 'America/Los_Angeles';
+                          const etz = editingEvent.timezone || 'America/Los_Angeles';
 
-                      // Build recurrence end date as end-of-day UTC
-                      const recurrenceEndDateISO = editIsRecurring && editRecurrenceEndType === 'date' && editRecurrenceEndDate
-                        ? editRecurrenceEndDate + 'T23:59:59Z'
-                        : null;
+                          const recurrenceEndDateISO = editIsRecurring && editRecurrenceEndType === 'date' && editRecurrenceEndDate
+                            ? editRecurrenceEndDate + 'T23:59:59Z'
+                            : null;
 
-                      const updatedData = {
-                        ...editingEvent,
-                        startTime: editingEvent.startTime ? localDatetimeToUTC(editingEvent.startTime, etz) : editingEvent.startTime,
-                        endTime: editingEvent.endTime ? localDatetimeToUTC(editingEvent.endTime, etz) : editingEvent.endTime,
-                        isRecurring: editIsRecurring,
-                        recurringType: editIsRecurring ? editRecurrenceFrequency : null,
-                        recurringEndDate: editIsRecurring ? recurrenceEndDateISO : null,
-                      };
-                      
-                      try {
-                        await updateEvent.mutateAsync(updatedData);
-                      } catch (e) {
-                        return;
-                      }
+                          const updatedData = {
+                            ...editingEvent,
+                            startTime: editingEvent.startTime ? localDatetimeToUTC(editingEvent.startTime, etz) : editingEvent.startTime,
+                            endTime: editingEvent.endTime ? localDatetimeToUTC(editingEvent.endTime, etz) : editingEvent.endTime,
+                            isRecurring: editIsRecurring,
+                            recurringType: editIsRecurring ? editRecurrenceFrequency : null,
+                            recurringEndDate: editIsRecurring ? recurrenceEndDateISO : null,
+                          };
 
-                      if (editIsRecurring) {
-                        const startDate = new Date(updatedData.startTime);
-                        const endDate = new Date(updatedData.endTime);
-                        const durationMs = endDate.getTime() - startDate.getTime();
-                        
-                        let endLimit: Date | null = null;
-                        if (editRecurrenceEndType === 'date' && editRecurrenceEndDate) {
-                          const [year, month, day] = editRecurrenceEndDate.split('-').map(Number);
-                          endLimit = new Date(year, month - 1, day, 23, 59, 59);
-                        }
-                        const maxCount = editRecurrenceEndType === 'count' ? editRecurrenceCount : 1000;
-                        
-                        const eventsToCreate: any[] = [];
-                        let currentStart = new Date(startDate);
-                        let count = 0;
+                          try {
+                            await updateEvent.mutateAsync(updatedData);
+                          } catch (e) {
+                            return;
+                          }
 
-                        if ((editRecurrenceFrequency === 'weekly' || editRecurrenceFrequency === 'biweekly') && editRecurrenceDays.length > 0) {
-                          const weekInterval = editRecurrenceFrequency === 'biweekly' ? 2 : 1;
-                          let weekStart = new Date(currentStart);
-                          weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-                          
-                          while (count < maxCount) {
-                            if (endLimit && weekStart > endLimit) break;
-                            for (const dayOfWeek of editRecurrenceDays.sort((a: number, b: number) => a - b)) {
-                              if (count >= maxCount) break;
-                              const eventDate = new Date(weekStart);
-                              eventDate.setDate(eventDate.getDate() + dayOfWeek);
-                              eventDate.setHours(startDate.getHours(), startDate.getMinutes(), 0, 0);
-                              if (endLimit && eventDate > endLimit) continue;
-                              if (eventDate > startDate) {
-                                const newEnd = new Date(eventDate.getTime() + durationMs);
-                                eventsToCreate.push({ ...updatedData, id: undefined, startTime: eventDate.toISOString(), endTime: newEnd.toISOString() });
+                          if (editIsRecurring) {
+                            const startDate = new Date(updatedData.startTime);
+                            const endDate = new Date(updatedData.endTime);
+                            const durationMs = endDate.getTime() - startDate.getTime();
+
+                            let endLimit: Date | null = null;
+                            if (editRecurrenceEndType === 'date' && editRecurrenceEndDate) {
+                              const [year, month, day] = editRecurrenceEndDate.split('-').map(Number);
+                              endLimit = new Date(year, month - 1, day, 23, 59, 59);
+                            }
+                            const maxCount = editRecurrenceEndType === 'count' ? editRecurrenceCount : 1000;
+
+                            const eventsToCreate: any[] = [];
+                            let currentStart = new Date(startDate);
+                            let count = 0;
+
+                            if ((editRecurrenceFrequency === 'weekly' || editRecurrenceFrequency === 'biweekly') && editRecurrenceDays.length > 0) {
+                              const weekInterval = editRecurrenceFrequency === 'biweekly' ? 2 : 1;
+                              let weekStart = new Date(currentStart);
+                              weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+
+                              while (count < maxCount) {
+                                if (endLimit && weekStart > endLimit) break;
+                                for (const dayOfWeek of editRecurrenceDays.sort((a: number, b: number) => a - b)) {
+                                  if (count >= maxCount) break;
+                                  const eventDate = new Date(weekStart);
+                                  eventDate.setDate(eventDate.getDate() + dayOfWeek);
+                                  eventDate.setHours(startDate.getHours(), startDate.getMinutes(), 0, 0);
+                                  if (endLimit && eventDate > endLimit) continue;
+                                  if (eventDate > startDate) {
+                                    const newEnd = new Date(eventDate.getTime() + durationMs);
+                                    eventsToCreate.push({ ...updatedData, id: undefined, startTime: eventDate.toISOString(), endTime: newEnd.toISOString() });
+                                    count++;
+                                  }
+                                }
+                                weekStart.setDate(weekStart.getDate() + (7 * weekInterval));
+                              }
+                            } else {
+                              while (count < maxCount) {
+                                if (editRecurrenceFrequency === 'daily') {
+                                  currentStart.setDate(currentStart.getDate() + 1);
+                                } else if (editRecurrenceFrequency === 'weekly') {
+                                  currentStart.setDate(currentStart.getDate() + 7);
+                                } else if (editRecurrenceFrequency === 'biweekly') {
+                                  currentStart.setDate(currentStart.getDate() + 14);
+                                } else if (editRecurrenceFrequency === 'monthly') {
+                                  currentStart.setMonth(currentStart.getMonth() + 1);
+                                }
+                                if (endLimit && currentStart > endLimit) break;
+                                const newEnd = new Date(currentStart.getTime() + durationMs);
+                                eventsToCreate.push({ ...updatedData, id: undefined, startTime: new Date(currentStart).toISOString(), endTime: newEnd.toISOString() });
                                 count++;
                               }
                             }
-                            weekStart.setDate(weekStart.getDate() + (7 * weekInterval));
-                          }
-                        } else {
-                          while (count < maxCount) {
-                            if (editRecurrenceFrequency === 'daily') {
-                              currentStart.setDate(currentStart.getDate() + 1);
-                            } else if (editRecurrenceFrequency === 'weekly') {
-                              currentStart.setDate(currentStart.getDate() + 7);
-                            } else if (editRecurrenceFrequency === 'biweekly') {
-                              currentStart.setDate(currentStart.getDate() + 14);
-                            } else if (editRecurrenceFrequency === 'monthly') {
-                              currentStart.setMonth(currentStart.getMonth() + 1);
-                            }
-                            if (endLimit && currentStart > endLimit) break;
-                            const newEnd = new Date(currentStart.getTime() + durationMs);
-                            eventsToCreate.push({ ...updatedData, id: undefined, startTime: new Date(currentStart).toISOString(), endTime: newEnd.toISOString() });
-                            count++;
-                          }
-                        }
 
-                        for (const evt of eventsToCreate) {
-                          try {
-                            await apiRequest("POST", "/api/events", evt);
-                          } catch (e) {
-                            console.error('Failed to create recurring event:', e);
+                            for (const evt of eventsToCreate) {
+                              try {
+                                await apiRequest("POST", "/api/events", evt);
+                              } catch (e) {
+                                console.error('Failed to create recurring event:', e);
+                              }
+                            }
+                            queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+                            toast({ title: `Created ${eventsToCreate.length} additional recurring event(s)` });
+                            setEditIsRecurring(false);
+                            setEditRecurrenceFrequency('weekly');
+                            setEditRecurrenceCount(4);
+                            setEditRecurrenceDays([]);
+                            setEditRecurrenceEndType('count');
+                            setEditRecurrenceEndDate('');
                           }
-                        }
-                        queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-                        toast({ title: `Created ${eventsToCreate.length} additional recurring event(s)` });
-                        setEditIsRecurring(false);
-                        setEditRecurrenceFrequency('weekly');
-                        setEditRecurrenceCount(4);
-                        setEditRecurrenceDays([]);
-                        setEditRecurrenceEndType('count');
-                        setEditRecurrenceEndDate('');
-                      }
-                    }}
-                    disabled={updateEvent.isPending || !editingEvent.title?.trim() || !editingEvent.startTime || !editingEvent.endTime || !editingEvent.location?.trim()}
-                    data-testid="button-submit-edit-event"
-                  >
-                    {updateEvent.isPending ? "Updating..." : editIsRecurring ? "Update & Create Recurring" : "Update Event"}
-                  </Button>
+                        }}
+                        disabled={updateEvent.isPending || !editingEvent.title?.trim() || !editingEvent.startTime || !editingEvent.endTime || !editingEvent.location?.trim()}
+                        data-testid="button-submit-edit-event"
+                      >
+                        {updateEvent.isPending ? "Updating..." : editIsRecurring ? "Update & Create Recurring" : "Update Event"}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               )}
             </DialogContent>

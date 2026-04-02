@@ -4606,7 +4606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               unit_amount: bundleOneTimeProcFee,
             },
             quantity: 1,
-            description: 'Card processing fee (one-time)',
+            description: 'Card processing fee',
           });
         }
 

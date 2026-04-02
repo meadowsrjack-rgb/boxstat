@@ -4625,7 +4625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               quantity: 1,
             }];
         
-        if (!monthlyPriceId && selectedPricingOption.monthlyPrice > 0) {
+        if (selectedPricingOption.monthlyPrice > 0) {
           const monthlyProcFee = calculateStripeProcessingFee(selectedPricingOption.monthlyPrice);
           if (monthlyProcFee > 0) {
             subscriptionLineItems.push({

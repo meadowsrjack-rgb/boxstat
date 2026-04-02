@@ -278,52 +278,69 @@ function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, sel
         </div>
       </div>
 
-      {/* Team selection — only show if program is selected */}
       {selectedProgram && (
         <div className="space-y-3">
           <div className="text-sm font-medium">Teams <span className="text-muted-foreground font-normal">(optional)</span></div>
 
-          {teamsForCurrentProgram.length > 0 && (
-            <div className="space-y-1">
-              <div className="text-xs text-muted-foreground">Add from existing teams in this program:</div>
-              <Select onValueChange={addExistingTeam} value="">
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a team to add" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teamsForCurrentProgram.map((t: any) => (
-                    <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <div className="space-y-2">
+            {teamsForCurrentProgram.map((t: any) => {
+              const alreadyAdded = selectedTeams.some((st) => st.id === t.id);
+              return (
+                <div
+                  key={t.id}
+                  className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background text-left"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                    <Users size={14} className="text-slate-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{t.name}</div>
+                  </div>
+                  {!alreadyAdded ? (
+                    <Button size="sm" variant="ghost" className="text-xs h-7 px-2 text-muted-foreground" onClick={() => addExistingTeam(t.id.toString())}>
+                      <Plus size={12} className="mr-1" /> Include
+                    </Button>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200">Included</Badge>
+                  )}
+                </div>
+              );
+            })}
 
-          <div className="flex gap-2">
-            <Input
-              placeholder="New team name (e.g. Blue, U12 Boys)"
-              value={newTeamName}
-              onChange={(e) => setNewTeamName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addNewTeam()}
-            />
-            <Button size="sm" variant="outline" onClick={addNewTeam} disabled={!newTeamName.trim()}>
-              <Plus size={14} className="mr-1" /> Add
-            </Button>
+            {selectedTeams.filter((t) => t.isNew).map((t) => (
+              <div
+                key={t.id}
+                className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background text-left"
+              >
+                <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                  <Users size={14} className="text-amber-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{t.name}</div>
+                </div>
+                <Badge variant="outline" className="text-[10px] shrink-0 bg-amber-50 text-amber-700 border-amber-200">New</Badge>
+                <button
+                  type="button"
+                  onClick={() => removeTeam(t.id)}
+                  className="text-muted-foreground hover:text-destructive p-1 rounded shrink-0"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+
+            <div className="flex gap-2">
+              <Input
+                placeholder="New team name (e.g. Blue, U12 Boys)"
+                value={newTeamName}
+                onChange={(e) => setNewTeamName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addNewTeam()}
+              />
+              <Button size="sm" variant="outline" onClick={addNewTeam} disabled={!newTeamName.trim()}>
+                <Plus size={14} className="mr-1" /> Add
+              </Button>
+            </div>
           </div>
-
-          {selectedTeams.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {selectedTeams.map((t) => (
-                <Badge key={t.id} variant="secondary" className="flex items-center gap-1">
-                  {t.name}
-                  {t.isNew && <span className="text-[10px] text-muted-foreground ml-1">(new)</span>}
-                  <button onClick={() => removeTeam(t.id)} className="ml-1 hover:text-destructive">
-                    <X size={10} />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          )}
         </div>
       )}
     </div>

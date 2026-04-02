@@ -134,9 +134,12 @@ interface ProgramsStepProps {
 
 function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, selectedTeams, setSelectedTeams }: ProgramsStepProps) {
   const [showNewForm, setShowNewForm] = useState(false);
-  const [newProgramName, setNewProgramName] = useState(selectedProgram?.isNew ? selectedProgram.name : "");
-  const [newProgramCode, setNewProgramCode] = useState(selectedProgram?.isNew ? selectedProgram.code : "");
+  const [newProgramName, setNewProgramName] = useState("");
+  const [newProgramCode, setNewProgramCode] = useState("");
   const [newTeamName, setNewTeamName] = useState("");
+  const [createdPrograms, setCreatedPrograms] = useState<MigrationProgram[]>(
+    () => selectedProgram?.isNew ? [selectedProgram] : []
+  );
 
   const { data: existingPrograms = [] } = useQuery<any[]>({ queryKey: ["/api/programs"] });
   const { data: existingTeams = [] } = useQuery<any[]>({ queryKey: ["/api/teams"] });
@@ -144,20 +147,29 @@ function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, sel
   const orgPrograms = existingPrograms.filter((p: any) => p.organizationId === organizationId && p.productCategory !== 'goods');
   const orgTeams = existingTeams.filter((t: any) => t.organizationId === organizationId);
 
-  const selectExistingProgram = (programId: string) => {
-    const prog = orgPrograms.find((p: any) => p.id === programId);
-    if (!prog) return;
-    setSelectedProgram({ id: prog.id, name: prog.name, code: prog.code || "", isNew: false });
+  const selectProgram = (prog: MigrationProgram) => {
+    setSelectedProgram(prog);
     setSelectedTeams([]);
+  };
+
+  const addNewProgram = () => {
+    if (!newProgramName.trim()) return;
+    const tempId = `migration-new-${Date.now()}`;
+    const newProg: MigrationProgram = { id: tempId, name: newProgramName.trim(), code: newProgramCode.trim(), isNew: true };
+    setCreatedPrograms((prev) => [...prev, newProg]);
+    setSelectedProgram(newProg);
+    setSelectedTeams([]);
+    setNewProgramName("");
+    setNewProgramCode("");
     setShowNewForm(false);
   };
 
-  const applyNewProgram = () => {
-    if (!newProgramName.trim()) return;
-    const tempId = `migration-new-${Date.now()}`;
-    setSelectedProgram({ id: tempId, name: newProgramName.trim(), code: newProgramCode.trim(), isNew: true });
-    setSelectedTeams([]);
-    setShowNewForm(false);
+  const removeCreatedProgram = (id: string) => {
+    setCreatedPrograms((prev) => prev.filter((p) => p.id !== id));
+    if (selectedProgram?.id === id) {
+      setSelectedProgram(null);
+      setSelectedTeams([]);
+    }
   };
 
   const addExistingTeam = (teamId: string) => {
@@ -180,6 +192,11 @@ function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, sel
     ? orgTeams.filter((t: any) => t.programId === selectedProgram.id && !selectedProgram.isNew)
     : [];
 
+  const allPrograms: { prog: MigrationProgram; source: "existing" | "new" }[] = [
+    ...orgPrograms.map((p: any) => ({ prog: { id: p.id, name: p.name, code: p.code || "", isNew: false } as MigrationProgram, source: "existing" as const })),
+    ...createdPrograms.map((p) => ({ prog: p, source: "new" as const })),
+  ];
+
   return (
     <div className="space-y-6">
       <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-lg p-3 text-sm text-blue-800">
@@ -189,24 +206,67 @@ function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, sel
       <div className="space-y-3">
         <div className="text-sm font-medium">Program</div>
 
-        {orgPrograms.length > 0 && !selectedProgram && !showNewForm && (
-          <div className="space-y-2">
-            {orgPrograms.map((p: any) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => selectExistingProgram(p.id)}
-                className="w-full flex items-center gap-3 p-3 rounded-lg border border-border bg-background hover:bg-muted/50 transition-colors text-left"
+        <div className="space-y-2">
+          {allPrograms.map(({ prog, source }) => {
+            const isSelected = selectedProgram?.id === prog.id;
+            return (
+              <div
+                key={prog.id}
+                className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors text-left cursor-pointer
+                  ${isSelected
+                    ? "border-green-300 bg-green-50 ring-1 ring-green-200"
+                    : "border-border bg-background hover:bg-muted/50"}`}
+                onClick={() => selectProgram(prog)}
               >
-                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                  <Package size={16} className="text-blue-600" />
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
+                  ${isSelected ? "bg-green-100" : "bg-blue-50"}`}>
+                  {isSelected
+                    ? <CheckCircle2 size={16} className="text-green-600" />
+                    : <Package size={16} className="text-blue-600" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{p.name}</div>
-                  {p.code && <div className="text-xs text-muted-foreground">{p.code}</div>}
+                  <div className="text-sm font-medium truncate">{prog.name}</div>
+                  {prog.code && <div className="text-xs text-muted-foreground">{prog.code}</div>}
                 </div>
-              </button>
-            ))}
+                {source === "new" && (
+                  <Badge variant="outline" className="text-[10px] shrink-0 bg-amber-50 text-amber-700 border-amber-200">New</Badge>
+                )}
+                {source === "new" && !isSelected && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); removeCreatedProgram(prog.id); }}
+                    className="text-muted-foreground hover:text-destructive p-1 rounded shrink-0"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+
+          {showNewForm ? (
+            <div className="border border-dashed border-border rounded-lg p-3 space-y-2">
+              <Input
+                placeholder="Program name (e.g. Spring 2026 Training)"
+                value={newProgramName}
+                onChange={(e) => setNewProgramName(e.target.value)}
+                autoFocus
+              />
+              <Input
+                placeholder="Short code (e.g. SPR26) — optional"
+                value={newProgramCode}
+                onChange={(e) => setNewProgramCode(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={addNewProgram} disabled={!newProgramName.trim()}>
+                  Add program
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => { setShowNewForm(false); setNewProgramName(""); setNewProgramCode(""); }}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
             <button
               type="button"
               onClick={() => setShowNewForm(true)}
@@ -214,47 +274,8 @@ function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, sel
             >
               <Plus size={14} /> Create new program
             </button>
-          </div>
-        )}
-
-        {(showNewForm || orgPrograms.length === 0) && !selectedProgram && (
-          <div className="space-y-2">
-            <Input
-              placeholder="Program name (e.g. Spring 2026 Training)"
-              value={newProgramName}
-              onChange={(e) => setNewProgramName(e.target.value)}
-            />
-            <Input
-              placeholder="Short code (e.g. SPR26) — optional"
-              value={newProgramCode}
-              onChange={(e) => setNewProgramCode(e.target.value)}
-            />
-            <div className="flex gap-2">
-              <Button size="sm" onClick={applyNewProgram} disabled={!newProgramName.trim()}>
-                Set program
-              </Button>
-              {orgPrograms.length > 0 && (
-                <Button size="sm" variant="outline" onClick={() => setShowNewForm(false)}>
-                  Cancel
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {selectedProgram && (
-          <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
-            <CheckCircle2 size={14} />
-            <span>
-              <strong>{selectedProgram.name}</strong>
-              {selectedProgram.code ? ` · ${selectedProgram.code}` : ""}
-              {selectedProgram.isNew ? " (will be created)" : ""}
-            </span>
-            <button onClick={() => { setSelectedProgram(null); setShowNewForm(false); }} className="ml-auto text-green-600 hover:text-green-800">
-              <X size={14} />
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Team selection — only show if program is selected */}

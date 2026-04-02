@@ -754,7 +754,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               "/magic-link-login",
               "/magic-link-login/*",
               "/claim-verify",
-              "/claim-verify/*"
+              "/claim-verify/*",
+              "/invite/*"
             ]
           }
         ]

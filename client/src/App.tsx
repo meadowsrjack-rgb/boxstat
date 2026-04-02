@@ -54,6 +54,8 @@ import ParentSettingsPage from "@/pages/parent-settings";
 import TrophiesBadges from "@/pages/trophies-badges";
 import Skills from "@/pages/skills";
 import InviteClaim from "@/pages/invite-claim";
+import ClaimVerify from "@/pages/claim-verify";
+import AccountClaim from "@/pages/account-claim";
 import TestRoute from "@/pages/test-route";
 import TestDatePicker from "@/pages/test-datepicker";
 import NotFound from "@/pages/not-found";
@@ -457,6 +459,8 @@ function AppRouter() {
       <Route path="/register" component={RegistrationFlow} />
       <Route path="/verify-email" component={VerifyEmail} />
       <Route path="/magic-link-login" component={MagicLinkLogin} />
+      <Route path="/claim-verify" component={ClaimVerify} />
+      <Route path="/account-claim" component={AccountClaim} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/set-password" component={SetPassword} />

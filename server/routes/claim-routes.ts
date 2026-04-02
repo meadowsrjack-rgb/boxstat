@@ -111,7 +111,7 @@ export function registerClaimRoutes(app: Express): void {
       });
 
       // Send claim email
-      const claimLink = `${process.env.REPL_URL || 'http://localhost:5000'}/claim-verify?token=${magicLinkToken}`;
+      const claimLink = `${process.env.APP_URL || process.env.REPL_URL || 'http://localhost:5000'}/claim-verify?token=${magicLinkToken}`;
       
       try {
         // In development mode, provide direct access to the claim link
@@ -333,7 +333,7 @@ export function registerClaimRoutes(app: Express): void {
       });
 
       // Generate the claim link
-      const baseUrl = process.env.REPL_URL || 'http://localhost:5000';
+      const baseUrl = process.env.APP_URL || process.env.REPL_URL || 'http://localhost:5000';
       const claimLink = `${baseUrl}/claim-verify?token=${magicLinkToken}`;
       
       // Audit logging

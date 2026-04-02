@@ -179,20 +179,24 @@ const stripe = stripeSecretKey
 const stripeOrgCache = new Map<string, { instance: Stripe; key: string; createdAt: number }>();
 const STRIPE_CACHE_TTL = 5 * 60 * 1000;
 
-async function getOrgConnectInfo(organizationId: string): Promise<{ connectedAccountId: string | null; isConnected: boolean }> {
+async function getOrgConnectInfo(organizationId: string): Promise<{ connectedAccountId: string | null; isConnected: boolean; stripeConnectStatus: string | null }> {
+  let org: Awaited<ReturnType<typeof storage.getOrganization>>;
   try {
-    const org = await storage.getOrganization(organizationId);
-    if (!org) {
-      console.warn(`[Connect] Org ${organizationId} not found — cannot determine Connect status`);
-    } else if (!org.stripeConnectedId || org.stripeConnectStatus !== 'active') {
-      console.log(`[Connect] Org ${organizationId} is not Connect-enabled (status: ${org.stripeConnectStatus ?? 'none'})`);
-    } else {
-      return { connectedAccountId: org.stripeConnectedId, isConnected: true };
-    }
-  } catch (e: any) {
-    console.warn(`[Connect] Failed to look up org ${organizationId} for Connect info:`, e?.message || e);
+    org = await storage.getOrganization(organizationId);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[Connect] Database error looking up org ${organizationId} for Connect info:`, msg);
+    throw new Error(`Failed to retrieve Connect status for org ${organizationId}: ${msg}`);
   }
-  return { connectedAccountId: null, isConnected: false };
+  if (!org) {
+    console.error(`[Connect] Org ${organizationId} not found — cannot determine Connect status. Blocking checkout to prevent misrouting.`);
+    throw new Error(`Org ${organizationId} not found — cannot verify Connect routing. Checkout blocked.`);
+  }
+  if (!org.stripeConnectedId || org.stripeConnectStatus !== 'active') {
+    console.log(`[Connect] Org ${organizationId} is not Connect-enabled (status: ${org.stripeConnectStatus ?? 'none'})`);
+    return { connectedAccountId: null, isConnected: false, stripeConnectStatus: org.stripeConnectStatus ?? null };
+  }
+  return { connectedAccountId: org.stripeConnectedId, isConnected: true, stripeConnectStatus: org.stripeConnectStatus };
 }
 
 async function getStripeForOrg(organizationId: string): Promise<Stripe | null> {
@@ -211,7 +215,10 @@ async function getStripeForOrg(organizationId: string): Promise<Stripe | null> {
       stripeOrgCache.set(organizationId, { instance, key: org.stripeSecretKey, createdAt: Date.now() });
       return instance;
     }
-  } catch (e) {}
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[Connect] getStripeForOrg: failed to resolve Stripe instance for org ${organizationId}, falling back to platform Stripe:`, msg);
+  }
   return stripe;
 }
 
@@ -262,14 +269,17 @@ async function applyConnectChargeParams(
   organizationId: string,
   mode: 'payment' | 'subscription',
   applicationFeeAmount?: number,
-) {
+): Promise<{ applied: boolean; connectedAccountId: string | null; stripeConnectStatus: string | null }> {
   const connectInfo = await getOrgConnectInfo(organizationId);
   if (!connectInfo.isConnected || !connectInfo.connectedAccountId) {
-    console.log(`[Connect] Org ${organizationId} not connected, skipping Connect params`);
-    return;
+    console.log(`[Connect] Org ${organizationId} is not Connect-enabled — skipping Connect params (no routing applied)`);
+    return { applied: false, connectedAccountId: null, stripeConnectStatus: connectInfo.stripeConnectStatus };
   }
 
-  console.log(`[Connect] Applying ${mode} Connect params for org ${organizationId} → ${connectInfo.connectedAccountId}`);
+  console.log(`[Connect] Applying ${mode} Connect params for org ${organizationId} → ${connectInfo.connectedAccountId}`, {
+    applicationFeeAmount: applicationFeeAmount ?? null,
+    mode,
+  });
 
   if (mode === 'payment') {
     sessionParams.payment_intent_data = {
@@ -283,7 +293,7 @@ async function applyConnectChargeParams(
     }
     console.log(`[Connect] payment_intent_data applied:`, {
       transfer_data: sessionParams.payment_intent_data.transfer_data,
-      application_fee_amount: sessionParams.payment_intent_data.application_fee_amount,
+      application_fee_amount: sessionParams.payment_intent_data.application_fee_amount ?? null,
     });
   } else if (mode === 'subscription') {
     sessionParams.subscription_data = {
@@ -294,10 +304,8 @@ async function applyConnectChargeParams(
     };
     const feePercent = await getPlatformFeePercent();
     if (feePercent > 0) {
-      // Prefer percent-based fee for subscriptions so recurring charges are also covered
       sessionParams.subscription_data.application_fee_percent = feePercent;
     } else if (applicationFeeAmount && applicationFeeAmount > 0) {
-      // Fall back to flat fee amount when no percent is configured
       sessionParams.subscription_data.application_fee_amount = applicationFeeAmount;
     }
     console.log(`[Connect] subscription_data applied:`, {
@@ -306,6 +314,49 @@ async function applyConnectChargeParams(
       application_fee_amount: sessionParams.subscription_data.application_fee_amount ?? null,
     });
   }
+
+  return { applied: true, connectedAccountId: connectInfo.connectedAccountId, stripeConnectStatus: connectInfo.stripeConnectStatus };
+}
+
+function verifyConnectRouting(
+  sessionParams: Record<string, unknown>,
+  mode: 'payment' | 'subscription',
+  organizationId: string,
+  connectResult: { applied: boolean; connectedAccountId: string | null; stripeConnectStatus: string | null },
+  context?: { applicationFeeAmount?: number; checkoutType?: string },
+): void {
+  const decisionLog = {
+    orgId: organizationId,
+    connectedAccountId: connectResult.connectedAccountId,
+    stripeConnectStatus: connectResult.stripeConnectStatus,
+    connectApplied: connectResult.applied,
+    mode,
+    applicationFeeAmount: context?.applicationFeeAmount ?? null,
+    checkoutType: context?.checkoutType ?? 'unknown',
+  };
+
+  if (!connectResult.applied) {
+    console.log(`[Connect] Decision: Connect not applied (org not connected)`, decisionLog);
+    return;
+  }
+
+  const paymentIntentData = sessionParams.payment_intent_data as { transfer_data?: { destination?: string } } | undefined;
+  const subscriptionData = sessionParams.subscription_data as { transfer_data?: { destination?: string } } | undefined;
+  const destination = mode === 'payment'
+    ? paymentIntentData?.transfer_data?.destination
+    : subscriptionData?.transfer_data?.destination;
+
+  if (!destination) {
+    console.error(`[Connect] ROUTING ERROR: Connect params were applied but transfer_data.destination is missing. Blocking checkout.`, decisionLog);
+    throw new Error(`Connect routing verification failed for org ${organizationId}: transfer_data.destination is not set. Payment blocked to prevent funds misrouting.`);
+  }
+
+  if (destination !== connectResult.connectedAccountId) {
+    console.error(`[Connect] ROUTING ERROR: transfer_data.destination mismatch. Expected ${connectResult.connectedAccountId}, got ${destination}. Blocking checkout.`, decisionLog);
+    throw new Error(`Connect routing verification failed for org ${organizationId}: transfer_data.destination does not match expected connected account. Payment blocked to prevent funds misrouting.`);
+  }
+
+  console.log(`[Connect] Decision: routing verified`, { ...decisionLog, destination });
 }
 
 // Helper function to generate stable UUID for pricing options
@@ -1750,7 +1801,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         metadata,
       };
 
-      await applyConnectChargeParams(sessionParams1, req.user.organizationId, mode, legacyPlatformFee > 0 ? legacyPlatformFee : undefined);
+      const connectResult1 = await applyConnectChargeParams(sessionParams1, req.user.organizationId, mode, legacyPlatformFee > 0 ? legacyPlatformFee : undefined);
+      verifyConnectRouting(sessionParams1, mode, req.user.organizationId, connectResult1, { applicationFeeAmount: legacyPlatformFee, checkoutType: 'legacy_package' });
 
       const session = await orgStripe.checkout.sessions.create(sessionParams1);
       
@@ -2203,7 +2255,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }
 
-      await applyConnectChargeParams(sessionParams, req.user.organizationId, checkoutMode, platformFee);
+      const connectResult2 = await applyConnectChargeParams(sessionParams, req.user.organizationId, checkoutMode, platformFee);
+      verifyConnectRouting(sessionParams, checkoutMode, req.user.organizationId, connectResult2, { applicationFeeAmount: platformFee, checkoutType: 'package_purchase' });
 
       const session = await orgStripe2.checkout.sessions.create(sessionParams);
 
@@ -3288,7 +3341,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       };
 
-      await applyConnectChargeParams(cartSessionParams, req.user.organizationId, 'payment', cartPlatformFee);
+      const connectResult3 = await applyConnectChargeParams(cartSessionParams, req.user.organizationId, 'payment', cartPlatformFee);
+      verifyConnectRouting(cartSessionParams, 'payment', req.user.organizationId, connectResult3, { applicationFeeAmount: cartPlatformFee, checkoutType: 'cart_purchase' });
 
       const newSession = await orgStripe.checkout.sessions.create(cartSessionParams);
 
@@ -3299,7 +3353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ url: newSession.url, sessionId: newSession.id });
     } catch (error: any) {
       console.error('Error resuming abandoned cart checkout:', error);
-      res.status(500).json({ error: 'Failed to resume checkout' });
+      res.status(500).json({ error: error.message || 'Failed to resume checkout' });
     }
   });
 
@@ -4509,7 +4563,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         };
 
-        await applyConnectChargeParams(addPlayerSubParams, req.user.organizationId, 'subscription');
+        const connectResult4 = await applyConnectChargeParams(addPlayerSubParams, req.user.organizationId, 'subscription');
+        verifyConnectRouting(addPlayerSubParams, 'subscription', req.user.organizationId, connectResult4, { checkoutType: 'add_player_subscription' });
 
         session = await playerOrgStripe.checkout.sessions.create(addPlayerSubParams);
         
@@ -4592,7 +4647,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         };
 
-        await applyConnectChargeParams(addPlayerPayParams, req.user.organizationId, 'payment', platformFee);
+        const connectResult5 = await applyConnectChargeParams(addPlayerPayParams, req.user.organizationId, 'payment', platformFee);
+        verifyConnectRouting(addPlayerPayParams, 'payment', req.user.organizationId, connectResult5, { applicationFeeAmount: platformFee, checkoutType: 'add_player_payment' });
 
         session = await playerOrgStripe.checkout.sessions.create(addPlayerPayParams);
       }
@@ -15134,7 +15190,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         };
 
-        await applyConnectChargeParams(quoteSessionParams, quote.organizationId, 'payment', quotePlatformFee);
+        const connectResult6 = await applyConnectChargeParams(quoteSessionParams, quote.organizationId, 'payment', quotePlatformFee);
+        verifyConnectRouting(quoteSessionParams, 'payment', quote.organizationId, connectResult6, { applicationFeeAmount: quotePlatformFee, checkoutType: 'quote_checkout' });
 
         const session = await quoteOrgStripe.checkout.sessions.create(quoteSessionParams);
 
@@ -15149,7 +15206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, userId: accountUser.id });
     } catch (error: any) {
       console.error('Error completing quote checkout:', error);
-      res.status(500).json({ error: "Failed to complete checkout" });
+      res.status(500).json({ error: error.message || "Failed to complete checkout" });
     }
   });
 

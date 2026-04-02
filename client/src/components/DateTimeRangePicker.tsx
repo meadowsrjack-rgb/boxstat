@@ -50,7 +50,7 @@ function formatTime(hour: number, minute: number, ampm: 'AM' | 'PM'): string {
 }
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
-const MINUTES = Array.from({ length: 60 }, (_, i) => i);
+const MINUTES = [0, 15, 30, 45];
 
 export default function DateTimeRangePicker({
   startValue,

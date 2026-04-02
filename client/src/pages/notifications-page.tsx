@@ -41,6 +41,10 @@ interface Notification {
   expiresAt?: string;
 }
 
+function displayTitle(title: string): string {
+  return title.replace(/^\[system:[^\]]*\]\s*/, '');
+}
+
 function getNotificationIcon(type: string) {
   switch (type) {
     case 'badge_earned':
@@ -263,7 +267,7 @@ export default function NotificationsPage() {
                             <CardTitle className={`text-base leading-tight ${
                               !notification.isRead ? 'font-bold' : ''
                             }`}>
-                              {notification.title}
+                              {displayTitle(notification.title)}
                             </CardTitle>
                             {!notification.isRead && (
                               <div className="w-2.5 h-2.5 bg-primary rounded-full flex-shrink-0 mt-1" />
@@ -334,7 +338,7 @@ export default function NotificationsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <CardTitle className="text-base leading-tight font-bold">
-                              {notification.title}
+                              {displayTitle(notification.title)}
                             </CardTitle>
                             <div className="w-2.5 h-2.5 bg-primary rounded-full flex-shrink-0 mt-1" />
                           </div>

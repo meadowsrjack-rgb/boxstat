@@ -106,7 +106,7 @@ export default function NotificationDetailDialog({
               </div>
               <div className="flex-1 min-w-0">
                 <DialogTitle className="text-xl leading-tight pr-8">
-                  {notification.title}
+                  {notification.title.replace(/^\[system:[^\]]*\]\s*/, '')}
                 </DialogTitle>
                 <div className="flex items-center gap-2 mt-2">
                   {getPriorityBadge(notification.priority)}

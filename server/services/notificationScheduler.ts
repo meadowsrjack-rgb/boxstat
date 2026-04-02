@@ -5,7 +5,7 @@ import { pushNotifications } from './pushNotificationHelper';
 import { analyzePlayerAttendance, getOrgPlayers, getTeamCoachIds, getOrgAdminIds } from './attendanceTracker';
 import type { Event } from '@shared/schema';
 import { db } from '../db';
-import { notifications, notificationRecipients, productEnrollments, products, users } from '@shared/schema';
+import { notifications, notificationRecipients, productEnrollments, products, users, teamMemberships, teams } from '@shared/schema';
 import { eq, and, sql, lte, gte, gt, inArray } from 'drizzle-orm';
 import { adminNotificationService } from './adminNotificationService';
 
@@ -802,8 +802,33 @@ export class NotificationScheduler {
           const orgId = row.enrollment.organizationId;
           const programName = row.programName || 'Unknown Program';
           const userName = `${row.profileFirstName || ''} ${row.profileLastName || ''}`.trim() || 'A member';
+          const profileId = row.enrollment.profileId;
 
-          const userTargetIds = [row.enrollment.profileId, row.enrollment.accountHolderId].filter(Boolean) as string[];
+          // Remove team memberships for teams linked to the expired program only
+          if (profileId) {
+            try {
+              const programId = row.enrollment.programId;
+              // Find teams that belong to this program
+              const programTeams = await db.select({ id: teams.id })
+                .from(teams)
+                .where(eq(teams.programId, programId));
+              const programTeamIds = programTeams.map(t => t.id);
+              if (programTeamIds.length > 0) {
+                await db.delete(teamMemberships)
+                  .where(
+                    and(
+                      eq(teamMemberships.profileId, profileId),
+                      inArray(teamMemberships.teamId, programTeamIds)
+                    )
+                  );
+                console.log(`[Enrollment Expiry] Removed program team memberships for player ${profileId} (program: ${programId})`);
+              }
+            } catch (membershipError) {
+              console.error(`[Enrollment Expiry] Failed to remove team memberships for ${profileId}:`, membershipError);
+            }
+          }
+
+          const userTargetIds = [profileId, row.enrollment.accountHolderId].filter(Boolean) as string[];
           const uniqueUserIds = [...new Set(userTargetIds)];
 
           if (uniqueUserIds.length > 0) {
@@ -812,7 +837,7 @@ export class NotificationScheduler {
                 organizationId: orgId,
                 types: ['notification'],
                 title: `${programName} Enrollment Expired`,
-                message: `Your enrollment in ${programName} has expired. To continue, please re-enroll through the app.`,
+                message: `You have been unenrolled from ${programName}. Re-enroll through the Payments tab to continue.`,
                 recipientTarget: 'users',
                 recipientUserIds: uniqueUserIds,
                 deliveryChannels: ['in_app', 'push'],
@@ -857,7 +882,7 @@ export class NotificationScheduler {
     try {
       console.log('[Enrollment Expiry Warnings] Checking for upcoming expirations...');
       const now = new Date();
-      const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const fiveDaysFromNow = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
 
       const soonExpiringEnrollments = await db.select({
         enrollment: productEnrollments,
@@ -871,25 +896,30 @@ export class NotificationScheduler {
         .where(
           and(
             eq(productEnrollments.status, 'active'),
-            lte(productEnrollments.endDate, sevenDaysFromNow.toISOString()),
+            lte(productEnrollments.endDate, fiveDaysFromNow.toISOString()),
             gt(productEnrollments.endDate, now.toISOString())
           )
         );
 
-      console.log(`[Enrollment Expiry Warnings] Found ${soonExpiringEnrollments.length} enrollments expiring within 7 days`);
+      console.log(`[Enrollment Expiry Warnings] Found ${soonExpiringEnrollments.length} enrollments expiring within 5 days`);
 
       for (const row of soonExpiringEnrollments) {
         try {
           const endDate = new Date(row.enrollment.endDate!);
           const daysUntilExpiry = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-          if (daysUntilExpiry !== 7 && daysUntilExpiry !== 1) continue;
+          if (daysUntilExpiry !== 5 && daysUntilExpiry !== 1) continue;
 
           const orgId = row.enrollment.organizationId;
           const programName = row.programName || 'Unknown Program';
           const userName = `${row.profileFirstName || ''} ${row.profileLastName || ''}`.trim() || 'A member';
-          const dedupTitle = `expiry-${row.enrollment.id}-${daysUntilExpiry}d`;
+          const userMessage = daysUntilExpiry === 1
+            ? `Your enrollment in ${programName} ends tomorrow. Re-enroll through the Payments tab to avoid unenrollment.`
+            : `Your enrollment in ${programName} ends in ${daysUntilExpiry} days. Re-enroll through the Payments tab to avoid unenrollment.`;
+          // Title encodes enrollment ID + days for per-enrollment dedup; frontend strips the prefix for display
+          const dedupTitle = `[system:expiry-${row.enrollment.id}-${daysUntilExpiry}d] Enrollment ending ${daysUntilExpiry === 1 ? 'tomorrow' : `in ${daysUntilExpiry} days`}`;
 
+          // Dedup per enrollment + days: skip if already sent
           const existing = await db.select({ id: notifications.id })
             .from(notifications)
             .where(
@@ -910,10 +940,8 @@ export class NotificationScheduler {
               await adminNotificationService.createNotification({
                 organizationId: orgId,
                 types: ['notification'],
-                title: `${programName} Expiring in ${daysUntilExpiry} Day${daysUntilExpiry > 1 ? 's' : ''}`,
-                message: daysUntilExpiry === 1
-                  ? `Your enrollment in ${programName} expires tomorrow. Renew now to avoid losing access.`
-                  : `Your enrollment in ${programName} expires in ${daysUntilExpiry} days. Renew soon to maintain your access.`,
+                title: dedupTitle,
+                message: userMessage,
                 recipientTarget: 'users',
                 recipientUserIds: uniqueUserIds,
                 deliveryChannels: ['in_app', 'push'],
@@ -926,13 +954,25 @@ export class NotificationScheduler {
           }
 
           const adminIds = await getOrgAdminIds(orgId);
-          if (adminIds.length > 0) {
+          const adminDedupTitle = `[system:expiry-admin-${row.enrollment.id}-${daysUntilExpiry}d] Enrollment expiring: ${userName}`;
+          const adminMessage = `${userName}'s enrollment in ${programName} expires in ${daysUntilExpiry} day${daysUntilExpiry > 1 ? 's' : ''}.`;
+          const existingAdminNotif = await db.select({ id: notifications.id })
+            .from(notifications)
+            .where(
+              and(
+                eq(notifications.organizationId, orgId),
+                eq(notifications.title, adminDedupTitle)
+              )
+            )
+            .limit(1);
+
+          if (adminIds.length > 0 && existingAdminNotif.length === 0) {
             try {
               await adminNotificationService.createNotification({
                 organizationId: orgId,
                 types: ['notification'],
-                title: `Enrollment Expiring: ${userName}`,
-                message: `${userName}'s enrollment in ${programName} expires in ${daysUntilExpiry} day${daysUntilExpiry > 1 ? 's' : ''}.`,
+                title: adminDedupTitle,
+                message: adminMessage,
                 recipientTarget: 'users',
                 recipientUserIds: adminIds,
                 deliveryChannels: ['in_app', 'push'],

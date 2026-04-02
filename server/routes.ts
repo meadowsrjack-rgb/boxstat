@@ -2692,19 +2692,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const existingEnrollments = await storage.getActiveEnrollmentsWithCredits(playerId);
                 const hasEnrollment = existingEnrollments.some(e => e.programId === packageId);
                 
-                if (!hasEnrollment && program) {
-                  await storage.createEnrollment({
-                    organizationId: player.organizationId || session.metadata?.organizationId || "default-org",
-                    accountHolderId: userId,
-                    profileId: playerId,
-                    programId: packageId,
-                    status: 'active',
-                    source: 'payment',
-                    remainingCredits: program.sessionCount ?? undefined,
-                    totalCredits: program.sessionCount ?? undefined,
-                  });
-                  console.log(`✅ Created enrollment for player ${playerId} in program ${packageId}`);
-                  
+                if (program) {
+                  // Calculate enrollment end date from product duration
+                  let enrollmentEndDate: string | undefined;
+                  if (program.durationDays) {
+                    const endDate = new Date();
+                    endDate.setDate(endDate.getDate() + program.durationDays);
+                    enrollmentEndDate = endDate.toISOString();
+                  } else if (program.billingCycle === 'monthly') {
+                    const endDate = new Date();
+                    endDate.setMonth(endDate.getMonth() + 1);
+                    enrollmentEndDate = endDate.toISOString();
+                  } else if (program.billingCycle === 'yearly') {
+                    const endDate = new Date();
+                    endDate.setFullYear(endDate.getFullYear() + 1);
+                    enrollmentEndDate = endDate.toISOString();
+                  }
+
+                  if (!hasEnrollment) {
+                    await storage.createEnrollment({
+                      organizationId: player.organizationId || session.metadata?.organizationId || "default-org",
+                      accountHolderId: userId,
+                      profileId: playerId,
+                      programId: packageId,
+                      status: 'active',
+                      source: 'payment',
+                      endDate: enrollmentEndDate,
+                      remainingCredits: program.sessionCount ?? undefined,
+                      totalCredits: program.sessionCount ?? undefined,
+                    });
+                    console.log(`✅ Created enrollment for player ${playerId} in program ${packageId}`);
+                  } else {
+                    // Re-enrollment: expire old and create fresh active enrollment
+                    const oldEnrollment = existingEnrollments.find(e => e.programId === packageId);
+                    if (oldEnrollment) {
+                      await storage.updateEnrollment(oldEnrollment.id, { status: 'expired' });
+                    }
+                    await storage.createEnrollment({
+                      organizationId: player.organizationId || session.metadata?.organizationId || "default-org",
+                      accountHolderId: userId,
+                      profileId: playerId,
+                      programId: packageId,
+                      status: 'active',
+                      source: 'payment',
+                      endDate: enrollmentEndDate,
+                      remainingCredits: program.sessionCount ?? undefined,
+                      totalCredits: program.sessionCount ?? undefined,
+                    });
+                    console.log(`✅ Re-enrollment: created fresh enrollment for player ${playerId} in program ${packageId}`);
+                  }
+
+                  // Update player subscriptionEndDate if we have an end date
+                  if (enrollmentEndDate) {
+                    const endDateStr = enrollmentEndDate.split('T')[0];
+                    await storage.updateUser(playerId, { subscriptionEndDate: endDateStr });
+                    console.log(`✅ Updated player ${playerId} subscriptionEndDate to ${endDateStr}`);
+                  }
+
+                  // Restore team membership only if the player's stored teamId belongs to the program being re-enrolled in
+                  try {
+                    const playerTeamId = player.teamId;
+                    if (playerTeamId) {
+                      const [linkedTeam] = await db.select({ id: teams.id, programId: teams.programId })
+                        .from(teams)
+                        .where(eq(teams.id, playerTeamId));
+                      const teamBelongsToProgram = linkedTeam && linkedTeam.programId === packageId;
+                      if (teamBelongsToProgram) {
+                        await db.insert(teamMemberships).values({
+                          teamId: playerTeamId,
+                          profileId: playerId,
+                          role: 'player',
+                          status: 'active',
+                        }).onConflictDoNothing();
+                        console.log(`✅ Restored team membership for player ${playerId} in team ${playerTeamId} (program: ${packageId})`);
+                      } else {
+                        console.log(`ℹ️ Skipped team membership restore for player ${playerId}: team ${playerTeamId} not in program ${packageId}`);
+                      }
+                    }
+                  } catch (membershipError: any) {
+                    console.error('⚠️ Team membership restore failed (non-fatal):', membershipError.message);
+                  }
+
                   // Evaluate store awards for the player after purchase
                   try {
                     await evaluateAwardsForUser(playerId, storage, { category: 'store' });
@@ -2733,8 +2801,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   } catch (notifError: any) {
                     console.error('⚠️ Enrollment/purchase admin notification failed (non-fatal):', notifError.message);
                   }
-                } else if (hasEnrollment) {
-                  console.log(`ℹ️ Player ${playerId} already has enrollment for program ${packageId}`);
                 }
               } else {
                 console.warn(`⚠️ Player ${playerId} not found, cannot update status`);
@@ -13345,6 +13411,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     lastName: z.string().default(''),
     dateOfBirth: z.string().optional().nullable(),
     subscriptionEndDate: z.string().transform(v => v === '' ? null : v).pipe(z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Date must be MM/DD/YYYY').nullable()).optional(),
+    programId: z.string().nullable().optional(),
+    teamId: z.coerce.number().nullable().optional(),
   });
 
   const migrationParentSchema = z.object({
@@ -13355,9 +13423,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     phone: z.string().optional().nullable(),
   });
 
+  const migrationProgramSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    code: z.string().default(''),
+    isNew: z.boolean().default(false),
+  }).nullable().optional();
+
+  const migrationTeamSchema = z.object({
+    id: z.number(),
+    name: z.string(),
+    programId: z.string(),
+    isNew: z.boolean().default(false),
+  });
+
   const sendInvitesSchema = z.object({
     parents: z.array(migrationParentSchema).min(1, 'At least one parent is required'),
     players: z.array(migrationPlayerSchema).optional().default([]),
+    program: migrationProgramSchema,
+    teams: z.array(migrationTeamSchema).optional().default([]),
   });
 
   // POST /api/migration/send-invites
@@ -13373,12 +13457,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!parseResult.success) {
         return res.status(400).json({ error: 'Invalid payload', details: parseResult.error.flatten() });
       }
-      const { parents, players } = parseResult.data;
+      const { parents, players, program: migrationProgram, teams: migrationTeams } = parseResult.data;
 
       const org = await storage.getOrganization(organizationId);
       const orgName = org?.name || 'Your organization';
 
       const { sendMigrationInvite } = await import('./emails/inviteEmail');
+
+      // ── Step 1: Resolve or create program ────────────────────────────────────
+      let resolvedProgramId: string | null = null;
+      let resolvedProgramName: string | null = null;
+
+      if (migrationProgram) {
+        if (migrationProgram.isNew) {
+          // Create new draft program
+          const newProgram = await storage.createProgram({
+            organizationId,
+            name: migrationProgram.name,
+            code: migrationProgram.code || undefined,
+            isActive: false, // marked incomplete — admin fills in later
+            productCategory: 'service',
+          });
+          resolvedProgramId = newProgram.id;
+          resolvedProgramName = newProgram.name;
+          console.log(`[Migration] Created new program: ${newProgram.id} (${newProgram.name})`);
+        } else {
+          // Verify the existing program belongs to this org
+          const existingProg = await storage.getProgram(migrationProgram.id);
+          if (!existingProg || existingProg.organizationId !== organizationId) {
+            return res.status(403).json({ error: 'Program does not belong to your organization' });
+          }
+          resolvedProgramId = migrationProgram.id;
+          resolvedProgramName = migrationProgram.name;
+        }
+      }
+
+      // ── Step 2: Resolve or create teams ──────────────────────────────────────
+      // Map from migration temp ID → real DB team ID
+      const teamIdMap: Record<number, number> = {};
+      // teamNameMap is keyed by REAL DB team IDs
+      const teamNameMap: Record<number, string> = {};
+
+      if (migrationTeams && migrationTeams.length > 0) {
+        // Pre-fetch org teams once for ownership validation
+        const orgTeams = await storage.getTeamsByOrganization(organizationId);
+        const orgTeamIdSet = new Set(orgTeams.map((t: any) => t.id));
+
+        for (const mt of migrationTeams) {
+          if (mt.isNew) {
+            const newTeam = await storage.createTeam({
+              organizationId,
+              name: mt.name,
+              programId: resolvedProgramId || undefined,
+              active: false, // marked incomplete — admin fills in later
+            });
+            teamIdMap[mt.id] = newTeam.id;
+            teamNameMap[newTeam.id] = newTeam.name;
+            console.log(`[Migration] Created new team: ${newTeam.id} (${newTeam.name})`);
+          } else {
+            // Verify the existing team belongs to this org
+            if (!orgTeamIdSet.has(mt.id)) {
+              return res.status(403).json({ error: `Team ${mt.id} does not belong to your organization` });
+            }
+            // Verify existing team is associated with the migration program (if program is resolved)
+            if (resolvedProgramId) {
+              const existingTeam = orgTeams.find((t: any) => t.id === mt.id);
+              if (existingTeam && existingTeam.programId && existingTeam.programId !== resolvedProgramId) {
+                return res.status(400).json({ error: `Team "${mt.name}" belongs to a different program` });
+              }
+            }
+            teamIdMap[mt.id] = mt.id;
+            teamNameMap[mt.id] = mt.name;
+          }
+        }
+      }
 
       let invited = 0;
       let skipped = 0;
@@ -13432,6 +13584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     subEndDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
                   }
                 }
+                const resolvedTeamId = player.teamId != null ? (teamIdMap[player.teamId] ?? null) : null;
                 await db.insert(users).values({
                   id: playerUserId,
                   firstName: player.firstName || null,
@@ -13444,10 +13597,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   accountHolderId: parentUserId,
                   parentEmail: parent.email.toLowerCase(),
                   subscriptionEndDate: subEndDate,
+                  teamId: resolvedTeamId,
+                  packageSelected: resolvedProgramId || null,
                   status: 'invited',
                   isActive: true,
                   hasRegistered: false,
                 });
+
+                // Create enrollment record if program assigned
+                if (resolvedProgramId && subEndDate) {
+                  const endDateIso = new Date(subEndDate + 'T23:59:59Z').toISOString();
+                  await storage.createEnrollment({
+                    organizationId,
+                    programId: resolvedProgramId,
+                    accountHolderId: parentUserId,
+                    profileId: playerUserId,
+                    status: 'active',
+                    source: 'migration',
+                    endDate: endDateIso,
+                    autoRenew: false,
+                  });
+                }
+
+                // Create team membership if team assigned
+                if (resolvedTeamId) {
+                  await db.insert(teamMemberships).values({
+                    teamId: resolvedTeamId,
+                    profileId: playerUserId,
+                    role: 'player',
+                    status: 'active',
+                  }).onConflictDoNothing();
+                }
               }
             }
           } else {
@@ -13484,6 +13664,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   subEndDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
                 }
               }
+              const resolvedTeamId = player.teamId != null ? (teamIdMap[player.teamId] ?? null) : null;
               await db.insert(users).values({
                 id: playerUserId,
                 firstName: player.firstName || null,
@@ -13496,17 +13677,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 accountHolderId: parentUserId,
                 parentEmail: parent.email.toLowerCase(),
                 subscriptionEndDate: subEndDate,
+                teamId: resolvedTeamId,
+                packageSelected: resolvedProgramId || null,
                 status: 'invited',
                 isActive: true,
                 hasRegistered: false,
               });
+
+              // Create enrollment record if program assigned
+              if (resolvedProgramId && subEndDate) {
+                const endDateIso = new Date(subEndDate + 'T23:59:59Z').toISOString();
+                await storage.createEnrollment({
+                  organizationId,
+                  programId: resolvedProgramId,
+                  accountHolderId: parentUserId,
+                  profileId: playerUserId,
+                  status: 'active',
+                  source: 'migration',
+                  endDate: endDateIso,
+                  autoRenew: false,
+                });
+              }
+
+              // Create team membership if team assigned
+              if (resolvedTeamId) {
+                await db.insert(teamMemberships).values({
+                  teamId: resolvedTeamId,
+                  profileId: playerUserId,
+                  role: 'player',
+                  status: 'active',
+                }).onConflictDoNothing();
+              }
             }
           }
 
           // Send invite email for both new and re-invited parents
+          // Transform players to use resolved (real DB) team IDs so email team lookup works
+          const resolvedLinkedPlayers = linkedPlayers.map((p) => ({
+            ...p,
+            teamId: p.teamId != null ? (teamIdMap[p.teamId] ?? p.teamId) : p.teamId,
+          }));
           const inviteRecord = {
             parent: { ...parent, id: parent.id },
-            players: linkedPlayers,
+            players: resolvedLinkedPlayers,
+            programName: resolvedProgramName || undefined,
+            teamNames: teamNameMap,
           };
           const result = await sendMigrationInvite(inviteRecord, inviteToken, orgName);
 

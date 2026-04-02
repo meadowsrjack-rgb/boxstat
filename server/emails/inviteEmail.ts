@@ -11,22 +11,26 @@ function formatDate(mmddyyyy: string): string {
 }
 
 function buildEmailHtml(record: InviteRecord, inviteUrl: string, orgName: string): string {
-  const { parent, players } = record;
+  const { parent, players, programName, teamNames } = record;
   const hasPlayers = players.length > 0;
   const playerNames = players.map((p) => p.firstName).join(", ");
 
   const playerRows = players
     .map(
-      (p) => `
+      (p) => {
+        const teamName = p.teamId != null && teamNames ? teamNames[p.teamId] : null;
+        return `
       <tr>
         <td style="padding:10px 0;border-bottom:1px solid #f1f3f5;font-size:14px;color:#1a202c">
           ${p.firstName} ${p.lastName}
+          ${programName ? `<div style="font-size:12px;color:#6c757d;margin-top:2px">${programName}${teamName ? ` · ${teamName}` : ''}</div>` : ''}
         </td>
         <td style="padding:10px 0;border-bottom:1px solid #f1f3f5;font-size:14px;color:#6c757d;text-align:right">
           ${p.subscriptionEndDate ? `Access until ${formatDate(p.subscriptionEndDate)}` : "—"}
         </td>
       </tr>
-    `
+    `;
+      }
     )
     .join("");
 
@@ -68,7 +72,7 @@ function buildEmailHtml(record: InviteRecord, inviteUrl: string, orgName: string
             </td></tr>
           </table>
           <p style="font-size:13px;color:#6c757d;line-height:1.7;margin:0 0 24px;padding:12px 16px;background:#f8f9fa;border-radius:8px;border-left:3px solid #3B82F6">
-            When your current subscription ends, you'll be prompted to renew directly through Boxstat. No action needed until then.
+            When your current subscription ends, you'll be prompted to re-enroll through the Payments tab to avoid unenrollment. No action needed until then.
           </p>
           ` : ""}
 

@@ -69,6 +69,7 @@ import { PINDialog } from "@/components/PINDialog";
 import CoachProfileDialog from "@/components/CoachProfileDialog";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
+import { EnrollmentExpiryBanner } from "@/components/EnrollmentExpiryBanner";
 import { PaymentHistory } from "@/components/PaymentHistory";
 import UypTrophyRings from "@/components/UypTrophyRings";
 import { authPersistence } from "@/services/authPersistence";
@@ -2083,6 +2084,7 @@ export default function UnifiedAccount() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Announcement Banner */}
         <AnnouncementBanner />
+        <EnrollmentExpiryBanner />
 
         {!enrollmentsLoading && !playerEnrollments.some((e: any) => e.status === 'active') && parentDashTab !== "payments" && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex items-center gap-3" data-testid="payments-guide-banner">

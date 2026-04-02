@@ -53,6 +53,7 @@ import {
 import NotificationCenter from "@/components/NotificationCenter";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
+import { EnrollmentExpiryBanner } from "@/components/EnrollmentExpiryBanner";
 import PushNotificationSetup from "@/components/PushNotificationSetup";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { format, isSameDay, isAfter, startOfDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isToday as isDateToday } from "date-fns";
@@ -970,6 +971,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         {/* Announcement Banner */}
         <div className="px-6 pt-4">
           <AnnouncementBanner />
+          <EnrollmentExpiryBanner />
         </div>
         {/* Hidden file input for player photo upload */}
         <input

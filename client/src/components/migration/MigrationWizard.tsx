@@ -130,16 +130,15 @@ interface ProgramsStepProps {
   setSelectedProgram: (p: MigrationProgram | null) => void;
   selectedTeams: MigrationTeam[];
   setSelectedTeams: React.Dispatch<React.SetStateAction<MigrationTeam[]>>;
+  createdPrograms: MigrationProgram[];
+  setCreatedPrograms: React.Dispatch<React.SetStateAction<MigrationProgram[]>>;
 }
 
-function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, selectedTeams, setSelectedTeams }: ProgramsStepProps) {
+function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, selectedTeams, setSelectedTeams, createdPrograms, setCreatedPrograms }: ProgramsStepProps) {
   const [showNewForm, setShowNewForm] = useState(false);
   const [newProgramName, setNewProgramName] = useState("");
   const [newProgramCode, setNewProgramCode] = useState("");
   const [newTeamName, setNewTeamName] = useState("");
-  const [createdPrograms, setCreatedPrograms] = useState<MigrationProgram[]>(
-    () => selectedProgram?.isNew ? [selectedProgram] : []
-  );
 
   const { data: existingPrograms = [] } = useQuery<any[]>({ queryKey: ["/api/programs"] });
   const { data: existingTeams = [] } = useQuery<any[]>({ queryKey: ["/api/teams"] });
@@ -201,7 +200,7 @@ function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, sel
 
   const allPrograms: { prog: MigrationProgram; source: "existing" | "new" }[] = [
     ...orgPrograms.map((p: any) => ({ prog: { id: p.id, name: p.name, code: p.code || "", isNew: false } as MigrationProgram, source: "existing" as const })),
-    ...createdPrograms.map((p) => ({ prog: p, source: "new" as const })),
+    ...(createdPrograms || []).map((p) => ({ prog: p, source: "new" as const })),
   ];
 
   return (
@@ -806,6 +805,7 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
   const [step, setStep]                   = useState<Step>("programs");
   const [selectedProgram, setSelectedProgram] = useState<MigrationProgram | null>(null);
   const [selectedTeams, setSelectedTeams] = useState<MigrationTeam[]>([]);
+  const [createdPrograms, setCreatedPrograms] = useState<MigrationProgram[]>([]);
   const [parents, setParents]             = useState<MigrationParent[]>([]);
   const [players, setPlayers]             = useState<MigrationPlayer[]>([]);
   const [isSending, setIsSending]         = useState(false);
@@ -923,6 +923,8 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
             setSelectedProgram={setSelectedProgram}
             selectedTeams={selectedTeams}
             setSelectedTeams={setSelectedTeams}
+            createdPrograms={createdPrograms}
+            setCreatedPrograms={setCreatedPrograms}
           />
         )}
         {step === "parents" && <ParentsStep parents={parents} setParents={setParents} />}

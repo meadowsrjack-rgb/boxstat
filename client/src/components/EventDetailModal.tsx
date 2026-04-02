@@ -7,9 +7,9 @@ import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
-  MapPin, Calendar, Check,
+  MapPin, Check, Building2,
   CheckCircle2, XCircle, Circle, Navigation,
-  MapPinOff, QrCode, Locate, Users, Loader2, Settings, RefreshCw, HelpCircle, UserCheck, ClipboardList, ChevronLeft
+  MapPinOff, QrCode, Locate, Users, Loader2, Settings, RefreshCw, HelpCircle, ClipboardList, ChevronLeft
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RSVPWheel, CheckInWheel, RsvpData, CheckInData } from '@/components/RSVPCheckInWheels';
@@ -151,6 +151,26 @@ export default function EventDetailModal({
       setShowQrCode(false);
     }
   }, [open]);
+
+  // Fetch teams list to find team info for subtitle (division · season)
+  const { data: allTeams = [] } = useQuery<Array<{ id: number; name: string; division?: string; season?: string }>>({
+    queryKey: ['/api/teams'],
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch('/api/teams', { headers, credentials: 'include' });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: open && !!event?.teamId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const teamInfo = useMemo(() => {
+    if (!event?.teamId || !allTeams.length) return null;
+    return allTeams.find(t => t.id === event.teamId) || null;
+  }, [allTeams, event?.teamId]);
 
   const { data: windows = [] } = useQuery<EventWindow[]>({
     queryKey: ['/api/event-windows/event', event?.id],
@@ -870,18 +890,51 @@ export default function EventDetailModal({
   const getEventTypeColor = (eventType: string) => {
     switch (eventType?.toLowerCase()) {
       case 'game':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-900/60 text-red-300 border border-red-700/50';
       case 'practice':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-900/60 text-green-300 border border-green-700/50';
       case 'tournament':
-        return 'bg-purple-100 text-purple-800';
+        return 'bg-purple-900/60 text-purple-300 border border-purple-700/50';
       case 'skills':
-        return 'bg-green-100 text-green-800';
+        return 'bg-blue-900/60 text-blue-300 border border-blue-700/50';
       case 'camp':
-        return 'bg-orange-100 text-orange-800';
+        return 'bg-orange-900/60 text-orange-300 border border-orange-700/50';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-800/60 text-gray-300 border border-gray-700/50';
     }
+  };
+
+  const getRelativeLabel = (dateStr: string) => {
+    const eventDate = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const eventDay = new Date(eventDate);
+    eventDay.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((eventDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Tomorrow';
+    if (diffDays === -1) return 'Yesterday';
+    if (diffDays > 1 && diffDays < 7) return `In ${diffDays} days`;
+    return '';
+  };
+
+  const getDuration = (startStr: string, endStr?: string | null) => {
+    if (!endStr) return null;
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    const diffMs = end.getTime() - start.getTime();
+    if (diffMs <= 0) return null;
+    const totalMinutes = Math.round(diffMs / (1000 * 60));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return { hours, minutes, totalMinutes };
+  };
+
+  const getAvatarColor = (index: number): string => {
+    const colors = ['bg-purple-600', 'bg-teal-600', 'bg-blue-600', 'bg-orange-600', 'bg-pink-600', 'bg-indigo-600', 'bg-yellow-600', 'bg-red-600'];
+    return colors[index % colors.length];
   };
 
   const qrCodeValue = useMemo(() => {
@@ -893,215 +946,211 @@ export default function EventDetailModal({
 
   if (!event) return null;
 
+  const relativeLabel = getRelativeLabel(event.startTime);
+  const duration = getDuration(event.startTime, event.endTime);
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent hideClose className="max-w-lg max-h-[90vh] overflow-hidden p-0 flex flex-col border-white/20 shadow-2xl" style={{ background: 'rgba(240, 242, 245, 0.92)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }} data-testid="event-detail-modal">
-          <div className="shrink-0 px-6 pt-3 pb-4 border-b border-gray-200/50 z-[1100]" style={{ background: 'rgba(240, 242, 245, 0.6)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
-            <div className="flex items-start gap-3">
+        <DialogContent hideClose className="max-w-lg max-h-[90vh] overflow-hidden p-0 flex flex-col border-0 shadow-2xl" style={{ background: '#0f1117' }} data-testid="event-detail-modal">
+          {/* Header */}
+          <div className="shrink-0 px-5 pt-5 pb-4" style={{ background: '#0f1117' }}>
+            <div className="flex items-center gap-2 mb-3">
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-8 w-8 shrink-0 -ml-2"
+                className="h-7 w-7 shrink-0 -ml-1 text-gray-400 hover:text-white hover:bg-white/10"
                 onClick={() => onOpenChange(false)}
                 data-testid="button-back"
               >
                 <ChevronLeft className="h-5 w-5" />
               </Button>
-              <div className="flex-1">
-                <DialogTitle className="text-xl font-bold text-gray-900">
-                  {event.title}
-                </DialogTitle>
-                <div className="flex items-center gap-2 mt-2">
-                  <Badge className={getEventTypeColor(event.eventType)} data-testid="badge-event-type">
-                    {event.eventType}
-                  </Badge>
-                  {event.tags?.map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-xs" data-testid={`badge-tag-${tag}`}>
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
+              <Badge className={`text-xs font-semibold uppercase tracking-wider px-2.5 py-1 ${getEventTypeColor(event.eventType)}`} data-testid="badge-event-type">
+                {event.eventType}
+              </Badge>
+              {event.tags?.map((tag) => (
+                <Badge key={tag} className="text-xs bg-gray-800 text-gray-300 border border-gray-700" data-testid={`badge-tag-${tag}`}>
+                  {tag}
+                </Badge>
+              ))}
             </div>
+            <DialogTitle className="text-2xl font-bold text-white leading-tight">
+              {event.title}
+            </DialogTitle>
+            {(() => {
+              const parts: string[] = [];
+              if (teamInfo?.division) parts.push(teamInfo.division);
+              if (teamInfo?.season) parts.push(teamInfo.season);
+              const subtitle = parts.join(' · ');
+              return subtitle ? (
+                <p className="text-sm text-gray-400 mt-1">{subtitle}</p>
+              ) : event.description ? (
+                <p className="text-sm text-gray-400 mt-1" data-testid="text-description">{event.description}</p>
+              ) : null;
+            })()}
           </div>
 
-          <div className="overflow-y-auto flex-1 px-6 pb-6 space-y-5">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-sm text-gray-700">
-                <Calendar className="h-5 w-5 text-gray-400 shrink-0" />
-                <span className="font-medium">
+          <div className="overflow-y-auto flex-1 px-5 pb-6 space-y-4" style={{ background: '#0f1117' }}>
+            {/* Date / Time / Duration row */}
+            <div className="grid grid-cols-3 gap-0 rounded-xl overflow-hidden" style={{ background: '#1a1f2e' }}>
+              <div className="px-4 py-3">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">DATE</p>
+                <p className="text-white font-bold text-sm leading-tight">
                   {new Date(event.startTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                  {' at '}
-                  {new Date(event.startTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                  {event.endTime && ` - ${new Date(event.endTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`}
-                </span>
-              </div>
-              
-              {event.location && (
-                <a
-                  href={event.latitude && event.longitude
-                    ? `https://maps.google.com/?q=${event.latitude},${event.longitude}`
-                    : `https://maps.google.com/?q=${encodeURIComponent(event.location)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 text-sm text-gray-700 hover:text-red-600 transition-colors cursor-pointer"
-                >
-                  <MapPin className="h-5 w-5 text-gray-400 shrink-0" />
-                  <span className="underline decoration-gray-300 underline-offset-2">{event.location}</span>
-                </a>
-              )}
-
-              {event.description && (
-                <p className="text-sm text-gray-600 pt-2 border-t" data-testid="text-description">
-                  {event.description}
                 </p>
-              )}
+                {relativeLabel && <p className="text-gray-400 text-xs mt-0.5">{relativeLabel}</p>}
+              </div>
+              <div className="px-4 py-3 border-l border-r border-gray-700/50">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">TIME</p>
+                <p className="text-white font-bold text-sm leading-tight">
+                  {new Date(event.startTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                </p>
+                {event.endTime && (
+                  <p className="text-gray-400 text-xs mt-0.5">
+                    {new Date(event.endTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} end
+                  </p>
+                )}
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">DURATION</p>
+                {duration ? (
+                  <>
+                    <p className="text-white font-bold text-sm leading-tight">
+                      {duration.hours > 0 && `${duration.hours}h `}{duration.minutes > 0 && `${duration.minutes}m`}
+                    </p>
+                    <p className="text-gray-400 text-xs mt-0.5">{duration.totalMinutes} min</p>
+                  </>
+                ) : (
+                  <p className="text-gray-500 text-sm">—</p>
+                )}
+              </div>
             </div>
 
-            {event.latitude && event.longitude && (
-              <MapPreview
-                lat={event.latitude}
-                lng={event.longitude}
-                locationName={event.location}
-                height="h-36"
+            {/* RSVP Section */}
+            {userRole === 'player' && event?.playerRsvpEnabled === false ? (
+              <div className="rounded-xl p-4" style={{ background: '#1a1f2e' }}>
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-yellow-500 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-yellow-300 text-sm">RSVP managed by parent/guardian</h4>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Your account owner, parent, or guardian must RSVP for this event on your behalf.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <RSVPWheel
+                data={rsvpData}
+                openTime={eventWindows.rsvpOpen}
+                closeTime={eventWindows.rsvpClose}
+                onRsvpClick={handleRsvpClick}
+                userResponse={userRsvp?.response || 'no_response'}
+                disabled={rsvpMutation.isPending}
+                attendingNames={rsvpNames.attendingNames}
+                notAttendingNames={rsvpNames.notAttendingNames}
+                invitedUsers={users}
               />
             )}
 
+            {/* Check-In Section */}
+            <CheckInWheel
+              data={checkInData}
+              openTime={eventWindows.checkinOpen}
+              closeTime={eventWindows.checkinClose}
+              onCheckInClick={handleCheckInClick}
+              isUserCheckedIn={!!userCheckIn}
+              disabled={checkInMutation.isPending || isCheckingLocation}
+              invitedUsers={users}
+              checkedInUserIds={attendances.map(a => a.userId)}
+            />
+
+            {/* GPS Location Banner */}
             {!isAdminOrCoach && event.latitude != null && event.longitude != null && (
-              <Card className={`p-4 ${
-                geoError || (!coords && locationRequested && !geoLoading)
-                  ? 'bg-amber-50 border-amber-200' 
-                  : userDistance === null 
-                    ? 'bg-gray-50' 
-                    : userDistance <= (event.checkInRadius ?? 200)
-                      ? 'bg-green-50 border-green-200'
-                      : 'bg-red-50 border-red-200'
-              }`} data-testid="card-location-status">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                      geoError || (!coords && locationRequested && !geoLoading)
-                        ? 'bg-amber-200' 
-                        : userDistance === null 
-                          ? 'bg-gray-200' 
-                          : userDistance <= (event.checkInRadius ?? 200)
-                            ? 'bg-green-200'
-                            : 'bg-red-200'
-                    }`}>
-                      {geoLoading ? (
-                        <Loader2 className="h-5 w-5 text-gray-600 animate-spin" />
-                      ) : geoError || (!coords && locationRequested) ? (
-                        <MapPinOff className="h-5 w-5 text-amber-700" />
-                      ) : (
-                        <Navigation className={`h-5 w-5 ${
-                          userDistance === null 
-                            ? 'text-gray-600' 
-                            : userDistance <= (event.checkInRadius ?? 200)
-                              ? 'text-green-700'
-                              : 'text-red-700'
-                        }`} />
-                      )}
-                    </div>
-                    <div>
-                      {geoLoading ? (
-                        <div className="text-sm font-medium text-gray-700">Getting your location...</div>
-                      ) : geoError ? (
-                        <>
-                          <div className="text-sm font-medium text-amber-800">Location Permission Required</div>
-                          <div className="text-xs text-amber-700">Enable location to check in by GPS</div>
-                        </>
-                      ) : !coords && locationRequested ? (
-                        <>
-                          <div className="text-sm font-medium text-amber-800">Location Not Available</div>
-                          <div className="text-xs text-amber-700">Use QR code to check in instead</div>
-                        </>
-                      ) : userDistance !== null ? (
-                        <>
-                          <div className="text-sm font-medium">{Math.round(userDistance)}m away</div>
-                          <div className={`text-xs ${
-                            userDistance <= (event.checkInRadius ?? 200) 
-                              ? 'text-green-700' 
-                              : 'text-red-700'
-                          }`}>
-                            {userDistance <= (event.checkInRadius ?? 200) 
-                              ? 'Within check-in range!' 
-                              : `Need to be within ${event.checkInRadius ?? 200}m to check-in`}
-                          </div>
-                        </>
-                      ) : (
-                        <div className="text-sm text-gray-600">Tap to enable location</div>
-                      )}
-                    </div>
-                  </div>
-                  {(geoError || (!coords && !geoLoading)) && (
-                    <div className="flex items-center gap-1">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={handleRequestLocation}
-                        className="text-xs"
-                        data-testid="button-enable-location"
-                      >
-                        <Locate className="h-3 w-3 mr-1" />
-                        Enable
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowLocationHelp(true)}
-                        className="text-xs px-2"
-                        data-testid="button-location-help"
-                      >
-                        <HelpCircle className="h-4 w-4 text-gray-500" />
-                      </Button>
-                    </div>
+              <div
+                className="rounded-xl px-4 py-3 flex items-center gap-3"
+                style={{ background: 'rgba(161,110,0,0.25)', borderLeft: '3px solid #ca8a04' }}
+                data-testid="card-location-status"
+              >
+                <MapPin className="h-5 w-5 text-yellow-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  {geoLoading ? (
+                    <p className="text-yellow-200 text-sm">Getting your location...</p>
+                  ) : geoError ? (
+                    <>
+                      <p className="text-yellow-200 text-sm font-medium">GPS required to check in at this location</p>
+                      <p className="text-yellow-400/70 text-xs">Location permission needed</p>
+                    </>
+                  ) : userDistance !== null ? (
+                    <p className="text-yellow-200 text-sm">
+                      {userDistance <= (event.checkInRadius ?? 200)
+                        ? `Within range — ${Math.round(userDistance)}m away`
+                        : `${Math.round(userDistance)}m away — need to be within ${event.checkInRadius ?? 200}m`}
+                    </p>
+                  ) : (
+                    <p className="text-yellow-200 text-sm font-medium">GPS required to check in at this location</p>
                   )}
                 </div>
-              </Card>
+                {(geoError || (!coords && !geoLoading)) && (
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button
+                      size="sm"
+                      className="h-7 px-3 text-xs bg-yellow-600 hover:bg-yellow-500 text-white border-0"
+                      onClick={handleRequestLocation}
+                      data-testid="button-enable-location"
+                    >
+                      Enable
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowLocationHelp(true)}
+                      className="h-7 w-7 p-0 text-yellow-400 hover:text-yellow-200 hover:bg-yellow-900/30"
+                      data-testid="button-location-help"
+                    >
+                      <HelpCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             )}
 
-            <div className="grid grid-cols-1 gap-4">
-              {/* Show message for players when playerRsvpEnabled is false */}
-              {userRole === 'player' && event?.playerRsvpEnabled === false ? (
-                <Card className="p-4 bg-amber-50 border-amber-200">
-                  <div className="flex items-center gap-3">
-                    <Users className="h-5 w-5 text-amber-600" />
-                    <div>
-                      <h4 className="font-medium text-amber-900">RSVP Not Available for Players</h4>
-                      <p className="text-sm text-amber-700">
-                        Your account owner, parent, or guardian must RSVP for this event on your behalf.
-                      </p>
+            {/* Location / Venue Card */}
+            {event.location && (() => {
+              // Split location into venue name (first part) + full address (rest)
+              const commaParts = event.location.split(',');
+              const venueName = commaParts[0]?.trim() || event.location;
+              const address = commaParts.length > 1 ? commaParts.slice(1).join(',').trim() : null;
+              const mapsUrl = event.latitude && event.longitude
+                ? `https://maps.google.com/?q=${event.latitude},${event.longitude}`
+                : `https://maps.google.com/?q=${encodeURIComponent(event.location)}`;
+              return (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="rounded-xl px-4 py-3 flex items-center gap-3 hover:opacity-80 transition-opacity" style={{ background: '#1a1f2e' }}>
+                    <div className="h-9 w-9 rounded-lg bg-blue-900/50 flex items-center justify-center flex-shrink-0">
+                      <Building2 className="h-4 w-4 text-blue-400" />
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-semibold text-sm leading-tight">{venueName}</p>
+                      {address && <p className="text-gray-400 text-xs mt-0.5 leading-snug">{address}</p>}
+                    </div>
+                    <Navigation className="h-4 w-4 text-gray-500 flex-shrink-0" />
                   </div>
-                </Card>
-              ) : (
-                <RSVPWheel
-                  data={rsvpData}
-                  openTime={eventWindows.rsvpOpen}
-                  closeTime={eventWindows.rsvpClose}
-                  onRsvpClick={handleRsvpClick}
-                  userResponse={userRsvp?.response || 'no_response'}
-                  disabled={rsvpMutation.isPending}
-                  attendingNames={rsvpNames.attendingNames}
-                  notAttendingNames={rsvpNames.notAttendingNames}
-                />
-              )}
+                </a>
+              );
+            })()}
 
-              <CheckInWheel
-                data={checkInData}
-                openTime={eventWindows.checkinOpen}
-                closeTime={eventWindows.checkinClose}
-                onCheckInClick={handleCheckInClick}
-                isUserCheckedIn={!!userCheckIn}
-                disabled={checkInMutation.isPending || isCheckingLocation}
-              />
-            </div>
-
+            {/* QR code scan for players */}
             {!userCheckIn && !isAdminOrCoach && userRole === 'player' && (
-              <Button 
-                variant="outline" 
-                className="w-full"
+              <Button
+                variant="outline"
+                className="w-full border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white bg-transparent"
                 onClick={() => setShowQrScanner(true)}
                 data-testid="button-scan-qr"
               >
@@ -1112,24 +1161,19 @@ export default function EventDetailModal({
 
             {/* Coach Roster Check-In Section */}
             {isAdminOrCoach && rosterData && rosterData.roster.length > 0 && (
-              <Card className="p-4 bg-green-50 border-green-200" data-testid="card-coach-roster">
-                <h4 className="font-semibold text-green-900 mb-2 flex items-center gap-2">
-                  <ClipboardList className="h-5 w-5" />
-                  Roster Check-In
-                  <Badge variant="outline" className="ml-auto">
-                    {rosterData.checkedInCount}/{rosterData.totalPlayers}
-                  </Badge>
-                </h4>
-                <p className="text-sm text-green-700 mb-3">
-                  Mark players as present
-                </p>
+              <div className="rounded-xl p-4" style={{ background: '#1a1f2e' }} data-testid="card-coach-roster">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-white text-sm flex items-center gap-2">
+                    <ClipboardList className="h-4 w-4 text-gray-400" />
+                    Roster Check-In
+                  </h4>
+                  <span className="text-gray-400 text-xs">{rosterData.checkedInCount}/{rosterData.totalPlayers} present</span>
+                </div>
                 
-                {/* Bulk Actions */}
                 <div className="flex gap-2 mb-3">
                   <Button
                     size="sm"
-                    variant="outline"
-                    className="flex-1"
+                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white border-0 text-xs"
                     disabled={coachCheckInMutation.isPending}
                     onClick={() => {
                       const uncheckedPlayers = rosterData.roster.filter(p => !p.isCheckedIn).map(p => p.id);
@@ -1140,16 +1184,16 @@ export default function EventDetailModal({
                     data-testid="button-mark-all-present"
                   >
                     {coachCheckInMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
                     ) : (
-                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
                     )}
                     Mark All Present
                   </Button>
                   {selectedRosterPlayers.size > 0 && (
                     <Button
                       size="sm"
-                      className="bg-green-600 hover:bg-green-700"
+                      className="bg-green-700 hover:bg-green-600 text-white border-0 text-xs"
                       disabled={coachCheckInMutation.isPending}
                       onClick={() => {
                         coachCheckInMutation.mutate({ playerIds: Array.from(selectedRosterPlayers) });
@@ -1161,17 +1205,15 @@ export default function EventDetailModal({
                   )}
                 </div>
                 
-                {/* Player Roster List */}
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {rosterData.roster.map(player => {
+                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                  {rosterData.roster.map((player, idx) => {
                     const playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'Unknown';
+                    const initials = `${player.firstName?.[0] || ''}${player.lastName?.[0] || ''}`.toUpperCase();
                     return (
                       <div 
                         key={player.id}
-                        className={`flex items-center gap-3 p-2 rounded-lg border ${
-                          player.isCheckedIn 
-                            ? 'bg-green-100 border-green-200' 
-                            : 'bg-white border-gray-200'
+                        className={`flex items-center gap-3 p-2 rounded-lg ${
+                          player.isCheckedIn ? 'bg-green-900/20' : 'bg-gray-800/50'
                         }`}
                         data-testid={`roster-player-${player.id}`}
                       >
@@ -1187,24 +1229,22 @@ export default function EventDetailModal({
                               }
                               setSelectedRosterPlayers(newSet);
                             }}
+                            className="border-gray-600"
                             data-testid={`checkbox-player-${player.id}`}
                           />
                         )}
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={player.profileImageUrl} />
-                          <AvatarFallback className="text-xs">
-                            {(player.firstName?.[0] || '') + (player.lastName?.[0] || '')}
-                          </AvatarFallback>
-                        </Avatar>
+                        <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0 ${getAvatarColor(idx)}`}>
+                          {initials || '?'}
+                        </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{playerName}</p>
+                          <p className="text-sm font-medium text-white truncate">{playerName}</p>
                           <p className="text-xs text-gray-500">
                             {player.rsvpResponse === 'attending' ? 'RSVP: Yes' : 
                              player.rsvpResponse === 'not_attending' ? 'RSVP: No' : 'No RSVP'}
                           </p>
                         </div>
                         {player.isCheckedIn ? (
-                          <Badge className="bg-green-600 text-white text-xs">
+                          <Badge className="bg-green-700 text-white text-xs border-0">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             Present
                           </Badge>
@@ -1212,7 +1252,7 @@ export default function EventDetailModal({
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                            className="h-7 px-2 text-green-500 hover:text-green-400 hover:bg-green-900/30"
                             disabled={coachCheckInMutation.isPending}
                             onClick={() => coachCheckInMutation.mutate({ playerIds: [player.id] })}
                             data-testid={`button-checkin-${player.id}`}
@@ -1224,18 +1264,18 @@ export default function EventDetailModal({
                     );
                   })}
                 </div>
-              </Card>
+              </div>
             )}
 
             {isAdminOrCoach && (
-              <Card className="p-4 bg-blue-50 border-blue-200" data-testid="card-coach-qr">
+              <div className="rounded-xl p-4" style={{ background: '#1a1f2e' }} data-testid="card-coach-qr">
                 <div className="text-center">
-                  <h4 className="font-semibold text-blue-900 mb-2 flex items-center justify-center gap-2">
-                    <QrCode className="h-5 w-5" />
+                  <h4 className="font-semibold text-white mb-1 flex items-center justify-center gap-2 text-sm">
+                    <QrCode className="h-4 w-4 text-gray-400" />
                     Check-In QR Code
                   </h4>
-                  <p className="text-sm text-blue-700 mb-4">
-                    Show this QR code to players for them to scan and check in
+                  <p className="text-xs text-gray-400 mb-3">
+                    Show to players to scan and check in
                   </p>
                   {showQrCode ? (
                     <div className="bg-white p-4 rounded-lg inline-block shadow-sm">
@@ -1245,7 +1285,7 @@ export default function EventDetailModal({
                   ) : (
                     <Button 
                       onClick={() => setShowQrCode(true)}
-                      className="bg-blue-600 hover:bg-blue-700"
+                      className="bg-gray-700 hover:bg-gray-600 text-white border-0 text-sm"
                       data-testid="button-show-qr"
                     >
                       <QrCode className="h-4 w-4 mr-2" />
@@ -1253,18 +1293,17 @@ export default function EventDetailModal({
                     </Button>
                   )}
                 </div>
-              </Card>
+              </div>
             )}
 
             {users.length > 0 && (
-              <Card className="p-4" data-testid="card-participant-list">
-                <h4 className="font-semibold mb-3 flex items-center gap-2 text-gray-900">
-                  <Users className="h-4 w-4 text-gray-500" />
-                  Invited ({users.length})
+              <div className="rounded-xl p-4" style={{ background: '#1a1f2e' }} data-testid="card-participant-list">
+                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                  INVITED ({users.length})
                 </h4>
                 
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {sortedUsers.map((user) => {
+                  {sortedUsers.map((user, idx) => {
                     const userRsvpResponse = rsvps.find(r => r.userId === user.id);
                     const userAttendance = attendances.find(a => a.userId === user.id);
                     const initials = `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase();
@@ -1272,74 +1311,41 @@ export default function EventDetailModal({
                     return (
                       <div 
                         key={user.id} 
-                        className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg"
+                        className="flex items-center justify-between py-2"
                         data-testid={`row-participant-${user.id}`}
                       >
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={user.profileImageUrl || undefined} />
-                            <AvatarFallback className={`text-xs text-white ${
-                              user.role === 'admin' ? 'bg-red-500' :
-                              user.role === 'parent' ? 'bg-purple-500' :
-                              (user.role === 'coach' || user.role === 'head_coach' || user.role === 'assistant_coach') ? 'bg-blue-500' :
-                              'bg-green-500'
-                            }`}>
-                              {initials}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className={`text-sm font-medium ${
-                            user.role === 'player' ? 'text-green-700' :
-                            (user.role === 'coach' || user.role === 'head_coach' || user.role === 'assistant_coach') ? 'text-blue-700' :
-                            user.role === 'parent' ? 'text-purple-700' :
-                            user.role === 'admin' ? 'text-red-700' :
-                            'text-gray-900'
-                          }`}>
+                          <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-semibold text-white flex-shrink-0 ${getAvatarColor(idx)}`}>
+                            {initials || '?'}
+                          </div>
+                          <span className="text-sm font-medium text-white">
                             {user.firstName} {user.lastName}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          {/* RSVP Status */}
-                          <div className="flex flex-col items-center">
-                            {userRsvpResponse?.response === 'attending' ? (
-                              <Badge className="bg-blue-100 text-blue-800 text-xs">
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                Going
-                              </Badge>
-                            ) : userRsvpResponse?.response === 'not_attending' ? (
-                              <Badge className="bg-red-100 text-red-800 text-xs">
-                                <XCircle className="h-3 w-3 mr-1" />
-                                Not Going
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-gray-100 text-gray-600 text-xs">
-                                <Circle className="h-3 w-3 mr-1" />
-                                No Response
-                              </Badge>
-                            )}
-                            {userRsvpResponse?.respondedAt && (
-                              <span className="text-[9px] text-gray-400 mt-0.5">
-                                {new Date(userRsvpResponse.respondedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} {new Date(userRsvpResponse.respondedAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-                              </span>
-                            )}
-                          </div>
-                          {/* Check-in Status */}
-                          {userAttendance && (
-                            <div className="flex flex-col items-center">
-                              <Badge className="bg-green-100 text-green-800 text-xs">
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                Checked In
-                              </Badge>
-                              <span className="text-[9px] text-gray-400 mt-0.5">
-                                {new Date(userAttendance.checkedInAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} {new Date(userAttendance.checkedInAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-                              </span>
-                            </div>
+                          {userAttendance ? (
+                            <Badge className="bg-green-800 text-green-200 text-xs border-0">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Checked In
+                            </Badge>
+                          ) : userRsvpResponse?.response === 'attending' ? (
+                            <Badge className="bg-blue-900/60 text-blue-300 text-xs border border-blue-700/50">
+                              Going
+                            </Badge>
+                          ) : userRsvpResponse?.response === 'not_attending' ? (
+                            <Badge className="bg-red-900/60 text-red-300 text-xs border border-red-700/50">
+                              Not Going
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-gray-700/60 text-gray-400 text-xs border border-gray-600/50">
+                              No response
+                            </Badge>
                           )}
-                          {/* Manual check-in button for coaches */}
                           {isAdminOrCoach && !userAttendance && user.role === 'player' && (
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                              className="h-7 w-7 p-0 text-green-500 hover:text-green-400 hover:bg-green-900/30"
                               disabled={coachCheckInMutation.isPending}
                               onClick={() => coachCheckInMutation.mutate({ playerIds: [user.id] })}
                               data-testid={`button-manual-checkin-${user.id}`}
@@ -1353,7 +1359,7 @@ export default function EventDetailModal({
                     );
                   })}
                 </div>
-              </Card>
+              </div>
             )}
           </div>
         </DialogContent>

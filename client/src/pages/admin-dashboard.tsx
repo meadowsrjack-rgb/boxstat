@@ -12429,17 +12429,12 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                 <Plus className="w-4 h-4" />
               </Button>
             </DialogTrigger>
-          {/* Program Wizard Dialog */}
-          <DialogContent className="max-w-2xl w-full max-h-[92vh] overflow-hidden p-0" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          {/* Program Dialog */}
+          <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto bg-[#1a2332] text-slate-200 border-slate-700 [&>button]:text-slate-400 [&>button:hover]:text-slate-200">
+            <DialogHeader className="sr-only">
+              <DialogTitle>{editingProgram ? "Edit Program" : "Create Program"}</DialogTitle>
+            </DialogHeader>
             {(() => {
-              const [wizardStep, setWizardStep] = useState(0);
-              const WIZARD_STEPS = [
-                { id: "basics", label: "Basics", icon: "\u2726" },
-                { id: "pricing", label: "Pricing", icon: "$" },
-                { id: "settings", label: "Settings", icon: "\u2699" },
-                { id: "social", label: "Social", icon: "\uD83D\uDCAC" },
-              ];
-
               const CATEGORY_CHIPS = [
                 { value: "general", label: "General", icon: "\uD83D\uDCCB" },
                 { value: "training", label: "Training", icon: "\uD83C\uDFAF" },
@@ -12497,17 +12492,17 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                 { value: "Group", label: "Group", example: "e.g. Private Training" },
               ];
 
-              const WizardChipSelect = ({ options, value, onChange }: { options: any[]; value: string; onChange: (v: string) => void }) => (
+              const DarkChipSelect = ({ options, value, onChange }: { options: any[]; value: string; onChange: (v: string) => void }) => (
                 <div className="flex flex-wrap gap-2">
                   {options.map((opt: any) => (
                     <button
                       key={opt.value}
                       type="button"
                       onClick={() => onChange(opt.value)}
-                      className={`px-3 py-2 rounded-lg text-[13px] font-semibold flex items-center gap-1.5 transition-all duration-150 border-2 ${
+                      className={`px-3 py-2 rounded-lg text-[13px] font-semibold flex items-center gap-1.5 transition-all duration-150 border ${
                         value === opt.value
-                          ? "border-[#D82428] bg-red-50 text-[#D82428]"
-                          : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                          ? "border-teal-500 bg-teal-900/50 text-teal-300"
+                          : "border-slate-600 bg-[#243044] text-slate-300 hover:border-slate-500"
                       }`}
                     >
                       {opt.icon && <span className="text-base">{opt.icon}</span>}
@@ -12518,43 +12513,43 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                 </div>
               );
 
-              const WizardRadioCard = ({ options, value, onChange }: { options: any[]; value: string; onChange: (v: string) => void }) => (
+              const DarkRadioCard = ({ options, value, onChange }: { options: any[]; value: string; onChange: (v: string) => void }) => (
                 <div className="flex flex-col gap-2">
                   {options.map((opt: any) => (
                     <button
                       key={opt.value}
                       type="button"
                       onClick={() => onChange(opt.value)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-150 text-left border-2 ${
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-150 text-left border ${
                         value === opt.value
-                          ? "border-[#D82428] bg-red-50"
-                          : "border-gray-200 bg-white hover:border-gray-300"
+                          ? "border-teal-500 bg-teal-900/30"
+                          : "border-slate-600 bg-[#243044] hover:border-slate-500"
                       }`}
                     >
                       <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 transition-all ${
-                        value === opt.value ? "border-[6px] border-[#D82428]" : "border-gray-300"
+                        value === opt.value ? "border-[6px] border-teal-400" : "border-slate-500"
                       }`} />
                       <div>
-                        <div className="text-sm font-semibold text-gray-900">
+                        <div className="text-sm font-semibold text-slate-200">
                           {opt.icon && <span className="mr-1.5">{opt.icon}</span>}
                           {opt.label}
                         </div>
-                        {opt.desc && <div className="text-xs text-gray-500">{opt.desc}</div>}
-                        {opt.example && <div className="text-[11px] text-gray-400">{opt.example}</div>}
+                        {opt.desc && <div className="text-xs text-slate-400">{opt.desc}</div>}
+                        {opt.example && <div className="text-[11px] text-slate-500">{opt.example}</div>}
                       </div>
                     </button>
                   ))}
                 </div>
               );
 
-              const WizardToggle = ({ checked, onChange, label, desc, testId }: { checked: boolean; onChange: (v: boolean) => void; label: string; desc?: string; testId?: string }) => (
-                <label className={`flex items-start gap-3 cursor-pointer px-4 py-3 rounded-xl transition-all border-[1.5px] ${
-                  checked ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-200"
+              const DarkToggle = ({ checked, onChange, label, desc, testId }: { checked: boolean; onChange: (v: boolean) => void; label: string; desc?: string; testId?: string }) => (
+                <label className={`flex items-start gap-3 cursor-pointer px-4 py-3 rounded-xl transition-all border ${
+                  checked ? "bg-teal-900/30 border-teal-700/50" : "bg-[#243044] border-slate-600"
                 }`}>
                   <div
                     onClick={(e) => { e.preventDefault(); onChange(!checked); }}
                     className={`w-11 h-6 rounded-full relative flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
-                      checked ? "bg-[#D82428]" : "bg-gray-300"
+                      checked ? "bg-teal-500" : "bg-slate-600"
                     }`}
                     data-testid={testId}
                   >
@@ -12563,28 +12558,13 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                     }`} />
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-gray-900">{label}</div>
-                    {desc && <div className="text-xs text-gray-500 mt-0.5">{desc}</div>}
+                    <div className="text-sm font-semibold text-slate-200">{label}</div>
+                    {desc && <div className="text-xs text-slate-400 mt-0.5">{desc}</div>}
                   </div>
                 </label>
               );
 
-              const WizardFieldLabel = ({ children, hint }: { children: React.ReactNode; hint?: string }) => (
-                <div className="mb-1.5">
-                  <span className="text-[13px] font-semibold text-gray-700">{children}</span>
-                  {hint && <span className="text-[11px] text-gray-400 ml-2">{hint}</span>}
-                </div>
-              );
-
-              const WizardSectionDivider = ({ label }: { label: string }) => (
-                <div className="flex items-center gap-3 my-2">
-                  <div className="h-px flex-1 bg-gray-200" />
-                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
-                  <div className="h-px flex-1 bg-gray-200" />
-                </div>
-              );
-
-              const wizardInputClass = "w-full px-3.5 py-2.5 rounded-lg border-[1.5px] border-gray-200 text-sm text-gray-900 bg-white outline-none transition-colors focus:border-[#D82428]";
+              const darkInputClass = "w-full px-3.5 py-2.5 rounded-lg border border-slate-600 text-sm text-slate-200 bg-[#243044] outline-none transition-colors placeholder:text-slate-500 focus:border-slate-400 focus:ring-1 focus:ring-slate-500";
 
               const billingIntervalLabel = (d: number) => {
                 if (!d || d <= 0) return "e.g. 30 = monthly";
@@ -12599,71 +12579,50 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
               };
 
               return (
-                <form onSubmit={form.handleSubmit((data) => createProgram.mutate(data))} className="flex flex-col h-full max-h-[92vh]">
-                  <div className="bg-gradient-to-r from-gray-800 to-gray-900 px-6 py-5 text-white flex-shrink-0">
-                    <div className="flex items-center gap-3 mb-1">
-                      <div className={`px-2.5 py-1 rounded-md text-xs font-bold ${editingProgram ? "bg-amber-500/20 text-amber-300" : "bg-emerald-500/20 text-emerald-300"}`}>
-                        {editingProgram ? "Edit Program" : "New Program"}
-                      </div>
-                    </div>
-                    <h2 className="text-lg font-bold tracking-tight">{editingProgram ? "Edit Program" : "Create Program"}</h2>
-                    <p className="text-gray-400 text-sm mt-0.5">
-                      Step {wizardStep + 1} of {WIZARD_STEPS.length} — {WIZARD_STEPS[wizardStep].label}
-                    </p>
-                  </div>
+                <form onSubmit={form.handleSubmit((data) => createProgram.mutate(data))} className="space-y-5">
+                  <span className={`inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full border ${
+                    editingProgram
+                      ? "bg-amber-900/50 text-amber-400 border-amber-700/50"
+                      : "bg-teal-900/50 text-teal-400 border-teal-700/50"
+                  }`}>{editingProgram ? "Edit Program" : "New Program"}</span>
 
-                  <div className="px-6 pt-4 pb-2 border-b border-gray-100 flex-shrink-0">
-                    <div className="flex gap-2">
-                      {WIZARD_STEPS.map((step, idx) => (
-                        <button
-                          key={step.id}
-                          type="button"
-                          onClick={() => setWizardStep(idx)}
-                          className={`flex-1 text-center pb-2 transition-all ${
-                            idx === wizardStep ? "text-[#D82428] font-semibold" : idx < wizardStep ? "text-gray-700 font-medium" : "text-gray-400"
-                          }`}
-                        >
-                          <div className="flex items-center justify-center gap-1.5 text-[13px] mb-1.5">
-                            <span>{step.icon}</span>
-                            <span>{step.label}</span>
-                          </div>
-                          <div className="h-1 rounded-full overflow-hidden bg-gray-100">
-                            <div className={`h-full rounded-full transition-all duration-300 ${
-                              idx < wizardStep ? "w-full bg-[#D82428]" : idx === wizardStep ? "w-1/2 bg-[#D82428]" : "w-0"
-                            }`} />
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <input
+                    className={darkInputClass + " text-lg h-12"}
+                    placeholder="Program name..."
+                    value={form.watch("name") || ""}
+                    onChange={(e) => form.setValue("name", e.target.value)}
+                    data-testid="input-program-name"
+                  />
 
-                  <div className="flex-1 overflow-y-auto px-6 py-5">
-                    {wizardStep === 0 && (
-                      <div className="flex flex-col gap-5">
-                        <div>
-                          <WizardFieldLabel>Program Name</WizardFieldLabel>
-                          <input
-                            className={wizardInputClass}
-                            placeholder="e.g. High School Club, Summer Camp 2026"
-                            value={form.watch("name") || ""}
-                            onChange={(e) => form.setValue("name", e.target.value)}
-                            data-testid="input-program-name"
-                          />
+                  <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                    {/* Left Column */}
+                    <div className="lg:col-span-3 space-y-5">
+
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Basic Info</label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <label className="text-slate-300 text-sm">Program Code</label>
+                            <input
+                              className={darkInputClass}
+                              placeholder="e.g. SKA"
+                              value={form.watch("code") || ""}
+                              onChange={(e) => form.setValue("code", e.target.value)}
+                              data-testid="input-program-code"
+                            />
+                            <p className="text-xs text-slate-500">Short code for imports</p>
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-slate-300 text-sm">Category</label>
+                            <div data-testid="select-program-category">
+                              <DarkChipSelect options={CATEGORY_CHIPS} value={form.watch("displayCategory") || ""} onChange={(v) => form.setValue("displayCategory", v)} />
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <WizardFieldLabel hint="Short code for imports">Program Code</WizardFieldLabel>
-                          <input
-                            className={wizardInputClass}
-                            placeholder="e.g. SKA"
-                            value={form.watch("code") || ""}
-                            onChange={(e) => form.setValue("code", e.target.value)}
-                            data-testid="input-program-code"
-                          />
-                        </div>
-                        <div>
-                          <WizardFieldLabel hint="Optional">Description</WizardFieldLabel>
+                        <div className="space-y-1.5">
+                          <label className="text-slate-300 text-sm">Description</label>
                           <textarea
-                            className={wizardInputClass + " resize-y"}
+                            className={darkInputClass + " resize-y"}
                             placeholder="A short description shown to parents during enrollment..."
                             rows={2}
                             value={form.watch("description") || ""}
@@ -12671,83 +12630,26 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                             data-testid="input-program-description"
                           />
                         </div>
-                        <div>
-                          <WizardFieldLabel>Category</WizardFieldLabel>
-                          <div data-testid="select-program-category">
-                            <WizardChipSelect options={CATEGORY_CHIPS} value={form.watch("displayCategory") || ""} onChange={(v) => form.setValue("displayCategory", v)} />
-                          </div>
-                        </div>
-                        <div>
-                          <WizardFieldLabel hint="Optional">Program Icon</WizardFieldLabel>
+                        <div className="space-y-1.5">
+                          <label className="text-slate-300 text-sm">Program Icon</label>
                           <div data-testid="select-program-icon">
-                            <WizardChipSelect options={ICON_CHIPS} value={form.watch("iconName") || ""} onChange={(v) => form.setValue("iconName", v)} />
+                            <DarkChipSelect options={ICON_CHIPS} value={form.watch("iconName") || ""} onChange={(v) => form.setValue("iconName", v)} />
                           </div>
-                        </div>
-                        <div>
-                          <WizardFieldLabel hint="16:9 recommended">Cover Image</WizardFieldLabel>
-                          {form.watch("coverImageUrl") ? (
-                            <div className="aspect-[16/9] w-full max-w-xs bg-gray-100 rounded-xl overflow-hidden relative">
-                              <img src={form.watch("coverImageUrl")} alt="Cover" className="w-full h-full object-cover" />
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="sm"
-                                className="absolute top-2 right-2"
-                                onClick={() => form.setValue("coverImageUrl", "")}
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <label className="flex flex-col items-center justify-center py-7 px-5 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 cursor-pointer hover:border-gray-400 transition-colors">
-                              <div className="text-2xl mb-1.5">\uD83D\uDCF8</div>
-                              <div className="text-[13px] font-semibold text-gray-500">Click to upload or drag & drop</div>
-                              <div className="text-[11px] text-gray-400 mt-0.5">PNG, JPG up to 5MB</div>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                data-testid="input-program-cover-image"
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    const formData = new FormData();
-                                    formData.append('image', file);
-                                    try {
-                                      const headers: Record<string, string> = {};
-                                      const token = localStorage.getItem('authToken');
-                                      if (token) headers['Authorization'] = `Bearer ${token}`;
-                                      const res = await fetch('/api/upload/product-image', { method: 'POST', body: formData, credentials: 'include', headers });
-                                      const data = await res.json();
-                                      if (data.imageUrl) {
-                                        form.setValue("coverImageUrl", data.imageUrl);
-                                      } else if (data.error) {
-                                        console.error('Upload error:', data.error);
-                                      }
-                                    } catch (err) {
-                                      console.error('Upload failed:', err);
-                                    }
-                                  }
-                                }}
-                              />
-                            </label>
-                          )}
                         </div>
                       </div>
-                    )}
 
-                    {wizardStep === 1 && (
-                      <div className="flex flex-col gap-5">
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Pricing</label>
                         <div>
-                          <WizardFieldLabel>Product Type</WizardFieldLabel>
+                          <label className="text-slate-300 text-sm mb-1.5 block">Product Type</label>
                           <div data-testid="select-program-type">
-                            <WizardRadioCard options={PRODUCT_TYPE_CARDS} value={form.watch("type") || "Subscription"} onChange={(v) => form.setValue("type", v)} />
+                            <DarkRadioCard options={PRODUCT_TYPE_CARDS} value={form.watch("type") || "Subscription"} onChange={(v) => form.setValue("type", v)} />
                           </div>
                         </div>
 
-                        <div className="flex gap-3">
-                          <div className="flex-1">
-                            <WizardFieldLabel>Price</WizardFieldLabel>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <label className="text-slate-300 text-sm">Price</label>
                             <FormField
                               control={form.control}
                               name="price"
@@ -12760,13 +12662,13 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                 }, [editingProgram]);
                                 return (
                                   <div className="relative">
-                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-semibold">$</span>
+                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-semibold">$</span>
                                     <input
                                       type="number"
                                       step="0.01"
                                       min="0"
                                       placeholder="0.00"
-                                      className={wizardInputClass + " pl-7"}
+                                      className={darkInputClass + " pl-7"}
                                       data-testid="input-program-price"
                                       value={displayPrice}
                                       onChange={(e) => {
@@ -12785,35 +12687,32 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                               }}
                             />
                           </div>
-                          <div className="flex-1">
-                            <WizardFieldLabel>Billing Model</WizardFieldLabel>
+                          <div className="space-y-1.5">
+                            <label className="text-slate-300 text-sm">Billing Model</label>
                             <div data-testid="select-billing-model">
-                              <WizardChipSelect options={BILLING_MODEL_CHIPS} value={form.watch("billingModel") || "Per Player"} onChange={(v) => form.setValue("billingModel", v)} />
+                              <DarkChipSelect options={BILLING_MODEL_CHIPS} value={form.watch("billingModel") || "Per Player"} onChange={(v) => form.setValue("billingModel", v)} />
                             </div>
                           </div>
                         </div>
 
                         {selectedType === "Subscription" && (
                           <>
-                            <div>
-                              <WizardFieldLabel hint={billingIntervalLabel(form.watch("billingIntervalDays") || 0)}>Billing Interval (days)</WizardFieldLabel>
+                            <div className="space-y-1.5">
+                              <label className="text-slate-300 text-sm">Billing Interval (days) <span className="text-slate-500 font-normal">{billingIntervalLabel(form.watch("billingIntervalDays") || 0)}</span></label>
                               <input
                                 type="number"
                                 min="1"
                                 placeholder="30"
-                                className={wizardInputClass}
+                                className={darkInputClass}
                                 value={form.watch("billingIntervalDays") || ""}
                                 onChange={(e) => form.setValue("billingIntervalDays", parseInt(e.target.value) || 0)}
                                 data-testid="input-billing-interval-days"
                               />
                             </div>
-
-                            <WizardSectionDivider label="Subscription Details" />
-
-                            <div>
-                              <WizardFieldLabel hint="Shown at checkout">Subscription Disclosure</WizardFieldLabel>
+                            <div className="space-y-1.5">
+                              <label className="text-slate-300 text-sm">Subscription Disclosure <span className="text-slate-500 font-normal">Shown at checkout</span></label>
                               <textarea
-                                className={wizardInputClass + " resize-y"}
+                                className={darkInputClass + " resize-y"}
                                 placeholder="You will be charged $X every [cycle]. Your subscription renews automatically until canceled."
                                 rows={3}
                                 value={form.watch("subscriptionDisclosure") || ""}
@@ -12825,8 +12724,8 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                         )}
 
                         {selectedType === "One-Time" && (
-                          <div>
-                            <WizardFieldLabel>Duration</WizardFieldLabel>
+                          <div className="space-y-1.5">
+                            <label className="text-slate-300 text-sm">Duration</label>
                             <div className="flex gap-2">
                               <FormField
                                 control={form.control}
@@ -12835,7 +12734,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                   <div className="flex-1">
                                     <input
                                       type="number"
-                                      className={wizardInputClass}
+                                      className={darkInputClass}
                                       placeholder="28"
                                       value={field.value || ""}
                                       onChange={(e) => {
@@ -12863,10 +12762,10 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                       form.setValue("durationDays", numValue * (multipliers[value] || 1));
                                     }}
                                   >
-                                    <SelectTrigger className="w-32" data-testid="select-duration-unit">
+                                    <SelectTrigger className="w-32 bg-[#243044] border-slate-600 text-slate-200" data-testid="select-duration-unit">
                                       <SelectValue placeholder="Unit" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="bg-[#1a2332] border-slate-600">
                                       <SelectItem value="days">Days</SelectItem>
                                       <SelectItem value="weeks">Weeks</SelectItem>
                                       <SelectItem value="months">Months</SelectItem>
@@ -12876,26 +12775,26 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                 )}
                               />
                             </div>
-                            <p className="text-[11px] text-gray-400 mt-1">How long access lasts after purchase</p>
+                            <p className="text-xs text-slate-500">How long access lasts after purchase</p>
                           </div>
                         )}
 
                         {selectedType === "Pack" && (
-                          <div>
-                            <WizardFieldLabel>Number of Sessions/Credits</WizardFieldLabel>
+                          <div className="space-y-1.5">
+                            <label className="text-slate-300 text-sm">Number of Sessions/Credits</label>
                             <input
                               type="number"
-                              className={wizardInputClass}
+                              className={darkInputClass}
                               placeholder="10"
                               value={form.watch("sessionCount") || ""}
                               onChange={(e) => form.setValue("sessionCount", parseInt(e.target.value) || 0)}
                               data-testid="input-session-count"
                             />
-                            <p className="text-[11px] text-gray-400 mt-1">Credits that get used per check-in</p>
+                            <p className="text-xs text-slate-500">Credits that get used per check-in</p>
                           </div>
                         )}
 
-                        <WizardToggle
+                        <DarkToggle
                           checked={!!form.watch("allowInstallments")}
                           onChange={(v) => form.setValue("allowInstallments", v)}
                           label="Allow Installment Payments"
@@ -12922,24 +12821,24 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                           const discount = form.watch("payInFullDiscount") || 0;
                           const discountedFullPrice = discount > 0 ? Math.round(totalPrice * (1 - discount / 100)) : totalPrice;
                           return (
-                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+                            <div className="bg-amber-900/20 border border-amber-700/50 rounded-xl p-4 space-y-3">
                               <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                  <WizardFieldLabel>Number of Installments</WizardFieldLabel>
+                                <div className="space-y-1.5">
+                                  <label className="text-slate-300 text-sm">Number of Installments</label>
                                   <input
                                     type="number"
-                                    className={wizardInputClass}
+                                    className={darkInputClass}
                                     placeholder="3"
                                     value={form.watch("installments") || ""}
                                     onChange={(e) => form.setValue("installments", parseInt(e.target.value) || 0)}
                                     data-testid="input-installments"
                                   />
                                 </div>
-                                <div>
-                                  <WizardFieldLabel>Pay-in-Full Discount (%)</WizardFieldLabel>
+                                <div className="space-y-1.5">
+                                  <label className="text-slate-300 text-sm">Pay-in-Full Discount (%)</label>
                                   <input
                                     type="number"
-                                    className={wizardInputClass}
+                                    className={darkInputClass}
                                     placeholder="0"
                                     value={form.watch("payInFullDiscount") || ""}
                                     onChange={(e) => form.setValue("payInFullDiscount", parseInt(e.target.value) || 0)}
@@ -12947,20 +12846,20 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                   />
                                 </div>
                               </div>
-                              <div className="bg-white/60 rounded-lg p-2.5 space-y-1">
-                                <p className="text-xs text-amber-800 font-medium">
+                              <div className="bg-[#243044] rounded-lg p-2.5 space-y-1">
+                                <p className="text-xs text-amber-300 font-medium">
                                   {perPayment > 0
                                     ? `${count} payments of $${(perPayment / 100).toFixed(2)} \u00B7 ${intervalLabel} \u00B7 $${(totalInstallmentCost / 100).toFixed(2)} total`
                                     : "Set the option price above to see installment breakdown"}
                                 </p>
                                 {totalDays > duration && perPayment > 0 && (
-                                  <p className="text-xs text-amber-600">
+                                  <p className="text-xs text-amber-400">
                                     Payments span {totalDays} days ({duration}-day program)
                                   </p>
                                 )}
                                 {discount > 0 && totalPrice > 0 && (
-                                  <p className="text-xs text-green-700">
-                                    Pay-in-full price: $${(discountedFullPrice / 100).toFixed(2)} ({discount}% off)
+                                  <p className="text-xs text-teal-400">
+                                    Pay-in-full price: ${(discountedFullPrice / 100).toFixed(2)} ({discount}% off)
                                   </p>
                                 )}
                               </div>
@@ -12968,25 +12867,27 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                           );
                         })()}
 
-                        <div>
-                          <WizardFieldLabel>Access Type</WizardFieldLabel>
+                        <div className="space-y-1.5">
+                          <label className="text-slate-300 text-sm">Access Type</label>
                           <div data-testid="select-access-tag">
-                            <WizardRadioCard options={ACCESS_TYPE_CARDS} value={form.watch("accessTag") || "none"} onChange={(v) => form.setValue("accessTag", v)} />
+                            <DarkRadioCard options={ACCESS_TYPE_CARDS} value={form.watch("accessTag") || "none"} onChange={(v) => form.setValue("accessTag", v)} />
                           </div>
                         </div>
+                      </div>
 
-                        <WizardSectionDivider label="Pricing Options" />
-
-                        <div className="border rounded-xl p-4 bg-blue-50/50">
-                          <div className="flex items-center justify-between mb-3">
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Pricing Options</label>
+                        <div className="border border-slate-700 rounded-xl p-4 bg-[#243044]/50 space-y-3">
+                          <div className="flex items-center justify-between">
                             <div>
-                              <h4 className="font-semibold text-sm text-gray-800">Pricing Tiers</h4>
-                              <p className="text-[11px] text-gray-500">Add bundles, credit packs, or subscriptions</p>
+                              <h4 className="font-semibold text-sm text-slate-200">Pricing Tiers</h4>
+                              <p className="text-xs text-slate-500">Add bundles, credit packs, or subscriptions</p>
                             </div>
                             <Button
                               type="button"
                               variant="outline"
                               size="sm"
+                              className="border-slate-600 text-slate-300 hover:bg-[#2a3a52] hover:text-slate-200"
                               onClick={() => {
                                 const current = form.getValues("pricingOptions") || [];
                                 const newId = `opt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -13032,16 +12933,16 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                 const displayName = option.name || `Option ${index + 1}`;
                                 const displayPrice = option.price > 0 ? `$${(option.price / 100).toFixed(2)}` : "No price set";
                                 return (
-                                <div key={option.id} className="border rounded-lg bg-white overflow-hidden">
+                                <div key={option.id} className="border border-slate-600 rounded-lg bg-[#1a2332] overflow-hidden">
                                   <div
-                                    className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                                    className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-[#243044] transition-colors"
                                     onClick={toggleExpanded}
                                   >
                                     <div className="flex items-center gap-2 min-w-0">
-                                      <ChevronDown className={`h-4 w-4 text-gray-500 flex-shrink-0 transition-transform duration-200 ${isExpanded ? "" : "-rotate-90"}`} />
-                                      <span className="text-sm font-medium text-gray-800 truncate">{displayName}</span>
-                                      <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded flex-shrink-0">{typeLabel}</span>
-                                      <span className="text-xs text-gray-500 flex-shrink-0">{displayPrice}</span>
+                                      <ChevronDown className={`h-4 w-4 text-slate-400 flex-shrink-0 transition-transform duration-200 ${isExpanded ? "" : "-rotate-90"}`} />
+                                      <span className="text-sm font-medium text-slate-200 truncate">{displayName}</span>
+                                      <span className="text-xs bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded flex-shrink-0">{typeLabel}</span>
+                                      <span className="text-xs text-slate-500 flex-shrink-0">{displayPrice}</span>
                                     </div>
                                     <Button
                                       type="button"
@@ -13062,14 +12963,14 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                       }}
                                       data-testid={`button-remove-option-${index}`}
                                     >
-                                      <Trash2 className="h-4 w-4 text-red-500" />
+                                      <Trash2 className="h-4 w-4 text-red-400" />
                                     </Button>
                                   </div>
                                   {isExpanded && (
-                                  <div className="border-t px-3 pb-3 pt-2">
+                                  <div className="border-t border-slate-600 px-3 pb-3 pt-2 bg-[#1a2332]">
                                   <div className="grid grid-cols-2 gap-2">
                                     <div className="col-span-2">
-                                      <label className="text-xs font-medium">Type</label>
+                                      <label className="text-xs font-medium text-slate-300">Type</label>
                                       <Select
                                         value={option.optionType || "one_time"}
                                         onValueChange={(value) => {
@@ -13082,10 +12983,10 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                           form.setValue("pricingOptions", [...current]);
                                         }}
                                       >
-                                        <SelectTrigger data-testid={`select-option-type-${index}`}>
+                                        <SelectTrigger className="bg-[#243044] border-slate-600 text-slate-200" data-testid={`select-option-type-${index}`}>
                                           <SelectValue />
                                         </SelectTrigger>
-                                        <SelectContent>
+                                        <SelectContent className="bg-[#1a2332] border-slate-600">
                                           <SelectItem value="one_time">One-Time Payment</SelectItem>
                                           <SelectItem value="credit_pack">Credit Pack</SelectItem>
                                           <SelectItem value="subscription">Subscription</SelectItem>
@@ -13093,7 +12994,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                       </Select>
                                     </div>
                                     <div>
-                                      <label className="text-xs font-medium">Name</label>
+                                      <label className="text-xs font-medium text-slate-300">Name</label>
                                       <Input
                                         placeholder={option.optionType === "credit_pack" ? "10 Session Pack" : option.optionType === "subscription" ? "Monthly Membership" : "3 Months"}
                                         value={option.name}
@@ -13102,11 +13003,12 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                           current[index] = { ...current[index], name: e.target.value };
                                           form.setValue("pricingOptions", [...current]);
                                         }}
+                                        className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500"
                                         data-testid={`input-option-name-${index}`}
                                       />
                                     </div>
                                     <div>
-                                      <label className="text-xs font-medium">Price ($)</label>
+                                      <label className="text-xs font-medium text-slate-300">Price ($)</label>
                                       <Input
                                         type="text"
                                         inputMode="decimal"
@@ -13122,12 +13024,13 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                           }
                                           form.setValue("pricingOptions", [...current]);
                                         }}
+                                        className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500"
                                         data-testid={`input-option-price-${index}`}
                                       />
                                     </div>
                                     {(option.optionType || "one_time") === "credit_pack" ? (
                                       <div>
-                                        <label className="text-xs font-medium">Credits / Sessions</label>
+                                        <label className="text-xs font-medium text-slate-300">Credits / Sessions</label>
                                         <Input
                                           type="number"
                                           placeholder="10"
@@ -13137,13 +13040,14 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                             current[index] = { ...current[index], creditCount: parseInt(e.target.value) || undefined };
                                             form.setValue("pricingOptions", [...current]);
                                           }}
+                                          className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500"
                                           data-testid={`input-option-credits-${index}`}
                                         />
                                       </div>
                                     ) : option.optionType === "subscription" ? (
                                       <>
                                         <div>
-                                          <label className="text-xs font-medium">Billing Interval (days)</label>
+                                          <label className="text-xs font-medium text-slate-300">Billing Interval (days)</label>
                                           <Input
                                             type="number"
                                             placeholder="30"
@@ -13154,9 +13058,10 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                               current[index] = { ...current[index], billingIntervalDays: days };
                                               form.setValue("pricingOptions", [...current]);
                                             }}
+                                            className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500"
                                             data-testid={`input-billing-interval-days-${index}`}
                                           />
-                                          <p className="text-xs text-gray-400 mt-0.5">
+                                          <p className="text-xs text-slate-400 mt-0.5">
                                             {(() => {
                                               const d = option.billingIntervalDays;
                                               if (!d || d <= 0) return "e.g. 30 = monthly, 90 = quarterly";
@@ -13173,7 +13078,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                           </p>
                                         </div>
                                         <div>
-                                          <label className="text-xs font-medium">Ends After (days)</label>
+                                          <label className="text-xs font-medium text-slate-300">Ends After (days)</label>
                                           <Input
                                             type="number"
                                             placeholder="e.g. 120"
@@ -13183,9 +13088,10 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                               current[index] = { ...current[index], durationDays: parseInt(e.target.value) || undefined };
                                               form.setValue("pricingOptions", [...current]);
                                             }}
+                                            className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500"
                                             data-testid={`input-option-sub-duration-${index}`}
                                           />
-                                          <p className="text-xs text-gray-400 mt-0.5">
+                                          <p className="text-xs text-slate-400 mt-0.5">
                                             {(() => {
                                               const d = option.durationDays;
                                               const interval = option.billingIntervalDays || 30;
@@ -13196,7 +13102,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                           </p>
                                         </div>
                                         <div>
-                                          <label className="text-xs font-medium">Trial Period (days)</label>
+                                          <label className="text-xs font-medium text-slate-300">Trial Period (days)</label>
                                           <Input
                                             type="number"
                                             placeholder="0"
@@ -13206,6 +13112,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                               current[index] = { ...current[index], trialDays: parseInt(e.target.value) || undefined };
                                               form.setValue("pricingOptions", [...current]);
                                             }}
+                                            className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500"
                                             data-testid={`input-option-trial-${index}`}
                                           />
                                         </div>
@@ -13213,7 +13120,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                     ) : (
                                       <>
                                         <div>
-                                          <label className="text-xs font-medium">Duration (days)</label>
+                                          <label className="text-xs font-medium text-slate-300">Duration (days)</label>
                                           <Input
                                             type="number"
                                             placeholder="90"
@@ -13232,10 +13139,11 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                               }
                                               form.setValue("pricingOptions", [...current]);
                                             }}
+                                            className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500"
                                             data-testid={`input-option-duration-${index}`}
                                           />
                                         </div>
-                                        <div className="col-span-2 border-t pt-2 mt-1">
+                                        <div className="col-span-2 border-t border-slate-600 pt-2 mt-1">
                                           <div className="flex items-center gap-2 mb-2">
                                             <Checkbox
                                               checked={option.allowInstallments || false}
@@ -13264,7 +13172,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                               }}
                                               data-testid={`checkbox-allow-installments-${index}`}
                                             />
-                                            <label className="text-xs font-medium">Allow Installment Payments</label>
+                                            <label className="text-xs font-medium text-slate-300">Allow Installment Payments</label>
                                           </div>
                                           {option.allowInstallments && (() => {
                                             const duration = option.durationDays || 90;
@@ -13287,15 +13195,16 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                               : duration <= 365 ? Math.min(12, Math.floor(duration / 14))
                                               : 24;
                                             return (
-                                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-3">
+                                            <div className="bg-amber-900/20 border border-amber-700/50 rounded-lg p-3 space-y-3">
                                               <div className="grid grid-cols-2 gap-3">
                                                 <div>
-                                                  <label className="text-xs font-medium">Number of Installments</label>
+                                                  <label className="text-xs font-medium text-slate-300">Number of Installments</label>
                                                   <Input
                                                     type="number"
                                                     min="2"
                                                     max={maxCount}
                                                     value={option.installmentCount || ""}
+                                                    className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500"
                                                     onChange={(e) => {
                                                       const current = form.getValues("pricingOptions") || [];
                                                       const newCount = Math.max(2, Math.min(maxCount, parseInt(e.target.value) || 2));
@@ -13318,7 +13227,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                                   />
                                                 </div>
                                                 <div>
-                                                  <label className="text-xs font-medium">Pay-in-Full Discount (%)</label>
+                                                  <label className="text-xs font-medium text-slate-300">Pay-in-Full Discount (%)</label>
                                                   <Input
                                                     type="number"
                                                     min="0"
@@ -13330,24 +13239,25 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                                       current[index] = { ...current[index], payInFullDiscount: parseInt(e.target.value) || 0 };
                                                       form.setValue("pricingOptions", [...current]);
                                                     }}
+                                                    className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500"
                                                     data-testid={`input-pay-in-full-discount-${index}`}
                                                   />
                                                 </div>
                                               </div>
-                                              <div className="bg-white/60 rounded-lg p-2 space-y-1">
-                                                <p className="text-xs text-amber-800 font-medium">
+                                              <div className="bg-[#243044] rounded-lg p-2 space-y-1">
+                                                <p className="text-xs text-amber-300 font-medium">
                                                   {perPayment > 0
                                                     ? `${count} payments of $${(perPayment / 100).toFixed(2)} \u00B7 ${intervalLabel} \u00B7 $${(totalInstallmentCost / 100).toFixed(2)} total`
                                                     : "Set the option price above to see installment breakdown"}
                                                 </p>
                                                 {totalDays > duration && perPayment > 0 && (
-                                                  <p className="text-xs text-amber-600">
+                                                  <p className="text-xs text-amber-400">
                                                     Payments span {totalDays} days ({duration}-day program)
                                                   </p>
                                                 )}
                                                 {discount > 0 && totalPrice > 0 && (
-                                                  <p className="text-xs text-green-700">
-                                                    Pay-in-full price: $${(discountedFullPrice / 100).toFixed(2)} ({discount}% off)
+                                                  <p className="text-xs text-teal-400">
+                                                    Pay-in-full price: ${(discountedFullPrice / 100).toFixed(2)} ({discount}% off)
                                                   </p>
                                                 )}
                                               </div>
@@ -13358,7 +13268,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                       </>
                                     )}
                                     <div>
-                                      <label className="text-xs font-medium">Savings Note</label>
+                                      <label className="text-xs font-medium text-slate-300">Savings Note</label>
                                       <Input
                                         placeholder="Save $30!"
                                         value={option.savingsNote || ""}
@@ -13367,12 +13277,13 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                           current[index] = { ...current[index], savingsNote: e.target.value };
                                           form.setValue("pricingOptions", [...current]);
                                         }}
+                                        className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500"
                                         data-testid={`input-option-savings-${index}`}
                                       />
                                     </div>
                                     {(option.optionType) === "subscription" && (
-                                    <div className="col-span-2 border-t pt-2 mt-2">
-                                      <label className="text-xs font-medium mb-2 block">After Bundle Period</label>
+                                    <div className="col-span-2 border-t border-slate-600 pt-2 mt-2">
+                                      <label className="text-xs font-medium text-slate-300 mb-2 block">After Bundle Period</label>
                                       <Select
                                         value={option.renewalType || "none"}
                                         onValueChange={(value) => {
@@ -13385,10 +13296,10 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                           form.setValue("pricingOptions", [...current]);
                                         }}
                                       >
-                                        <SelectTrigger className="w-full" data-testid={`select-renewal-type-${index}`}>
+                                        <SelectTrigger className="w-full bg-[#243044] border-slate-600 text-slate-200" data-testid={`select-renewal-type-${index}`}>
                                           <SelectValue placeholder="Select renewal option" />
                                         </SelectTrigger>
-                                        <SelectContent>
+                                        <SelectContent className="bg-[#1a2332] border-slate-600">
                                           <SelectItem value="none">No auto-renewal (ends after period)</SelectItem>
                                           <SelectItem value="same">Auto-renew at same bundle price</SelectItem>
                                           <SelectItem value="monthly">Convert to Monthly after period</SelectItem>
@@ -13398,7 +13309,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                       {(option.renewalType === "monthly" || option.convertsToMonthly) && option.renewalType !== "same" && option.renewalType !== "none" && (
                                         <div className="mt-3 space-y-2">
                                           <div>
-                                            <label className="text-xs font-medium">Monthly Price ($)</label>
+                                            <label className="text-xs font-medium text-slate-300">Monthly Price ($)</label>
                                             <Input
                                               type="text"
                                               inputMode="decimal"
@@ -13410,29 +13321,30 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                                 current[index] = { ...current[index], monthlyPrice: isNaN(val) ? 0 : Math.round(val * 100) };
                                                 form.setValue("pricingOptions", [...current]);
                                               }}
+                                              className="bg-[#243044] border-slate-600 text-slate-200 placeholder:text-slate-500"
                                               data-testid={`input-monthly-price-${index}`}
                                             />
-                                            <p className="text-xs text-gray-500 mt-1">Price charged monthly after bundle ends</p>
+                                            <p className="text-xs text-slate-500 mt-1">Price charged monthly after bundle ends</p>
                                           </div>
                                           {option.monthlyStripePriceId && (
-                                            <div className="text-xs bg-green-50 border border-green-200 rounded px-2 py-1">
-                                              <span className="text-green-700">Monthly Stripe ID: </span>
-                                              <code className="text-green-600">{option.monthlyStripePriceId}</code>
+                                            <div className="text-xs bg-teal-900/30 border border-teal-700/50 rounded px-2 py-1">
+                                              <span className="text-teal-400">Monthly Stripe ID: </span>
+                                              <code className="text-teal-300">{option.monthlyStripePriceId}</code>
                                             </div>
                                           )}
                                         </div>
                                       )}
                                       
                                       {option.renewalType === "same" && (
-                                        <p className="text-xs text-green-600 mt-2">Bundle will automatically renew at $${option.price ? (option.price / 100).toFixed(2) : "0.00"} every {option.durationDays || 0} days</p>
+                                        <p className="text-xs text-teal-400 mt-2">Bundle will automatically renew at ${option.price ? (option.price / 100).toFixed(2) : "0.00"} every {option.durationDays || 0} days</p>
                                       )}
                                     </div>
                                     )}
                                     
                                     <div className="col-span-2 space-y-2">
-                                      <label className="text-xs font-medium flex items-center gap-2">
+                                      <label className="text-xs font-medium text-slate-300 flex items-center gap-2">
                                         Stripe Price ID
-                                        <span className="text-gray-400 font-normal">(paste existing ID or leave blank to auto-create)</span>
+                                        <span className="text-slate-500 font-normal">(paste existing ID or leave blank to auto-create)</span>
                                       </label>
                                       <div className="flex gap-2">
                                         <Input
@@ -13444,7 +13356,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                             current[index] = { ...current[index], stripePriceId: e.target.value };
                                             form.setValue("pricingOptions", [...current]);
                                           }}
-                                          className="flex-1 font-mono text-sm"
+                                          className="flex-1 font-mono text-sm bg-[#243044] border-slate-600 text-slate-200"
                                           data-testid={`input-stripe-price-id-${index}`}
                                         />
                                         <Button
@@ -13486,12 +13398,12 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                         </Button>
                                       </div>
                                       {option.linkedFromStripe && (
-                                        <div className="text-xs text-green-600 flex items-center gap-1">
+                                        <div className="text-xs text-teal-400 flex items-center gap-1">
                                           <Check className="w-3 h-3" /> Linked from Stripe - will not create new price
                                         </div>
                                       )}
                                       {option.stripePriceId && !option.linkedFromStripe && (
-                                        <div className="text-xs text-blue-600">(auto-synced)</div>
+                                        <div className="text-xs text-slate-400">(auto-synced)</div>
                                       )}
                                     </div>
                                   </div>
@@ -13504,95 +13416,147 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                           )}
                         </div>
 
-                        <WizardSectionDivider label="Coupons" />
-                        <div className="border rounded-xl p-4 bg-purple-50/50">
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Coupons</label>
+                        <div className="border border-slate-700 rounded-xl p-4 bg-[#243044]/50">
                           <div className="flex items-center gap-2 mb-2">
-                            <Ticket className="h-4 w-4 text-purple-600" />
-                            <h4 className="font-semibold text-sm">Coupons</h4>
+                            <Ticket className="h-4 w-4 text-purple-400" />
+                            <h4 className="font-semibold text-sm text-slate-200">Coupons</h4>
                           </div>
-                          <p className="text-[11px] text-gray-500 mb-3">Generate discount coupons. Coupons expire 24 hours after creation.</p>
+                          <p className="text-xs text-slate-500 mb-3">Generate discount coupons. Coupons expire 24 hours after creation.</p>
                           {editingProgram?.id ? (
                             <InlineCouponSection programId={editingProgram.id} />
                           ) : (
-                            <div className="text-center py-4 bg-white/60 rounded-lg border border-dashed border-gray-300">
-                              <p className="text-sm text-gray-400">Save the program first to create coupons.</p>
+                            <div className="text-center py-4 bg-[#1a2332] rounded-lg border border-dashed border-slate-600">
+                              <p className="text-sm text-slate-500">Save the program first to create coupons.</p>
                             </div>
                           )}
                         </div>
+                      </div>
 
-                        {storeProducts.length > 0 && (
-                          <>
-                            <WizardSectionDivider label="Add-ons" />
-                            <div>
-                              <WizardFieldLabel hint="Suggested at checkout">Suggested Add-ons</WizardFieldLabel>
-                              <div className="flex flex-col gap-1.5">
-                                {storeProducts.map((product: any) => (
-                                  <label
-                                    key={product.id}
-                                    className={`flex items-center gap-2.5 cursor-pointer px-3.5 py-2.5 rounded-lg transition-all border-[1.5px] ${
-                                      selectedAddOns.includes(product.id) ? "bg-red-50 border-red-200" : "bg-gray-50 border-transparent"
-                                    }`}
-                                  >
-                                    <Checkbox
-                                      checked={selectedAddOns.includes(product.id)}
-                                      onCheckedChange={(checked) => {
-                                        if (checked) {
-                                          setSelectedAddOns([...selectedAddOns, product.id]);
-                                        } else {
-                                          setSelectedAddOns(selectedAddOns.filter(id => id !== product.id));
-                                        }
-                                      }}
-                                      data-testid={`checkbox-addon-${product.id}`}
-                                    />
-                                    <span className="text-[13px] font-medium text-gray-700 flex-1">{product.name}</span>
-                                    {product.price > 0 && (
-                                      <span className="text-xs text-gray-400 font-medium">$${(product.price / 100).toFixed(2)}</span>
-                                    )}
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                          </>
+                      {storeProducts.length > 0 && (
+                        <div className="space-y-3">
+                          <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Add-ons</label>
+                          <div className="flex flex-col gap-1.5">
+                            {storeProducts.map((product: any) => (
+                              <label
+                                key={product.id}
+                                className={`flex items-center gap-2.5 cursor-pointer px-3.5 py-2.5 rounded-lg transition-all border ${
+                                  selectedAddOns.includes(product.id) ? "bg-teal-900/30 border-teal-700/50" : "bg-[#243044] border-slate-600"
+                                }`}
+                              >
+                                <Checkbox
+                                  checked={selectedAddOns.includes(product.id)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedAddOns([...selectedAddOns, product.id]);
+                                    } else {
+                                      setSelectedAddOns(selectedAddOns.filter(id => id !== product.id));
+                                    }
+                                  }}
+                                  data-testid={`checkbox-addon-${product.id}`}
+                                />
+                                <span className="text-sm font-medium text-slate-200 flex-1">{product.name}</span>
+                                {product.price > 0 && (
+                                  <span className="text-xs text-slate-400 font-medium">${(product.price / 100).toFixed(2)}</span>
+                                )}
+                              </label>
+                            ))}
+                          </div>
+                          <p className="text-xs text-slate-500">Suggested at checkout</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right Column */}
+                    <div className="lg:col-span-2 space-y-5">
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Cover Image</label>
+                        {form.watch("coverImageUrl") ? (
+                          <div className="aspect-[16/9] w-full bg-[#243044] rounded-xl overflow-hidden relative">
+                            <img src={form.watch("coverImageUrl")} alt="Cover" className="w-full h-full object-cover" />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-2 right-2"
+                              onClick={() => form.setValue("coverImageUrl", "")}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <label className="flex flex-col items-center justify-center py-7 px-5 rounded-xl border-2 border-dashed border-slate-600 bg-[#243044] cursor-pointer hover:border-slate-500 transition-colors">
+                            <div className="text-2xl mb-1.5">📸</div>
+                            <div className="text-sm font-semibold text-slate-400">Click to upload or drag & drop</div>
+                            <div className="text-xs text-slate-500 mt-0.5">PNG, JPG up to 5MB · 16:9 recommended</div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              data-testid="input-program-cover-image"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const formData = new FormData();
+                                  formData.append('image', file);
+                                  try {
+                                    const headers: Record<string, string> = {};
+                                    const token = localStorage.getItem('authToken');
+                                    if (token) headers['Authorization'] = `Bearer ${token}`;
+                                    const res = await fetch('/api/upload/product-image', { method: 'POST', body: formData, credentials: 'include', headers });
+                                    const data = await res.json();
+                                    if (data.imageUrl) {
+                                      form.setValue("coverImageUrl", data.imageUrl);
+                                    } else if (data.error) {
+                                      console.error('Upload error:', data.error);
+                                    }
+                                  } catch (err) {
+                                    console.error('Upload failed:', err);
+                                  }
+                                }
+                              }}
+                            />
+                          </label>
                         )}
                       </div>
-                    )}
 
-                    {wizardStep === 2 && (
-                      <div className="flex flex-col gap-5">
-                        {waivers.length > 0 && (
-                          <div>
-                            <WizardFieldLabel>Required Waivers</WizardFieldLabel>
-                            <div className="flex flex-col gap-1.5">
-                              {waivers.map((waiver: any) => (
-                                <label
-                                  key={waiver.id}
-                                  className={`flex items-center gap-2.5 cursor-pointer px-3.5 py-2.5 rounded-lg transition-all border-[1.5px] ${
-                                    (form.watch("requiredWaivers") || []).includes(waiver.id) ? "bg-red-50 border-red-200" : "bg-gray-50 border-transparent"
-                                  }`}
-                                >
-                                  <Checkbox
-                                    checked={(form.watch("requiredWaivers") || []).includes(waiver.id)}
-                                    onCheckedChange={(checked) => {
-                                      const current = form.getValues("requiredWaivers") || [];
-                                      if (checked) {
-                                        form.setValue("requiredWaivers", [...current, waiver.id]);
-                                      } else {
-                                        form.setValue("requiredWaivers", current.filter((id: string) => id !== waiver.id));
-                                      }
-                                    }}
-                                    data-testid={`checkbox-waiver-${waiver.id}`}
-                                  />
-                                  <span className="text-[13px] font-medium text-gray-700">{waiver.name}</span>
-                                </label>
-                              ))}
-                            </div>
-                            <p className="text-[11px] text-gray-400 mt-1.5">Parents must sign selected waivers before enrolling</p>
+                      {waivers.length > 0 && (
+                        <div className="space-y-3">
+                          <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Required Waivers</label>
+                          <div className="flex flex-col gap-1.5">
+                            {waivers.map((waiver: any) => (
+                              <label
+                                key={waiver.id}
+                                className={`flex items-center gap-2.5 cursor-pointer px-3.5 py-2.5 rounded-lg transition-all border ${
+                                  (form.watch("requiredWaivers") || []).includes(waiver.id) ? "bg-teal-900/30 border-teal-700/50" : "bg-[#243044] border-slate-600"
+                                }`}
+                              >
+                                <Checkbox
+                                  checked={(form.watch("requiredWaivers") || []).includes(waiver.id)}
+                                  onCheckedChange={(checked) => {
+                                    const current = form.getValues("requiredWaivers") || [];
+                                    if (checked) {
+                                      form.setValue("requiredWaivers", [...current, waiver.id]);
+                                    } else {
+                                      form.setValue("requiredWaivers", current.filter((id: string) => id !== waiver.id));
+                                    }
+                                  }}
+                                  data-testid={`checkbox-waiver-${waiver.id}`}
+                                />
+                                <span className="text-sm font-medium text-slate-200">{waiver.name}</span>
+                              </label>
+                            ))}
                           </div>
-                        )}
+                          <p className="text-xs text-slate-500">Parents must sign selected waivers before enrolling</p>
+                        </div>
+                      )}
 
-                        <WizardSectionDivider label="Scheduling" />
-
-                        <WizardToggle
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Scheduling</label>
+                        <DarkToggle
                           checked={!!form.watch("scheduleRequestEnabled")}
                           onChange={(v) => form.setValue("scheduleRequestEnabled", v)}
                           label="Enable Schedule Request"
@@ -13601,17 +13565,17 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                         />
 
                         {form.watch("scheduleRequestEnabled") && (
-                          <>
-                            <div>
-                              <WizardFieldLabel>Session Length</WizardFieldLabel>
+                          <div className="space-y-3">
+                            <div className="space-y-1.5">
+                              <label className="text-slate-300 text-sm">Session Length</label>
                               <Select
                                 value={form.watch("sessionLengthMinutes")?.toString() || ""}
                                 onValueChange={(val) => form.setValue("sessionLengthMinutes", parseInt(val))}
                               >
-                                <SelectTrigger data-testid="select-session-length">
+                                <SelectTrigger className="bg-[#243044] border-slate-600 text-slate-200" data-testid="select-session-length">
                                   <SelectValue placeholder="Select duration" />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="bg-[#1a2332] border-slate-600">
                                   <SelectItem value="30">30 minutes</SelectItem>
                                   <SelectItem value="45">45 minutes</SelectItem>
                                   <SelectItem value="60">1 hour</SelectItem>
@@ -13619,12 +13583,12 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                   <SelectItem value="120">2 hours</SelectItem>
                                 </SelectContent>
                               </Select>
-                              <p className="text-[11px] text-gray-400 mt-1">How long each booked session will last</p>
+                              <p className="text-xs text-slate-500">How long each booked session will last</p>
                             </div>
 
-                            <div>
-                              <WizardFieldLabel>Available Time Windows</WizardFieldLabel>
-                              <p className="text-[11px] text-gray-500 mb-2">Define recurring weekly time slots when sessions can be booked</p>
+                            <div className="space-y-1.5">
+                              <label className="text-slate-300 text-sm">Available Time Windows</label>
+                              <p className="text-xs text-slate-500">Define recurring weekly time slots when sessions can be booked</p>
                               {availabilitySlots.map((slot, index) => (
                                 <div key={index} className="flex items-center gap-2 mb-2">
                                   <Select
@@ -13635,10 +13599,10 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                       setAvailabilitySlots(updated);
                                     }}
                                   >
-                                    <SelectTrigger className="w-[130px]">
+                                    <SelectTrigger className="w-[130px] bg-[#243044] border-slate-600 text-slate-200">
                                       <SelectValue placeholder="Day" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="bg-[#1a2332] border-slate-600">
                                       <SelectItem value="0">Sunday</SelectItem>
                                       <SelectItem value="1">Monday</SelectItem>
                                       <SelectItem value="2">Tuesday</SelectItem>
@@ -13656,9 +13620,9 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                       updated[index] = { ...updated[index], startTime: e.target.value };
                                       setAvailabilitySlots(updated);
                                     }}
-                                    className="w-[120px]"
+                                    className="w-[120px] bg-[#243044] border-slate-600 text-slate-200 [color-scheme:dark]"
                                   />
-                                  <span className="text-xs text-gray-400">to</span>
+                                  <span className="text-xs text-slate-500">to</span>
                                   <Input
                                     type="time"
                                     value={slot.endTime}
@@ -13667,7 +13631,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                       updated[index] = { ...updated[index], endTime: e.target.value };
                                       setAvailabilitySlots(updated);
                                     }}
-                                    className="w-[120px]"
+                                    className="w-[120px] bg-[#243044] border-slate-600 text-slate-200 [color-scheme:dark]"
                                   />
                                   <Button
                                     type="button"
@@ -13677,7 +13641,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                       setAvailabilitySlots(availabilitySlots.filter((_, i) => i !== index));
                                     }}
                                   >
-                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                    <Trash2 className="h-4 w-4 text-red-400" />
                                   </Button>
                                 </div>
                               ))}
@@ -13688,29 +13652,18 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                 onClick={() => {
                                   setAvailabilitySlots([...availabilitySlots, { dayOfWeek: 1, startTime: "09:00", endTime: "17:00" }]);
                                 }}
-                                className="mt-1"
+                                className="mt-1 border-slate-600 text-slate-300 hover:bg-[#2a3a52]"
                               >
                                 <Plus className="h-4 w-4 mr-1" /> Add Time Slot
                               </Button>
                             </div>
-                          </>
+                          </div>
                         )}
-
-                        <WizardSectionDivider label="Status" />
-
-                        <WizardToggle
-                          checked={!!form.watch("isActive")}
-                          onChange={(v) => form.setValue("isActive", v)}
-                          label="Active Program"
-                          desc="When active, this program is visible and open for enrollment"
-                          testId="checkbox-program-active"
-                        />
                       </div>
-                    )}
 
-                    {wizardStep === 3 && (
-                      <div className="flex flex-col gap-5">
-                        <WizardToggle
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Subgroups</label>
+                        <DarkToggle
                           checked={!!form.watch("hasSubgroups")}
                           onChange={(v) => form.setValue("hasSubgroups", v)}
                           label="Has Teams / Groups"
@@ -13719,96 +13672,79 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                         />
 
                         {form.watch("hasSubgroups") && (
-                          <div>
-                            <WizardFieldLabel>Subgroup Label</WizardFieldLabel>
+                          <div className="space-y-1.5">
+                            <label className="text-slate-300 text-sm">Subgroup Label</label>
                             <div data-testid="select-subgroup-label">
-                              <WizardRadioCard options={SUBGROUP_OPTS} value={form.watch("subgroupLabel") || "Team"} onChange={(v) => form.setValue("subgroupLabel", v)} />
+                              <DarkRadioCard options={SUBGROUP_OPTS} value={form.watch("subgroupLabel") || "Team"} onChange={(v) => form.setValue("subgroupLabel", v)} />
                             </div>
                           </div>
                         )}
+                      </div>
 
-                        <WizardSectionDivider label="Visibility & Chat" />
-
-                        <div>
-                          <WizardFieldLabel>Roster Visibility</WizardFieldLabel>
-                          <div className="flex gap-2" data-testid="select-roster-visibility">
-                            {ROSTER_OPTS.map((opt) => (
-                              <button
-                                key={opt.value}
-                                type="button"
-                                onClick={() => form.setValue("rosterVisibility", opt.value)}
-                                className={`flex-1 py-3 px-2.5 rounded-xl text-center transition-all border-2 ${
-                                  form.watch("rosterVisibility") === opt.value
-                                    ? "border-[#D82428] bg-red-50"
-                                    : "border-gray-200 bg-white hover:border-gray-300"
-                                }`}
-                              >
-                                <div className="text-[13px] font-semibold text-gray-900">{opt.label}</div>
-                                <div className="text-[11px] text-gray-500">{opt.desc}</div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div>
-                          <WizardFieldLabel>Chat Mode</WizardFieldLabel>
-                          <div className="flex gap-2" data-testid="select-chat-mode">
-                            {CHAT_OPTS.map((opt) => (
-                              <button
-                                key={opt.value}
-                                type="button"
-                                onClick={() => form.setValue("chatMode", opt.value)}
-                                className={`flex-1 py-3 px-2.5 rounded-xl text-center transition-all border-2 ${
-                                  form.watch("chatMode") === opt.value
-                                    ? "border-[#D82428] bg-red-50"
-                                    : "border-gray-200 bg-white hover:border-gray-300"
-                                }`}
-                              >
-                                <div className="text-[13px] font-semibold text-gray-900">{opt.label}</div>
-                                <div className="text-[11px] text-gray-500">{opt.desc}</div>
-                              </button>
-                            ))}
-                          </div>
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Roster Visibility</label>
+                        <div className="flex gap-2" data-testid="select-roster-visibility">
+                          {ROSTER_OPTS.map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => form.setValue("rosterVisibility", opt.value)}
+                              className={`flex-1 py-3 px-2.5 rounded-xl text-center transition-all border ${
+                                form.watch("rosterVisibility") === opt.value
+                                  ? "border-teal-500 bg-teal-900/30"
+                                  : "border-slate-600 bg-[#243044] hover:border-slate-500"
+                              }`}
+                            >
+                              <div className="text-sm font-semibold text-slate-200">{opt.label}</div>
+                              <div className="text-xs text-slate-400">{opt.desc}</div>
+                            </button>
+                          ))}
                         </div>
                       </div>
-                    )}
+
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Chat Mode</label>
+                        <div className="flex gap-2" data-testid="select-chat-mode">
+                          {CHAT_OPTS.map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => form.setValue("chatMode", opt.value)}
+                              className={`flex-1 py-3 px-2.5 rounded-xl text-center transition-all border ${
+                                form.watch("chatMode") === opt.value
+                                  ? "border-teal-500 bg-teal-900/30"
+                                  : "border-slate-600 bg-[#243044] hover:border-slate-500"
+                              }`}
+                            >
+                              <div className="text-sm font-semibold text-slate-200">{opt.label}</div>
+                              <div className="text-xs text-slate-400">{opt.desc}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Status</label>
+                        <DarkToggle
+                          checked={!!form.watch("isActive")}
+                          onChange={(v) => form.setValue("isActive", v)}
+                          label="Active Program"
+                          desc="When active, this program is visible and open for enrollment"
+                          testId="checkbox-program-active"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between flex-shrink-0 bg-gray-50/50">
-                    <div>
-                      {wizardStep > 0 && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setWizardStep(wizardStep - 1)}
-                          className="gap-1.5"
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                          Back
-                        </Button>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      {wizardStep < WIZARD_STEPS.length - 1 ? (
-                        <Button
-                          type="button"
-                          onClick={() => setWizardStep(wizardStep + 1)}
-                          className="gap-1.5 bg-gradient-to-r from-[#D82428] to-[#B91C1C] hover:from-[#B91C1C] hover:to-[#991B1B] text-white"
-                        >
-                          Continue
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      ) : (
-                        <Button
-                          type="submit"
-                          disabled={createProgram.isPending}
-                          className="gap-1.5 bg-gradient-to-r from-[#D82428] to-[#B91C1C] hover:from-[#B91C1C] hover:to-[#991B1B] text-white"
-                          data-testid="button-submit-program"
-                        >
-                          {createProgram.isPending ? "Saving..." : editingProgram ? "Update Program" : "Create Program"}
-                        </Button>
-                      )}
-                    </div>
+                  <div className="pt-4 border-t border-slate-700">
+                    <Button
+                      type="submit"
+                      disabled={createProgram.isPending}
+                      className="w-full bg-teal-600 hover:bg-teal-500 text-white"
+                      data-testid="button-submit-program"
+                    >
+                      {createProgram.isPending ? "Saving..." : editingProgram ? "Update Program" : "Create Program"}
+                    </Button>
                   </div>
                 </form>
               );

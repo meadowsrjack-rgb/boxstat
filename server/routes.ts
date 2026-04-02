@@ -4334,11 +4334,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const user = await storage.getUser(id);
     
     let players: any[] = [];
+    const accountHolderId = user?.accountHolderId || id;
     
     if (user?.role === "parent" || user?.role === "admin") {
-      // Get all players linked to this parent/admin (check both accountHolderId and parentId)
+      // Get all players linked to any profile in this account
       const allUsers = await storage.getUsersByOrganization(user.organizationId);
-      players = allUsers.filter(u => (u.accountHolderId === id || u.parentId === id) && u.role === "player");
+      players = allUsers.filter(u => (u.accountHolderId === accountHolderId || u.parentId === accountHolderId || u.accountHolderId === id || u.parentId === id) && u.role === "player");
     } else if (user?.role === "player") {
       // Return self
       players = [user];

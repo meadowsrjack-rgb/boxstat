@@ -132,7 +132,8 @@ export default function ProfileGateway() {
     if (type === "account") {
       localStorage.removeItem("selectedPlayerId");
       localStorage.removeItem("viewingAsParent");
-      if (userRole !== "parent") {
+      const parentProfile = accountProfiles.find((p: any) => p.role === "parent");
+      if (parentProfile && userRole !== "parent") {
         const ok = await switchToRole("parent");
         if (!ok) return;
         window.location.href = "/parent-dashboard";
@@ -140,7 +141,8 @@ export default function ProfileGateway() {
         setLocation("/parent-dashboard");
       }
     } else if (type === "coach") {
-      if (userRole !== "coach") {
+      const coachProfile = accountProfiles.find((p: any) => p.role === "coach");
+      if (coachProfile && userRole !== "coach") {
         const ok = await switchToRole("coach");
         if (!ok) return;
         window.location.href = "/coach-dashboard";
@@ -148,7 +150,8 @@ export default function ProfileGateway() {
         setLocation("/coach-dashboard");
       }
     } else if (type === "admin") {
-      if (userRole !== "admin") {
+      const adminProfile = accountProfiles.find((p: any) => p.role === "admin");
+      if (adminProfile && userRole !== "admin") {
         const ok = await switchToRole("admin");
         if (!ok) return;
         window.location.href = "/admin-dashboard";

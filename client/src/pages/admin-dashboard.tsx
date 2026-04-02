@@ -1015,6 +1015,17 @@ function StoreAtAGlance({ storeStats, onNavigateToStore, programs }: { storeStat
   });
 
   const orders = pendingOrdersData?.orders || [];
+  const [visibleOrderCount, setVisibleOrderCount] = useState(3);
+
+  useEffect(() => {
+    if (visibleOrderCount > 3 && orders.length <= 3) {
+      setVisibleOrderCount(3);
+    }
+  }, [orders.length]);
+
+  const visibleOrders = orders.slice(0, visibleOrderCount);
+  const hasMoreOrders = orders.length > visibleOrderCount;
+  const hasHiddenOrders = visibleOrderCount > 3 && orders.length > 3;
 
   return (
     <Card id="store-at-a-glance">
@@ -1144,7 +1155,7 @@ function StoreAtAGlance({ storeStats, onNavigateToStore, programs }: { storeStat
           <div>
             <p className="text-sm font-semibold text-gray-900 mb-3">Recent Orders</p>
             <div className="space-y-0">
-              {orders.map((order: any) => (
+              {visibleOrders.map((order: any) => (
                 <div key={order.paymentId} className="flex items-center justify-between py-2.5 border-b last:border-0">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -1194,6 +1205,28 @@ function StoreAtAGlance({ storeStats, onNavigateToStore, programs }: { storeStat
                 </div>
               ))}
             </div>
+            <div className="flex items-center gap-2 mt-2">
+              {hasMoreOrders && (
+                <Button
+                  variant="ghost"
+                  className="flex-1 flex items-center justify-center gap-2 text-sm"
+                  onClick={() => setVisibleOrderCount(c => c + 10)}
+                >
+                  Show More
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              )}
+              {hasHiddenOrders && (
+                <Button
+                  variant="ghost"
+                  className="flex-1 flex items-center justify-center gap-2 text-sm"
+                  onClick={() => setVisibleOrderCount(3)}
+                >
+                  Show Less
+                  <ChevronDown className="w-4 h-4 rotate-180" />
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </CardContent>
@@ -1203,7 +1236,7 @@ function StoreAtAGlance({ storeStats, onNavigateToStore, programs }: { storeStat
 
 function RecentTransactionsCard({ payments, users, programs, isAdmin }: any) {
   const { toast } = useToast();
-  const [showAll, setShowAll] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(3);
   const [refundModalPayment, setRefundModalPayment] = useState<any>(null);
   const [refundType, setRefundType] = useState<'full' | 'partial'>('full');
   const [refundAmount, setRefundAmount] = useState('');
@@ -1221,9 +1254,16 @@ function RecentTransactionsCard({ payments, users, programs, isAdmin }: any) {
 
   const sortedPayments = [...localPayments]
     .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  
-  const recentPayments = sortedPayments.slice(0, 5);
-  const olderPayments = sortedPayments.slice(5);
+
+  useEffect(() => {
+    if (visibleCount > 3 && sortedPayments.length <= 3) {
+      setVisibleCount(3);
+    }
+  }, [sortedPayments.length]);
+
+  const visiblePayments = sortedPayments.slice(0, visibleCount);
+  const hasMorePayments = sortedPayments.length > visibleCount;
+  const hasHiddenPayments = visibleCount > 3 && sortedPayments.length > 3;
 
   const refundMutation = useMutation({
     mutationFn: async ({ paymentId, amount, reasonCode, notes, refundFee }: any) => {
@@ -1534,32 +1574,32 @@ function RecentTransactionsCard({ payments, users, programs, isAdmin }: any) {
         </CardHeader>
         <CardContent>
           <div className="space-y-0">
-            {recentPayments.map((payment: any) => (
+            {visiblePayments.map((payment: any) => (
               <TransactionRow key={payment.id} payment={payment} />
             ))}
-            
-            {olderPayments.length > 0 && (
-              <Collapsible open={showAll} onOpenChange={setShowAll}>
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="w-full mt-2 flex items-center justify-center gap-2"
-                    data-testid="button-show-all-transactions"
-                  >
-                    <span className="text-sm">
-                      {showAll ? 'Show Less' : `Show ${olderPayments.length} More`}
-                    </span>
-                    <ChevronDown className={`w-4 h-4 transition-transform ${showAll ? 'rotate-180' : ''}`} />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="space-y-0 mt-2">
-                    {olderPayments.map((payment: any) => (
-                      <TransactionRow key={payment.id} payment={payment} />
-                    ))}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            {hasMorePayments && (
+              <Button
+                variant="ghost"
+                className="flex-1 flex items-center justify-center gap-2 text-sm"
+                onClick={() => setVisibleCount(c => c + 10)}
+                data-testid="button-show-more-transactions"
+              >
+                Show More
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+            )}
+            {hasHiddenPayments && (
+              <Button
+                variant="ghost"
+                className="flex-1 flex items-center justify-center gap-2 text-sm"
+                onClick={() => setVisibleCount(3)}
+                data-testid="button-show-less-transactions"
+              >
+                Show Less
+                <ChevronDown className="w-4 h-4 rotate-180" />
+              </Button>
             )}
           </div>
         </CardContent>

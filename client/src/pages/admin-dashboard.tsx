@@ -105,6 +105,7 @@ import { format } from "date-fns";
 import RevenueTrendChart from "@/components/RevenueTrendChart";
 import { TIMEZONE_OPTIONS, getBrowserTimezone, localDatetimeToUTC, utcToLocalDatetime, getTimezoneAbbreviation, ensureUtcString } from "@/lib/time";
 import EventWindowsConfigurator from "@/components/EventWindowsConfigurator";
+import DateTimeRangePicker from "@/components/DateTimeRangePicker";
 import type { EventWindow } from "@shared/schema";
 import EventDetailModal from "@/components/EventDetailModal";
 import { SKILL_CATEGORIES } from "@/components/CoachAwardDialogs";
@@ -7105,33 +7106,26 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
 
                       <div className="space-y-3">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Date & Time</label>
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="startTime"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-sm">Start</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="datetime-local" data-testid="input-event-start" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="endTime"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-sm">End</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="datetime-local" data-testid="input-event-end" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                        <DateTimeRangePicker
+                          startValue={form.watch("startTime") || ""}
+                          endValue={form.watch("endTime") || ""}
+                          onStartChange={(v) => form.setValue("startTime", v, { shouldValidate: true })}
+                          onEndChange={(v) => form.setValue("endTime", v, { shouldValidate: true })}
+                        />
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Timezone</label>
+                          <Select value={eventTimezone} onValueChange={setEventTimezone}>
+                            <SelectTrigger className="h-9" data-testid="select-event-timezone">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TIMEZONE_OPTIONS.map((tz) => (
+                                <SelectItem key={tz.value} value={tz.value}>
+                                  {tz.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
 
@@ -7401,23 +7395,6 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
 
                     {/* Right Column */}
                     <div className="lg:col-span-2 space-y-5">
-                      <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Timezone</label>
-                        <Select value={eventTimezone} onValueChange={setEventTimezone}>
-                          <SelectTrigger data-testid="select-event-timezone">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TIMEZONE_OPTIONS.map((tz) => (
-                              <SelectItem key={tz.value} value={tz.value}>
-                                {tz.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground">Auto-adjusts for daylight saving</p>
-                      </div>
-
                       <div className="rounded-lg border p-4 space-y-3">
                         <div className="flex items-center justify-between">
                           <Label htmlFor="recurring-toggle" className="font-medium cursor-pointer">Recurring event</Label>
@@ -7653,27 +7630,29 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
 
                       <div className="space-y-3">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Date & Time</label>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label className="text-sm">Start</Label>
-                            <Input
-                              id="edit-event-startTime"
-                              type="datetime-local"
-                              value={editingEvent.startTime || ""}
-                              onChange={(e) => setEditingEvent({...editingEvent, startTime: e.target.value})}
-                              data-testid="input-edit-event-startTime"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm">End</Label>
-                            <Input
-                              id="edit-event-endTime"
-                              type="datetime-local"
-                              value={editingEvent.endTime || ""}
-                              onChange={(e) => setEditingEvent({...editingEvent, endTime: e.target.value})}
-                              data-testid="input-edit-event-endTime"
-                            />
-                          </div>
+                        <DateTimeRangePicker
+                          startValue={editingEvent.startTime || ""}
+                          endValue={editingEvent.endTime || ""}
+                          onStartChange={(v) => setEditingEvent({...editingEvent, startTime: v})}
+                          onEndChange={(v) => setEditingEvent({...editingEvent, endTime: v})}
+                        />
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Timezone</label>
+                          <Select
+                            value={editingEvent.timezone || 'America/Los_Angeles'}
+                            onValueChange={(value) => setEditingEvent({...editingEvent, timezone: value})}
+                          >
+                            <SelectTrigger className="h-9" data-testid="select-edit-event-timezone">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TIMEZONE_OPTIONS.map((tz) => (
+                                <SelectItem key={tz.value} value={tz.value}>
+                                  {tz.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
 
@@ -7914,26 +7893,6 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
 
                     {/* Right Column */}
                     <div className="lg:col-span-2 space-y-5">
-                      <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Timezone</label>
-                        <Select
-                          value={editingEvent.timezone || 'America/Los_Angeles'}
-                          onValueChange={(value) => setEditingEvent({...editingEvent, timezone: value})}
-                        >
-                          <SelectTrigger data-testid="select-edit-event-timezone">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TIMEZONE_OPTIONS.map((tz) => (
-                              <SelectItem key={tz.value} value={tz.value}>
-                                {tz.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground">Auto-adjusts for daylight saving</p>
-                      </div>
-
                       <div className="rounded-lg border p-4 space-y-3">
                         <div className="flex items-center justify-between">
                           <Label htmlFor="edit-recurring-toggle" className="font-medium cursor-pointer">Recurring event</Label>

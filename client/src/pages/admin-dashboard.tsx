@@ -90,6 +90,17 @@ import {
   VolumeX,
   Volume2,
   Eraser,
+  RefreshCw,
+  Globe,
+  Building,
+  Mic,
+  BellOff,
+  MessageCircle,
+  Crown,
+  Tent,
+  MapPin,
+  Info,
+  Hash,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -110,6 +121,16 @@ import type { EventWindow } from "@shared/schema";
 import EventDetailModal from "@/components/EventDetailModal";
 import { SKILL_CATEGORIES } from "@/components/CoachAwardDialogs";
 import LeadEvaluationForm from "@/components/LeadEvaluationForm";
+import {
+  Section,
+  FieldWrap,
+  ChipSel,
+  SegControl,
+  TogRow,
+  ChkItem,
+  SUBGROUP_LABEL_OPTIONS,
+  SESSION_LENGTH_OPTIONS,
+} from "./admin-dashboard-program-form";
 import type { SkillCategoryName, EvalScores, Quarter } from "@/components/CoachAwardDialogs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -12381,139 +12402,117 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                 <Plus className="w-4 h-4" />
               </Button>
             </DialogTrigger>
-          <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingProgram ? "Edit Program" : "Create New Program"}</DialogTitle>
+          <DialogContent className="max-w-2xl w-full p-0 gap-0 overflow-hidden">
+            <DialogHeader className="px-6 py-5 border-b border-gray-100">
+              <DialogTitle className="text-lg font-bold text-gray-900">{editingProgram ? "Edit Program" : "Create New Program"}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => createProgram.mutate(data))} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Program Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="High School Club" data-testid="input-program-name" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="code"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Program Code</FormLabel>
-                      <FormControl>
-                        <Input {...field} value={field.value || ""} placeholder="e.g. SKA" data-testid="input-program-code" />
-                      </FormControl>
-                      <FormDescription>Short code used for bulk import matching</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} placeholder="Competitive basketball program for high school players" data-testid="input-program-description" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <form onSubmit={form.handleSubmit((data) => createProgram.mutate(data))}>
+                {/* Scrollable body */}
+                <div className="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto">
 
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField
-                    control={form.control}
-                    name="displayCategory"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Category</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-program-category">
-                              <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="general">General</SelectItem>
-                            <SelectItem value="training">Training</SelectItem>
-                            <SelectItem value="camps">Camps</SelectItem>
-                            <SelectItem value="clinics">Clinics</SelectItem>
-                            <SelectItem value="league">League</SelectItem>
-                            <SelectItem value="tournament">Tournament</SelectItem>
-                            <SelectItem value="membership">Membership</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="iconName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Icon</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-program-icon">
-                              <SelectValue placeholder="Select icon" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="target">Target</SelectItem>
-                            <SelectItem value="tent">Tent (Camps)</SelectItem>
-                            <SelectItem value="users">Users (Team)</SelectItem>
-                            <SelectItem value="trophy">Trophy</SelectItem>
-                            <SelectItem value="calendar">Calendar</SelectItem>
-                            <SelectItem value="star">Star</SelectItem>
-                            <SelectItem value="medal">Medal</SelectItem>
-                            <SelectItem value="crown">Crown</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="coverImageUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cover Image</FormLabel>
-                      <div className="space-y-2">
-                        {field.value && (
-                          <div className="aspect-[16/9] w-full max-w-xs bg-gray-100 rounded-lg overflow-hidden relative">
-                            <img src={field.value} alt="Cover" className="w-full h-full object-cover" />
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="sm"
-                              className="absolute top-2 right-2"
-                              onClick={() => field.onChange("")}
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </div>
+                  {/* ── PROGRAM DETAILS ── */}
+                  <Section icon={<Layers size={16} className="text-gray-500" />} title="Program Details" defaultOpen>
+                    {/* Name */}
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FieldWrap label="Program Name">
+                          <Input {...field} placeholder="High School Club" data-testid="input-program-name" className="w-full h-10 px-3 rounded-md border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition" />
+                        </FieldWrap>
+                      )}
+                    />
+                    {/* Code */}
+                    <FormField
+                      control={form.control}
+                      name="code"
+                      render={({ field }) => (
+                        <FieldWrap label="Program Code">
+                          <Input {...field} value={field.value || ""} placeholder="e.g. SKA" data-testid="input-program-code" className="w-full h-10 px-3 rounded-md border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition" />
+                          <p className="text-xs text-gray-400">Short code used for bulk import matching</p>
+                        </FieldWrap>
+                      )}
+                    />
+                    {/* Description */}
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FieldWrap label="Description">
+                          <textarea {...field} placeholder="Competitive basketball program for high school players" rows={2} data-testid="input-program-description" className="w-full px-3 py-2 rounded-md border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition resize-y min-h-[60px]" />
+                        </FieldWrap>
+                      )}
+                    />
+                    {/* Category + Icon */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="displayCategory"
+                        render={({ field }) => (
+                          <FieldWrap label="Category">
+                            <ChipSel
+                              options={[
+                                { value: "general", label: "General", Icon: Layers },
+                                { value: "training", label: "Training", Icon: Target },
+                                { value: "camps", label: "Camps", Icon: Tent },
+                                { value: "clinics", label: "Clinics", Icon: Shield },
+                                { value: "league", label: "League", Icon: Trophy },
+                                { value: "tournament", label: "Tournament", Icon: Award },
+                                { value: "membership", label: "Membership", Icon: Ticket },
+                              ]}
+                              value={field.value}
+                              onChange={field.onChange}
+                              testIdPrefix="chip-category"
+                            />
+                          </FieldWrap>
                         )}
-                        {!field.value && (
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="file"
-                              accept="image/*"
-                              className="flex-1"
-                              data-testid="input-program-cover-image"
-                              onChange={async (e) => {
+                      />
+                      <FormField
+                        control={form.control}
+                        name="iconName"
+                        render={({ field }) => (
+                          <FieldWrap label="Icon">
+                            <ChipSel
+                              options={[
+                                { value: "target", label: "Basketball", Icon: Target },
+                                { value: "tent", label: "Camps", Icon: Tent },
+                                { value: "users", label: "Team", Icon: Users },
+                                { value: "trophy", label: "Trophy", Icon: Trophy },
+                                { value: "calendar", label: "Calendar", Icon: Calendar },
+                                { value: "star", label: "Star", Icon: Star },
+                                { value: "medal", label: "Medal", Icon: Award },
+                                { value: "crown", label: "Crown", Icon: Crown },
+                              ]}
+                              value={field.value}
+                              onChange={field.onChange}
+                              testIdPrefix="chip-icon"
+                            />
+                          </FieldWrap>
+                        )}
+                      />
+                    </div>
+                    {/* Cover Image */}
+                    <FormField
+                      control={form.control}
+                      name="coverImageUrl"
+                      render={({ field }) => (
+                        <FieldWrap label="Cover Image">
+                          {field.value ? (
+                            <div className="relative w-full max-w-xs">
+                              <div className="aspect-[16/9] bg-gray-100 rounded-lg overflow-hidden">
+                                <img src={field.value} alt="Cover" className="w-full h-full object-cover" />
+                              </div>
+                              <button type="button" onClick={() => field.onChange("")} className="absolute top-2 right-2 bg-red-600 text-white rounded p-1 hover:bg-red-700">
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ) : (
+                            <label className="flex flex-col items-center justify-center py-6 rounded-lg border-2 border-dashed border-gray-200 bg-gray-50/50 cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-colors">
+                              <ImageIcon size={24} className="text-gray-300 mb-1" />
+                              <span className="text-sm text-gray-500 font-medium">Click to upload</span>
+                              <span className="text-xs text-gray-400 mt-0.5">PNG, JPG up to 5MB · 16:9 recommended</span>
+                              <input type="file" accept="image/*" className="hidden" data-testid="input-program-cover-image" onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
                                   const formData = new FormData();
@@ -12524,1260 +12523,727 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                     if (token) headers['Authorization'] = `Bearer ${token}`;
                                     const res = await fetch('/api/upload/product-image', { method: 'POST', body: formData, credentials: 'include', headers });
                                     const data = await res.json();
-                                    if (data.imageUrl) {
-                                      field.onChange(data.imageUrl);
-                                    } else if (data.error) {
-                                      console.error('Upload error:', data.error);
-                                    }
-                                  } catch (err) {
-                                    console.error('Upload failed:', err);
-                                  }
+                                    if (data.imageUrl) field.onChange(data.imageUrl);
+                                  } catch (err) { console.error('Upload failed:', err); }
                                 }
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                      <FormDescription>Recommended: 16:9 aspect ratio (1280x720 or similar)</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Pricing Section */}
-                <div className="border-t pt-4 mt-4">
-                  <h4 className="font-medium mb-3">Pricing & Billing</h4>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <FormField
-                      control={form.control}
-                      name="type"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Product Type</FormLabel>
-                          <Select value={field.value} onValueChange={field.onChange}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-program-type">
-                                <SelectValue placeholder="Select type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Subscription">Subscription (Recurring)</SelectItem>
-                              <SelectItem value="One-Time">One-Time Payment</SelectItem>
-                              <SelectItem value="Pack">Credit Pack</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
+                              }} />
+                            </label>
+                          )}
+                        </FieldWrap>
                       )}
                     />
+                  </Section>
 
-                    <FormField
-                      control={form.control}
-                      name="price"
-                      render={({ field }) => {
-                        const [displayPrice, setDisplayPrice] = useState(field.value ? (field.value / 100).toString() : "");
-                        
-                        useEffect(() => {
-                          if (field.value !== undefined) {
-                            setDisplayPrice(field.value > 0 ? (field.value / 100).toString() : "");
-                          }
-                        }, [editingProgram]);
-                        
-                        return (
-                          <FormItem>
-                            <FormLabel>Price ($)</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                step="0.01"
-                                min="0"
-                                placeholder="0.00" 
-                                data-testid="input-program-price"
-                                value={displayPrice}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setDisplayPrice(val);
-                                  if (val === "" || val === ".") {
-                                    field.onChange(0);
-                                  } else {
-                                    const parsed = parseFloat(val);
-                                    field.onChange(isNaN(parsed) ? 0 : Math.round(parsed * 100));
-                                  }
-                                }}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        );
-                      }}
-                    />
-                  </div>
-
-                  {selectedType === "Subscription" && (
+                  {/* ── PRICING & BILLING ── */}
+                  <Section icon={<DollarSign size={16} className="text-gray-500" />} title="Pricing & Billing" badge="Required" defaultOpen>
                     <>
-                      <div className="grid grid-cols-2 gap-3 mt-3">
-                        <FormField
-                          control={form.control}
-                          name="billingIntervalDays"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Billing Interval (days)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  placeholder="30"
-                                  value={field.value || ""}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                  data-testid="input-billing-interval-days"
-                                />
-                              </FormControl>
-                              <FormDescription className="text-xs">
-                                {(() => {
-                                  const d = field.value;
-                                  if (!d || d <= 0) return "e.g. 30 = monthly, 90 = quarterly, 180 = 6 months";
-                                  if (d === 7) return "Charges every week";
-                                  if (d === 14) return "Charges every 2 weeks";
-                                  if (d === 28) return "Charges every 28 days";
-                                  if (d === 30) return "Charges monthly";
-                                  if (d === 60) return "Charges every 2 months";
-                                  if (d === 90) return "Charges every 3 months (quarterly)";
-                                  if (d === 180) return "Charges every 6 months";
-                                  if (d === 365) return "Charges yearly";
-                                  return `Charges every ${d} days`;
-                                })()}
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="billingModel"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Billing Model</FormLabel>
-                              <Select value={field.value} onValueChange={field.onChange}>
-                                <FormControl>
-                                  <SelectTrigger data-testid="select-billing-model">
-                                    <SelectValue placeholder="Select model" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="Per Player">Per Player</SelectItem>
-                                  <SelectItem value="Per Family">Per Family</SelectItem>
-                                  <SelectItem value="Organization-Wide">Organization-Wide</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      <FormField
-                        control={form.control}
-                        name="subscriptionDisclosure"
-                        render={({ field }) => (
-                          <FormItem className="mt-3">
-                            <FormLabel>Subscription Disclosure</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                {...field} 
-                                placeholder="You will be charged $X every [cycle]. Your subscription renews automatically until canceled. Cancel anytime from your account."
-                                rows={3}
-                                data-testid="input-program-subscription-disclosure"
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Displayed to customers before checkout. Explain billing terms, auto-renewal, and cancellation policy.
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </>
-                  )}
-
-                  {selectedType === "One-Time" && (
-                    <div className="mt-3">
-                      <FormLabel>Duration</FormLabel>
-                      <div className="flex gap-2 mt-1">
-                        <FormField
-                          control={form.control}
-                          name="durationValue"
-                          render={({ field }) => (
-                            <FormItem className="flex-1">
-                              <FormControl>
-                                <Input 
-                                  type="number" 
-                                  {...field} 
-                                  onChange={(e) => {
-                                    const value = parseInt(e.target.value) || 0;
-                                    field.onChange(value);
-                                    const unit = form.getValues("durationUnit") || "days";
-                                    const multipliers: Record<string, number> = { days: 1, weeks: 7, months: 30, years: 365 };
-                                    form.setValue("durationDays", value * (multipliers[unit] || 1));
-                                  }}
-                                  placeholder="28" 
-                                  data-testid="input-duration-value" 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="durationUnit"
-                          render={({ field }) => (
-                            <FormItem className="w-32">
-                              <Select 
-                                value={field.value || "days"} 
-                                onValueChange={(value) => {
-                                  field.onChange(value);
-                                  const numValue = form.getValues("durationValue") || 0;
-                                  const multipliers: Record<string, number> = { days: 1, weeks: 7, months: 30, years: 365 };
-                                  form.setValue("durationDays", numValue * (multipliers[value] || 1));
-                                }}
-                              >
-                                <FormControl>
-                                  <SelectTrigger data-testid="select-duration-unit">
-                                    <SelectValue placeholder="Unit" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="days">Days</SelectItem>
-                                  <SelectItem value="weeks">Weeks</SelectItem>
-                                  <SelectItem value="months">Months</SelectItem>
-                                  <SelectItem value="years">Years</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">How long access lasts after purchase</p>
-                    </div>
-                  )}
-
-                  {selectedType === "Pack" && (
-                    <FormField
-                      control={form.control}
-                      name="sessionCount"
-                      render={({ field }) => (
-                        <FormItem className="mt-3">
-                          <FormLabel>Number of Sessions/Credits</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
-                              placeholder="10" 
-                              data-testid="input-session-count" 
+                            {/* Product Type */}
+                            <FormField
+                              control={form.control}
+                              name="type"
+                              render={({ field }) => (
+                                <FieldWrap label="Product Type">
+                                  <SegControl
+                                    options={[
+                                      { value: "Subscription", label: "Subscription", Icon: RefreshCw },
+                                      { value: "One-Time", label: "One-Time", Icon: CreditCard },
+                                      { value: "Pack", label: "Credit Pack", Icon: Package },
+                                    ]}
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    testIdPrefix="seg-type"
+                                  />
+                                </FieldWrap>
+                              )}
                             />
-                          </FormControl>
-                          <FormDescription>Credits that get used per check-in</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
 
-                  <FormField
-                    control={form.control}
-                    name="allowInstallments"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center gap-2 space-y-0 mt-3">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            data-testid="checkbox-allow-installments"
-                          />
-                        </FormControl>
-                        <FormLabel className="!mt-0">Allow Installment Payments</FormLabel>
-                      </FormItem>
-                    )}
-                  />
-
-                  {allowInstallments && (() => {
-                    const duration = form.watch("durationDays") || 90;
-                    const count = form.watch("installments") || 3;
-                    const totalPrice = form.watch("price") || 0;
-                    const perPayment = totalPrice > 0 && count > 0 ? Math.ceil(totalPrice / count) : 0;
-                    const rawInterval = count > 0 ? Math.floor((duration * 0.75) / count) : 30;
-                    const standards = [7, 14, 30, 90, 180];
-                    const smartInterval = standards.reduce((p, c) => Math.abs(c - rawInterval) < Math.abs(p - rawInterval) ? c : p);
-                    const intervalLabel = smartInterval === 7 ? "Weekly"
-                      : smartInterval === 14 ? "Bi-Weekly"
-                      : smartInterval === 30 ? "Monthly"
-                      : smartInterval === 90 ? "Quarterly"
-                      : smartInterval === 180 ? "Every 6 months"
-                      : `Every ${smartInterval} days`;
-                    const totalInstallmentCost = perPayment * count;
-                    const totalDays = smartInterval * count;
-                    const discount = form.watch("payInFullDiscount") || 0;
-                    const discountedFullPrice = discount > 0 ? Math.round(totalPrice * (1 - discount / 100)) : totalPrice;
-                    return (
-                    <div className="bg-amber-50 border border-amber-200 rounded p-3 space-y-3 mt-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <FormField
-                          control={form.control}
-                          name="installments"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Number of Installments</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="number" 
-                                  {...field} 
-                                  onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                  placeholder="3" 
-                                  data-testid="input-installments" 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="payInFullDiscount"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Pay-in-Full Discount (%)</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="number" 
-                                  {...field} 
-                                  onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                  placeholder="0" 
-                                  data-testid="input-pay-in-full-discount" 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <div className="bg-white/60 rounded p-2 space-y-1">
-                        <p className="text-xs text-amber-800 font-medium">
-                          {perPayment > 0
-                            ? `${count} payments of $${(perPayment / 100).toFixed(2)} · ${intervalLabel} · $${(totalInstallmentCost / 100).toFixed(2)} total`
-                            : "Set the option price above to see installment breakdown"}
-                        </p>
-                        {totalDays > duration && perPayment > 0 && (
-                          <p className="text-xs text-amber-600">
-                            Payments span {totalDays} days ({duration}-day program)
-                          </p>
-                        )}
-                        {discount > 0 && totalPrice > 0 && (
-                          <p className="text-xs text-green-700">
-                            Pay-in-full price: ${(discountedFullPrice / 100).toFixed(2)} ({discount}% off)
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    );
-                  })()}
-
-                  <FormField
-                    control={form.control}
-                    name="accessTag"
-                    render={({ field }) => (
-                      <FormItem className="mt-3">
-                        <FormLabel>Access Type</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-access-tag">
-                              <SelectValue placeholder="Select access type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="club_member">Club Member (Full Access)</SelectItem>
-                            <SelectItem value="pack_holder">Pack Holder (Credit-Based)</SelectItem>
-                            <SelectItem value="none">No Special Access</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>Determines user's status after purchase</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Bundle Pricing Options */}
-                  <div className="border rounded-lg p-3 mt-3 bg-blue-50">
-                    {/* Pricing Options Section */}
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <h4 className="font-medium text-sm">Pricing Options</h4>
-                          <p className="text-xs text-gray-500">Add pricing tiers: one-time bundles, credit packs, or subscriptions</p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const current = form.getValues("pricingOptions") || [];
-                            const newId = `opt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                            form.setValue("pricingOptions", [
-                              ...current,
-                              {
-                                id: newId,
-                                name: "",
-                                price: 0,
-                                optionType: "one_time",
-                                billingCycle: "One-Time",
-                                durationDays: 90,
-                                isDefault: current.length === 0,
-                              }
-                            ]);
-                            setExpandedPricingOptions(prev => new Set([...prev, newId]));
-                          }}
-                          data-testid="button-add-pricing-option"
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Add Option
-                        </Button>
-                      </div>
-                      
-                      {(form.watch("pricingOptions") || []).length > 0 && (
-                        <div className="space-y-3">
-                          {(form.watch("pricingOptions") || []).map((option: any, index: number) => {
-                            const isExpanded = expandedPricingOptions.has(option.id);
-                            const toggleExpanded = () => {
-                              setExpandedPricingOptions(prev => {
-                                const next = new Set(prev);
-                                if (next.has(option.id)) {
-                                  next.delete(option.id);
-                                } else {
-                                  next.add(option.id);
-                                }
-                                return next;
-                              });
-                            };
-                            const typeLabel = option.optionType === "credit_pack" ? "Credit Pack"
-                              : option.optionType === "subscription" ? "Subscription"
-                              : "One-Time";
-                            const displayName = option.name || `Option ${index + 1}`;
-                            const displayPrice = option.price > 0 ? `$${(option.price / 100).toFixed(2)}` : "No price set";
-                            return (
-                            <div key={option.id} className="border rounded-md bg-gray-50 overflow-hidden">
-                              <div
-                                className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-100 transition-colors"
-                                onClick={toggleExpanded}
-                              >
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <ChevronDown className={`h-4 w-4 text-gray-500 flex-shrink-0 transition-transform duration-200 ${isExpanded ? "" : "-rotate-90"}`} />
-                                  <span className="text-sm font-medium text-gray-800 truncate">{displayName}</span>
-                                  <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded flex-shrink-0">{typeLabel}</span>
-                                  <span className="text-xs text-gray-500 flex-shrink-0">{displayPrice}</span>
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const current = form.getValues("pricingOptions") || [];
-                                    const removedId = current[index]?.id;
-                                    form.setValue("pricingOptions", current.filter((_: any, i: number) => i !== index));
-                                    if (removedId) {
-                                      setExpandedPricingOptions(prev => {
-                                        const next = new Set(prev);
-                                        next.delete(removedId);
-                                        return next;
-                                      });
-                                    }
-                                  }}
-                                  data-testid={`button-remove-option-${index}`}
-                                >
-                                  <Trash2 className="h-4 w-4 text-red-500" />
-                                </Button>
-                              </div>
-                              {isExpanded && (
-                              <div className="border-t px-3 pb-3 pt-2">
-                              <div className="grid grid-cols-2 gap-2">
-                                <div className="col-span-2">
-                                  <label className="text-xs font-medium">Type</label>
-                                  <Select
-                                    value={option.optionType || "one_time"}
-                                    onValueChange={(value) => {
-                                      const current = form.getValues("pricingOptions") || [];
-                                      current[index] = { 
-                                        ...current[index], 
-                                        optionType: value,
-                                        billingCycle: value === "credit_pack" ? "One-Time" : value === "subscription" ? (current[index].billingInterval || "monthly") : current[index].billingCycle,
-                                      };
-                                      form.setValue("pricingOptions", [...current]);
-                                    }}
-                                  >
-                                    <SelectTrigger data-testid={`select-option-type-${index}`}>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="one_time">One-Time Payment</SelectItem>
-                                      <SelectItem value="credit_pack">Credit Pack</SelectItem>
-                                      <SelectItem value="subscription">Subscription</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <div>
-                                  <label className="text-xs font-medium">Name</label>
-                                  <Input
-                                    placeholder={option.optionType === "credit_pack" ? "10 Session Pack" : option.optionType === "subscription" ? "Monthly Membership" : "3 Months"}
-                                    value={option.name}
-                                    onChange={(e) => {
-                                      const current = form.getValues("pricingOptions") || [];
-                                      current[index] = { ...current[index], name: e.target.value };
-                                      form.setValue("pricingOptions", [...current]);
-                                    }}
-                                    data-testid={`input-option-name-${index}`}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-xs font-medium">Price ($)</label>
-                                  <Input
-                                    type="text"
-                                    inputMode="decimal"
-                                    placeholder="195.00"
-                                    defaultValue={option.price ? (option.price / 100).toFixed(2) : ""}
-                                    onBlur={(e) => {
-                                      const current = form.getValues("pricingOptions") || [];
-                                      const val = parseFloat(e.target.value);
-                                      const newPrice = isNaN(val) ? 0 : Math.round(val * 100);
-                                      current[index] = { ...current[index], price: newPrice };
-                                      if (current[index].allowInstallments && current[index].installmentCount) {
-                                        current[index].installmentPrice = newPrice > 0 ? Math.ceil(newPrice / current[index].installmentCount) : 0;
-                                      }
-                                      form.setValue("pricingOptions", [...current]);
-                                    }}
-                                    data-testid={`input-option-price-${index}`}
-                                  />
-                                </div>
-                                {(option.optionType || "one_time") === "credit_pack" ? (
-                                  <div>
-                                    <label className="text-xs font-medium">Credits / Sessions</label>
-                                    <Input
-                                      type="number"
-                                      placeholder="10"
-                                      value={option.creditCount || ""}
-                                      onChange={(e) => {
-                                        const current = form.getValues("pricingOptions") || [];
-                                        current[index] = { ...current[index], creditCount: parseInt(e.target.value) || undefined };
-                                        form.setValue("pricingOptions", [...current]);
-                                      }}
-                                      data-testid={`input-option-credits-${index}`}
-                                    />
-                                  </div>
-                                ) : option.optionType === "subscription" ? (
-                                  <>
-                                    <div>
-                                      <label className="text-xs font-medium">Billing Interval (days)</label>
-                                      <Input
-                                        type="number"
-                                        placeholder="30"
-                                        value={option.billingIntervalDays || ""}
-                                        onChange={(e) => {
-                                          const current = form.getValues("pricingOptions") || [];
-                                          const days = parseInt(e.target.value) || 0;
-                                          current[index] = { ...current[index], billingIntervalDays: days };
-                                          form.setValue("pricingOptions", [...current]);
+                            {/* Price + Billing Model */}
+                            <div className="grid grid-cols-2 gap-4">
+                              <FormField
+                                control={form.control}
+                                name="price"
+                                render={({ field }) => (
+                                  <FieldWrap label="Price ($)">
+                                    <div className="relative">
+                                      <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                      <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        placeholder="0.00"
+                                        data-testid="input-program-price"
+                                        key={editingProgram?.id ?? "new"}
+                                        defaultValue={field.value && field.value > 0 ? (field.value / 100).toFixed(2) : ""}
+                                        onBlur={(e) => {
+                                          const val = parseFloat(e.target.value);
+                                          field.onChange(isNaN(val) ? 0 : Math.round(val * 100));
                                         }}
-                                        data-testid={`input-billing-interval-days-${index}`}
-                                      />
-                                      <p className="text-xs text-gray-400 mt-0.5">
-                                        {(() => {
-                                          const d = option.billingIntervalDays;
-                                          if (!d || d <= 0) return "e.g. 30 = monthly, 90 = quarterly, 180 = 6 months, 365 = yearly";
-                                          if (d === 7) return "Charges every week";
-                                          if (d === 14) return "Charges every 2 weeks";
-                                          if (d === 28) return "Charges every 28 days";
-                                          if (d === 30) return "Charges monthly";
-                                          if (d === 60) return "Charges every 2 months";
-                                          if (d === 90) return "Charges every 3 months (quarterly)";
-                                          if (d === 180) return "Charges every 6 months";
-                                          if (d === 365) return "Charges yearly";
-                                          return `Charges every ${d} days`;
-                                        })()}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <label className="text-xs font-medium">Ends After (days)</label>
-                                      <Input
-                                        type="number"
-                                        placeholder="e.g. 120"
-                                        value={option.durationDays || ""}
-                                        onChange={(e) => {
-                                          const current = form.getValues("pricingOptions") || [];
-                                          current[index] = { ...current[index], durationDays: parseInt(e.target.value) || undefined };
-                                          form.setValue("pricingOptions", [...current]);
-                                        }}
-                                        data-testid={`input-option-sub-duration-${index}`}
-                                      />
-                                      <p className="text-xs text-gray-400 mt-0.5">
-                                        {(() => {
-                                          const d = option.durationDays;
-                                          const interval = option.billingIntervalDays || 30;
-                                          if (!d || d <= 0) return "Leave empty for ongoing (no end date)";
-                                          const payments = Math.ceil(d / interval);
-                                          return `~${payments} payment${payments !== 1 ? 's' : ''} over ${d} days`;
-                                        })()}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <label className="text-xs font-medium">Trial Period (days)</label>
-                                      <Input
-                                        type="number"
-                                        placeholder="0"
-                                        value={option.trialDays || ""}
-                                        onChange={(e) => {
-                                          const current = form.getValues("pricingOptions") || [];
-                                          current[index] = { ...current[index], trialDays: parseInt(e.target.value) || undefined };
-                                          form.setValue("pricingOptions", [...current]);
-                                        }}
-                                        data-testid={`input-option-trial-${index}`}
+                                        className="w-full h-10 pl-8 pr-3 rounded-md border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition"
                                       />
                                     </div>
-                                  </>
-                                ) : (
-                                  <>
-                                    <div>
-                                      <label className="text-xs font-medium">Duration (days)</label>
-                                      <Input
-                                        type="number"
-                                        placeholder="90"
-                                        value={option.durationDays || ""}
-                                        onChange={(e) => {
-                                          const current = form.getValues("pricingOptions") || [];
-                                          const newDur = parseInt(e.target.value) || undefined;
-                                          current[index] = { ...current[index], durationDays: newDur };
-                                          if (current[index].allowInstallments && current[index].installmentCount && newDur) {
-                                            const cnt = current[index].installmentCount;
-                                            const raw = Math.floor((newDur * 0.75) / cnt);
-                                            const stds = [7, 14, 30, 90, 180];
-                                            current[index].installmentIntervalDays = stds.reduce((p, c) =>
-                                              Math.abs(c - raw) < Math.abs(p - raw) ? c : p
-                                            );
-                                          }
-                                          form.setValue("pricingOptions", [...current]);
-                                        }}
-                                        data-testid={`input-option-duration-${index}`}
-                                      />
-                                    </div>
-                                    <div className="col-span-2 border-t pt-2 mt-1">
-                                      <div className="flex items-center gap-2 mb-2">
-                                        <Checkbox
-                                          checked={option.allowInstallments || false}
-                                          onCheckedChange={(checked) => {
-                                            const current = form.getValues("pricingOptions") || [];
-                                            const opt = current[index];
-                                            const duration = opt.durationDays || 90;
-                                            const totalPrice = opt.price || 0;
-                                            let defaultCount = 3;
-                                            let defaultInterval = 30;
-                                            if (duration < 30) {
-                                              defaultCount = 2;
-                                              defaultInterval = 7;
-                                            } else if (duration <= 90) {
-                                              defaultCount = Math.min(3, Math.floor(duration / 14));
-                                              defaultInterval = duration <= 60 ? 14 : 30;
-                                              if (defaultCount < 2) defaultCount = 2;
-                                            } else if (duration <= 180) {
-                                              defaultCount = Math.min(4, Math.floor(duration / 30));
-                                              defaultInterval = 30;
-                                              if (defaultCount < 2) defaultCount = 2;
-                                            } else if (duration <= 365) {
-                                              defaultCount = Math.min(6, Math.floor(duration / 30));
-                                              defaultInterval = 30;
-                                            } else {
-                                              defaultCount = Math.min(8, Math.floor(duration / 90));
-                                              defaultInterval = 90;
-                                              if (defaultCount < 2) defaultCount = 2;
-                                            }
-                                            const perPayment = totalPrice > 0 ? Math.ceil(totalPrice / defaultCount) : 0;
-                                            current[index] = {
-                                              ...opt,
-                                              allowInstallments: !!checked,
-                                              installmentCount: checked ? defaultCount : undefined,
-                                              installmentPrice: checked ? perPayment : undefined,
-                                              installmentIntervalDays: checked ? defaultInterval : undefined,
-                                              payInFullDiscount: checked ? (opt.payInFullDiscount || 0) : undefined,
-                                            };
-                                            form.setValue("pricingOptions", [...current]);
-                                          }}
-                                          data-testid={`checkbox-allow-installments-${index}`}
-                                        />
-                                        <label className="text-xs font-medium">Allow Installment Payments</label>
-                                      </div>
-                                      {option.allowInstallments && (() => {
-                                        const duration = option.durationDays || 90;
-                                        const count = option.installmentCount || 3;
-                                        const totalPrice = option.price || 0;
-                                        const perPayment = totalPrice > 0 && count > 0 ? Math.ceil(totalPrice / count) : 0;
-                                        const smartInterval = option.installmentIntervalDays || 30;
-                                        const intervalLabel = smartInterval === 7 ? "Weekly"
-                                          : smartInterval === 14 ? "Bi-Weekly"
-                                          : smartInterval === 30 ? "Monthly"
-                                          : smartInterval === 90 ? "Quarterly"
-                                          : smartInterval === 180 ? "Every 6 months"
-                                          : `Every ${smartInterval} days`;
-                                        const totalInstallmentCost = perPayment * count;
-                                        const totalDays = smartInterval * count;
-                                        const discount = option.payInFullDiscount || 0;
-                                        const discountedFullPrice = discount > 0 ? Math.round(totalPrice * (1 - discount / 100)) : totalPrice;
-                                        const maxCount = duration < 30 ? 2
-                                          : duration <= 90 ? Math.min(6, Math.floor(duration / 14))
-                                          : duration <= 365 ? Math.min(12, Math.floor(duration / 14))
-                                          : 24;
-                                        return (
-                                        <div className="bg-amber-50 border border-amber-200 rounded p-3 space-y-3">
-                                          <div className="grid grid-cols-2 gap-3">
-                                            <div>
-                                              <label className="text-xs font-medium">Number of Installments</label>
-                                              <Input
-                                                type="number"
-                                                min="2"
-                                                max={maxCount}
-                                                value={option.installmentCount || ""}
-                                                onChange={(e) => {
-                                                  const current = form.getValues("pricingOptions") || [];
-                                                  const newCount = Math.max(2, Math.min(maxCount, parseInt(e.target.value) || 2));
-                                                  const dur = current[index].durationDays || 90;
-                                                  const rawInterval = Math.floor((dur * 0.75) / newCount);
-                                                  const standards = [7, 14, 30, 90, 180];
-                                                  const newInterval = standards.reduce((prev, curr) =>
-                                                    Math.abs(curr - rawInterval) < Math.abs(prev - rawInterval) ? curr : prev
-                                                  );
-                                                  const price = current[index].price || 0;
-                                                  current[index] = {
-                                                    ...current[index],
-                                                    installmentCount: newCount,
-                                                    installmentPrice: price > 0 ? Math.ceil(price / newCount) : 0,
-                                                    installmentIntervalDays: newInterval,
-                                                  };
-                                                  form.setValue("pricingOptions", [...current]);
-                                                }}
-                                                data-testid={`input-installment-count-${index}`}
-                                              />
-                                            </div>
-                                            <div>
-                                              <label className="text-xs font-medium">Pay-in-Full Discount (%)</label>
-                                              <Input
-                                                type="number"
-                                                min="0"
-                                                max="50"
-                                                placeholder="0"
-                                                value={option.payInFullDiscount || ""}
-                                                onChange={(e) => {
-                                                  const current = form.getValues("pricingOptions") || [];
-                                                  current[index] = { ...current[index], payInFullDiscount: parseInt(e.target.value) || 0 };
-                                                  form.setValue("pricingOptions", [...current]);
-                                                }}
-                                                data-testid={`input-pay-in-full-discount-${index}`}
-                                              />
-                                            </div>
-                                          </div>
-                                          <div className="bg-white/60 rounded p-2 space-y-1">
-                                            <p className="text-xs text-amber-800 font-medium">
-                                              {perPayment > 0
-                                                ? `${count} payments of $${(perPayment / 100).toFixed(2)} · ${intervalLabel} · $${(totalInstallmentCost / 100).toFixed(2)} total`
-                                                : "Set the option price above to see installment breakdown"}
-                                            </p>
-                                            {totalDays > duration && perPayment > 0 && (
-                                              <p className="text-xs text-amber-600">
-                                                Payments span {totalDays} days ({duration}-day program)
-                                              </p>
-                                            )}
-                                            {discount > 0 && totalPrice > 0 && (
-                                              <p className="text-xs text-green-700">
-                                                Pay-in-full price: ${(discountedFullPrice / 100).toFixed(2)} ({discount}% off)
-                                              </p>
-                                            )}
-                                          </div>
-                                        </div>
-                                        );
-                                      })()}
-                                    </div>
-                                  </>
+                                  </FieldWrap>
                                 )}
-                                <div>
-                                  <label className="text-xs font-medium">Savings Note</label>
-                                  <Input
-                                    placeholder="Save $30!"
-                                    value={option.savingsNote || ""}
-                                    onChange={(e) => {
-                                      const current = form.getValues("pricingOptions") || [];
-                                      current[index] = { ...current[index], savingsNote: e.target.value };
-                                      form.setValue("pricingOptions", [...current]);
-                                    }}
-                                    data-testid={`input-option-savings-${index}`}
+                              />
+                              <FormField
+                                control={form.control}
+                                name="billingModel"
+                                render={({ field }) => (
+                                  <FieldWrap label="Billing Model">
+                                    <ChipSel
+                                      options={[
+                                        { value: "Per Player", label: "Per Player", Icon: User },
+                                        { value: "Per Family", label: "Per Family", Icon: Users },
+                                        { value: "Organization-Wide", label: "Org-Wide", Icon: Building },
+                                      ]}
+                                      value={field.value}
+                                      onChange={field.onChange}
+                                      testIdPrefix="chip-billing-model"
+                                    />
+                                  </FieldWrap>
+                                )}
+                              />
+                            </div>
+
+                            {/* Subscription-specific fields */}
+                            {selectedType === "Subscription" && (
+                              <>
+                                <FormField
+                                  control={form.control}
+                                  name="billingIntervalDays"
+                                  render={({ field }) => (
+                                    <div className="space-y-1.5">
+                                      <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Billing Interval (days)</label>
+                                      <input type="number" min="1" placeholder="30" value={field.value || ""} onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} data-testid="input-billing-interval-days" className="w-full h-10 px-3 rounded-md border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition" />
+                                      <p className="text-xs text-gray-400">{(() => { const d = field.value; if (!d || d <= 0) return "e.g. 30 = monthly, 90 = quarterly, 180 = 6 months"; if (d === 7) return "Charges every week"; if (d === 14) return "Charges every 2 weeks"; if (d === 28) return "Charges every 28 days"; if (d === 30) return "Charges monthly"; if (d === 90) return "Charges quarterly"; if (d === 180) return "Charges every 6 months"; if (d === 365) return "Charges yearly"; return `Charges every ${d} days`; })()}</p>
+                                    </div>
+                                  )}
+                                />
+
+                                {/* Installments */}
+                                <div className="border-t border-gray-100 pt-4">
+                                  <FormField
+                                    control={form.control}
+                                    name="allowInstallments"
+                                    render={({ field }) => (
+                                      <>
+                                        <label className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${field.value ? "bg-red-50/60" : "hover:bg-gray-50"}`}>
+                                          <div onClick={(e) => { e.preventDefault(); field.onChange(!field.value); }} className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${field.value ? "bg-red-600 border-red-600" : "border-gray-300 bg-white"}`} data-testid="checkbox-allow-installments">
+                                            {field.value && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                          </div>
+                                          <span className="text-sm text-gray-700 flex-1">Allow Installment Payments</span>
+                                        </label>
+                                        {field.value && (() => {
+                                          const duration = form.watch("durationDays") || 90;
+                                          const count = form.watch("installments") || 3;
+                                          const totalPrice = form.watch("price") || 0;
+                                          const perPayment = totalPrice > 0 && count > 0 ? Math.ceil(totalPrice / count) : 0;
+                                          const rawInterval = count > 0 ? Math.floor((duration * 0.75) / count) : 30;
+                                          const standards = [7, 14, 30, 90, 180];
+                                          const smartInterval = standards.reduce((p, c) => Math.abs(c - rawInterval) < Math.abs(p - rawInterval) ? c : p);
+                                          const intervalLabel = smartInterval === 7 ? "Weekly" : smartInterval === 14 ? "Bi-Weekly" : smartInterval === 30 ? "Monthly" : smartInterval === 90 ? "Quarterly" : smartInterval === 180 ? "Every 6 months" : `Every ${smartInterval} days`;
+                                          const totalInstallmentCost = perPayment * count;
+                                          const totalDays = smartInterval * count;
+                                          const discount = form.watch("payInFullDiscount") || 0;
+                                          const discountedFullPrice = discount > 0 ? Math.round(totalPrice * (1 - discount / 100)) : totalPrice;
+                                          return (
+                                            <div className="mt-3 border border-amber-200 rounded-lg p-4 bg-amber-50 space-y-3">
+                                              <div className="grid grid-cols-2 gap-3">
+                                                <FormField control={form.control} name="installments" render={({ field: f }) => (
+                                                  <div>
+                                                    <label className="text-xs font-medium text-gray-600">Number of Installments</label>
+                                                    <input type="number" value={f.value || ""} min="2" max="12" onChange={(e) => f.onChange(parseInt(e.target.value))} placeholder="3" data-testid="input-installments" className="mt-1 w-full h-9 px-3 rounded-md border border-gray-200 bg-white text-sm outline-none focus:border-gray-400" />
+                                                  </div>
+                                                )} />
+                                                <FormField control={form.control} name="payInFullDiscount" render={({ field: f }) => (
+                                                  <div>
+                                                    <label className="text-xs font-medium text-gray-600">Pay-in-Full Discount (%)</label>
+                                                    <input type="number" value={f.value || ""} min="0" max="50" onChange={(e) => f.onChange(parseInt(e.target.value))} placeholder="0" data-testid="input-pay-in-full-discount" className="mt-1 w-full h-9 px-3 rounded-md border border-gray-200 bg-white text-sm outline-none focus:border-gray-400" />
+                                                  </div>
+                                                )} />
+                                              </div>
+                                              <div className="bg-white/60 rounded-md p-3 space-y-1">
+                                                <p className="text-xs text-amber-800 font-medium">{perPayment > 0 ? `${count}× payments of $${(perPayment / 100).toFixed(2)} · ${intervalLabel} · $${(totalInstallmentCost / 100).toFixed(2)} total` : "Set the price above to see installment breakdown"}</p>
+                                                {totalDays > duration && perPayment > 0 && <p className="text-xs text-amber-600">Payments span {totalDays} days ({duration}-day program)</p>}
+                                                {discount > 0 && totalPrice > 0 && <p className="text-xs text-green-700">Pay-in-full: ${(discountedFullPrice / 100).toFixed(2)} ({discount}% off)</p>}
+                                              </div>
+                                            </div>
+                                          );
+                                        })()}
+                                      </>
+                                    )}
                                   />
                                 </div>
-                                {/* Bundle Renewal Options - only for subscriptions, not one-time or credit packs */}
-                                {(option.optionType) === "subscription" && (
-                                <div className="col-span-2 border-t pt-2 mt-2">
-                                  <label className="text-xs font-medium mb-2 block">After Bundle Period</label>
-                                  <Select
-                                    value={option.renewalType || "none"}
-                                    onValueChange={(value) => {
-                                      const current = form.getValues("pricingOptions") || [];
-                                      current[index] = { 
-                                        ...current[index], 
-                                        renewalType: value,
-                                        convertsToMonthly: value === "monthly"
-                                      };
-                                      form.setValue("pricingOptions", [...current]);
-                                    }}
-                                  >
-                                    <SelectTrigger className="w-full" data-testid={`select-renewal-type-${index}`}>
-                                      <SelectValue placeholder="Select renewal option" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="none">No auto-renewal (ends after period)</SelectItem>
-                                      <SelectItem value="same">Auto-renew at same bundle price</SelectItem>
-                                      <SelectItem value="monthly">Convert to Monthly after period</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  
-                                  {(option.renewalType === "monthly" || option.convertsToMonthly) && option.renewalType !== "same" && option.renewalType !== "none" && (
-                                    <div className="mt-3 space-y-2">
-                                      <div>
-                                        <label className="text-xs font-medium">Monthly Price ($)</label>
-                                        <Input
-                                          type="text"
-                                          inputMode="decimal"
-                                          placeholder="75.00"
-                                          defaultValue={option.monthlyPrice ? (option.monthlyPrice / 100).toFixed(2) : ""}
-                                          onBlur={(e) => {
-                                            const current = form.getValues("pricingOptions") || [];
-                                            const val = parseFloat(e.target.value);
-                                            current[index] = { ...current[index], monthlyPrice: isNaN(val) ? 0 : Math.round(val * 100) };
-                                            form.setValue("pricingOptions", [...current]);
-                                          }}
-                                          data-testid={`input-monthly-price-${index}`}
-                                        />
-                                        <p className="text-xs text-gray-500 mt-1">Price charged monthly after bundle ends</p>
-                                      </div>
-                                      {option.monthlyStripePriceId && (
-                                        <div className="text-xs bg-green-50 border border-green-200 rounded px-2 py-1">
-                                          <span className="text-green-700">Monthly Stripe ID: </span>
-                                          <code className="text-green-600">{option.monthlyStripePriceId}</code>
+
+                                {/* Subscription Disclosure */}
+                                <div className="border-t border-gray-100 pt-4">
+                                  <FormField
+                                    control={form.control}
+                                    name="subscriptionDisclosure"
+                                    render={({ field }) => {
+                                      const price = form.watch("price") || 0;
+                                      const days = form.watch("billingIntervalDays") || 30;
+                                      const cycleText = days === 7 ? "week" : days === 14 ? "2 weeks" : days === 30 ? "month" : days === 90 ? "3 months" : days === 180 ? "6 months" : days === 365 ? "year" : `${days} days`;
+                                      const autoDisclosure = price > 0 ? `You will be charged $${(price / 100).toFixed(2)} every ${cycleText}. Your subscription renews automatically until canceled. Cancel anytime from your account.` : "";
+                                      return (
+                                        <div className="space-y-1.5">
+                                          <div className="flex items-center justify-between">
+                                            <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Subscription Disclosure</label>
+                                            {autoDisclosure && (
+                                              <button type="button" onClick={() => field.onChange(autoDisclosure)} className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                                                <Copy size={11} /> Auto-fill from fields
+                                              </button>
+                                            )}
+                                          </div>
+                                          <textarea {...field} placeholder="You will be charged $X every [cycle]. Your subscription renews automatically until canceled." rows={3} data-testid="input-program-subscription-disclosure" className="w-full px-3 py-2 rounded-md border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition resize-y min-h-[70px]" />
+                                          <p className="text-xs text-gray-400">Displayed before checkout. Explain billing, auto-renewal, cancellation.</p>
                                         </div>
+                                      );
+                                    }}
+                                  />
+                                </div>
+                              </>
+                            )}
+
+                            {/* One-Time duration */}
+                            {selectedType === "One-Time" && (
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</label>
+                                <div className="flex gap-2">
+                                  <FormField control={form.control} name="durationValue" render={({ field }) => (
+                                    <input type="number" {...field} onChange={(e) => { const value = parseInt(e.target.value) || 0; field.onChange(value); const unit = form.getValues("durationUnit") || "days"; const multipliers: Record<string, number> = { days: 1, weeks: 7, months: 30, years: 365 }; form.setValue("durationDays", value * (multipliers[unit] || 1)); }} placeholder="28" data-testid="input-duration-value" className="flex-1 h-10 px-3 rounded-md border border-gray-200 text-sm outline-none focus:border-gray-400" />
+                                  )} />
+                                  <FormField control={form.control} name="durationUnit" render={({ field }) => (
+                                    <Select value={field.value || "days"} onValueChange={(value) => { field.onChange(value); const numValue = form.getValues("durationValue") || 0; const multipliers: Record<string, number> = { days: 1, weeks: 7, months: 30, years: 365 }; form.setValue("durationDays", numValue * (multipliers[value] || 1)); }}>
+                                      <SelectTrigger className="w-32" data-testid="select-duration-unit"><SelectValue placeholder="Unit" /></SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="days">Days</SelectItem>
+                                        <SelectItem value="weeks">Weeks</SelectItem>
+                                        <SelectItem value="months">Months</SelectItem>
+                                        <SelectItem value="years">Years</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  )} />
+                                </div>
+                                <p className="text-xs text-gray-400">How long access lasts after purchase</p>
+                              </div>
+                            )}
+
+                            {/* Pack session count */}
+                            {selectedType === "Pack" && (
+                              <FormField control={form.control} name="sessionCount" render={({ field }) => (
+                                <div className="space-y-1.5">
+                                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Number of Sessions/Credits</label>
+                                  <input type="number" {...field} onChange={(e) => field.onChange(parseInt(e.target.value))} placeholder="10" data-testid="input-session-count" className="w-full h-10 px-3 rounded-md border border-gray-200 text-sm outline-none focus:border-gray-400" />
+                                  <p className="text-xs text-gray-400">Credits that get used per check-in</p>
+                                </div>
+                              )} />
+                            )}
+
+                            {/* Access Type */}
+                            <div className="border-t border-gray-100 pt-4">
+                              <FormField
+                                control={form.control}
+                                name="accessTag"
+                                render={({ field }) => (
+                                  <div className="space-y-1.5">
+                                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Access Type</label>
+                                    <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+                                      {[
+                                        { value: "club_member", label: "Club Member", Icon: Shield },
+                                        { value: "pack_holder", label: "Pack Holder", Icon: Package },
+                                        { value: "none", label: "No Access", Icon: X },
+                                      ].map((o) => {
+                                        const on = field.value === o.value;
+                                        return (
+                                          <button key={o.value} type="button" onClick={() => field.onChange(o.value)} data-testid={`chip-access-${o.value}`} className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 border ${on ? "border-red-500 bg-red-50 text-red-700" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50"}`}>
+                                            <o.Icon size={14} className={on ? "text-red-500" : "text-gray-400"} />
+                                            <span>{o.label}</span>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                    <p className="text-xs text-gray-400">Determines user's status after purchase</p>
+                                  </div>
+                                )}
+                              />
+                            </div>
+
+                            {/* Pricing Options */}
+                            <div className="border-t border-gray-100 pt-4">
+                              <div className="flex items-center justify-between mb-3">
+                                <div>
+                                  <h4 className="text-sm font-semibold text-gray-700">Pricing Options</h4>
+                                  <p className="text-xs text-gray-400">Add pricing tiers: one-time bundles, credit packs, or subscriptions</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const current = form.getValues("pricingOptions") || [];
+                                    const newId = `opt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                                    form.setValue("pricingOptions", [...current, { id: newId, name: "", price: 0, optionType: "one_time", billingCycle: "One-Time", durationDays: 90, isDefault: current.length === 0 }]);
+                                    setExpandedPricingOptions(prev => new Set([...prev, newId]));
+                                  }}
+                                  data-testid="button-add-pricing-option"
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-gray-200 bg-white text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                                >
+                                  <Plus size={14} /> Add Option
+                                </button>
+                              </div>
+                              <div className="space-y-2">
+                                {(form.watch("pricingOptions") || []).length === 0 && (
+                                  <div className="text-center py-4 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                                    <p className="text-sm text-gray-400">No pricing options yet</p>
+                                  </div>
+                                )}
+                                {(form.watch("pricingOptions") || []).map((option: any, index: number) => {
+                                  const isExpanded = expandedPricingOptions.has(option.id);
+                                  const toggleExpanded = () => {
+                                    setExpandedPricingOptions(prev => {
+                                      const next = new Set(prev);
+                                      if (next.has(option.id)) { next.delete(option.id); } else { next.add(option.id); }
+                                      return next;
+                                    });
+                                  };
+                                  const typeLabel = option.optionType === "credit_pack" ? "Pack" : option.optionType === "subscription" ? "Sub" : "One-Time";
+                                  const displayName = option.name || `Option ${index + 1}`;
+                                  const displayPrice = option.price > 0 ? `$${(option.price / 100).toFixed(2)}` : "";
+                                  return (
+                                    <div key={option.id} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                                      <div className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors" onClick={toggleExpanded}>
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <ChevronDown size={14} className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ${isExpanded ? "" : "-rotate-90"}`} />
+                                          <span className="text-sm font-medium text-gray-800 truncate">{displayName}</span>
+                                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-semibold flex-shrink-0">{typeLabel}</span>
+                                          {displayPrice && <span className="text-xs text-gray-400 flex-shrink-0">{displayPrice}</span>}
+                                        </div>
+                                        <button type="button" onClick={(e) => { e.stopPropagation(); const current = form.getValues("pricingOptions") || []; const removedId = current[index]?.id; form.setValue("pricingOptions", current.filter((_: any, i: number) => i !== index)); if (removedId) { setExpandedPricingOptions(prev => { const next = new Set(prev); next.delete(removedId); return next; }); } }} data-testid={`button-remove-option-${index}`} className="p-1 hover:bg-red-50 rounded transition-colors">
+                                          <Trash2 size={14} className="text-red-400" />
+                                        </button>
+                                      </div>
+                                      {isExpanded && (
+                                      <div className="border-t border-gray-100 px-4 py-3 space-y-3">
+                                        <div className="grid grid-cols-2 gap-3">
+                                        <div className="col-span-2">
+                                          <label className="text-xs font-medium text-gray-500">Type</label>
+                                          <Select
+                                            value={option.optionType || "one_time"}
+                                            onValueChange={(value) => {
+                                              const current = form.getValues("pricingOptions") || [];
+                                              current[index] = { 
+                                                ...current[index], 
+                                                optionType: value,
+                                                billingCycle: value === "credit_pack" ? "One-Time" : value === "subscription" ? (current[index].billingInterval || "monthly") : current[index].billingCycle,
+                                              };
+                                              form.setValue("pricingOptions", [...current]);
+                                            }}
+                                          >
+                                            <SelectTrigger data-testid={`select-option-type-${index}`} className="mt-1 h-9">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="one_time">One-Time Payment</SelectItem>
+                                              <SelectItem value="credit_pack">Credit Pack</SelectItem>
+                                              <SelectItem value="subscription">Subscription</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        <div>
+                                          <label className="text-xs font-medium text-gray-500">Name</label>
+                                          <input
+                                            placeholder={option.optionType === "credit_pack" ? "10 Session Pack" : option.optionType === "subscription" ? "Monthly Membership" : "3 Months"}
+                                            value={option.name}
+                                            onChange={(e) => {
+                                              const current = form.getValues("pricingOptions") || [];
+                                              current[index] = { ...current[index], name: e.target.value };
+                                              form.setValue("pricingOptions", [...current]);
+                                            }}
+                                            data-testid={`input-option-name-${index}`}
+                                            className="mt-1 w-full h-9 px-3 rounded-md border border-gray-200 text-sm outline-none focus:border-gray-400"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="text-xs font-medium text-gray-500">Price ($)</label>
+                                          <input type="text" inputMode="decimal" placeholder="195.00" defaultValue={option.price ? (option.price / 100).toFixed(2) : ""} onBlur={(e) => { const current = form.getValues("pricingOptions") || []; const val = parseFloat(e.target.value); const newPrice = isNaN(val) ? 0 : Math.round(val * 100); current[index] = { ...current[index], price: newPrice }; if (current[index].allowInstallments && current[index].installmentCount) { current[index].installmentPrice = newPrice > 0 ? Math.ceil(newPrice / current[index].installmentCount) : 0; } form.setValue("pricingOptions", [...current]); }} data-testid={`input-option-price-${index}`} className="mt-1 w-full h-9 px-3 rounded-md border border-gray-200 text-sm outline-none focus:border-gray-400" />
+                                        </div>
+                                        {(option.optionType || "one_time") === "credit_pack" ? (
+                                          <div>
+                                            <label className="text-xs font-medium text-gray-500">Credits / Sessions</label>
+                                            <input type="number" placeholder="10" value={option.creditCount || ""} onChange={(e) => { const current = form.getValues("pricingOptions") || []; current[index] = { ...current[index], creditCount: parseInt(e.target.value) || undefined }; form.setValue("pricingOptions", [...current]); }} data-testid={`input-option-credits-${index}`} className="mt-1 w-full h-9 px-3 rounded-md border border-gray-200 text-sm outline-none focus:border-gray-400" />
+                                          </div>
+                                        ) : option.optionType === "subscription" ? (
+                                          <>
+                                            <div>
+                                              <label className="text-xs font-medium text-gray-500">Billing Interval (days)</label>
+                                              <input type="number" placeholder="30" value={option.billingIntervalDays || ""} onChange={(e) => { const current = form.getValues("pricingOptions") || []; current[index] = { ...current[index], billingIntervalDays: parseInt(e.target.value) || 0 }; form.setValue("pricingOptions", [...current]); }} data-testid={`input-billing-interval-days-${index}`} className="mt-1 w-full h-9 px-3 rounded-md border border-gray-200 text-sm outline-none focus:border-gray-400" />
+                                              <p className="text-xs text-gray-400 mt-0.5">{(() => { const d = option.billingIntervalDays; if (!d || d <= 0) return "e.g. 30 = monthly, 90 = quarterly"; if (d === 7) return "Charges every week"; if (d === 30) return "Charges monthly"; if (d === 90) return "Charges quarterly"; if (d === 365) return "Charges yearly"; return `Charges every ${d} days`; })()}</p>
+                                            </div>
+                                            <div>
+                                              <label className="text-xs font-medium text-gray-500">Ends After (days)</label>
+                                              <input type="number" placeholder="e.g. 120" value={option.durationDays || ""} onChange={(e) => { const current = form.getValues("pricingOptions") || []; current[index] = { ...current[index], durationDays: parseInt(e.target.value) || undefined }; form.setValue("pricingOptions", [...current]); }} data-testid={`input-option-sub-duration-${index}`} className="mt-1 w-full h-9 px-3 rounded-md border border-gray-200 text-sm outline-none focus:border-gray-400" />
+                                              <p className="text-xs text-gray-400 mt-0.5">{(() => { const d = option.durationDays; const interval = option.billingIntervalDays || 30; if (!d || d <= 0) return "Leave empty for ongoing"; const payments = Math.ceil(d / interval); return `~${payments} payment${payments !== 1 ? 's' : ''} over ${d} days`; })()}</p>
+                                            </div>
+                                            <div>
+                                              <label className="text-xs font-medium text-gray-500">Trial Period (days)</label>
+                                              <input type="number" placeholder="0" value={option.trialDays || ""} onChange={(e) => { const current = form.getValues("pricingOptions") || []; current[index] = { ...current[index], trialDays: parseInt(e.target.value) || undefined }; form.setValue("pricingOptions", [...current]); }} data-testid={`input-option-trial-${index}`} className="mt-1 w-full h-9 px-3 rounded-md border border-gray-200 text-sm outline-none focus:border-gray-400" />
+                                            </div>
+                                          </>
+                                        ) : (
+                                          <div>
+                                            <label className="text-xs font-medium text-gray-500">Duration (days)</label>
+                                            <input type="number" placeholder="90" value={option.durationDays || ""} onChange={(e) => { const current = form.getValues("pricingOptions") || []; const newDur = parseInt(e.target.value) || undefined; current[index] = { ...current[index], durationDays: newDur }; if (current[index].allowInstallments && current[index].installmentCount && newDur) { const cnt = current[index].installmentCount; const raw = Math.floor((newDur * 0.75) / cnt); const stds = [7, 14, 30, 90, 180]; current[index].installmentIntervalDays = stds.reduce((p, c) => Math.abs(c - raw) < Math.abs(p - raw) ? c : p); } form.setValue("pricingOptions", [...current]); }} data-testid={`input-option-duration-${index}`} className="mt-1 w-full h-9 px-3 rounded-md border border-gray-200 text-sm outline-none focus:border-gray-400" />
+                                          </div>
+                                        )}
+                                        <div>
+                                          <label className="text-xs font-medium text-gray-500">Savings Note</label>
+                                          <input placeholder="Save $30!" value={option.savingsNote || ""} onChange={(e) => { const current = form.getValues("pricingOptions") || []; current[index] = { ...current[index], savingsNote: e.target.value }; form.setValue("pricingOptions", [...current]); }} data-testid={`input-option-savings-${index}`} className="mt-1 w-full h-9 px-3 rounded-md border border-gray-200 text-sm outline-none focus:border-gray-400" />
+                                        </div>
+                                        </div>
+
+                                        {/* Installments within option (for one_time) */}
+                                        {(option.optionType || "one_time") !== "subscription" && (
+                                          <div className="border-t border-gray-100 pt-3">
+                                            <label className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${option.allowInstallments ? "bg-red-50/60" : "hover:bg-gray-50"}`}>
+                                              <div onClick={() => { const current = form.getValues("pricingOptions") || []; const opt = current[index]; const duration = opt.durationDays || 90; const totalPrice = opt.price || 0; let defaultCount = 3; let defaultInterval = 30; if (duration < 30) { defaultCount = 2; defaultInterval = 7; } else if (duration <= 90) { defaultCount = Math.min(3, Math.floor(duration / 14)); defaultInterval = duration <= 60 ? 14 : 30; if (defaultCount < 2) defaultCount = 2; } const perPayment = totalPrice > 0 ? Math.ceil(totalPrice / defaultCount) : 0; current[index] = { ...opt, allowInstallments: !opt.allowInstallments, installmentCount: !opt.allowInstallments ? defaultCount : undefined, installmentPrice: !opt.allowInstallments ? perPayment : undefined, installmentIntervalDays: !opt.allowInstallments ? defaultInterval : undefined, payInFullDiscount: !opt.allowInstallments ? (opt.payInFullDiscount || 0) : undefined }; form.setValue("pricingOptions", [...current]); }} data-testid={`checkbox-allow-installments-${index}`} className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${option.allowInstallments ? "bg-red-600 border-red-600" : "border-gray-300 bg-white"}`}>
+                                                {option.allowInstallments && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                              </div>
+                                              <span className="text-sm text-gray-700 flex-1">Allow Installment Payments</span>
+                                            </label>
+                                            {option.allowInstallments && (() => {
+                                              const duration = option.durationDays || 90;
+                                              const count = option.installmentCount || 3;
+                                              const totalPrice = option.price || 0;
+                                              const perPayment = totalPrice > 0 && count > 0 ? Math.ceil(totalPrice / count) : 0;
+                                              const smartInterval = option.installmentIntervalDays || 30;
+                                              const intervalLabel = smartInterval === 7 ? "Weekly" : smartInterval === 14 ? "Bi-Weekly" : smartInterval === 30 ? "Monthly" : smartInterval === 90 ? "Quarterly" : `Every ${smartInterval} days`;
+                                              const totalInstallmentCost = perPayment * count;
+                                              const totalDays = smartInterval * count;
+                                              const discount = option.payInFullDiscount || 0;
+                                              const discountedFullPrice = discount > 0 ? Math.round(totalPrice * (1 - discount / 100)) : totalPrice;
+                                              const maxCount = duration < 30 ? 2 : duration <= 90 ? Math.min(6, Math.floor(duration / 14)) : duration <= 365 ? Math.min(12, Math.floor(duration / 14)) : 24;
+                                              return (
+                                                <div className="mt-2 border border-amber-200 rounded-lg p-3 bg-amber-50/50 space-y-3">
+                                                  <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                      <label className="text-xs font-medium text-gray-600">Number of Installments</label>
+                                                      <input type="number" min="2" max={maxCount} value={option.installmentCount || ""} onChange={(e) => { const current = form.getValues("pricingOptions") || []; const newCount = Math.max(2, Math.min(maxCount, parseInt(e.target.value) || 2)); const dur = current[index].durationDays || 90; const rawInterval = Math.floor((dur * 0.75) / newCount); const standards = [7, 14, 30, 90, 180]; const newInterval = standards.reduce((prev, curr) => Math.abs(curr - rawInterval) < Math.abs(prev - rawInterval) ? curr : prev); const price = current[index].price || 0; current[index] = { ...current[index], installmentCount: newCount, installmentPrice: price > 0 ? Math.ceil(price / newCount) : 0, installmentIntervalDays: newInterval }; form.setValue("pricingOptions", [...current]); }} data-testid={`input-installment-count-${index}`} className="mt-1 w-full h-9 px-3 rounded-md border border-gray-200 bg-white text-sm outline-none focus:border-gray-400" />
+                                                    </div>
+                                                    <div>
+                                                      <label className="text-xs font-medium text-gray-600">Pay-in-Full Discount (%)</label>
+                                                      <input type="number" min="0" max="50" placeholder="0" value={option.payInFullDiscount || ""} onChange={(e) => { const current = form.getValues("pricingOptions") || []; current[index] = { ...current[index], payInFullDiscount: parseInt(e.target.value) || 0 }; form.setValue("pricingOptions", [...current]); }} data-testid={`input-pay-in-full-discount-${index}`} className="mt-1 w-full h-9 px-3 rounded-md border border-gray-200 bg-white text-sm outline-none focus:border-gray-400" />
+                                                    </div>
+                                                  </div>
+                                                  <div className="bg-white/60 rounded-md p-2.5 space-y-1">
+                                                    {perPayment > 0 ? (<>
+                                                      <p className="text-xs text-amber-800 font-medium">{count}× payments of <strong className="text-gray-900">${(perPayment / 100).toFixed(2)}</strong> · {intervalLabel} · ${(totalInstallmentCost / 100).toFixed(2)} total</p>
+                                                      {totalDays > duration && <p className="text-xs text-amber-600">Payments span {totalDays} days ({duration}-day program)</p>}
+                                                      {discount > 0 && totalPrice > 0 && <p className="text-xs text-green-700">Pay in full: <strong>${(discountedFullPrice / 100).toFixed(2)}</strong> (save {discount}%)</p>}
+                                                    </>) : <p className="text-xs text-amber-700">Set the option price above to see installment breakdown</p>}
+                                                  </div>
+                                                </div>
+                                              );
+                                            })()}
+                                          </div>
+                                        )}
+
+                                        {/* Subscription renewal */}
+                                        {option.optionType === "subscription" && (
+                                          <div className="border-t border-gray-100 pt-3">
+                                            <label className="text-xs font-medium text-gray-500 mb-1 block">After Bundle Period</label>
+                                            <Select value={option.renewalType || "none"} onValueChange={(value) => { const current = form.getValues("pricingOptions") || []; current[index] = { ...current[index], renewalType: value, convertsToMonthly: value === "monthly" }; form.setValue("pricingOptions", [...current]); }}>
+                                              <SelectTrigger className="w-full h-9" data-testid={`select-renewal-type-${index}`}><SelectValue placeholder="Select renewal option" /></SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="none">No auto-renewal (ends after period)</SelectItem>
+                                                <SelectItem value="same">Auto-renew at same bundle price</SelectItem>
+                                                <SelectItem value="monthly">Convert to Monthly after period</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                            {(option.renewalType === "monthly" || option.convertsToMonthly) && option.renewalType !== "same" && option.renewalType !== "none" && (
+                                              <div className="mt-2">
+                                                <label className="text-xs font-medium text-gray-500">Monthly Price ($)</label>
+                                                <input type="text" inputMode="decimal" placeholder="75.00" defaultValue={option.monthlyPrice ? (option.monthlyPrice / 100).toFixed(2) : ""} onBlur={(e) => { const current = form.getValues("pricingOptions") || []; const val = parseFloat(e.target.value); current[index] = { ...current[index], monthlyPrice: isNaN(val) ? 0 : Math.round(val * 100) }; form.setValue("pricingOptions", [...current]); }} data-testid={`input-monthly-price-${index}`} className="mt-1 w-full h-9 px-3 rounded-md border border-gray-200 text-sm outline-none focus:border-gray-400" />
+                                                <p className="text-xs text-gray-500 mt-1">Price charged monthly after bundle ends</p>
+                                                {option.monthlyStripePriceId && <div className="text-xs bg-green-50 border border-green-200 rounded px-2 py-1 mt-1"><span className="text-green-700">Monthly Stripe ID: </span><code className="text-green-600">{option.monthlyStripePriceId}</code></div>}
+                                              </div>
+                                            )}
+                                            {option.renewalType === "same" && <p className="text-xs text-green-600 mt-2">Bundle will automatically renew at ${option.price ? (option.price / 100).toFixed(2) : "0.00"} every {option.durationDays || 0} days</p>}
+                                          </div>
+                                        )}
+
+                                        {/* Stripe Price ID */}
+                                        <div className="border-t border-gray-100 pt-3">
+                                          <label className="text-xs font-medium text-gray-500 flex items-center gap-1.5">Stripe Price ID <span className="text-gray-300 font-normal">(paste existing or leave blank to auto-create)</span></label>
+                                          <div className="flex gap-2 mt-1">
+                                            <input type="text" placeholder="price_xxx..." value={option.stripePriceId || ""} onChange={(e) => { const current = form.getValues("pricingOptions") || []; current[index] = { ...current[index], stripePriceId: e.target.value }; form.setValue("pricingOptions", [...current]); }} className="flex-1 h-9 px-3 rounded-md border border-gray-200 text-sm font-mono outline-none focus:border-gray-400" data-testid={`input-stripe-price-id-${index}`} />
+                                            <button type="button" disabled={!option.stripePriceId || !option.stripePriceId.startsWith('price_')} onClick={async () => { if (!option.stripePriceId) return; try { const response = await fetch(`/api/stripe/prices/${option.stripePriceId}`, { credentials: 'include' }); if (!response.ok) { const err = await response.json(); toast({ title: "Error", description: err.error || "Failed to fetch price", variant: "destructive" }); return; } const priceData = await response.json(); const current = form.getValues("pricingOptions") || []; current[index] = { ...current[index], stripePriceId: priceData.priceId, name: current[index].name || priceData.productName || "Imported Price", price: priceData.unitAmount, billingCycle: priceData.billingCycle, durationDays: priceData.durationDays || current[index].durationDays, linkedFromStripe: true }; form.setValue("pricingOptions", [...current]); toast({ title: "Price Linked", description: `Imported: ${priceData.productName || 'price'} - $${(priceData.unitAmount / 100).toFixed(2)}` }); } catch (err: any) { toast({ title: "Error", description: err.message || "Failed to fetch price from Stripe", variant: "destructive" }); } }} data-testid={`button-fetch-stripe-price-${index}`} className="h-9 px-3 rounded-md border border-gray-200 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default">Fetch</button>
+                                          </div>
+                                          {option.linkedFromStripe && <div className="text-xs text-green-600 flex items-center gap-1 mt-1"><Check className="w-3 h-3" /> Linked from Stripe</div>}
+                                          {option.stripePriceId && !option.linkedFromStripe && <div className="text-xs text-blue-600 mt-1">(auto-synced)</div>}
+                                        </div>
+                                      </div>
                                       )}
                                     </div>
-                                  )}
-                                  
-                                  {option.renewalType === "same" && (
-                                    <p className="text-xs text-green-600 mt-2">Bundle will automatically renew at ${option.price ? (option.price / 100).toFixed(2) : "0.00"} every {option.durationDays || 0} days</p>
-                                  )}
-                                </div>
-                                )}
-                                
-                                {/* Stripe Price ID - Link Existing or Auto-sync */}
-                                <div className="col-span-2 space-y-2">
-                                  <label className="text-xs font-medium flex items-center gap-2">
-                                    Stripe Price ID
-                                    <span className="text-gray-400 font-normal">(paste existing ID or leave blank to auto-create)</span>
-                                  </label>
-                                  <div className="flex gap-2">
-                                    <Input
-                                      type="text"
-                                      placeholder="price_xxx..."
-                                      value={option.stripePriceId || ""}
-                                      onChange={(e) => {
-                                        const current = form.getValues("pricingOptions") || [];
-                                        current[index] = { ...current[index], stripePriceId: e.target.value };
-                                        form.setValue("pricingOptions", [...current]);
-                                      }}
-                                      className="flex-1 font-mono text-sm"
-                                      data-testid={`input-stripe-price-id-${index}`}
-                                    />
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      disabled={!option.stripePriceId || !option.stripePriceId.startsWith('price_')}
-                                      onClick={async () => {
-                                        if (!option.stripePriceId) return;
-                                        try {
-                                          const response = await fetch(`/api/stripe/prices/${option.stripePriceId}`, {
-                                            credentials: 'include'
-                                          });
-                                          if (!response.ok) {
-                                            const err = await response.json();
-                                            toast({ title: "Error", description: err.error || "Failed to fetch price", variant: "destructive" });
-                                            return;
-                                          }
-                                          const priceData = await response.json();
-                                          const current = form.getValues("pricingOptions") || [];
-                                          current[index] = {
-                                            ...current[index],
-                                            stripePriceId: priceData.priceId,
-                                            name: current[index].name || priceData.productName || "Imported Price",
-                                            price: priceData.unitAmount,
-                                            billingCycle: priceData.billingCycle,
-                                            durationDays: priceData.durationDays || current[index].durationDays,
-                                            linkedFromStripe: true,
-                                          };
-                                          form.setValue("pricingOptions", [...current]);
-                                          toast({ title: "Price Linked", description: `Imported: ${priceData.productName || 'price'} - $${(priceData.unitAmount / 100).toFixed(2)}` });
-                                        } catch (err: any) {
-                                          toast({ title: "Error", description: err.message || "Failed to fetch price from Stripe", variant: "destructive" });
-                                        }
-                                      }}
-                                      data-testid={`button-fetch-stripe-price-${index}`}
-                                    >
-                                      Fetch Details
-                                    </Button>
-                                  </div>
-                                  {option.linkedFromStripe && (
-                                    <div className="text-xs text-green-600 flex items-center gap-1">
-                                      <Check className="w-3 h-3" /> Linked from Stripe - will not create new price
-                                    </div>
-                                  )}
-                                  {option.stripePriceId && !option.linkedFromStripe && (
-                                    <div className="text-xs text-blue-600">(auto-synced)</div>
-                                  )}
-                                </div>
+                                  );
+                                })}
                               </div>
-                              </div>
-                              )}
                             </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Coupons Section */}
-                  <div className="border rounded-lg p-3 mt-3 bg-purple-50">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Ticket className="h-4 w-4 text-purple-600" />
-                      <h4 className="font-medium text-sm">Coupons</h4>
-                    </div>
-                    <p className="text-xs text-gray-500 mb-3">Generate discount coupons for this program. Coupons expire 24 hours after creation.</p>
-                    {editingProgram?.id ? (
-                      <InlineCouponSection programId={editingProgram.id} />
-                    ) : (
-                      <div className="text-center py-4 bg-gray-50 rounded border border-dashed border-gray-300">
-                        <p className="text-sm text-gray-400">Save the program first to create coupons.</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {waivers.length > 0 && (
-                    <FormField
-                      control={form.control}
-                      name="requiredWaivers"
-                      render={({ field }) => (
-                        <FormItem className="mt-3">
-                          <FormLabel>Required Waivers</FormLabel>
-                          <div className="space-y-2 border rounded-md p-3 max-h-32 overflow-y-auto">
-                            {waivers.map((waiver: any) => (
-                              <div key={waiver.id} className="flex items-center gap-2">
-                                <Checkbox
-                                  checked={field.value?.includes(waiver.id)}
-                                  onCheckedChange={(checked) => {
-                                    const current = field.value || [];
-                                    if (checked) {
-                                      field.onChange([...current, waiver.id]);
-                                    } else {
-                                      field.onChange(current.filter((id: string) => id !== waiver.id));
-                                    }
-                                  }}
-                                  data-testid={`checkbox-waiver-${waiver.id}`}
-                                />
-                                <span className="text-sm">{waiver.name}</span>
+                            {/* Coupons */}
+                            <div className="border-t border-gray-100 pt-4">
+                              <div className="border border-purple-100 rounded-lg p-3 bg-purple-50/40">
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <Ticket size={14} className="text-purple-500" />
+                                  <h4 className="text-sm font-semibold text-gray-700">Coupons</h4>
+                                </div>
+                                <p className="text-xs text-gray-400 mb-3">Generate discount coupons. Coupons expire 24 hours after creation.</p>
+                                {editingProgram?.id ? (
+                                  <InlineCouponSection programId={editingProgram.id} />
+                                ) : (
+                                  <div className="text-center py-3 bg-white/60 rounded border border-dashed border-gray-200">
+                                    <p className="text-sm text-gray-400">Save the program first to create coupons.</p>
+                                  </div>
+                                )}
                               </div>
-                            ))}
-                          </div>
-                          <FormDescription>Users must sign these waivers before enrolling</FormDescription>
-                        </FormItem>
-                      )}
-                    />
-                  )}
+                            </div>
 
-                  {/* Suggested Add-ons Section */}
-                  {storeProducts.length > 0 && (
-                    <div className="mt-3">
-                      <label className="text-sm font-medium">Suggested Add-ons</label>
-                      <div className="space-y-2 border rounded-md p-3 mt-1 max-h-32 overflow-y-auto">
-                        {storeProducts.map((product: any) => (
-                          <div key={product.id} className="flex items-center gap-2">
-                            <Checkbox
-                              checked={selectedAddOns.includes(product.id)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedAddOns([...selectedAddOns, product.id]);
-                                } else {
-                                  setSelectedAddOns(selectedAddOns.filter(id => id !== product.id));
-                                }
-                              }}
-                              data-testid={`checkbox-addon-${product.id}`}
-                            />
-                            <span className="text-sm">{product.name}</span>
-                            {product.price > 0 && (
-                              <span className="text-xs text-gray-500">${(product.price / 100).toFixed(2)}</span>
+                            {/* Suggested Add-ons */}
+                            {storeProducts.length > 0 && (
+                              <div className="border-t border-gray-100 pt-4">
+                                <div className="space-y-1.5">
+                                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Suggested Add-ons</label>
+                                  <p className="text-xs text-gray-400">These products will be suggested as add-ons during checkout</p>
+                                  <div className="space-y-1 border border-gray-200 rounded-lg p-1 max-h-36 overflow-y-auto">
+                                    {storeProducts.map((product: any) => (
+                                      <ChkItem
+                                        key={product.id}
+                                        label={product.name}
+                                        sublabel={product.price > 0 ? `$${(product.price / 100).toFixed(2)}` : undefined}
+                                        checked={selectedAddOns.includes(product.id)}
+                                        onCheckedChange={(checked) => {
+                                          if (checked) {
+                                            setSelectedAddOns([...selectedAddOns, product.id]);
+                                          } else {
+                                            setSelectedAddOns(selectedAddOns.filter(id => id !== product.id));
+                                          }
+                                        }}
+                                        testId={`checkbox-addon-${product.id}`}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
                             )}
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">These products will be suggested as add-ons during checkout</p>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="border-t pt-4 mt-4">
-                  <h4 className="font-medium mb-3">Schedule Request</h4>
-                  
-                  <FormField
-                    control={form.control}
-                    name="scheduleRequestEnabled"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center gap-2 space-y-0 mb-3">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            data-testid="checkbox-schedule-request"
-                          />
-                        </FormControl>
-                        <FormLabel className="!mt-0">Enable Schedule Request</FormLabel>
-                        <FormDescription className="!mt-0 ml-2 text-xs">
-                          Allow parents to book sessions after payment
-                        </FormDescription>
-                      </FormItem>
-                    )}
-                  />
+                    </>
+                  </Section>
 
-                  {form.watch("scheduleRequestEnabled") && (
+                  {/* ── REQUIREMENTS & SCHEDULE ── */}
+                  <Section icon={<FileText size={16} className="text-gray-500" />} title="Requirements & Schedule">
                     <>
-                    <FormField
-                      control={form.control}
-                      name="sessionLengthMinutes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Session Length (minutes)</FormLabel>
-                          <Select 
-                            value={field.value?.toString() || ""} 
-                            onValueChange={(val) => field.onChange(parseInt(val))}
-                          >
-                            <FormControl>
-                              <SelectTrigger data-testid="select-session-length">
-                                <SelectValue placeholder="Select duration" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="30">30 minutes</SelectItem>
-                              <SelectItem value="45">45 minutes</SelectItem>
-                              <SelectItem value="60">1 hour</SelectItem>
-                              <SelectItem value="90">1.5 hours</SelectItem>
-                              <SelectItem value="120">2 hours</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>How long each booked session will last</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                            {/* Required Waivers */}
+                            {waivers.length > 0 && (
+                              <FormField
+                                control={form.control}
+                                name="requiredWaivers"
+                                render={({ field }) => (
+                                  <div className="space-y-1.5">
+                                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Required Waivers</label>
+                                    <p className="text-xs text-gray-400">Users must sign these waivers before enrolling</p>
+                                    <div className="space-y-1 border border-gray-200 rounded-lg p-1">
+                                      {waivers.map((waiver: any) => (
+                                        <ChkItem
+                                          key={waiver.id}
+                                          label={waiver.name}
+                                          checked={(field.value || []).includes(waiver.id)}
+                                          onCheckedChange={(checked) => {
+                                            const current = field.value || [];
+                                            if (checked) {
+                                              field.onChange([...current, waiver.id]);
+                                            } else {
+                                              field.onChange(current.filter((id: string) => id !== waiver.id));
+                                            }
+                                          }}
+                                          testId={`checkbox-waiver-${waiver.id}`}
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              />
+                            )}
 
-                    <div className="mt-4">
-                      <h5 className="text-sm font-medium mb-2">Available Time Windows</h5>
-                      <p className="text-xs text-gray-500 mb-3">Define recurring weekly time slots when sessions can be booked</p>
-                      {availabilitySlots.map((slot, index) => (
-                        <div key={index} className="flex items-center gap-2 mb-2">
-                          <Select
-                            value={slot.dayOfWeek.toString()}
-                            onValueChange={(val) => {
-                              const updated = [...availabilitySlots];
-                              updated[index] = { ...updated[index], dayOfWeek: parseInt(val) };
-                              setAvailabilitySlots(updated);
-                            }}
-                          >
-                            <SelectTrigger className="w-[130px]">
-                              <SelectValue placeholder="Day" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="0">Sunday</SelectItem>
-                              <SelectItem value="1">Monday</SelectItem>
-                              <SelectItem value="2">Tuesday</SelectItem>
-                              <SelectItem value="3">Wednesday</SelectItem>
-                              <SelectItem value="4">Thursday</SelectItem>
-                              <SelectItem value="5">Friday</SelectItem>
-                              <SelectItem value="6">Saturday</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Input
-                            type="time"
-                            value={slot.startTime}
-                            onChange={(e) => {
-                              const updated = [...availabilitySlots];
-                              updated[index] = { ...updated[index], startTime: e.target.value };
-                              setAvailabilitySlots(updated);
-                            }}
-                            className="w-[120px]"
+                            {/* Schedule Request toggle */}
+                            <div className="border-t border-gray-100 pt-4 space-y-3">
+                              <FormField
+                                control={form.control}
+                                name="scheduleRequestEnabled"
+                                render={({ field }) => (
+                                  <>
+                                    <TogRow
+                                      label="Enable Schedule Request"
+                                      description="Allow parents to book sessions after payment"
+                                      value={!!field.value}
+                                      onChange={field.onChange}
+                                      testId="checkbox-schedule-request"
+                                    />
+                                    {field.value && (
+                                      <div className="border border-gray-200 rounded-lg p-4 bg-gray-50/50 space-y-4">
+                                        <FormField control={form.control} name="sessionLengthMinutes" render={({ field: f }) => (
+                                          <FieldWrap label="Session Length">
+                                            <p className="text-xs text-gray-400">How long each booked session will last</p>
+                                            <SegControl
+                                              options={SESSION_LENGTH_OPTIONS}
+                                              value={f.value}
+                                              onChange={f.onChange}
+                                              testIdPrefix="seg-session"
+                                            />
+                                          </FieldWrap>
+                                        )} />
+
+                                        <div className="border-t border-gray-200 pt-3">
+                                          <div className="flex items-center justify-between mb-2">
+                                            <div>
+                                              <h5 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Available Time Windows</h5>
+                                              <p className="text-xs text-gray-400 mt-0.5">Define recurring weekly time slots</p>
+                                            </div>
+                                          </div>
+                                          <div className="space-y-2">
+                                            {availabilitySlots.map((slot, slotIndex) => (
+                                              <div key={slotIndex} className="border border-gray-200 rounded-lg p-3 bg-gray-50/50 space-y-3">
+                                                <div className="flex justify-between items-center">
+                                                  <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Window {slotIndex + 1}</span>
+                                                  <button type="button" onClick={() => setAvailabilitySlots(availabilitySlots.filter((_, i) => i !== slotIndex))} className="p-1 hover:bg-red-50 rounded"><X size={14} className="text-red-400" /></button>
+                                                </div>
+                                                <div className="flex gap-1">
+                                                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d, dayIdx) => {
+                                                    const dayOfWeek = dayIdx === 6 ? 0 : dayIdx + 1;
+                                                    const isSelected = slot.dayOfWeek === dayOfWeek;
+                                                    return (
+                                                      <button key={d} type="button" onClick={() => { const updated = [...availabilitySlots]; updated[slotIndex] = { ...updated[slotIndex], dayOfWeek }; setAvailabilitySlots(updated); }} className={`flex-1 py-1.5 rounded text-xs font-semibold transition-colors ${isSelected ? "bg-red-600 text-white" : "bg-white border border-gray-200 text-gray-400 hover:border-gray-300"}`}>{d}</button>
+                                                    );
+                                                  })}
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                  <div>
+                                                    <label className="text-xs font-medium text-gray-500">Start</label>
+                                                    <input type="time" value={slot.startTime} onChange={(e) => { const updated = [...availabilitySlots]; updated[slotIndex] = { ...updated[slotIndex], startTime: e.target.value }; setAvailabilitySlots(updated); }} className="mt-1 w-full h-9 px-3 rounded-md border border-gray-200 text-sm outline-none focus:border-gray-400" />
+                                                  </div>
+                                                  <div>
+                                                    <label className="text-xs font-medium text-gray-500">End</label>
+                                                    <input type="time" value={slot.endTime} onChange={(e) => { const updated = [...availabilitySlots]; updated[slotIndex] = { ...updated[slotIndex], endTime: e.target.value }; setAvailabilitySlots(updated); }} className="mt-1 w-full h-9 px-3 rounded-md border border-gray-200 text-sm outline-none focus:border-gray-400" />
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                          <button type="button" onClick={() => setAvailabilitySlots([...availabilitySlots, { dayOfWeek: 1, startTime: "09:00", endTime: "17:00" }])} className="w-full py-2.5 mt-2 rounded-lg border border-dashed border-gray-300 text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-600 transition-colors flex items-center justify-center gap-1.5">
+                                            <Plus size={14} /> Add Time Slot
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              />
+                            </div>
+                    </>
+                  </Section>
+
+                  {/* ── SOCIAL SETTINGS ── */}
+                  <Section icon={<Users size={16} className="text-gray-500" />} title="Social Settings">
+                    <>
+                    <FormField control={form.control} name="hasSubgroups" render={({ field }) => (
+                      <>
+                        <TogRow
+                          label="Has Teams/Groups"
+                          description="Enable if this program has subgroups like teams or levels"
+                          value={!!field.value}
+                          onChange={field.onChange}
+                          testId="checkbox-has-subgroups"
+                        />
+                        {field.value && (
+                          <FormField control={form.control} name="subgroupLabel" render={({ field: f }) => (
+                            <FieldWrap label="Subgroup Label">
+                              <SegControl
+                                options={SUBGROUP_LABEL_OPTIONS}
+                                value={f.value}
+                                onChange={f.onChange}
+                                testIdPrefix="seg-subgroup"
+                              />
+                            </FieldWrap>
+                          )} />
+                        )}
+                      </>
+                    )} />
+
+                    <div className="border-t border-gray-100 pt-4">
+                      <FormField control={form.control} name="rosterVisibility" render={({ field }) => (
+                        <FieldWrap label="Roster Visibility">
+                          <ChipSel
+                            options={[
+                              { value: "public", label: "Public", Icon: Globe },
+                              { value: "members", label: "Members Only", Icon: Eye },
+                              { value: "hidden", label: "Hidden", Icon: EyeOff },
+                            ]}
+                            value={field.value}
+                            onChange={field.onChange}
+                            testIdPrefix="chip-roster"
                           />
-                          <span className="text-xs text-gray-400">to</span>
-                          <Input
-                            type="time"
-                            value={slot.endTime}
-                            onChange={(e) => {
-                              const updated = [...availabilitySlots];
-                              updated[index] = { ...updated[index], endTime: e.target.value };
-                              setAvailabilitySlots(updated);
-                            }}
-                            className="w-[120px]"
+                        </FieldWrap>
+                      )} />
+                    </div>
+
+                    <div className="border-t border-gray-100 pt-4">
+                      <FormField control={form.control} name="chatMode" render={({ field }) => (
+                        <FieldWrap label="Chat Mode">
+                          <ChipSel
+                            options={[
+                              { value: "two_way", label: "Two-Way", Icon: MessageCircle },
+                              { value: "announcements", label: "Announce Only", Icon: Mic },
+                              { value: "disabled", label: "Disabled", Icon: BellOff },
+                            ]}
+                            value={field.value}
+                            onChange={field.onChange}
+                            testIdPrefix="chip-chat"
                           />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setAvailabilitySlots(availabilitySlots.filter((_, i) => i !== index));
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </div>
-                      ))}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setAvailabilitySlots([...availabilitySlots, { dayOfWeek: 1, startTime: "09:00", endTime: "17:00" }]);
-                        }}
-                        className="mt-1"
-                      >
-                        <Plus className="h-4 w-4 mr-1" /> Add Time Slot
-                      </Button>
+                        </FieldWrap>
+                      )} />
                     </div>
                     </>
-                  )}
+                  </Section>
+
+                  {/* Active Program toggle */}
+                  <FormField control={form.control} name="isActive" render={({ field }) => (
+                    <div className="px-5 py-3 border border-gray-200 rounded-lg">
+                      <TogRow
+                        label="Active Program"
+                        description="Visible and open for enrollment when active"
+                        value={!!field.value}
+                        onChange={field.onChange}
+                        testId="checkbox-program-active"
+                        accentColor="green"
+                      />
+                    </div>
+                  )} />
+
                 </div>
 
-                <div className="border-t pt-4 mt-4">
-                  <h4 className="font-medium mb-3">Social Settings</h4>
-                  
-                  <FormField
-                    control={form.control}
-                    name="hasSubgroups"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center gap-2 space-y-0 mb-3">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            data-testid="checkbox-has-subgroups"
-                          />
-                        </FormControl>
-                        <FormLabel className="!mt-0">Has Teams/Groups</FormLabel>
-                        <FormDescription className="!mt-0 ml-2 text-xs">
-                          Enable if this program has subgroups like teams or levels
-                        </FormDescription>
-                      </FormItem>
-                    )}
-                  />
-
-                  {form.watch("hasSubgroups") && (
-                    <FormField
-                      control={form.control}
-                      name="subgroupLabel"
-                      render={({ field }) => (
-                        <FormItem className="mb-3">
-                          <FormLabel>Subgroup Label</FormLabel>
-                          <Select value={field.value} onValueChange={field.onChange}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-subgroup-label">
-                                <SelectValue placeholder="Select label" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Team">Team (e.g., Youth Club)</SelectItem>
-                              <SelectItem value="Level">Level (e.g., Skills Academy)</SelectItem>
-                              <SelectItem value="Group">Group (e.g., Private Training)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-
-                  <FormField
-                    control={form.control}
-                    name="rosterVisibility"
-                    render={({ field }) => (
-                      <FormItem className="mb-3">
-                        <FormLabel>Roster Visibility</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-roster-visibility">
-                              <SelectValue placeholder="Select visibility" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="public">Public - Anyone can see roster</SelectItem>
-                            <SelectItem value="members">Members Only - Only program members</SelectItem>
-                            <SelectItem value="hidden">Hidden - No roster visible</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="chatMode"
-                    render={({ field }) => (
-                      <FormItem className="mb-3">
-                        <FormLabel>Chat Mode</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-chat-mode">
-                              <SelectValue placeholder="Select chat mode" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="two_way">Two-Way Chat - Everyone can send messages</SelectItem>
-                            <SelectItem value="announcements">Announcements Only - Coaches only</SelectItem>
-                            <SelectItem value="disabled">Disabled - No chat</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                {/* Footer */}
+                <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                  <p className="text-xs text-gray-400">
+                    {(() => {
+                      const name = form.watch("name");
+                      const price = form.watch("price");
+                      const missing = [];
+                      if (!name) missing.push("title");
+                      if (!price) missing.push("price");
+                      return missing.length > 0 ? `Missing: ${missing.join(", ")}` : (createProgram.isPending ? "Saving..." : "Ready to save");
+                    })()}
+                  </p>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => handleDialogClose(false)} className="h-10 px-4 rounded-md border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
+                    <button type="submit" disabled={createProgram.isPending} data-testid="button-submit-program" className="h-10 px-5 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                      {createProgram.isPending ? "Saving..." : editingProgram ? "Update Program" : "Create Program"}
+                    </button>
+                  </div>
                 </div>
-
-                <FormField
-                  control={form.control}
-                  name="isActive"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          data-testid="checkbox-program-active"
-                        />
-                      </FormControl>
-                      <FormLabel className="!mt-0">Active Program</FormLabel>
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full" disabled={createProgram.isPending} data-testid="button-submit-program">
-                  {createProgram.isPending ? "Saving..." : editingProgram ? "Update Program" : "Create Program"}
-                </Button>
               </form>
             </Form>
           </DialogContent>

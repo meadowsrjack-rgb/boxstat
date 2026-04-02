@@ -436,15 +436,28 @@ function ParentsStep({
 // ── Players step ──────────────────────────────────────────────────────────────
 
 function PlayersStep({
-  parents, players, setPlayers, selectedProgram, selectedTeams,
+  parents, players, setPlayers, selectedProgram, selectedTeams, createdPrograms, orgPrograms, orgTeams,
 }: {
   parents: MigrationParent[];
   players: MigrationPlayer[];
   setPlayers: React.Dispatch<React.SetStateAction<MigrationPlayer[]>>;
   selectedProgram: MigrationProgram | null;
   selectedTeams: MigrationTeam[];
+  createdPrograms: MigrationProgram[];
+  orgPrograms: any[];
+  orgTeams: any[];
 }) {
   const [pasteRaw, setPasteRaw] = useState("");
+
+  const allPrograms = [
+    ...orgPrograms.map((p: any) => ({ id: p.id, name: p.name, code: p.code || "", isNew: false } as MigrationProgram)),
+    ...createdPrograms,
+  ];
+
+  const getTeamsForProgram = (programId: string | null) => {
+    if (!programId) return [];
+    return selectedTeams.filter((t) => t.programId === programId);
+  };
 
   const add = () =>
     setPlayers((p) => [...p, {
@@ -453,7 +466,7 @@ function PlayersStep({
       lastName: "",
       parentId: parents[0]?.id ?? null,
       subscriptionEndDate: "",
-      programId: selectedProgram?.id ?? null,
+      programId: allPrograms[0]?.id ?? null,
       teamId: null,
     }]);
 
@@ -464,6 +477,10 @@ function PlayersStep({
 
   const importPaste = () => {
     const rows = parsePaste(pasteRaw);
+    const allPrograms = [
+      ...orgPrograms.map((p: any) => ({ id: p.id, name: p.name, code: p.code || "", isNew: false } as MigrationProgram)),
+      ...createdPrograms,
+    ];
     const imported = rows
       .filter((r) => r.first)
       .map((r) => {
@@ -475,7 +492,7 @@ function PlayersStep({
           lastName: r.last,
           parentId: parent?.id ?? null,
           subscriptionEndDate: r.expiry,
-          programId: selectedProgram?.id ?? null,
+          programId: allPrograms[0]?.id ?? null,
           teamId: matchedTeam?.id ?? null,
         };
       });
@@ -484,7 +501,7 @@ function PlayersStep({
     setPasteRaw("");
   };
 
-  const colSpan = 2 + (selectedProgram ? 1 : 0) + (selectedTeams.length > 0 ? 1 : 0);
+  const hasTeams = selectedTeams.length > 0;
 
   return (
     <div className="space-y-4">
@@ -500,7 +517,7 @@ function PlayersStep({
 
         <TabsContent value="paste" className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Include a <strong>Parent Email</strong> column to auto-link players. Subscription End{selectedTeams.length > 0 ? " and Team" : ""} columns are detected automatically. All players are assigned to the program selected in step 1.
+            Include a <strong>Parent Email</strong> column to auto-link players. Subscription End{hasTeams ? " and Team" : ""} columns are detected automatically.
           </p>
           <Textarea
             value={pasteRaw}
@@ -520,19 +537,19 @@ function PlayersStep({
         <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
           <thead>
             <tr className="bg-muted/50">
-              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[18%]">First name</th>
-              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[18%]">Last name</th>
-              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[22%]">Parent *</th>
-              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[16%]">Sub end date</th>
-              {selectedProgram && <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[14%]">Program</th>}
-              {selectedTeams.length > 0 && <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[14%]">Team</th>}
+              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[16%]">First name</th>
+              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[16%]">Last name</th>
+              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[20%]">Parent *</th>
+              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[14%]">Sub end date</th>
+              {allPrograms.length > 0 && <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[16%]">Program</th>}
+              {hasTeams && <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[14%]">Team</th>}
               <th className="w-[6%]" />
             </tr>
           </thead>
           <tbody>
             {players.length === 0 ? (
               <tr>
-                <td colSpan={5 + (selectedProgram ? 1 : 0) + (selectedTeams.length > 0 ? 1 : 0)} className="px-3 py-8 text-center text-sm text-muted-foreground">
+                <td colSpan={5 + (allPrograms.length > 0 ? 1 : 0) + (hasTeams ? 1 : 0)} className="px-3 py-8 text-center text-sm text-muted-foreground">
                   No players yet — skip if parents will add their own on sign-up
                 </td>
               </tr>
@@ -559,22 +576,24 @@ function PlayersStep({
                     </Select>
                   </td>
                   <td className="px-1 py-1"><Input value={k.subscriptionEndDate} onChange={(e) => upd(k.id, "subscriptionEndDate", e.target.value)} placeholder="MM/DD/YYYY" className="border-0 shadow-none h-8 text-sm px-2" /></td>
-                  {selectedProgram && (
+                  {allPrograms.length > 0 && (
                     <td className="px-1 py-1">
                       <Select
-                        value={k.programId?.toString() ?? selectedProgram.id.toString()}
+                        value={k.programId?.toString() ?? allPrograms[0]?.id ?? ""}
                         onValueChange={(v) => upd(k.id, "programId", v)}
                       >
                         <SelectTrigger className="border-0 shadow-none h-8 text-sm px-2">
                           <SelectValue placeholder="Program" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value={selectedProgram.id.toString()}>{selectedProgram.name}</SelectItem>
+                          {allPrograms.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </td>
                   )}
-                  {selectedTeams.length > 0 && (
+                  {hasTeams && (
                     <td className="px-1 py-1">
                       <Select
                         value={k.teamId?.toString() ?? "none"}
@@ -585,7 +604,7 @@ function PlayersStep({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">None</SelectItem>
-                          {selectedTeams.map((t) => (
+                          {getTeamsForProgram(k.programId?.toString() ?? null).map((t) => (
                             <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>
                           ))}
                         </SelectContent>
@@ -812,6 +831,12 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
   const [done, setDone]                   = useState(false);
   const [result, setResult]               = useState<MigrationResult | null>(null);
 
+  const { data: existingPrograms = [] } = useQuery<any[]>({ queryKey: ["/api/programs"] });
+  const { data: existingTeams = [] } = useQuery<any[]>({ queryKey: ["/api/teams"] });
+
+  const orgPrograms = existingPrograms.filter((p: any) => p.organizationId === organizationId && p.productCategory !== 'goods');
+  const orgTeams = existingTeams.filter((t: any) => t.organizationId === organizationId);
+
   const stepOrder: Step[] = ["programs", "parents", "players", "review"];
   const stepIdx = stepOrder.indexOf(step);
 
@@ -837,16 +862,13 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
     return true;
   }, [players, toast]);
 
-  const validateProgram = useCallback(() => {
-    if (!selectedProgram) {
-      toast({ title: "No program selected", description: "Select or create a program before continuing.", variant: "destructive" });
-      return false;
-    }
-    return true;
-  }, [selectedProgram, toast]);
-
   const next = () => {
-    if (step === "programs" && !validateProgram()) return;
+    if (step === "programs") {
+      if (createdPrograms.length === 0 && orgPrograms.length === 0) {
+        toast({ title: "No programs", description: "Create at least one program before continuing.", variant: "destructive" });
+        return;
+      }
+    }
     if (step === "parents" && !validateParents()) return;
     if (step === "players" && !validatePlayers()) return;
     setStep(stepOrder[stepIdx + 1]);
@@ -935,6 +957,9 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
             setPlayers={setPlayers}
             selectedProgram={selectedProgram}
             selectedTeams={selectedTeams}
+            createdPrograms={createdPrograms}
+            orgPrograms={orgPrograms}
+            orgTeams={orgTeams}
           />
         )}
         {step === "review" && (

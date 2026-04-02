@@ -1484,8 +1484,8 @@ export const insertEventSchema = z.object({
   playerRsvpEnabled: z.boolean().default(true),
   timezone: z.string().default('America/Los_Angeles'),
   isRecurring: z.boolean().optional().default(false),
-  recurringType: z.string().optional(),
-  recurringEndDate: z.string().optional(),
+  recurringType: z.string().nullable().optional(),
+  recurringEndDate: z.string().nullable().optional(),
 });
 
 export type InsertEvent = z.infer<typeof insertEventSchema>;

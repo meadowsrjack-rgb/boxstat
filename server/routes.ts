@@ -253,6 +253,12 @@ async function getOrCreateStripeCustomer(stripeInstance: Stripe, user: any): Pro
   return stripeCustomerId;
 }
 
+function calculateStripeProcessingFee(subtotalCents: number): number {
+  if (subtotalCents <= 0) return 0;
+  const totalNeeded = (subtotalCents + 30) / (1 - 0.029);
+  return Math.round(totalNeeded - subtotalCents);
+}
+
 async function getPlatformFeePercent(): Promise<number> {
   try {
     const results = await db.select().from(platformSettings)
@@ -1632,8 +1638,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { amount, packageId, packageName, organizationId } = req.body;
 
+      const baseAmount = Math.round(amount);
+      const intentProcessingFee = calculateStripeProcessingFee(baseAmount);
       const intentParams: any = {
-        amount: Math.round(amount), // Amount should already be in cents
+        amount: baseAmount + intentProcessingFee,
         currency: "usd",
         metadata: {
           packageId: packageId || "",
@@ -1787,9 +1795,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      const processingFeeSubtotal1 = lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
+      const processingFee1 = calculateStripeProcessingFee(processingFeeSubtotal1);
+      if (processingFee1 > 0) {
+        lineItems.push({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Processing Fee',
+              description: 'Card processing fee',
+            },
+            unit_amount: processingFee1,
+          },
+          quantity: 1,
+        });
+      }
+
       const stripeCustomerId = await getOrCreateStripeCustomer(orgStripe, user);
       
-      // Get origin for URLs
       const origin = `${req.protocol}://${req.get('host')}`;
       
       const sessionParams1: any = {
@@ -2137,6 +2160,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lineItems.push(platformFeeItem);
       }
       
+      const processingFeeSubtotal2 = lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
+      const processingFee2 = calculateStripeProcessingFee(processingFeeSubtotal2);
+      if (processingFee2 > 0) {
+        const processingFeeItem: any = {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Processing Fee',
+              description: 'Card processing fee',
+            },
+            unit_amount: processingFee2,
+          },
+          quantity: 1,
+        };
+        
+        if (isSubscription) {
+          const pfResolved = resolveStripeInterval(program.billingIntervalDays, program.billingCycle);
+          processingFeeItem.price_data.recurring = {
+            interval: pfResolved.interval,
+            interval_count: pfResolved.interval_count,
+          };
+        }
+        
+        if (isInstallmentPlan) {
+          const pfInstInterval = resolveStripeInterval(selectedPricingOption.installmentIntervalDays);
+          processingFeeItem.price_data.recurring = {
+            interval: pfInstInterval.interval,
+            interval_count: pfInstInterval.interval_count,
+          };
+        }
+        
+        lineItems.push(processingFeeItem);
+      }
+
       // Create Stripe Checkout Session
       // For iOS native app, use web URLs with auth token so the in-app browser
       // can redirect back and trigger payment verification
@@ -3314,6 +3371,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
               description: `${cartFeePercent}% technology fee`,
             },
             unit_amount: cartPlatformFee,
+          },
+          quantity: 1,
+        });
+      }
+
+      const cartProcessingSubtotal = cartLineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
+      const cartProcessingFee = calculateStripeProcessingFee(cartProcessingSubtotal);
+      if (cartProcessingFee > 0) {
+        cartLineItems.push({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Processing Fee',
+              description: 'Card processing fee',
+            },
+            unit_amount: cartProcessingFee,
           },
           quantity: 1,
         });
@@ -4516,7 +4589,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        // Build subscription line items (monthly price only)
+        const bundleProcessingSubtotal = addInvoiceItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0)
+          + (selectedPricingOption.monthlyPrice || 0);
+        const bundleProcessingFee = calculateStripeProcessingFee(bundleProcessingSubtotal);
+        if (bundleProcessingFee > 0) {
+          addInvoiceItems.push({
+            price_data: {
+              currency: 'usd',
+              product_data: { name: 'Processing Fee' },
+              unit_amount: bundleProcessingFee,
+            },
+            quantity: 1,
+            description: 'Card processing fee',
+          });
+        }
+
         const subscriptionLineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = monthlyPriceId
           ? [{ price: monthlyPriceId, quantity: 1 }]
           : [{
@@ -4625,6 +4712,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 description: `${addPlayerFeePercent}% technology fee`,
               },
               unit_amount: platformFee,
+            },
+            quantity: 1,
+          });
+        }
+
+        const addPlayerProcessingSubtotal = lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
+        const addPlayerProcessingFee = calculateStripeProcessingFee(addPlayerProcessingSubtotal);
+        if (addPlayerProcessingFee > 0) {
+          lineItems.push({
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: 'Processing Fee',
+                description: 'Card processing fee',
+              },
+              unit_amount: addPlayerProcessingFee,
             },
             quantity: 1,
           });
@@ -15170,6 +15273,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 description: `${quoteFeePercent}% technology fee`,
               },
               unit_amount: quotePlatformFee,
+            },
+            quantity: 1,
+          });
+        }
+
+        const quoteProcessingSubtotal = lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
+        const quoteProcessingFee = calculateStripeProcessingFee(quoteProcessingSubtotal);
+        if (quoteProcessingFee > 0) {
+          lineItems.push({
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: 'Processing Fee',
+                description: 'Card processing fee',
+              },
+              unit_amount: quoteProcessingFee,
             },
             quantity: 1,
           });

@@ -133,7 +133,7 @@ interface ProgramsStepProps {
 }
 
 function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, selectedTeams, setSelectedTeams }: ProgramsStepProps) {
-  const [programMode, setProgramMode] = useState<"existing" | "new">("new");
+  const [showNewForm, setShowNewForm] = useState(false);
   const [newProgramName, setNewProgramName] = useState(selectedProgram?.isNew ? selectedProgram.name : "");
   const [newProgramCode, setNewProgramCode] = useState(selectedProgram?.isNew ? selectedProgram.code : "");
   const [newTeamName, setNewTeamName] = useState("");
@@ -149,6 +149,7 @@ function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, sel
     if (!prog) return;
     setSelectedProgram({ id: prog.id, name: prog.name, code: prog.code || "", isNew: false });
     setSelectedTeams([]);
+    setShowNewForm(false);
   };
 
   const applyNewProgram = () => {
@@ -156,6 +157,7 @@ function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, sel
     const tempId = `migration-new-${Date.now()}`;
     setSelectedProgram({ id: tempId, name: newProgramName.trim(), code: newProgramCode.trim(), isNew: true });
     setSelectedTeams([]);
+    setShowNewForm(false);
   };
 
   const addExistingTeam = (teamId: string) => {
@@ -167,7 +169,7 @@ function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, sel
 
   const addNewTeam = () => {
     if (!newTeamName.trim()) return;
-    const tempId = -(Date.now()); // negative id = new team placeholder
+    const tempId = -(Date.now());
     setSelectedTeams((prev) => [...prev, { id: tempId, name: newTeamName.trim(), programId: selectedProgram?.id || "", isNew: true }]);
     setNewTeamName("");
   };
@@ -181,31 +183,41 @@ function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, sel
   return (
     <div className="space-y-6">
       <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-lg p-3 text-sm text-blue-800">
-        Select or create the program your migrated players belong to. You can also pre-assign teams — both will be marked incomplete for you to finish setting up later.
+        Select a program to add migrated players to, or create a new one. You can also pre-assign teams.
       </div>
 
-      {/* Program selection */}
       <div className="space-y-3">
         <div className="text-sm font-medium">Program</div>
-        {orgPrograms.length > 0 && (
-          <div className="flex gap-2 mb-3">
-            <Button size="sm" variant={programMode === "existing" ? "default" : "outline"} onClick={() => setProgramMode("existing")}>Use existing</Button>
-            <Button size="sm" variant={programMode === "new" ? "default" : "outline"} onClick={() => setProgramMode("new")}>Create new</Button>
+
+        {orgPrograms.length > 0 && !selectedProgram && !showNewForm && (
+          <div className="space-y-2">
+            {orgPrograms.map((p: any) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => selectExistingProgram(p.id)}
+                className="w-full flex items-center gap-3 p-3 rounded-lg border border-border bg-background hover:bg-muted/50 transition-colors text-left"
+              >
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                  <Package size={16} className="text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{p.name}</div>
+                  {p.code && <div className="text-xs text-muted-foreground">{p.code}</div>}
+                </div>
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setShowNewForm(true)}
+              className="w-full py-2 border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:border-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1"
+            >
+              <Plus size={14} /> Create new program
+            </button>
           </div>
         )}
 
-        {(programMode === "existing" && orgPrograms.length > 0) ? (
-          <Select value={selectedProgram && !selectedProgram.isNew ? selectedProgram.id : ""} onValueChange={selectExistingProgram}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a program" />
-            </SelectTrigger>
-            <SelectContent>
-              {orgPrograms.map((p: any) => (
-                <SelectItem key={p.id} value={p.id}>{p.name}{p.code ? ` (${p.code})` : ""}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
+        {(showNewForm || orgPrograms.length === 0) && !selectedProgram && (
           <div className="space-y-2">
             <Input
               placeholder="Program name (e.g. Spring 2026 Training)"
@@ -217,9 +229,16 @@ function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, sel
               value={newProgramCode}
               onChange={(e) => setNewProgramCode(e.target.value)}
             />
-            <Button size="sm" onClick={applyNewProgram} disabled={!newProgramName.trim()}>
-              {selectedProgram?.isNew ? "Update program" : "Set program"}
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={applyNewProgram} disabled={!newProgramName.trim()}>
+                Set program
+              </Button>
+              {orgPrograms.length > 0 && (
+                <Button size="sm" variant="outline" onClick={() => setShowNewForm(false)}>
+                  Cancel
+                </Button>
+              )}
+            </div>
           </div>
         )}
 
@@ -231,7 +250,7 @@ function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, sel
               {selectedProgram.code ? ` · ${selectedProgram.code}` : ""}
               {selectedProgram.isNew ? " (will be created)" : ""}
             </span>
-            <button onClick={() => setSelectedProgram(null)} className="ml-auto text-green-600 hover:text-green-800">
+            <button onClick={() => { setSelectedProgram(null); setShowNewForm(false); }} className="ml-auto text-green-600 hover:text-green-800">
               <X size={14} />
             </button>
           </div>

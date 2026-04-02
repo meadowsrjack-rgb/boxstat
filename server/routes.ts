@@ -13558,18 +13558,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const newExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
           if (existing) {
-            // User exists — skip if already active, re-invite if still pending
-            if (existing.status !== 'invited') {
-              skipped++;
-              errors.push(`${parent.email} already has an active account`);
-              continue;
-            }
             parentUserId = existing.id;
-            // Always rotate token on re-invite so expired tokens are refreshed
-            inviteToken = crypto.randomBytes(32).toString('hex');
-            await storage.updateUser(parentUserId, { inviteToken, inviteTokenExpiry: newExpiry });
+            const isAlreadyActive = existing.status !== 'invited';
 
-            // Create any newly-linked players that don't already exist
+            if (!isAlreadyActive) {
+              inviteToken = crypto.randomBytes(32).toString('hex');
+              await storage.updateUser(parentUserId, { inviteToken, inviteTokenExpiry: newExpiry });
+            } else {
+              inviteToken = '';
+            }
+
             const existingPlayers = await storage.getPlayersByParent(parentUserId);
             for (const player of linkedPlayers) {
               const alreadyExists = existingPlayers.some(
@@ -13599,12 +13597,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   subscriptionEndDate: subEndDate,
                   teamId: resolvedTeamId,
                   packageSelected: resolvedProgramId || null,
-                  status: 'invited',
+                  status: isAlreadyActive ? 'active' : 'invited',
                   isActive: true,
-                  hasRegistered: false,
+                  hasRegistered: isAlreadyActive,
                 });
 
-                // Create enrollment record if program assigned
                 if (resolvedProgramId && subEndDate) {
                   const endDateIso = new Date(subEndDate + 'T23:59:59Z').toISOString();
                   await storage.createEnrollment({
@@ -13619,7 +13616,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   });
                 }
 
-                // Create team membership if team assigned
                 if (resolvedTeamId) {
                   await db.insert(teamMemberships).values({
                     teamId: resolvedTeamId,
@@ -13629,6 +13625,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   }).onConflictDoNothing();
                 }
               }
+            }
+
+            if (isAlreadyActive) {
+              if (linkedPlayers.length > 0) {
+                invited++;
+                console.log(`Migration: ${parent.email} already active — players added directly, no invite email needed`);
+              } else {
+                skipped++;
+                errors.push(`${parent.email} already has an account — no new players to add`);
+              }
+              continue;
             }
           } else {
             // Create shadow parent user directly with invite fields

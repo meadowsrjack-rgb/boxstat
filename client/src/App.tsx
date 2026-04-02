@@ -174,11 +174,6 @@ function ProtectedAdminRoute({ component: Component }: { component: React.Compon
     return null;
   }
 
-  if ((user as any)?.organizationPlatformSubscriptionStatus !== "active") {
-    setLocation("/subscription-required");
-    return null;
-  }
-
   return <Component />;
 }
 

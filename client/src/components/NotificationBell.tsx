@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
-import { Bell } from "lucide-react";
+import { Bell, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -65,6 +65,14 @@ export function NotificationBell() {
     },
   });
 
+  const markAllAsRead = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/notifications/mark-all-read", { method: "POST", data: { profileId } });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/feed", profileId] });
+    },
+  });
 
   const handlePopoverChange = async (open: boolean) => {
     setPopoverOpen(open);
@@ -118,6 +126,17 @@ export function NotificationBell() {
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-sm">Notifications</h3>
+            {unreadCount > 0 && (
+              <button
+                onClick={() => markAllAsRead.mutate()}
+                disabled={markAllAsRead.isPending}
+                className="p-1 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
+                title="Mark all as read"
+                data-testid="button-mark-all-read"
+              >
+                <CheckCheck className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           <ScrollArea className="h-[300px]">

@@ -600,11 +600,6 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
           {step === "players" && "Players"}
           {step === "review"  && "Review & send invites"}
         </h2>
-        <p className="text-sm text-muted-foreground mb-5">
-          {step === "parents" && "One row per family. Boxstat emails each parent an invite to claim their account."}
-          {step === "players" && "Link each player to their parent and enter their current subscription end date."}
-          {step === "review"  && "Check everything looks right, then send the invites."}
-        </p>
 
         {step === "parents" && <ParentsStep parents={parents} setParents={setParents} />}
         {step === "players" && <PlayersStep parents={parents} players={players} setPlayers={setPlayers} />}

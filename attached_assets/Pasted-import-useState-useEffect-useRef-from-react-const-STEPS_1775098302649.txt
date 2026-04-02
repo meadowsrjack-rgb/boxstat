@@ -1,0 +1,937 @@
+import { useState, useEffect, useRef } from "react";
+
+const STEPS = [
+  { id: "basics", label: "Basics", icon: "✦" },
+  { id: "pricing", label: "Pricing", icon: "$" },
+  { id: "settings", label: "Settings", icon: "⚙" },
+  { id: "social", label: "Social", icon: "💬" },
+];
+
+const CATEGORIES = [
+  { value: "general", label: "General", icon: "📋" },
+  { value: "basketball", label: "Basketball", icon: "🏀" },
+  { value: "training", label: "Training", icon: "🎯" },
+  { value: "camps", label: "Camps", icon: "⛺" },
+  { value: "clinics", label: "Clinics", icon: "🩺" },
+  { value: "league", label: "League", icon: "🏆" },
+  { value: "tournament", label: "Tournament", icon: "🥇" },
+  { value: "membership", label: "Membership", icon: "🎫" },
+];
+
+const ICONS = [
+  { value: "basketball", label: "Basketball", preview: "🏀" },
+  { value: "target", label: "Target", preview: "🎯" },
+  { value: "tent", label: "Camps", preview: "⛺" },
+  { value: "users", label: "Team", preview: "👥" },
+  { value: "trophy", label: "Trophy", preview: "🏆" },
+  { value: "calendar", label: "Calendar", preview: "📅" },
+  { value: "star", label: "Star", preview: "⭐" },
+  { value: "medal", label: "Medal", preview: "🥇" },
+  { value: "crown", label: "Crown", preview: "👑" },
+];
+
+const PRODUCT_TYPES = [
+  { value: "Subscription", label: "Subscription", desc: "Recurring billing", icon: "🔄" },
+  { value: "One-Time", label: "One-Time", desc: "Single payment", icon: "💳" },
+  { value: "Pack", label: "Credit Pack", desc: "Prepaid credits", icon: "📦" },
+];
+
+const ACCESS_TYPES = [
+  { value: "club_member", label: "Club Member", desc: "Full access to all features" },
+  { value: "pack_holder", label: "Pack Holder", desc: "Credit-based access" },
+  { value: "none", label: "No Special Access", desc: "Standard enrollment only" },
+];
+
+const BILLING_MODELS = [
+  { value: "Per Player", label: "Per Player" },
+  { value: "Per Family", label: "Per Family" },
+  { value: "Organization-Wide", label: "Org-Wide" },
+];
+
+const WAIVERS = [
+  { id: "aau", label: "AAU Membership" },
+  { id: "club_agreement", label: "Club Agreement" },
+  { id: "concussion", label: "Concussion Waiver" },
+];
+
+const ADDONS = [
+  { id: "gear", label: "Complete Gear Package", price: 259 },
+  { id: "uniform", label: "Add-On Uniform", price: 105 },
+  { id: "uniform_jersey", label: "Uniform + Practice Jersey", price: 156 },
+];
+
+const ROSTER_OPTIONS = [
+  { value: "public", label: "Public", desc: "Anyone can see" },
+  { value: "members", label: "Members Only", desc: "Program members" },
+  { value: "hidden", label: "Hidden", desc: "No roster visible" },
+];
+
+const CHAT_OPTIONS = [
+  { value: "two_way", label: "Two-Way", desc: "Everyone chats" },
+  { value: "announcements", label: "Announce Only", desc: "Coaches only" },
+  { value: "disabled", label: "Disabled", desc: "No chat" },
+];
+
+const SUBGROUP_LABELS = [
+  { value: "Team", label: "Team", example: "e.g. Youth Club" },
+  { value: "Level", label: "Level", example: "e.g. Skills Academy" },
+  { value: "Group", label: "Group", example: "e.g. Private Training" },
+];
+
+// --- Reusable UI Components ---
+
+function ChipSelect({ options, value, onChange, multi = false }) {
+  const isSelected = (v) => (multi ? (value || []).includes(v) : value === v);
+  const handleClick = (v) => {
+    if (multi) {
+      const arr = value || [];
+      onChange(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+    } else {
+      onChange(v);
+    }
+  };
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+      {options.map((opt) => (
+        <button
+          key={opt.value || opt.id}
+          type="button"
+          onClick={() => handleClick(opt.value || opt.id)}
+          style={{
+            padding: "8px 16px",
+            borderRadius: 10,
+            border: isSelected(opt.value || opt.id)
+              ? "2px solid #D82428"
+              : "2px solid #E5E7EB",
+            background: isSelected(opt.value || opt.id) ? "#FEF2F2" : "#fff",
+            color: isSelected(opt.value || opt.id) ? "#D82428" : "#374151",
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            transition: "all 0.18s ease",
+          }}
+        >
+          {opt.icon && <span style={{ fontSize: 16 }}>{opt.icon}</span>}
+          {opt.preview && <span style={{ fontSize: 16 }}>{opt.preview}</span>}
+          <span>{opt.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Toggle({ checked, onChange, label, desc }) {
+  return (
+    <label
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 12,
+        cursor: "pointer",
+        padding: "12px 16px",
+        borderRadius: 12,
+        background: checked ? "#FEF2F2" : "#F9FAFB",
+        border: checked ? "1.5px solid #FECACA" : "1.5px solid #E5E7EB",
+        transition: "all 0.18s ease",
+      }}
+    >
+      <div
+        onClick={(e) => {
+          e.preventDefault();
+          onChange(!checked);
+        }}
+        style={{
+          width: 44,
+          height: 24,
+          borderRadius: 12,
+          background: checked ? "#D82428" : "#D1D5DB",
+          position: "relative",
+          flexShrink: 0,
+          transition: "background 0.2s ease",
+          marginTop: 2,
+          cursor: "pointer",
+        }}
+      >
+        <div
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: "50%",
+            background: "#fff",
+            position: "absolute",
+            top: 3,
+            left: checked ? 23 : 3,
+            transition: "left 0.2s ease",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+          }}
+        />
+      </div>
+      <div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: "#111827", fontFamily: "'DM Sans', sans-serif" }}>
+          {label}
+        </div>
+        {desc && (
+          <div style={{ fontSize: 12, color: "#6B7280", marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>
+            {desc}
+          </div>
+        )}
+      </div>
+    </label>
+  );
+}
+
+function CheckItem({ checked, onChange, label, extra }) {
+  return (
+    <label
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        cursor: "pointer",
+        padding: "10px 14px",
+        borderRadius: 10,
+        background: checked ? "#FEF2F2" : "#F9FAFB",
+        border: checked ? "1.5px solid #FECACA" : "1.5px solid transparent",
+        transition: "all 0.15s ease",
+      }}
+    >
+      <div
+        onClick={(e) => {
+          e.preventDefault();
+          onChange(!checked);
+        }}
+        style={{
+          width: 20,
+          height: 20,
+          borderRadius: 6,
+          border: checked ? "2px solid #D82428" : "2px solid #D1D5DB",
+          background: checked ? "#D82428" : "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          transition: "all 0.15s ease",
+          cursor: "pointer",
+        }}
+      >
+        {checked && (
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M2.5 6L5 8.5L9.5 3.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </div>
+      <span style={{ fontSize: 13, fontWeight: 500, color: "#374151", flex: 1, fontFamily: "'DM Sans', sans-serif" }}>
+        {label}
+      </span>
+      {extra && (
+        <span style={{ fontSize: 12, color: "#9CA3AF", fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
+          {extra}
+        </span>
+      )}
+    </label>
+  );
+}
+
+function RadioCard({ options, value, onChange }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => onChange(opt.value)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "12px 16px",
+            borderRadius: 12,
+            border: value === opt.value ? "2px solid #D82428" : "2px solid #E5E7EB",
+            background: value === opt.value ? "#FEF2F2" : "#fff",
+            cursor: "pointer",
+            textAlign: "left",
+            transition: "all 0.15s ease",
+          }}
+        >
+          <div
+            style={{
+              width: 20,
+              height: 20,
+              borderRadius: "50%",
+              border: value === opt.value ? "6px solid #D82428" : "2px solid #D1D5DB",
+              flexShrink: 0,
+              transition: "all 0.15s ease",
+            }}
+          />
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "#111827", fontFamily: "'DM Sans', sans-serif" }}>
+              {opt.icon && <span style={{ marginRight: 6 }}>{opt.icon}</span>}
+              {opt.label}
+            </div>
+            {opt.desc && (
+              <div style={{ fontSize: 12, color: "#6B7280", fontFamily: "'DM Sans', sans-serif" }}>
+                {opt.desc}
+              </div>
+            )}
+            {opt.example && (
+              <div style={{ fontSize: 11, color: "#9CA3AF", fontFamily: "'DM Sans', sans-serif" }}>
+                {opt.example}
+              </div>
+            )}
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function FieldLabel({ children, hint }) {
+  return (
+    <div style={{ marginBottom: 6 }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: "#374151", fontFamily: "'DM Sans', sans-serif" }}>
+        {children}
+      </span>
+      {hint && (
+        <span style={{ fontSize: 11, color: "#9CA3AF", marginLeft: 8, fontFamily: "'DM Sans', sans-serif" }}>
+          {hint}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function TextInput({ placeholder, value, onChange, type = "text", ...props }) {
+  return (
+    <input
+      type={type}
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={{
+        width: "100%",
+        padding: "10px 14px",
+        borderRadius: 10,
+        border: "1.5px solid #E5E7EB",
+        fontSize: 14,
+        fontFamily: "'DM Sans', sans-serif",
+        color: "#111827",
+        background: "#fff",
+        outline: "none",
+        transition: "border 0.15s ease",
+        boxSizing: "border-box",
+      }}
+      onFocus={(e) => (e.target.style.borderColor = "#D82428")}
+      onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
+      {...props}
+    />
+  );
+}
+
+function TextArea({ placeholder, value, onChange, rows = 3 }) {
+  return (
+    <textarea
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      rows={rows}
+      style={{
+        width: "100%",
+        padding: "10px 14px",
+        borderRadius: 10,
+        border: "1.5px solid #E5E7EB",
+        fontSize: 14,
+        fontFamily: "'DM Sans', sans-serif",
+        color: "#111827",
+        background: "#fff",
+        outline: "none",
+        resize: "vertical",
+        transition: "border 0.15s ease",
+        boxSizing: "border-box",
+      }}
+      onFocus={(e) => (e.target.style.borderColor = "#D82428")}
+      onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
+    />
+  );
+}
+
+function SectionDivider({ label }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "8px 0" }}>
+      <div style={{ height: 1, flex: 1, background: "#E5E7EB" }} />
+      <span style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: 1, fontFamily: "'DM Sans', sans-serif" }}>
+        {label}
+      </span>
+      <div style={{ height: 1, flex: 1, background: "#E5E7EB" }} />
+    </div>
+  );
+}
+
+// --- Step Components ---
+
+function StepBasics({ form, setForm }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div>
+        <FieldLabel>Program Name</FieldLabel>
+        <TextInput
+          placeholder="e.g. High School Club, Summer Camp 2026"
+          value={form.name}
+          onChange={(v) => setForm({ ...form, name: v })}
+        />
+      </div>
+      <div>
+        <FieldLabel hint="Optional">Description</FieldLabel>
+        <TextArea
+          placeholder="A short description shown to parents during enrollment..."
+          value={form.description}
+          onChange={(v) => setForm({ ...form, description: v })}
+          rows={2}
+        />
+      </div>
+      <div>
+        <FieldLabel>Category</FieldLabel>
+        <ChipSelect options={CATEGORIES} value={form.category} onChange={(v) => setForm({ ...form, category: v })} />
+      </div>
+      <div>
+        <FieldLabel hint="Optional">Program Icon</FieldLabel>
+        <ChipSelect options={ICONS} value={form.icon} onChange={(v) => setForm({ ...form, icon: v })} />
+      </div>
+      <div>
+        <FieldLabel hint="16:9 recommended">Cover Image</FieldLabel>
+        <label
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "28px 20px",
+            borderRadius: 14,
+            border: "2px dashed #D1D5DB",
+            background: "#F9FAFB",
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+          }}
+        >
+          <div style={{ fontSize: 28, marginBottom: 6 }}>📸</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#6B7280", fontFamily: "'DM Sans', sans-serif" }}>
+            Click to upload or drag & drop
+          </div>
+          <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>
+            PNG, JPG up to 5MB
+          </div>
+          <input type="file" accept="image/*" style={{ display: "none" }} />
+        </label>
+      </div>
+    </div>
+  );
+}
+
+function StepPricing({ form, setForm }) {
+  const billingIntervalLabel = (days) => {
+    if (days === 7) return "Weekly";
+    if (days === 14) return "Bi-weekly";
+    if (days === 30) return "Monthly";
+    if (days === 60) return "Bi-monthly";
+    if (days === 90) return "Quarterly";
+    if (days === 365) return "Annually";
+    return `Every ${days} days`;
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div>
+        <FieldLabel>Product Type</FieldLabel>
+        <RadioCard options={PRODUCT_TYPES} value={form.productType} onChange={(v) => setForm({ ...form, productType: v })} />
+      </div>
+
+      <div style={{ display: "flex", gap: 12 }}>
+        <div style={{ flex: 1 }}>
+          <FieldLabel>Price</FieldLabel>
+          <div style={{ position: "relative" }}>
+            <span style={{
+              position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)",
+              fontSize: 14, color: "#9CA3AF", fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
+            }}>$</span>
+            <input
+              type="number"
+              placeholder="0.00"
+              step="0.01"
+              min="0"
+              value={form.price}
+              onChange={(e) => setForm({ ...form, price: e.target.value })}
+              style={{
+                width: "100%", padding: "10px 14px 10px 28px", borderRadius: 10,
+                border: "1.5px solid #E5E7EB", fontSize: 14, fontFamily: "'DM Sans', sans-serif",
+                color: "#111827", background: "#fff", outline: "none", boxSizing: "border-box",
+              }}
+              onFocus={(e) => (e.target.style.borderColor = "#D82428")}
+              onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
+            />
+          </div>
+        </div>
+        <div style={{ flex: 1 }}>
+          <FieldLabel>Billing Model</FieldLabel>
+          <ChipSelect options={BILLING_MODELS} value={form.billingModel} onChange={(v) => setForm({ ...form, billingModel: v })} />
+        </div>
+      </div>
+
+      {form.productType === "Subscription" && (
+        <div>
+          <FieldLabel hint={billingIntervalLabel(Number(form.billingInterval) || 30)}>
+            Billing Interval (days)
+          </FieldLabel>
+          <TextInput
+            type="number"
+            placeholder="30"
+            value={form.billingInterval}
+            onChange={(v) => setForm({ ...form, billingInterval: v })}
+            min="1"
+          />
+        </div>
+      )}
+
+      <div>
+        <FieldLabel>Access Type</FieldLabel>
+        <RadioCard options={ACCESS_TYPES} value={form.accessType} onChange={(v) => setForm({ ...form, accessType: v })} />
+      </div>
+
+      {form.productType === "Subscription" && (
+        <>
+          <SectionDivider label="Subscription Details" />
+          <div>
+            <FieldLabel hint="Shown at checkout">Subscription Disclosure</FieldLabel>
+            <TextArea
+              placeholder="You will be charged $X every month. Your subscription renews automatically until canceled..."
+              value={form.subscriptionDisclosure}
+              onChange={(v) => setForm({ ...form, subscriptionDisclosure: v })}
+              rows={3}
+            />
+          </div>
+          <Toggle
+            checked={form.allowInstallments}
+            onChange={(v) => setForm({ ...form, allowInstallments: v })}
+            label="Allow Installment Payments"
+            desc="Let families split the total into multiple payments"
+          />
+        </>
+      )}
+
+      <SectionDivider label="Add-ons" />
+      <div>
+        <FieldLabel hint="Suggested at checkout">Suggested Add-ons</FieldLabel>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {ADDONS.map((a) => (
+            <CheckItem
+              key={a.id}
+              checked={(form.addons || []).includes(a.id)}
+              onChange={(checked) => {
+                const arr = form.addons || [];
+                setForm({ ...form, addons: checked ? [...arr, a.id] : arr.filter((x) => x !== a.id) });
+              }}
+              label={a.label}
+              extra={`$${a.price.toFixed(2)}`}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StepSettings({ form, setForm }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div>
+        <FieldLabel>Required Waivers</FieldLabel>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {WAIVERS.map((w) => (
+            <CheckItem
+              key={w.id}
+              checked={(form.waivers || []).includes(w.id)}
+              onChange={(checked) => {
+                const arr = form.waivers || [];
+                setForm({ ...form, waivers: checked ? [...arr, w.id] : arr.filter((x) => x !== w.id) });
+              }}
+              label={w.label}
+            />
+          ))}
+        </div>
+        <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 6, fontFamily: "'DM Sans', sans-serif" }}>
+          Parents must sign selected waivers before enrolling
+        </div>
+      </div>
+
+      <SectionDivider label="Scheduling" />
+
+      <Toggle
+        checked={form.scheduleRequest}
+        onChange={(v) => setForm({ ...form, scheduleRequest: v })}
+        label="Enable Schedule Request"
+        desc="Allow parents to book sessions after payment"
+      />
+
+      <SectionDivider label="Status" />
+
+      <Toggle
+        checked={form.active}
+        onChange={(v) => setForm({ ...form, active: v })}
+        label="Active Program"
+        desc="When active, this program is visible and open for enrollment"
+      />
+    </div>
+  );
+}
+
+function StepSocial({ form, setForm }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <Toggle
+        checked={form.hasSubgroups}
+        onChange={(v) => setForm({ ...form, hasSubgroups: v })}
+        label="Has Teams / Groups"
+        desc="Enable if this program has subgroups like teams, levels, or sessions"
+      />
+
+      {form.hasSubgroups && (
+        <div>
+          <FieldLabel>Subgroup Label</FieldLabel>
+          <RadioCard
+            options={SUBGROUP_LABELS}
+            value={form.subgroupLabel}
+            onChange={(v) => setForm({ ...form, subgroupLabel: v })}
+          />
+        </div>
+      )}
+
+      <SectionDivider label="Visibility & Chat" />
+
+      <div>
+        <FieldLabel>Roster Visibility</FieldLabel>
+        <div style={{ display: "flex", gap: 8 }}>
+          {ROSTER_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setForm({ ...form, rosterVisibility: opt.value })}
+              style={{
+                flex: 1,
+                padding: "12px 10px",
+                borderRadius: 12,
+                border: form.rosterVisibility === opt.value ? "2px solid #D82428" : "2px solid #E5E7EB",
+                background: form.rosterVisibility === opt.value ? "#FEF2F2" : "#fff",
+                cursor: "pointer",
+                textAlign: "center",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", fontFamily: "'DM Sans', sans-serif" }}>
+                {opt.label}
+              </div>
+              <div style={{ fontSize: 11, color: "#6B7280", fontFamily: "'DM Sans', sans-serif" }}>
+                {opt.desc}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <FieldLabel>Chat Mode</FieldLabel>
+        <div style={{ display: "flex", gap: 8 }}>
+          {CHAT_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setForm({ ...form, chatMode: opt.value })}
+              style={{
+                flex: 1,
+                padding: "12px 10px",
+                borderRadius: 12,
+                border: form.chatMode === opt.value ? "2px solid #D82428" : "2px solid #E5E7EB",
+                background: form.chatMode === opt.value ? "#FEF2F2" : "#fff",
+                cursor: "pointer",
+                textAlign: "center",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", fontFamily: "'DM Sans', sans-serif" }}>
+                {opt.label}
+              </div>
+              <div style={{ fontSize: 11, color: "#6B7280", fontFamily: "'DM Sans', sans-serif" }}>
+                {opt.desc}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Main Component ---
+
+export default function CreateProgramWizard() {
+  const [step, setStep] = useState(0);
+  const [animDir, setAnimDir] = useState("right");
+  const [animKey, setAnimKey] = useState(0);
+  const [form, setForm] = useState({
+    name: "",
+    description: "",
+    category: "general",
+    icon: "",
+    productType: "Subscription",
+    price: "",
+    billingInterval: "30",
+    billingModel: "Per Player",
+    accessType: "club_member",
+    subscriptionDisclosure: "",
+    allowInstallments: false,
+    addons: [],
+    waivers: [],
+    scheduleRequest: false,
+    active: true,
+    hasSubgroups: true,
+    subgroupLabel: "Team",
+    rosterVisibility: "members",
+    chatMode: "two_way",
+  });
+
+  const goTo = (i) => {
+    if (i === step) return;
+    setAnimDir(i > step ? "right" : "left");
+    setAnimKey((k) => k + 1);
+    setStep(i);
+  };
+
+  const next = () => {
+    if (step < STEPS.length - 1) goTo(step + 1);
+  };
+  const prev = () => {
+    if (step > 0) goTo(step - 1);
+  };
+
+  const stepContent = [
+    <StepBasics form={form} setForm={setForm} />,
+    <StepPricing form={form} setForm={setForm} />,
+    <StepSettings form={form} setForm={setForm} />,
+    <StepSocial form={form} setForm={setForm} />,
+  ];
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #F9FAFB 0%, #FEF2F2 50%, #F9FAFB 100%)",
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        padding: "32px 16px",
+        fontFamily: "'DM Sans', sans-serif",
+      }}
+    >
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+      <style>{`
+        @keyframes slideInRight {
+          from { opacity: 0; transform: translateX(40px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes slideInLeft {
+          from { opacity: 0; transform: translateX(-40px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .step-content { animation: fadeUp 0.35s ease-out; }
+        .slide-right { animation: slideInRight 0.3s ease-out; }
+        .slide-left { animation: slideInLeft 0.3s ease-out; }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+          -webkit-appearance: none; margin: 0;
+        }
+        input[type="number"] { -moz-appearance: textfield; }
+        * { box-sizing: border-box; }
+      `}</style>
+
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 560,
+          background: "#fff",
+          borderRadius: 24,
+          boxShadow: "0 4px 32px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04)",
+          overflow: "hidden",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            background: "linear-gradient(135deg, #1F2937 0%, #111827 100%)",
+            padding: "28px 28px 24px",
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          {/* Decorative elements */}
+          <div style={{
+            position: "absolute", top: -30, right: -30, width: 120, height: 120,
+            borderRadius: "50%", background: "rgba(216, 36, 40, 0.12)",
+          }} />
+          <div style={{
+            position: "absolute", bottom: -20, left: 40, width: 60, height: 60,
+            borderRadius: "50%", background: "rgba(216, 36, 40, 0.06)",
+          }} />
+
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#D82428", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 6 }}>
+              New Program
+            </div>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: "#fff", margin: 0, letterSpacing: -0.3 }}>
+              {form.name || "Create Program"}
+            </h2>
+            {form.category && form.category !== "general" && (
+              <span style={{
+                display: "inline-block", marginTop: 8, padding: "3px 10px", borderRadius: 6,
+                background: "rgba(216, 36, 40, 0.2)", color: "#FCA5A5", fontSize: 11, fontWeight: 600,
+              }}>
+                {CATEGORIES.find((c) => c.value === form.category)?.icon}{" "}
+                {CATEGORIES.find((c) => c.value === form.category)?.label}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Step Indicator */}
+        <div style={{ padding: "16px 28px 0", display: "flex", gap: 4, alignItems: "center" }}>
+          {STEPS.map((s, i) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => goTo(i)}
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 6,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "8px 0",
+              }}
+            >
+              <div
+                style={{
+                  height: 4,
+                  width: "100%",
+                  borderRadius: 2,
+                  background: i <= step ? "#D82428" : "#E5E7EB",
+                  transition: "background 0.3s ease",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: i === step ? 700 : 500,
+                  color: i === step ? "#D82428" : i < step ? "#6B7280" : "#9CA3AF",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                {s.label}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div
+          key={animKey}
+          className={animDir === "right" ? "slide-right" : "slide-left"}
+          style={{ padding: "24px 28px 20px", minHeight: 360 }}
+        >
+          {stepContent[step]}
+        </div>
+
+        {/* Footer */}
+        <div
+          style={{
+            padding: "16px 28px 24px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            borderTop: "1px solid #F3F4F6",
+          }}
+        >
+          {step > 0 ? (
+            <button
+              type="button"
+              onClick={prev}
+              style={{
+                padding: "10px 20px",
+                borderRadius: 10,
+                border: "1.5px solid #E5E7EB",
+                background: "#fff",
+                color: "#374151",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+                transition: "all 0.15s ease",
+              }}
+            >
+              ← Back
+            </button>
+          ) : (
+            <div />
+          )}
+
+          {step < STEPS.length - 1 ? (
+            <button
+              type="button"
+              onClick={next}
+              style={{
+                padding: "10px 28px",
+                borderRadius: 10,
+                border: "none",
+                background: "#1F2937",
+                color: "#fff",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+                transition: "all 0.15s ease",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+              }}
+            >
+              Continue →
+            </button>
+          ) : (
+            <button
+              type="button"
+              style={{
+                padding: "10px 28px",
+                borderRadius: 10,
+                border: "none",
+                background: "linear-gradient(135deg, #D82428 0%, #B91C20 100%)",
+                color: "#fff",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+                transition: "all 0.15s ease",
+                boxShadow: "0 2px 12px rgba(216, 36, 40, 0.3)",
+              }}
+            >
+              ✦ Create Program
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

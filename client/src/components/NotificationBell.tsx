@@ -75,10 +75,10 @@ export function NotificationBell() {
   });
 
   const handlePopoverChange = async (open: boolean) => {
-    setPopoverOpen(open);
-    if (open && unreadCount > 0) {
+    if (!open && unreadCount > 0) {
       markAllAsRead.mutate();
     }
+    setPopoverOpen(open);
   };
 
   const handleNotificationClick = async (notification: NotificationItem) => {

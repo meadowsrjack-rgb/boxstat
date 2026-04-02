@@ -7044,13 +7044,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
               <Form {...form}>
                 <form onSubmit={form.handleSubmit((data) => {
                   console.log('📍 Creating event with data:', data);
-                  // Convert datetime-local strings to ISO strings with timezone
-                  const eventData = {
-                    ...data,
-                    startTime: data.startTime && !data.startTime.endsWith('Z') ? new Date(data.startTime).toISOString() : data.startTime,
-                    endTime: data.endTime && !data.endTime.endsWith('Z') ? new Date(data.endTime).toISOString() : data.endTime,
-                  };
-                  createEvent.mutate(eventData);
+                  createEvent.mutate(data);
                 })} className="space-y-4">
                   <FormField
                     control={form.control}
@@ -8341,8 +8335,12 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                     }
                   }
                   
-                  // Build date/time display
-                  const dateTimeDisplay = new Date(event.startTime).toLocaleString();
+                  const etz = event.timezone || 'America/Los_Angeles';
+                  const dateTimeDisplay = new Date(ensureUtcString(event.startTime || '')).toLocaleString('en-US', {
+                    timeZone: etz,
+                    month: 'short', day: 'numeric', year: 'numeric',
+                    hour: 'numeric', minute: '2-digit', hour12: true,
+                  });
                   
                   return (
                   <TableRow key={event.id} data-testid={`row-event-${event.id}`} className="whitespace-nowrap">

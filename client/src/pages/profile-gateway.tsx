@@ -36,6 +36,7 @@ export default function ProfileGateway() {
   const [bugDialogOpen, setBugDialogOpen] = useState(false);
   const [bugTitle, setBugTitle] = useState("");
   const [bugDescription, setBugDescription] = useState("");
+  const [switching, setSwitching] = useState(false);
 
   const submitBugMutation = useMutation({
     mutationFn: async (bugData: { title: string; description: string }) => {
@@ -83,7 +84,7 @@ export default function ProfileGateway() {
   const hasActiveEnrollment = enrollments.some((e: any) => e.status === 'active');
   const needsOnboarding = !isLoading && !playersLoading && !profilesLoading && user && !hasActiveEnrollment;
 
-  if (isLoading || playersLoading || profilesLoading) {
+  if (isLoading || playersLoading || profilesLoading || switching) {
     return (
       <>
         <div className="fixed inset-0 w-full h-full z-0 pointer-events-none bg-white" />
@@ -106,17 +107,54 @@ export default function ProfileGateway() {
   const isCoach = userRole === "coach" || hasCoachProfile;
   const isAdmin = userRole === "admin" || hasAdminProfile;
 
-  const handleSelectProfile = (type: string, playerId?: string) => {
+  const switchToRole = async (role: string): Promise<boolean> => {
+    setSwitching(true);
+    try {
+      const data = await apiRequest("/api/auth/switch-profile", { method: "POST", data: { role } });
+      if (data.token) {
+        await authPersistence.setToken(data.token);
+        setSwitching(false);
+        return true;
+      }
+      setSwitching(false);
+      return false;
+    } catch (e) {
+      console.error("Profile switch failed:", e);
+      toast({ title: "Switch failed", description: "Could not switch profile. Please try again.", variant: "destructive" });
+      setSwitching(false);
+      return false;
+    }
+  };
+
+  const handleSelectProfile = async (type: string, playerId?: string) => {
     localStorage.setItem("lastViewedProfileType", type);
     
     if (type === "account") {
       localStorage.removeItem("selectedPlayerId");
       localStorage.removeItem("viewingAsParent");
-      setLocation("/parent-dashboard");
+      if (userRole !== "parent") {
+        const ok = await switchToRole("parent");
+        if (!ok) return;
+        window.location.href = "/parent-dashboard";
+      } else {
+        setLocation("/parent-dashboard");
+      }
     } else if (type === "coach") {
-      setLocation("/coach-dashboard");
+      if (userRole !== "coach") {
+        const ok = await switchToRole("coach");
+        if (!ok) return;
+        window.location.href = "/coach-dashboard";
+      } else {
+        setLocation("/coach-dashboard");
+      }
     } else if (type === "admin") {
-      setLocation("/admin-dashboard");
+      if (userRole !== "admin") {
+        const ok = await switchToRole("admin");
+        if (!ok) return;
+        window.location.href = "/admin-dashboard";
+      } else {
+        setLocation("/admin-dashboard");
+      }
     } else if (type === "player" && playerId) {
       localStorage.setItem("selectedPlayerId", playerId);
       localStorage.setItem("viewingAsParent", "true");

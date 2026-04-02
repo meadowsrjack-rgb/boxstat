@@ -1000,6 +1000,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.post('/api/auth/switch-profile', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.body;
+      if (!role) {
+        return res.status(400).json({ success: false, message: "Role is required" });
+      }
+
+      const currentUser = await storage.getUser(req.user.id);
+      if (!currentUser) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      const accountHolderId = currentUser.accountHolderId || currentUser.id;
+      const profiles = await storage.getAccountProfiles(accountHolderId);
+      const targetProfile = profiles.find((p: any) => p.role === role);
+
+      if (!targetProfile) {
+        return res.status(403).json({ success: false, message: "No profile found with that role" });
+      }
+
+      req.session.userId = targetProfile.id;
+      req.session.organizationId = targetProfile.organizationId;
+      req.session.role = targetProfile.role;
+
+      const token = jwt.sign(
+        {
+          userId: targetProfile.id,
+          organizationId: targetProfile.organizationId,
+          role: targetProfile.role,
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '30d' }
+      );
+
+      res.json({
+        success: true,
+        token,
+        user: {
+          id: targetProfile.id,
+          email: targetProfile.email,
+          role: targetProfile.role,
+          firstName: targetProfile.firstName,
+          lastName: targetProfile.lastName,
+          organizationId: targetProfile.organizationId,
+        },
+      });
+    } catch (error: any) {
+      console.error("Switch profile error:", error);
+      res.status(500).json({ success: false, message: "Failed to switch profile" });
+    }
+  });
+
   app.post('/api/auth/logout', (req: any, res) => {
     req.session.destroy((err: any) => {
       if (err) {
@@ -4266,7 +4318,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/account/profiles', requireAuth, async (req: any, res) => {
     try {
       const { id } = req.user;
-      const profiles = await storage.getAccountProfiles(id);
+      const currentUser = await storage.getUser(id);
+      const accountHolderId = currentUser?.accountHolderId || id;
+      const profiles = await storage.getAccountProfiles(accountHolderId);
       res.json(profiles || []);
     } catch (error: any) {
       console.error('Error fetching account profiles:', error);

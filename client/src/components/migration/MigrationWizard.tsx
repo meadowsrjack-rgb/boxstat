@@ -149,7 +149,14 @@ function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, sel
 
   const selectProgram = (prog: MigrationProgram) => {
     setSelectedProgram(prog);
-    setSelectedTeams([]);
+    if (!prog.isNew) {
+      const programTeams = orgTeams
+        .filter((t: any) => t.programId === prog.id)
+        .map((t: any) => ({ id: t.id, name: t.name, programId: prog.id, isNew: false }));
+      setSelectedTeams(programTeams);
+    } else {
+      setSelectedTeams([]);
+    }
   };
 
   const addNewProgram = () => {
@@ -283,49 +290,29 @@ function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, sel
           <div className="text-sm font-medium">Teams <span className="text-muted-foreground font-normal">(optional)</span></div>
 
           <div className="space-y-2">
-            {teamsForCurrentProgram.map((t: any) => {
-              const alreadyAdded = selectedTeams.some((st) => st.id === t.id);
-              return (
-                <div
-                  key={t.id}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background text-left"
-                >
-                  <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                    <Users size={14} className="text-slate-500" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{t.name}</div>
-                  </div>
-                  {!alreadyAdded ? (
-                    <Button size="sm" variant="ghost" className="text-xs h-7 px-2 text-muted-foreground" onClick={() => addExistingTeam(t.id.toString())}>
-                      <Plus size={12} className="mr-1" /> Include
-                    </Button>
-                  ) : (
-                    <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200">Included</Badge>
-                  )}
-                </div>
-              );
-            })}
-
-            {selectedTeams.filter((t) => t.isNew).map((t) => (
+            {selectedTeams.map((t) => (
               <div
                 key={t.id}
                 className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background text-left"
               >
-                <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
-                  <Users size={14} className="text-amber-600" />
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${t.isNew ? "bg-amber-50" : "bg-slate-100"}`}>
+                  <Users size={14} className={t.isNew ? "text-amber-600" : "text-slate-500"} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{t.name}</div>
                 </div>
-                <Badge variant="outline" className="text-[10px] shrink-0 bg-amber-50 text-amber-700 border-amber-200">New</Badge>
-                <button
-                  type="button"
-                  onClick={() => removeTeam(t.id)}
-                  className="text-muted-foreground hover:text-destructive p-1 rounded shrink-0"
-                >
-                  <X size={14} />
-                </button>
+                {t.isNew && (
+                  <>
+                    <Badge variant="outline" className="text-[10px] shrink-0 bg-amber-50 text-amber-700 border-amber-200">New</Badge>
+                    <button
+                      type="button"
+                      onClick={() => removeTeam(t.id)}
+                      className="text-muted-foreground hover:text-destructive p-1 rounded shrink-0"
+                    >
+                      <X size={14} />
+                    </button>
+                  </>
+                )}
               </div>
             ))}
 

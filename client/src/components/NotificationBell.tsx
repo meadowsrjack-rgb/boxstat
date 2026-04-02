@@ -65,9 +65,20 @@ export function NotificationBell() {
     },
   });
 
+  const markAllAsRead = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/notifications/read-all", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/feed", profileId] });
+    },
+  });
 
   const handlePopoverChange = async (open: boolean) => {
     setPopoverOpen(open);
+    if (open && unreadCount > 0) {
+      markAllAsRead.mutate();
+    }
   };
 
   const handleNotificationClick = async (notification: NotificationItem) => {

@@ -90,16 +90,6 @@ import {
   VolumeX,
   Volume2,
   Eraser,
-  Sparkles,
-  MessageCircle,
-  Tent,
-  Stethoscope,
-  Medal,
-  BadgeCheck,
-  Crown,
-  RefreshCw,
-  Camera,
-  LayoutGrid,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -11706,7 +11696,6 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
   const [selectedProgramIds, setSelectedProgramIds] = useState<Set<string>>(new Set());
   const [availabilitySlots, setAvailabilitySlots] = useState<{dayOfWeek: number, startTime: string, endTime: string}[]>([]);
   const [expandedPricingOptions, setExpandedPricingOptions] = useState<Set<string>>(new Set());
-  const [wizardStep, setWizardStep] = useState(0);
   const tableRef = useDragScroll();
 
   const toggleProgramActive = useMutation({
@@ -11923,7 +11912,6 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       setEditingProgram(null);
       setSelectedAddOns([]);
       setAvailabilitySlots([]);
-      setWizardStep(0);
       form.reset();
     },
     onError: (error: any) => {
@@ -11947,7 +11935,6 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
 
   const handleEdit = (program: any) => {
     setEditingProgram(program);
-    setWizardStep(0);
     const durationDays = program.durationDays || 90;
     let durationValue = durationDays;
     let durationUnit = "days";
@@ -12010,7 +11997,6 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       setEditingProgram(null);
       setSelectedAddOns([]);
       setExpandedPricingOptions(new Set());
-      setWizardStep(0);
       form.reset({
         organizationId: organization?.id || "",
         name: "",
@@ -12446,38 +12432,39 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
           {/* Program Wizard Dialog */}
           <DialogContent className="max-w-2xl w-full max-h-[92vh] overflow-hidden p-0" style={{ fontFamily: "'DM Sans', sans-serif" }}>
             {(() => {
+              const [wizardStep, setWizardStep] = useState(0);
               const WIZARD_STEPS = [
-                { id: "basics", label: "Basics", lucideIcon: "Sparkles" },
-                { id: "pricing", label: "Pricing", lucideIcon: "DollarSign" },
-                { id: "settings", label: "Settings", lucideIcon: "Settings" },
-                { id: "social", label: "Social", lucideIcon: "MessageCircle" },
+                { id: "basics", label: "Basics", icon: "\u2726" },
+                { id: "pricing", label: "Pricing", icon: "$" },
+                { id: "settings", label: "Settings", icon: "\u2699" },
+                { id: "social", label: "Social", icon: "\uD83D\uDCAC" },
               ];
 
               const CATEGORY_CHIPS = [
-                { value: "general", label: "General", lucideIcon: "LayoutGrid" },
-                { value: "training", label: "Training", lucideIcon: "Target" },
-                { value: "camps", label: "Camps", lucideIcon: "Tent" },
-                { value: "clinics", label: "Clinics", lucideIcon: "Stethoscope" },
-                { value: "league", label: "League", lucideIcon: "Trophy" },
-                { value: "tournament", label: "Tournament", lucideIcon: "Medal" },
-                { value: "membership", label: "Membership", lucideIcon: "BadgeCheck" },
+                { value: "general", label: "General", icon: "\uD83D\uDCCB" },
+                { value: "training", label: "Training", icon: "\uD83C\uDFAF" },
+                { value: "camps", label: "Camps", icon: "\u26FA" },
+                { value: "clinics", label: "Clinics", icon: "\uD83E\uDE7A" },
+                { value: "league", label: "League", icon: "\uD83C\uDFC6" },
+                { value: "tournament", label: "Tournament", icon: "\uD83E\uDD47" },
+                { value: "membership", label: "Membership", icon: "\uD83C\uDFAB" },
               ];
 
               const ICON_CHIPS = [
-                { value: "target", label: "Target", lucideIcon: "Target" },
-                { value: "tent", label: "Camps", lucideIcon: "Tent" },
-                { value: "users", label: "Team", lucideIcon: "Users" },
-                { value: "trophy", label: "Trophy", lucideIcon: "Trophy" },
-                { value: "calendar", label: "Calendar", lucideIcon: "Calendar" },
-                { value: "star", label: "Star", lucideIcon: "Star" },
-                { value: "medal", label: "Medal", lucideIcon: "Medal" },
-                { value: "crown", label: "Crown", lucideIcon: "Crown" },
+                { value: "target", label: "Target", icon: "\uD83C\uDFAF" },
+                { value: "tent", label: "Camps", icon: "\u26FA" },
+                { value: "users", label: "Team", icon: "\uD83D\uDC65" },
+                { value: "trophy", label: "Trophy", icon: "\uD83C\uDFC6" },
+                { value: "calendar", label: "Calendar", icon: "\uD83D\uDCC5" },
+                { value: "star", label: "Star", icon: "\u2B50" },
+                { value: "medal", label: "Medal", icon: "\uD83E\uDD47" },
+                { value: "crown", label: "Crown", icon: "\uD83D\uDC51" },
               ];
 
               const PRODUCT_TYPE_CARDS = [
-                { value: "Subscription", label: "Subscription", desc: "Recurring billing", lucideIcon: "RefreshCw" },
-                { value: "One-Time", label: "One-Time", desc: "Single payment", lucideIcon: "CreditCard" },
-                { value: "Pack", label: "Credit Pack", desc: "Prepaid credits", lucideIcon: "Package" },
+                { value: "Subscription", label: "Subscription", desc: "Recurring billing", icon: "\uD83D\uDD04" },
+                { value: "One-Time", label: "One-Time", desc: "Single payment", icon: "\uD83D\uDCB3" },
+                { value: "Pack", label: "Credit Pack", desc: "Prepaid credits", icon: "\uD83D\uDCE6" },
               ];
 
               const ACCESS_TYPE_CARDS = [
@@ -12523,11 +12510,8 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                           : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                       }`}
                     >
-                      {opt.lucideIcon && (() => {
-                        const LucideIcons: Record<string, any> = { LayoutGrid, Target, Tent, Stethoscope, Trophy, Medal, BadgeCheck, Users, Calendar, Star, Crown, RefreshCw, CreditCard, Package };
-                        const Icon = LucideIcons[opt.lucideIcon];
-                        return Icon ? <Icon className="w-4 h-4" /> : null;
-                      })()}
+                      {opt.icon && <span className="text-base">{opt.icon}</span>}
+                      {opt.preview && <span className="text-base">{opt.preview}</span>}
                       <span>{opt.label}</span>
                     </button>
                   ))}
@@ -12552,11 +12536,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                       }`} />
                       <div>
                         <div className="text-sm font-semibold text-gray-900">
-                          {opt.lucideIcon && (() => {
-                            const LucideIcons: Record<string, any> = { RefreshCw, CreditCard, Package };
-                            const Icon = LucideIcons[opt.lucideIcon];
-                            return Icon ? <Icon className="w-4 h-4 inline mr-1.5" /> : null;
-                          })()}
+                          {opt.icon && <span className="mr-1.5">{opt.icon}</span>}
                           {opt.label}
                         </div>
                         {opt.desc && <div className="text-xs text-gray-500">{opt.desc}</div>}
@@ -12644,13 +12624,10 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                           }`}
                         >
                           <div className="flex items-center justify-center gap-1.5 text-[13px] mb-1.5">
-                            {step.lucideIcon === "Sparkles" && <Sparkles className="w-3.5 h-3.5" />}
-                            {step.lucideIcon === "DollarSign" && <DollarSign className="w-3.5 h-3.5" />}
-                            {step.lucideIcon === "Settings" && <Settings className="w-3.5 h-3.5" />}
-                            {step.lucideIcon === "MessageCircle" && <MessageCircle className="w-3.5 h-3.5" />}
+                            <span>{step.icon}</span>
                             <span>{step.label}</span>
                           </div>
-                          <div className="h-[3px] rounded-full bg-gray-200 mt-1">
+                          <div className="h-1 rounded-full overflow-hidden bg-gray-100">
                             <div className={`h-full rounded-full transition-all duration-300 ${
                               idx < wizardStep ? "w-full bg-[#D82428]" : idx === wizardStep ? "w-1/2 bg-[#D82428]" : "w-0"
                             }`} />
@@ -12723,7 +12700,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                             </div>
                           ) : (
                             <label className="flex flex-col items-center justify-center py-7 px-5 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 cursor-pointer hover:border-gray-400 transition-colors">
-                              <div className="mb-1.5"><Camera className="w-7 h-7 text-gray-400" /></div>
+                              <div className="text-2xl mb-1.5">\uD83D\uDCF8</div>
                               <div className="text-[13px] font-semibold text-gray-500">Click to upload or drag & drop</div>
                               <div className="text-[11px] text-gray-400 mt-0.5">PNG, JPG up to 5MB</div>
                               <input
@@ -12983,7 +12960,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                 )}
                                 {discount > 0 && totalPrice > 0 && (
                                   <p className="text-xs text-green-700">
-                                    Pay-in-full price: {"$"}{(discountedFullPrice / 100).toFixed(2)} ({discount}% off)
+                                    Pay-in-full price: $${(discountedFullPrice / 100).toFixed(2)} ({discount}% off)
                                   </p>
                                 )}
                               </div>
@@ -13370,7 +13347,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                                 )}
                                                 {discount > 0 && totalPrice > 0 && (
                                                   <p className="text-xs text-green-700">
-                                                    Pay-in-full price: {"$"}{(discountedFullPrice / 100).toFixed(2)} ({discount}% off)
+                                                    Pay-in-full price: $${(discountedFullPrice / 100).toFixed(2)} ({discount}% off)
                                                   </p>
                                                 )}
                                               </div>
@@ -13447,7 +13424,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                       )}
                                       
                                       {option.renewalType === "same" && (
-                                        <p className="text-xs text-green-600 mt-2">Bundle will automatically renew at {"$"}{option.price ? (option.price / 100).toFixed(2) : "0.00"} every {option.durationDays || 0} days</p>
+                                        <p className="text-xs text-green-600 mt-2">Bundle will automatically renew at $${option.price ? (option.price / 100).toFixed(2) : "0.00"} every {option.durationDays || 0} days</p>
                                       )}
                                     </div>
                                     )}
@@ -13569,7 +13546,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                     />
                                     <span className="text-[13px] font-medium text-gray-700 flex-1">{product.name}</span>
                                     {product.price > 0 && (
-                                      <span className="text-xs text-gray-400 font-medium">{"$"}{(product.price / 100).toFixed(2)}</span>
+                                      <span className="text-xs text-gray-400 font-medium">$${(product.price / 100).toFixed(2)}</span>
                                     )}
                                   </label>
                                 ))}

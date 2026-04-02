@@ -1026,6 +1026,37 @@ export default function EventDetailModal({
               </div>
             </div>
 
+            {/* Location / Venue Card */}
+            {event.location && (() => {
+              // Split location into venue name (first part) + full address (rest)
+              const commaParts = event.location.split(',');
+              const venueName = commaParts[0]?.trim() || event.location;
+              const address = commaParts.length > 1 ? commaParts.slice(1).join(',').trim() : null;
+              const mapsUrl = event.latitude && event.longitude
+                ? `https://maps.google.com/?q=${event.latitude},${event.longitude}`
+                : `https://maps.google.com/?q=${encodeURIComponent(event.location)}`;
+              return (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="rounded-xl px-4 py-3 flex items-center gap-3 hover:opacity-80 transition-opacity" style={{ background: '#1a1f2e' }}>
+                    <div className="h-9 w-9 rounded-lg bg-blue-900/50 flex items-center justify-center flex-shrink-0">
+                      <Building2 className="h-4 w-4 text-blue-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-semibold text-sm leading-tight">{venueName}</p>
+                      {address && <p className="text-gray-400 text-xs mt-0.5 leading-snug">{address}</p>}
+                    </div>
+                    <Navigation className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                  </div>
+                </a>
+              );
+            })()}
+
             {/* RSVP Section */}
             {userRole === 'player' && event?.playerRsvpEnabled === false ? (
               <div className="rounded-xl p-4" style={{ background: '#1a1f2e' }}>
@@ -1052,18 +1083,6 @@ export default function EventDetailModal({
                 invitedUsers={users}
               />
             )}
-
-            {/* Check-In Section */}
-            <CheckInWheel
-              data={checkInData}
-              openTime={eventWindows.checkinOpen}
-              closeTime={eventWindows.checkinClose}
-              onCheckInClick={handleCheckInClick}
-              isUserCheckedIn={!!userCheckIn}
-              disabled={checkInMutation.isPending || isCheckingLocation}
-              invitedUsers={users}
-              checkedInUserIds={attendances.map(a => a.userId)}
-            />
 
             {/* GPS Location Banner */}
             {!isAdminOrCoach && event.latitude != null && event.longitude != null && (
@@ -1115,49 +1134,19 @@ export default function EventDetailModal({
               </div>
             )}
 
-            {/* Location / Venue Card */}
-            {event.location && (() => {
-              // Split location into venue name (first part) + full address (rest)
-              const commaParts = event.location.split(',');
-              const venueName = commaParts[0]?.trim() || event.location;
-              const address = commaParts.length > 1 ? commaParts.slice(1).join(',').trim() : null;
-              const mapsUrl = event.latitude && event.longitude
-                ? `https://maps.google.com/?q=${event.latitude},${event.longitude}`
-                : `https://maps.google.com/?q=${encodeURIComponent(event.location)}`;
-              return (
-                <a
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="rounded-xl px-4 py-3 flex items-center gap-3 hover:opacity-80 transition-opacity" style={{ background: '#1a1f2e' }}>
-                    <div className="h-9 w-9 rounded-lg bg-blue-900/50 flex items-center justify-center flex-shrink-0">
-                      <Building2 className="h-4 w-4 text-blue-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white font-semibold text-sm leading-tight">{venueName}</p>
-                      {address && <p className="text-gray-400 text-xs mt-0.5 leading-snug">{address}</p>}
-                    </div>
-                    <Navigation className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                  </div>
-                </a>
-              );
-            })()}
-
-            {/* QR code scan for players */}
-            {!userCheckIn && !isAdminOrCoach && userRole === 'player' && (
-              <Button
-                variant="outline"
-                className="w-full border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white bg-transparent"
-                onClick={() => setShowQrScanner(true)}
-                data-testid="button-scan-qr"
-              >
-                <QrCode className="h-4 w-4 mr-2" />
-                Scan QR Code to Check In
-              </Button>
-            )}
+            {/* Check-In Section */}
+            <CheckInWheel
+              data={checkInData}
+              openTime={eventWindows.checkinOpen}
+              closeTime={eventWindows.checkinClose}
+              onCheckInClick={handleCheckInClick}
+              isUserCheckedIn={!!userCheckIn}
+              disabled={checkInMutation.isPending || isCheckingLocation}
+              invitedUsers={users}
+              checkedInUserIds={attendances.map(a => a.userId)}
+              showQrButton={!userCheckIn && !isAdminOrCoach && userRole === 'player'}
+              onQrClick={() => setShowQrScanner(true)}
+            />
 
             {/* Coach Roster Check-In Section */}
             {isAdminOrCoach && rosterData && rosterData.roster.length > 0 && (

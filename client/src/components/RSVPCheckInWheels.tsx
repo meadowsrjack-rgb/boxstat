@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Clock } from 'lucide-react';
+import { Clock, QrCode } from 'lucide-react';
 import { timeUntil, getWindowStatus } from '@/lib/time';
 
 export interface RsvpData {
@@ -37,6 +37,8 @@ interface CheckInWheelProps {
   disabled?: boolean;
   invitedUsers?: Array<{ id: string; firstName?: string; lastName?: string; role?: string }>;
   checkedInUserIds?: string[];
+  showQrButton?: boolean;
+  onQrClick?: () => void;
 }
 
 function DonutChart({ attending, notAttending, noResponse, total }: { attending: number; notAttending: number; noResponse: number; total: number }) {
@@ -327,6 +329,8 @@ export function CheckInWheel({
   disabled = false,
   invitedUsers = [],
   checkedInUserIds = [],
+  showQrButton = false,
+  onQrClick,
 }: CheckInWheelProps) {
   const status = getWindowStatus(openTime, closeTime);
 
@@ -407,19 +411,33 @@ export function CheckInWheel({
           <div className={`h-2 w-2 rounded-full ${dotColor}`} />
           <span className="text-gray-400">{statusMessage}</span>
         </div>
-        <Button
-          onClick={() => onCheckInClick?.()}
-          disabled={isButtonDisabled}
-          size="sm"
-          className={`text-xs px-3 py-1.5 h-auto border-0 ${
-            isUserCheckedIn 
-              ? 'bg-green-700 hover:bg-green-600 text-white' 
-              : 'bg-gray-700 hover:bg-gray-600 text-white'
-          }`}
-          data-testid="button-checkin-action"
-        >
-          {buttonText}
-        </Button>
+        <div className="flex items-center gap-2">
+          {showQrButton && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onQrClick?.()}
+              className="h-7 w-7 p-0 text-gray-400 hover:text-white hover:bg-gray-700 border-0"
+              data-testid="button-scan-qr"
+              title="Scan QR Code to Check In"
+            >
+              <QrCode className="h-4 w-4" />
+            </Button>
+          )}
+          <Button
+            onClick={() => onCheckInClick?.()}
+            disabled={isButtonDisabled}
+            size="sm"
+            className={`text-xs px-3 py-1.5 h-auto border-0 ${
+              isUserCheckedIn 
+                ? 'bg-green-700 hover:bg-green-600 text-white' 
+                : 'bg-gray-700 hover:bg-gray-600 text-white'
+            }`}
+            data-testid="button-checkin-action"
+          >
+            {buttonText}
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -1014,7 +1014,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const accountHolderId = currentUser.accountHolderId || currentUser.id;
       const profiles = await storage.getAccountProfiles(accountHolderId);
-      const targetProfile = profiles.find((p: any) => p.role === role);
+      const targetProfile = profiles.find((p: any) => p.role === role && p.organizationId === currentUser.organizationId);
 
       if (!targetProfile) {
         return res.status(403).json({ success: false, message: "No profile found with that role" });
@@ -4321,7 +4321,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentUser = await storage.getUser(id);
       const accountHolderId = currentUser?.accountHolderId || id;
       const profiles = await storage.getAccountProfiles(accountHolderId);
-      res.json(profiles || []);
+      const orgProfiles = (profiles || []).filter((p: any) => p.organizationId === currentUser?.organizationId);
+      res.json(orgProfiles);
     } catch (error: any) {
       console.error('Error fetching account profiles:', error);
       res.status(500).json({ message: 'Failed to fetch profiles' });

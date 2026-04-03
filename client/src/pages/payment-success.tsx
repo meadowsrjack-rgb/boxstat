@@ -1,13 +1,18 @@
 import { CheckCircle, XCircle } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
+import { useLocation } from "wouter";
 
 export default function PaymentSuccess() {
   const urlParams = new URLSearchParams(window.location.search);
   const isCanceled = urlParams.get('canceled') === 'true';
+  const [countdown, setCountdown] = useState(3);
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
+    if (isCanceled) return;
+
     if (Capacitor.isNativePlatform()) {
       setTimeout(() => {
         try {
@@ -15,8 +20,21 @@ export default function PaymentSuccess() {
         } catch (e) {
         }
       }, 2500);
+    } else {
+      const interval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            setLocation("/unified-account");
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(interval);
     }
-  }, []);
+  }, [isCanceled]);
 
   if (isCanceled) {
     return (
@@ -51,9 +69,15 @@ export default function PaymentSuccess() {
         <p className="text-gray-600 mb-6">
           Thank you for your payment. A receipt has been sent to your email.
         </p>
-        <p className="text-sm text-gray-400">
-          Close this window to return to the app.
-        </p>
+        {Capacitor.isNativePlatform() ? (
+          <p className="text-sm text-gray-400">
+            Redirecting you back to the app...
+          </p>
+        ) : (
+          <p className="text-sm text-gray-400">
+            Redirecting you back to the app{countdown > 0 ? ` in ${countdown}...` : "..."}
+          </p>
+        )}
       </div>
     </div>
   );

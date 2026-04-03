@@ -1840,7 +1840,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: 'BoxStat Technology Fee',
+              name: 'Technology fee',
               description: `${legacyFeePercent}% technology fee`,
             },
             unit_amount: legacyPlatformFee,
@@ -2194,7 +2194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: 'BoxStat Technology Fee',
+              name: 'Technology fee',
               description: `${feePercent}% technology fee`,
             },
             unit_amount: platformFee,
@@ -3494,7 +3494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: 'BoxStat Technology Fee',
+              name: 'Technology fee',
               description: `${cartFeePercent}% technology fee`,
             },
             unit_amount: cartPlatformFee,
@@ -4712,11 +4712,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           addInvoiceItems.push({
             price_data: {
               currency: 'usd',
-              product_data: { name: 'BoxStat Technology Fee' },
+              product_data: { name: 'Technology fee' },
               unit_amount: platformFee,
             },
             quantity: 1,
-            description: `BoxStat Technology Fee (${bundleFeePercent}%)`,
+            description: `Technology fee (${bundleFeePercent}%)`,
           });
         }
         
@@ -4856,7 +4856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             price_data: {
               currency: 'usd',
               product_data: {
-                name: 'BoxStat Technology Fee',
+                name: 'Technology fee',
                 description: `${addPlayerFeePercent}% technology fee`,
               },
               unit_amount: platformFee,
@@ -15884,7 +15884,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             price_data: {
               currency: 'usd',
               product_data: {
-                name: 'BoxStat Technology Fee',
+                name: 'Technology fee',
                 description: `${quoteFeePercent}% technology fee`,
               },
               unit_amount: quotePlatformFee,

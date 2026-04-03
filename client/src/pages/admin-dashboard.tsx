@@ -14711,7 +14711,13 @@ function CommunicationsTab({ notifications, users, teams, divisions, organizatio
 // Teams By Program Tab - shows teams grouped by program (redesigned)
 function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }: any) {
   const { toast } = useToast();
-  const programs = allPrograms.filter((p: any) => p.productCategory === 'service' || !p.productCategory);
+  const programs = [...allPrograms.filter((p: any) => p.productCategory === 'service' || !p.productCategory)]
+    .sort((a: any, b: any) => {
+      const aActive = a.isActive !== false;
+      const bActive = b.isActive !== false;
+      if (aActive === bActive) return 0;
+      return aActive ? -1 : 1;
+    });
   const players = (users || []).filter((u: any) => u.role === 'player');
   const coaches = (users || []).filter((u: any) => u.role === 'coach');
 
@@ -15055,6 +15061,11 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
                 <div className="flex items-center gap-3">
                   <Layers className="w-4 h-4 text-gray-400" />
                   <span className="font-semibold text-gray-900 text-sm">{program.name}</span>
+                  {program.isActive === false && (
+                    <span className="px-2 py-0.5 rounded-full bg-gray-200 text-gray-500 text-[11px] font-semibold uppercase tracking-wide">
+                      Inactive
+                    </span>
+                  )}
                   <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[11px] font-semibold">
                     {programTeams.length} team{programTeams.length !== 1 ? 's' : ''}
                   </span>

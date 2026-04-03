@@ -11665,6 +11665,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.post('/api/store-checkout/:productId', async (req: any, res) => {
+    try {
+      const productId = req.params.productId;
+      const product = await storage.getProgram(productId);
+      if (!product) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      if (product.productCategory !== 'goods') {
+        return res.status(400).json({ error: 'This endpoint is only for store items' });
+      }
+      if (!product.price || product.price <= 0) {
+        return res.status(400).json({ error: 'Product has no valid price' });
+      }
+
+      const orgId = product.organizationId || 'default-org';
+      const orgStripe = await getStripeForOrg(orgId);
+      if (!orgStripe) {
+        return res.status(500).json({ error: 'Stripe is not configured for this organization' });
+      }
+
+      const origin = `${req.protocol}://${req.get('host')}`;
+
+      const sessionParams: any = {
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: product.name,
+              description: product.description || undefined,
+            },
+            unit_amount: product.price,
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        success_url: `${origin}/store-checkout-success?product=${encodeURIComponent(product.name)}`,
+        cancel_url: `${origin}/store-checkout-cancel`,
+        metadata: {
+          productId,
+          productCategory: 'goods',
+          source: 'qr_code',
+        },
+      };
+
+      const connectResult = await applyConnectChargeParams(sessionParams, orgId, 'payment', undefined);
+      
+      const session = await orgStripe.checkout.sessions.create(sessionParams);
+      res.json({ sessionUrl: session.url, sessionId: session.id });
+    } catch (error: any) {
+      console.error('Error creating store checkout session:', error);
+      res.status(500).json({ error: 'Failed to create checkout session', message: error.message });
+    }
+  });
+
   app.post('/api/programs', requireAuth, async (req: any, res) => {
     try {
       const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);

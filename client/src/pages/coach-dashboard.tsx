@@ -29,7 +29,8 @@ import {
   Users,
   Trophy,
   DollarSign,
-  FileText,
+  ShoppingBag,
+  QrCode,
   Send,
   UserCheck,
   ChevronRight,
@@ -60,6 +61,7 @@ import { AwardsDialog, EvaluationDialog, SKILL_CATEGORIES, type PlayerLite, type
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import PushNotificationSetup from "@/components/PushNotificationSetup";
+import { QRCodeSVG } from "qrcode.react";
 
 /* =================== Types =================== */
 
@@ -134,15 +136,15 @@ export default function CoachDashboard() {
   const coachProfileId = currentUser?.role === 'coach' 
     ? currentUser?.id 
     : (coachProfile?.id || (user as any)?.activeProfileId || currentUser?.id);
-  const [activeTab, setActiveTab] = useState<"calendar" | "team" | "profile" | "docs">(() => {
+  const [activeTab, setActiveTab] = useState<"calendar" | "team" | "profile" | "payments">(() => {
     if (typeof window === "undefined") return "calendar";
     const stored = localStorage.getItem("coachDashboardTab");
     if (stored === "roster") return "team";
-    if (stored === "hr") return "docs";
-    if (!["calendar", "team", "profile", "docs"].includes(stored || "")) {
+    if (stored === "hr" || stored === "docs") return "payments";
+    if (!["calendar", "team", "profile", "payments"].includes(stored || "")) {
       return "calendar";
     }
-    return stored as "calendar" | "team" | "profile" | "docs";
+    return stored as "calendar" | "team" | "profile" | "payments";
   });
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -606,7 +608,7 @@ export default function CoachDashboard() {
             <TabButton label="calendar" activeTab={activeTab} onClick={setActiveTab} Icon={CalendarIcon} />
             <TabButton label="team" activeTab={activeTab} onClick={setActiveTab} Icon={Users} />
             <TabButton label="profile" activeTab={activeTab} onClick={setActiveTab} Icon={User} />
-            <TabButton label="docs" activeTab={activeTab} onClick={setActiveTab} Icon={FileText} />
+            <TabButton label="payments" activeTab={activeTab} onClick={setActiveTab} Icon={ShoppingBag} />
           </div>
         </div>
 
@@ -763,12 +765,8 @@ export default function CoachDashboard() {
             <ProfileTab currentUser={currentUser} coachProfileId={coachProfileId} />
           )}
 
-          {activeTab === "docs" && (
-            <HRTab 
-              docs={hrDocs} 
-              announcements={hrAnnouncements}
-              currentUser={currentUser}
-            />
+          {activeTab === "payments" && (
+            <CoachPaymentsTab organizationId={currentUser?.organizationId || 'default-org'} />
           )}
 
           {/* Event Detail Modal */}
@@ -843,6 +841,141 @@ function TabButton({ label, activeTab, onClick, Icon, badgeCount }: { label: any
       </div>
       <div className={`h-1 w-12 rounded-full transition-all duration-200 ${active ? "opacity-100" : "opacity-0"}`} style={{ backgroundColor: "#d82428" }} />
     </button>
+  );
+}
+
+function CoachPaymentsTab({ organizationId }: { organizationId: string }) {
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+
+  const { data: storeItems = [], isLoading } = useQuery<any[]>({
+    queryKey: ['/api/store-products'],
+  });
+
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+  const handleShowQR = (item: any) => {
+    setSelectedItem(item);
+    setQrDialogOpen(true);
+  };
+
+  const handleDirectCheckout = async (item: any) => {
+    setCheckoutLoading(item.id);
+    try {
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`/api/store-checkout/${item.id}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers,
+      });
+      const data = await res.json();
+      if (data.sessionUrl) {
+        window.open(data.sessionUrl, '_blank');
+      }
+    } catch (err) {
+      console.error('Checkout error:', err);
+    } finally {
+      setCheckoutLoading(null);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  if (storeItems.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <ShoppingBag className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+        <p className="text-gray-500 font-medium">No store items available</p>
+        <p className="text-gray-400 text-sm mt-1">Store items will appear here once added by admin</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-bold text-gray-900">Store Items</h3>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {storeItems.map((item: any) => (
+          <Card key={item.id} className="overflow-hidden flex flex-col">
+            <div className="aspect-[16/9] bg-gray-100 overflow-hidden">
+              {item.coverImageUrl ? (
+                <img src={item.coverImageUrl} alt={item.name} className="w-full h-full object-contain bg-gray-50" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <ShoppingBag className="w-10 h-10 text-gray-300" />
+                </div>
+              )}
+            </div>
+            <CardContent className="p-3 flex flex-col flex-1">
+              <h4 className="font-semibold text-sm mb-1">{item.name}</h4>
+              {item.description && (
+                <p className="text-xs text-gray-500 mb-2 line-clamp-2">{item.description}</p>
+              )}
+              <p className="text-sm font-bold text-gray-900 mb-2 mt-auto">
+                ${item.price ? (item.price / 100).toFixed(2) : '0.00'}
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full border-red-200 text-red-600 hover:bg-red-50"
+                onClick={() => handleShowQR(item)}
+              >
+                <QrCode className="h-4 w-4 mr-1" />
+                QR Code
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-center">{selectedItem?.name}</DialogTitle>
+          </DialogHeader>
+          {selectedItem && (
+            <div className="flex flex-col items-center space-y-4 py-4">
+              <p className="text-2xl font-bold text-gray-900">
+                ${selectedItem.price ? (selectedItem.price / 100).toFixed(2) : '0.00'}
+              </p>
+              <div className="bg-white p-4 rounded-lg border">
+                <QRCodeSVG
+                  value={`${baseUrl}/store-buy/${selectedItem.id}`}
+                  size={200}
+                  level="H"
+                  includeMargin={true}
+                />
+              </div>
+              <p className="text-xs text-gray-500 text-center">
+                Scan this QR code to purchase this item via Stripe checkout
+              </p>
+              <Button
+                size="sm"
+                className="bg-red-600 hover:bg-red-700 w-full"
+                onClick={() => handleDirectCheckout(selectedItem)}
+                disabled={!!checkoutLoading}
+              >
+                {checkoutLoading === selectedItem.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : (
+                  <DollarSign className="h-4 w-4 mr-1" />
+                )}
+                Checkout Now
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
 

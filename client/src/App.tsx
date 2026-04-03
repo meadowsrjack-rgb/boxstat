@@ -68,6 +68,7 @@ import NoProfiles from "@/pages/NoProfiles";
 import FamilyOnboarding from "@/pages/family-onboarding";
 import DemoProfileSelection from "@/pages/demo-profile-selection";
 import QuoteCheckout from "@/pages/QuoteCheckout";
+import StoreBuy, { StoreCheckoutSuccess, StoreCheckoutCancel } from "@/pages/store-buy";
 import { useQuery } from "@tanstack/react-query";
 import { initPushNotifications, registerPushNotifications } from "@/services/pushNotificationService";
 import { initDeepLinks } from "@/services/deepLinkService";
@@ -461,6 +462,9 @@ function AppRouter() {
       <Route path="/set-password" component={SetPassword} />
       <Route path="/logout" component={Logout} />
       <Route path="/checkout/:checkoutId" component={QuoteCheckout} />
+      <Route path="/store-buy/:productId" component={StoreBuy} />
+      <Route path="/store-checkout-success" component={StoreCheckoutSuccess} />
+      <Route path="/store-checkout-cancel" component={StoreCheckoutCancel} />
       
       {/* Landing page - marketing for web, app landing for iOS */}
       <Route path="/" component={PlatformAwareLanding} />

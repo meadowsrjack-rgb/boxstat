@@ -279,26 +279,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     fetchAndOpenEvent();
   }, []);
 
-  const playerUserId = (user as any)?.id;
-  const lastTeamChatSeenKey = `boxstat_team_chat_seen_${playerUserId}`;
-  const lastTeamChatSeen = typeof window !== 'undefined' ? localStorage.getItem(lastTeamChatSeenKey) : null;
-  
-  const { data: teamUnreadData } = useQuery<any>({
-    queryKey: ['/api/messages/unread-counts', lastTeamChatSeen],
-    queryFn: async () => {
-      const params = lastTeamChatSeen ? `?since=${encodeURIComponent(lastTeamChatSeen)}` : '';
-      const token = localStorage.getItem('authToken');
-      const headers: Record<string, string> = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-      const res = await fetch(`/api/messages/unread-counts${params}`, { credentials: 'include', headers });
-      if (!res.ok) return { totalUnread: 0 };
-      return res.json();
-    },
-    enabled: !!playerUserId,
-    refetchInterval: 30000,
-  });
-  const teamUnreadCount = teamUnreadData?.totalUnread || 0;
-
   // Update URL and localStorage when activeTab changes
   const handleTabChange = (newTab: "activity" | "video" | "team" | "profile") => {
     setActiveTab(newTab);
@@ -307,9 +287,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
       const newUrl = new URL(window.location.href);
       newUrl.searchParams.set('tab', newTab);
       window.history.replaceState({}, '', newUrl.toString());
-      if (newTab === 'team') {
-        localStorage.setItem(lastTeamChatSeenKey, new Date().toISOString());
-      }
     }
   };
 
@@ -1069,7 +1046,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
           <div className="flex justify-between items-center">
             <TabButton label="activity" activeTab={activeTab} onClick={handleTabChange} Icon={CalendarIcon} />
             <TabButton label="video" activeTab={activeTab} onClick={handleTabChange} Icon={Play} />
-            <TabButton label="team" activeTab={activeTab} onClick={handleTabChange} Icon={Shirt} badgeCount={teamUnreadCount} />
+            <TabButton label="team" activeTab={activeTab} onClick={handleTabChange} Icon={Shirt} />
             <TabButton label="profile" activeTab={activeTab} onClick={handleTabChange} Icon={User} />
           </div>
         </div>

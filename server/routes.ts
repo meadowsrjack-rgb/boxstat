@@ -10568,17 +10568,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
     
-    // Send push notification to team members about new message
+    // Send push notification + in-app notification to team members about new message
     try {
       const team = await storage.getTeam(req.params.teamId);
       const sender = await storage.getUser(validatedSenderId);
       const senderName = sender ? `${sender.firstName || ''} ${sender.lastName || ''}`.trim() : 'Someone';
       
       if (team) {
-        // Notify coach about player/parent messages
+        // Push notification for coach about player/parent messages
         if (team.coachId && validatedSenderId !== team.coachId) {
           const isFromParent = channel === 'parents';
           await pushNotifications.coachNewMessage(storage, team.coachId, parseInt(req.params.teamId), senderName, isFromParent);
+        }
+
+        // In-app notification for all team members except the sender
+        const { db: notifDb } = await import("./db");
+        const teamSchema = await import("../shared/schema");
+        const { eq: eqOp, and: andOp } = await import("drizzle-orm");
+        const memberships = await notifDb.select({ profileId: teamSchema.teamMemberships.profileId })
+          .from(teamSchema.teamMemberships)
+          .where(andOp(
+            eqOp(teamSchema.teamMemberships.teamId, teamId),
+            eqOp(teamSchema.teamMemberships.status, 'active')
+          ));
+        const recipientIds: string[] = [];
+        for (const tm of memberships) {
+          if (tm.profileId && tm.profileId !== validatedSenderId) {
+            recipientIds.push(tm.profileId);
+          }
+        }
+        if (team.coachId && team.coachId !== validatedSenderId && !recipientIds.includes(team.coachId)) {
+          recipientIds.push(team.coachId);
+        }
+        
+        if (recipientIds.length > 0) {
+          const truncatedMsg = message.length > 80 ? message.substring(0, 80) + '...' : message;
+          await adminNotificationService.createNotification({
+            organizationId: req.user.organizationId,
+            title: `💬 ${senderName} in ${team.name}`,
+            message: truncatedMsg,
+            types: ['notification'],
+            recipientTarget: 'users',
+            recipientUserIds: recipientIds,
+            status: 'sent',
+            deliveryChannels: ['in_app'],
+            sentBy: 'system',
+          });
         }
       }
     } catch (notifError: any) {

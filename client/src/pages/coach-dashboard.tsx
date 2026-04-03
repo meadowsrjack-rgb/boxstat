@@ -213,29 +213,8 @@ export default function CoachDashboard() {
   // HR Tab - Lead Evaluation Form state
   const [showLeadEvaluation, setShowLeadEvaluation] = useState(false);
 
-  const lastTeamChatSeenKey = `boxstat_team_chat_seen_${currentUser?.id}`;
-  const lastTeamChatSeen = typeof window !== 'undefined' ? localStorage.getItem(lastTeamChatSeenKey) : null;
-  
-  const { data: teamUnreadData } = useQuery<any>({
-    queryKey: ['/api/messages/unread-counts', lastTeamChatSeen],
-    queryFn: async () => {
-      const params = lastTeamChatSeen ? `?since=${encodeURIComponent(lastTeamChatSeen)}` : '';
-      const token = localStorage.getItem('authToken');
-      const headers: Record<string, string> = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-      const res = await fetch(`/api/messages/unread-counts${params}`, { credentials: 'include', headers });
-      if (!res.ok) return { totalUnread: 0 };
-      return res.json();
-    },
-    refetchInterval: 30000,
-  });
-  const teamUnreadCount = teamUnreadData?.totalUnread || 0;
-
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("coachDashboardTab", activeTab);
-    if (activeTab === 'team' && typeof window !== 'undefined') {
-      localStorage.setItem(lastTeamChatSeenKey, new Date().toISOString());
-    }
   }, [activeTab]);
 
   if (!currentUser) {
@@ -625,7 +604,7 @@ export default function CoachDashboard() {
         <div className="px-6 mb-6">
           <div className="flex justify-between items-center">
             <TabButton label="calendar" activeTab={activeTab} onClick={setActiveTab} Icon={CalendarIcon} />
-            <TabButton label="team" activeTab={activeTab} onClick={setActiveTab} Icon={Users} badgeCount={teamUnreadCount} />
+            <TabButton label="team" activeTab={activeTab} onClick={setActiveTab} Icon={Users} />
             <TabButton label="profile" activeTab={activeTab} onClick={setActiveTab} Icon={User} />
             <TabButton label="docs" activeTab={activeTab} onClick={setActiveTab} Icon={FileText} />
           </div>

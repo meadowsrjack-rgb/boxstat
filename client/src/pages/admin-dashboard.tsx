@@ -13508,16 +13508,28 @@ function StripeSettingsSection() {
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm text-yellow-700 bg-yellow-50 dark:bg-yellow-950 dark:text-yellow-400 p-3 rounded-lg">
               <AlertTriangle className="w-4 h-4" />
-              <span className="font-medium">Setup in progress</span>
+              <span className="font-medium">Express setup in progress</span>
             </div>
-            <p className="text-sm text-muted-foreground">Your payment account setup is not yet complete. Click below to continue where you left off.</p>
-            <Button
-              size="sm"
-              onClick={() => onboardMutation.mutate()}
-              disabled={onboardMutation.isPending}
-            >
-              {onboardMutation.isPending ? "Loading..." : "Continue Setup"}
-            </Button>
+            <p className="text-sm text-muted-foreground">Your Express payment account setup is not yet complete. Click below to continue where you left off.</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                onClick={() => onboardMutation.mutate()}
+                disabled={onboardMutation.isPending || onboardStandardMutation.isPending}
+              >
+                {onboardMutation.isPending ? "Loading..." : "Continue Express Setup"}
+              </Button>
+              <span className="text-xs text-muted-foreground">or</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onboardStandardMutation.mutate()}
+                disabled={onboardMutation.isPending || onboardStandardMutation.isPending}
+              >
+                <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                {onboardStandardMutation.isPending ? "Redirecting..." : "Connect Existing Stripe Account"}
+              </Button>
+            </div>
           </div>
         ) : status === "restricted" ? (
           <div className="space-y-3">
@@ -13526,13 +13538,25 @@ function StripeSettingsSection() {
               <span className="font-medium">Account needs attention</span>
             </div>
             <p className="text-sm text-muted-foreground">Additional information is required before you can accept payments. Click below to resolve.</p>
-            <Button
-              size="sm"
-              onClick={() => onboardMutation.mutate()}
-              disabled={onboardMutation.isPending}
-            >
-              {onboardMutation.isPending ? "Loading..." : "Complete Setup"}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                onClick={() => onboardMutation.mutate()}
+                disabled={onboardMutation.isPending || onboardStandardMutation.isPending}
+              >
+                {onboardMutation.isPending ? "Loading..." : "Complete Setup"}
+              </Button>
+              <span className="text-xs text-muted-foreground">or</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onboardStandardMutation.mutate()}
+                disabled={onboardMutation.isPending || onboardStandardMutation.isPending}
+              >
+                <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                {onboardStandardMutation.isPending ? "Redirecting..." : "Connect Existing Stripe Account"}
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">

@@ -38,6 +38,9 @@ export interface Organization {
   stripeSecretKey?: string | null;
   stripePublishableKey?: string | null;
   stripeWebhookSecret?: string | null;
+  stripeConnectedId?: string | null;
+  stripeConnectStatus?: string | null;
+  stripeConnectType?: string | null;
   
   createdAt: Date;
   updatedAt: Date;
@@ -72,6 +75,7 @@ export const organizations = pgTable("organizations", {
   stripeWebhookSecret: text("stripe_webhook_secret"),
   stripeConnectedId: text("stripe_connected_id"),
   stripeConnectStatus: text("stripe_connect_status").default("not_started"),
+  stripeConnectType: text("stripe_connect_type").default("express"),
   platformPlan: varchar("platform_plan"),
   platformSubscriptionId: varchar("platform_subscription_id"),
   platformSubscriptionStatus: varchar("platform_subscription_status").default("inactive"),

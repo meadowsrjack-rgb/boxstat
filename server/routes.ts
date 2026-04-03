@@ -179,7 +179,7 @@ const stripe = stripeSecretKey
 const stripeOrgCache = new Map<string, { instance: Stripe; key: string; createdAt: number }>();
 const STRIPE_CACHE_TTL = 5 * 60 * 1000;
 
-async function getOrgConnectInfo(organizationId: string): Promise<{ connectedAccountId: string | null; isConnected: boolean; stripeConnectStatus: string | null }> {
+async function getOrgConnectInfo(organizationId: string): Promise<{ connectedAccountId: string | null; isConnected: boolean; stripeConnectStatus: string | null; stripeConnectType: string | null }> {
   let org: Awaited<ReturnType<typeof storage.getOrganization>>;
   try {
     org = await storage.getOrganization(organizationId);
@@ -194,9 +194,9 @@ async function getOrgConnectInfo(organizationId: string): Promise<{ connectedAcc
   }
   if (!org.stripeConnectedId || org.stripeConnectStatus !== 'active') {
     console.log(`[Connect] Org ${organizationId} is not Connect-enabled (status: ${org.stripeConnectStatus ?? 'none'})`);
-    return { connectedAccountId: null, isConnected: false, stripeConnectStatus: org.stripeConnectStatus ?? null };
+    return { connectedAccountId: null, isConnected: false, stripeConnectStatus: org.stripeConnectStatus ?? null, stripeConnectType: org.stripeConnectType ?? null };
   }
-  return { connectedAccountId: org.stripeConnectedId, isConnected: true, stripeConnectStatus: org.stripeConnectStatus };
+  return { connectedAccountId: org.stripeConnectedId, isConnected: true, stripeConnectStatus: org.stripeConnectStatus, stripeConnectType: org.stripeConnectType ?? 'express' };
 }
 
 async function getStripeForOrg(organizationId: string): Promise<Stripe | null> {
@@ -285,6 +285,7 @@ async function applyConnectChargeParams(
   console.log(`[Connect] Applying ${mode} Connect params for org ${organizationId} → ${connectInfo.connectedAccountId}`, {
     applicationFeeAmount: applicationFeeAmount ?? null,
     mode,
+    connectType: connectInfo.stripeConnectType ?? 'express',
   });
 
   if (mode === 'payment') {
@@ -5586,6 +5587,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         connectedAccountId: org.stripeConnectedId ? 'acct_••••' + org.stripeConnectedId.slice(-4) : null,
         status: connectStatus,
         isConnected: connectStatus === 'active',
+        connectType: org.stripeConnectType ?? 'express',
       });
     } catch (error: any) {
       console.error('Error fetching Connect status:', error);
@@ -5610,7 +5612,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let accountId = org.stripeConnectedId;
 
-      if (!accountId) {
+      if (!accountId || org.stripeConnectType === 'standard') {
+        if (org.stripeConnectType === 'standard') {
+          accountId = null;
+        }
         const account = await stripe.accounts.create({
           type: 'express',
           metadata: {
@@ -5623,8 +5628,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateOrganization(organizationId, {
           stripeConnectedId: accountId,
           stripeConnectStatus: 'pending',
+          stripeConnectType: 'express',
         });
-        console.log(`✅ Created Stripe Connect account ${accountId} for org ${organizationId}`);
+        console.log(`✅ Created Stripe Connect Express account ${accountId} for org ${organizationId}`);
+      } else {
+        await storage.updateOrganization(organizationId, {
+          stripeConnectType: 'express',
+        });
       }
 
       const host = req.headers.host || 'localhost:5000';
@@ -5642,6 +5652,181 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error creating Connect onboarding:', error);
       res.status(500).json({ error: 'Failed to create onboarding link', message: error.message });
+    }
+  });
+
+  const OAUTH_STATE_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+  const OAUTH_STATE_TTL_MS = 15 * 60 * 1000;
+
+  function createOAuthState(organizationId: string, userId: string): string {
+    if (!OAUTH_STATE_SECRET) {
+      throw new Error('OAuth state secret is not configured (JWT_SECRET or SESSION_SECRET required)');
+    }
+    const payload = `${organizationId}:${userId}:${Date.now()}`;
+    const sig = crypto.createHmac('sha256', OAUTH_STATE_SECRET).update(payload).digest('hex');
+    return Buffer.from(`${payload}:${sig}`).toString('base64url');
+  }
+
+  function verifyOAuthState(state: string): { organizationId: string; userId: string } | null {
+    if (!OAUTH_STATE_SECRET) {
+      console.error('[Stripe Connect Standard] Cannot verify OAuth state: secret not configured');
+      return null;
+    }
+    try {
+      const decoded = Buffer.from(state, 'base64url').toString('utf-8');
+      const parts = decoded.split(':');
+      if (parts.length < 4) return null;
+      const sig = parts.pop()!;
+      const payload = parts.join(':');
+      const expectedSig = crypto.createHmac('sha256', OAUTH_STATE_SECRET).update(payload).digest('hex');
+      if (sig.length !== expectedSig.length) return null;
+      if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig))) return null;
+      const [organizationId, userId, tsStr] = parts;
+      if (Date.now() - parseInt(tsStr, 10) > OAUTH_STATE_TTL_MS) return null;
+      return { organizationId, userId };
+    } catch {
+      return null;
+    }
+  }
+
+  app.post('/api/stripe-connect/onboard-standard', requireAuth, async (req: any, res) => {
+    if (!stripe) {
+      return res.status(500).json({ error: 'Platform Stripe is not configured' });
+    }
+
+    try {
+      const { organizationId, role } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(req.user.id, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ error: 'Only admins can set up Stripe Connect' });
+      }
+
+      const org = await storage.getOrganization(organizationId);
+      if (!org) return res.status(404).json({ error: 'Organization not found' });
+
+      const stripeClientId = process.env.STRIPE_CLIENT_ID;
+      if (!stripeClientId) {
+        return res.status(500).json({ error: 'Stripe OAuth client ID is not configured' });
+      }
+
+      const host = req.headers.host || 'localhost:5000';
+      const protocol = req.headers['x-forwarded-proto'] || 'https';
+      const baseUrl = `${protocol}://${host}`;
+
+      const oauthState = createOAuthState(organizationId, req.user.id);
+
+      const params = new URLSearchParams({
+        response_type: 'code',
+        client_id: stripeClientId,
+        scope: 'read_write',
+        redirect_uri: `${baseUrl}/api/stripe-connect/oauth/callback`,
+        state: oauthState,
+      });
+
+      const oauthUrl = `https://connect.stripe.com/oauth/authorize?${params.toString()}`;
+      res.json({ url: oauthUrl });
+    } catch (error: any) {
+      console.error('Error initiating Standard Connect OAuth:', error);
+      res.status(500).json({ error: 'Failed to initiate OAuth', message: error.message });
+    }
+  });
+
+  app.get('/api/stripe-connect/oauth/callback', async (req: any, res) => {
+    if (!stripe) {
+      return res.status(500).send('Platform Stripe is not configured');
+    }
+
+    const host = req.headers.host || 'localhost:5000';
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const baseUrl = `${protocol}://${host}`;
+
+    try {
+      const { code, state, error: oauthError, error_description } = req.query;
+
+      if (oauthError) {
+        console.error('[Stripe Connect Standard] OAuth error:', oauthError, error_description);
+        return res.redirect(`${baseUrl}/admin?tab=settings&stripe=error`);
+      }
+
+      if (!code || !state) {
+        console.error('[Stripe Connect Standard] Missing code or state in callback');
+        return res.redirect(`${baseUrl}/admin?tab=settings&stripe=error`);
+      }
+
+      const stateData = verifyOAuthState(state as string);
+      if (!stateData) {
+        console.error('[Stripe Connect Standard] Invalid or expired OAuth state — possible CSRF/replay attack');
+        return res.redirect(`${baseUrl}/admin?tab=settings&stripe=error`);
+      }
+
+      const { organizationId, userId } = stateData;
+
+      const isAdminUser = await hasAdminProfile(userId, organizationId);
+      const user = await storage.getUser(userId);
+      if (!user || (user.role !== 'admin' && !isAdminUser)) {
+        console.error(`[Stripe Connect Standard] Unauthorized callback for user ${userId} org ${organizationId}`);
+        return res.redirect(`${baseUrl}/admin?tab=settings&stripe=error`);
+      }
+
+      const response = await stripe.oauth.token({
+        grant_type: 'authorization_code',
+        code: code as string,
+      });
+
+      const connectedAccountId = response.stripe_user_id;
+      if (!connectedAccountId) {
+        console.error('[Stripe Connect Standard] No stripe_user_id in OAuth response');
+        return res.redirect(`${baseUrl}/admin?tab=settings&stripe=error`);
+      }
+
+      await storage.updateOrganization(organizationId, {
+        stripeConnectedId: connectedAccountId,
+        stripeConnectStatus: 'active',
+        stripeConnectType: 'standard',
+      });
+
+      console.log(`[Stripe Connect Standard] Connected account ${connectedAccountId} for org ${organizationId} by user ${userId}`);
+      return res.redirect(`${baseUrl}/admin?tab=settings&stripe=connected`);
+    } catch (error: any) {
+      console.error('[Stripe Connect Standard] OAuth callback error:', error);
+      return res.redirect(`${baseUrl}/admin?tab=settings&stripe=error`);
+    }
+  });
+
+  app.post('/api/stripe-connect/disconnect', requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(req.user.id, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ error: 'Only admins can disconnect Stripe Connect' });
+      }
+
+      const org = await storage.getOrganization(organizationId);
+      if (!org) return res.status(404).json({ error: 'Organization not found' });
+
+      if (stripe && org.stripeConnectedId && org.stripeConnectType === 'standard') {
+        try {
+          await stripe.oauth.deauthorize({
+            client_id: process.env.STRIPE_CLIENT_ID || '',
+            stripe_user_id: org.stripeConnectedId,
+          });
+          console.log(`[Stripe Connect] Deauthorized Standard account ${org.stripeConnectedId} for org ${organizationId}`);
+        } catch (err: any) {
+          console.warn(`[Stripe Connect] Deauthorize failed (continuing disconnect): ${err.message}`);
+        }
+      }
+
+      await storage.updateOrganization(organizationId, {
+        stripeConnectedId: null,
+        stripeConnectStatus: 'not_started',
+        stripeConnectType: 'express',
+      });
+
+      console.log(`[Stripe Connect] Disconnected account for org ${organizationId}`);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error disconnecting Stripe Connect:', error);
+      res.status(500).json({ error: 'Failed to disconnect', message: error.message });
     }
   });
 

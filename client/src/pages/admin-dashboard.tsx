@@ -13361,6 +13361,9 @@ function StripeSettingsSection() {
       toast({ title: "Payment setup updated successfully" });
       refetchConnect();
       window.history.replaceState({}, "", window.location.pathname);
+    } else if (params.get("stripe") === "error") {
+      toast({ title: "Payment setup failed. Please try again.", variant: "destructive" });
+      window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
 
@@ -13378,6 +13381,20 @@ function StripeSettingsSection() {
     },
   });
 
+  const onboardStandardMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/stripe-connect/onboard-standard");
+    },
+    onSuccess: (data: any) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: () => {
+      toast({ title: "Failed to start account linking", variant: "destructive" });
+    },
+  });
+
   const dashboardMutation = useMutation({
     mutationFn: async () => {
       return await apiRequest("GET", "/api/stripe-connect/login-link");
@@ -13392,9 +13409,24 @@ function StripeSettingsSection() {
     },
   });
 
+  const disconnectMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/stripe-connect/disconnect");
+    },
+    onSuccess: () => {
+      toast({ title: "Payment account disconnected" });
+      refetchConnect();
+    },
+    onError: () => {
+      toast({ title: "Failed to disconnect payment account", variant: "destructive" });
+    },
+  });
+
   const status = connectStatus?.status || "not_started";
+  const connectType = connectStatus?.connectType || "express";
   const connectedId = connectStatus?.connectedAccountId || "";
   const maskedId = connectedId ? `acct_...${connectedId.slice(-6)}` : "";
+  const isStandard = connectType === "standard";
 
   return (
     <Card>
@@ -13417,26 +13449,58 @@ function StripeSettingsSection() {
               <span className="font-medium">Payment account connected</span>
               <span className="text-green-600 dark:text-green-500 font-mono text-xs ml-auto">{maskedId}</span>
             </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="px-2 py-0.5 rounded bg-muted font-medium uppercase tracking-wide">
+                {isStandard ? "Standard" : "Express"}
+              </span>
+              <span>{isStandard ? "Connected existing Stripe account" : "Stripe-managed Express account"}</span>
+            </div>
             <p className="text-sm text-muted-foreground">
               Your account is set up to receive payments. All program and store payments from parents will be deposited to your connected bank account.
             </p>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => dashboardMutation.mutate()}
-                disabled={dashboardMutation.isPending}
-              >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                {dashboardMutation.isPending ? "Opening..." : "View Payout Dashboard"}
-              </Button>
+              {isStandard ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open("https://dashboard.stripe.com", "_blank")}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  View Stripe Dashboard
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => dashboardMutation.mutate()}
+                  disabled={dashboardMutation.isPending}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  {dashboardMutation.isPending ? "Opening..." : "View Payout Dashboard"}
+                </Button>
+              )}
+              {!isStandard && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onboardMutation.mutate()}
+                  disabled={onboardMutation.isPending}
+                >
+                  {onboardMutation.isPending ? "Loading..." : "Update Bank Details"}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onboardMutation.mutate()}
-                disabled={onboardMutation.isPending}
+                className="text-destructive hover:text-destructive"
+                onClick={() => {
+                  if (window.confirm("Disconnect your payment account? You can reconnect a different account at any time.")) {
+                    disconnectMutation.mutate();
+                  }
+                }}
+                disabled={disconnectMutation.isPending}
               >
-                {onboardMutation.isPending ? "Loading..." : "Update Bank Details"}
+                {disconnectMutation.isPending ? "Disconnecting..." : "Disconnect"}
               </Button>
             </div>
           </div>
@@ -13471,16 +13535,61 @@ function StripeSettingsSection() {
             </Button>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Set up your payment account to start receiving money from program enrollments and store purchases. You'll enter your bank details through a secure setup process.
+              Set up your payment account to start receiving money from program enrollments and store purchases. Choose how you'd like to connect:
             </p>
-            <Button
-              onClick={() => onboardMutation.mutate()}
-              disabled={onboardMutation.isPending}
-            >
-              {onboardMutation.isPending ? "Setting up..." : "Set Up Payments"}
-            </Button>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                className="flex flex-col gap-2 p-4 border-2 rounded-xl text-left transition-colors hover:border-primary hover:bg-primary/5 focus:outline-none focus:border-primary disabled:opacity-50"
+                onClick={() => onboardMutation.mutate()}
+                disabled={onboardMutation.isPending || onboardStandardMutation.isPending}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <CreditCard className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">Express Setup</p>
+                    <p className="text-xs text-primary font-medium">Recommended</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Create a new Stripe account through our guided setup. Best for organizations new to Stripe.
+                </p>
+                {onboardMutation.isPending && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                    Starting setup...
+                  </div>
+                )}
+              </button>
+
+              <button
+                className="flex flex-col gap-2 p-4 border-2 rounded-xl text-left transition-colors hover:border-primary hover:bg-primary/5 focus:outline-none focus:border-primary disabled:opacity-50"
+                onClick={() => onboardStandardMutation.mutate()}
+                disabled={onboardMutation.isPending || onboardStandardMutation.isPending}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                    <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">Connect Existing Account</p>
+                    <p className="text-xs text-muted-foreground">Already have Stripe</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Link your existing Stripe account via OAuth. Best for established clubs and organizations.
+                </p>
+                {onboardStandardMutation.isPending && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                    Redirecting to Stripe...
+                  </div>
+                )}
+              </button>
+            </div>
           </div>
         )}
       </CardContent>

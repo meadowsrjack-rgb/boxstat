@@ -1088,7 +1088,7 @@ export default function PaymentsPage() {
                   const uniqueCategories = [...new Set(storeItems.map((p) => p.displayCategory || 'general'))] as string[];
                   
                   return (
-                    <div className="flex flex-wrap gap-2" data-testid="store-category-filter">
+                    <div className="flex overflow-x-auto flex-nowrap gap-2 pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]" data-testid="store-category-filter">
                       <Button
                         variant={!selectedStoreCategory ? "default" : "outline"}
                         size="sm"
@@ -1145,7 +1145,7 @@ export default function PaymentsPage() {
                   }
                   
                   return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                       {filteredItems.map(item => (
                         <StoreItemCard
                           key={item.id}

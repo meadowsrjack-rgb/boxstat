@@ -10109,7 +10109,11 @@ function StoreTab({ organization }: any) {
                       disabled={uploadingImage}
                       data-testid="input-product-image"
                     />
-                    {uploadingImage && <p className="text-xs text-gray-500 mt-1">Uploading...</p>}
+                    {uploadingImage ? (
+                      <p className="text-xs text-gray-500 mt-1">Uploading...</p>
+                    ) : (
+                      <p className="text-xs text-gray-400 mt-1">1280 × 720px (16:9) recommended</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -11391,7 +11395,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                             <label className="flex flex-col items-center justify-center py-6 rounded-lg border-2 border-dashed border-gray-200 bg-gray-50/50 cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-colors">
                               <ImageIcon size={24} className="text-gray-300 mb-1" />
                               <span className="text-sm text-gray-500 font-medium">Click to upload</span>
-                              <span className="text-xs text-gray-400 mt-0.5">PNG, JPG up to 5MB · 16:9 recommended</span>
+                              <span className="text-xs text-gray-400 mt-0.5">PNG, JPG up to 5MB · 1280 × 720px (16:9)</span>
                               <input type="file" accept="image/*" className="hidden" data-testid="input-program-cover-image" onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {

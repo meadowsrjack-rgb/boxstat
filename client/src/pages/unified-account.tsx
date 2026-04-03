@@ -2388,7 +2388,7 @@ export default function UnifiedAccount() {
               const uniqueCategories = [...new Set(activePrograms.map(getCategory))] as string[];
               
               return (
-                <div className="flex flex-wrap gap-2" data-testid="category-filter-buttons">
+                <div className="flex overflow-x-auto flex-nowrap gap-2 pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]" data-testid="category-filter-buttons">
                   <Button
                     variant={!selectedStoreCategory ? "default" : "outline"}
                     size="sm"
@@ -2485,7 +2485,7 @@ export default function UnifiedAccount() {
                       </Button>
                     )}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                     {filteredProducts.map((item: any) => {
                       const isSubscription = item.type === "Subscription";
                       const isPack = item.type === "Pack";
@@ -2516,6 +2516,9 @@ export default function UnifiedAccount() {
                               <h4 className="font-semibold">{item.name}</h4>
                               {isStore && <Badge className="bg-purple-100 text-purple-700 border-0">Store</Badge>}
                             </div>
+                            {item.description && (
+                              <p className="text-sm text-gray-500 mb-2 line-clamp-2">{item.description}</p>
+                            )}
                             <Button size="sm" className="bg-red-600 hover:bg-red-700 w-full">
                               {isStore ? "Buy" : "Enroll"}
                             </Button>

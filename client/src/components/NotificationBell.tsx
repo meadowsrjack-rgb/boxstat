@@ -67,7 +67,7 @@ export function NotificationBell() {
 
   const markAllAsRead = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/notifications/mark-all-read", { method: "POST", data: { profileId } });
+      return await apiRequest("POST", "/api/notifications/read-all");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/feed", profileId] });

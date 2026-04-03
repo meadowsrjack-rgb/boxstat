@@ -608,56 +608,58 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div ref={tabsRef} className="overflow-x-auto hide-scrollbar mb-6 -mx-4 px-4 sm:mx-0 sm:px-0 cursor-grab">
-            <TabsList className="inline-flex w-auto min-w-full sm:w-auto bg-transparent border-b border-gray-200 rounded-none p-0 h-auto gap-0">
-              <TabsTrigger value="overview" data-testid="tab-overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <TrendingUp className="w-4 h-4 mr-2" />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="lg:flex lg:gap-6">
+          <div ref={tabsRef} className="overflow-x-auto hide-scrollbar mb-6 lg:mb-0 -mx-4 px-4 sm:mx-0 sm:px-0 cursor-grab lg:cursor-default lg:overflow-visible lg:shrink-0 lg:w-40 lg:border-r lg:border-gray-200 lg:pr-4">
+            <TabsList className="inline-flex w-auto min-w-full sm:w-auto bg-transparent border-b border-gray-200 rounded-none p-0 h-auto gap-0 lg:flex-col lg:w-full lg:border-b-0 lg:gap-0.5 lg:sticky lg:top-4">
+              <TabsTrigger value="overview" data-testid="tab-overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 lg:border-b-0 lg:border-l-2 lg:data-[state=active]:border-l-red-600 lg:data-[state=active]:bg-red-50 lg:justify-start lg:w-full lg:px-3 lg:py-2 lg:text-xs lg:rounded-r-md">
+                <TrendingUp className="w-4 h-4 mr-2 lg:w-3.5 lg:h-3.5" />
                 Overview
               </TabsTrigger>
-              <TabsTrigger value="users" data-testid="tab-users" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <Users className="w-4 h-4 mr-2" />
+              <TabsTrigger value="users" data-testid="tab-users" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 lg:border-b-0 lg:border-l-2 lg:data-[state=active]:border-l-red-600 lg:data-[state=active]:bg-red-50 lg:justify-start lg:w-full lg:px-3 lg:py-2 lg:text-xs lg:rounded-r-md">
+                <Users className="w-4 h-4 mr-2 lg:w-3.5 lg:h-3.5" />
                 Users
               </TabsTrigger>
-              <TabsTrigger value="programs" data-testid="tab-programs" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <Layers className="w-4 h-4 mr-2" />
+              <TabsTrigger value="programs" data-testid="tab-programs" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 lg:border-b-0 lg:border-l-2 lg:data-[state=active]:border-l-red-600 lg:data-[state=active]:bg-red-50 lg:justify-start lg:w-full lg:px-3 lg:py-2 lg:text-xs lg:rounded-r-md">
+                <Layers className="w-4 h-4 mr-2 lg:w-3.5 lg:h-3.5" />
                 Programs
               </TabsTrigger>
-              <TabsTrigger value="teams" data-testid="tab-teams" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <Users className="w-4 h-4 mr-2" />
+              <TabsTrigger value="teams" data-testid="tab-teams" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 lg:border-b-0 lg:border-l-2 lg:data-[state=active]:border-l-red-600 lg:data-[state=active]:bg-red-50 lg:justify-start lg:w-full lg:px-3 lg:py-2 lg:text-xs lg:rounded-r-md">
+                <Users className="w-4 h-4 mr-2 lg:w-3.5 lg:h-3.5" />
                 Teams
               </TabsTrigger>
-              <TabsTrigger value="events" data-testid="tab-events" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <Calendar className="w-4 h-4 mr-2" />
+              <TabsTrigger value="events" data-testid="tab-events" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 lg:border-b-0 lg:border-l-2 lg:data-[state=active]:border-l-red-600 lg:data-[state=active]:bg-red-50 lg:justify-start lg:w-full lg:px-3 lg:py-2 lg:text-xs lg:rounded-r-md">
+                <Calendar className="w-4 h-4 mr-2 lg:w-3.5 lg:h-3.5" />
                 Events
               </TabsTrigger>
-              <TabsTrigger value="awards" data-testid="tab-awards" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <Trophy className="w-4 h-4 mr-2" />
+              <TabsTrigger value="awards" data-testid="tab-awards" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 lg:border-b-0 lg:border-l-2 lg:data-[state=active]:border-l-red-600 lg:data-[state=active]:bg-red-50 lg:justify-start lg:w-full lg:px-3 lg:py-2 lg:text-xs lg:rounded-r-md">
+                <Trophy className="w-4 h-4 mr-2 lg:w-3.5 lg:h-3.5" />
                 Awards
               </TabsTrigger>
-              <TabsTrigger value="store" data-testid="tab-store" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <ShoppingBag className="w-4 h-4 mr-2" />
+              <TabsTrigger value="store" data-testid="tab-store" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 lg:border-b-0 lg:border-l-2 lg:data-[state=active]:border-l-red-600 lg:data-[state=active]:bg-red-50 lg:justify-start lg:w-full lg:px-3 lg:py-2 lg:text-xs lg:rounded-r-md">
+                <ShoppingBag className="w-4 h-4 mr-2 lg:w-3.5 lg:h-3.5" />
                 Store
               </TabsTrigger>
-              <TabsTrigger value="waivers" data-testid="tab-waivers" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <FileText className="w-4 h-4 mr-2" />
+              <TabsTrigger value="waivers" data-testid="tab-waivers" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 lg:border-b-0 lg:border-l-2 lg:data-[state=active]:border-l-red-600 lg:data-[state=active]:bg-red-50 lg:justify-start lg:w-full lg:px-3 lg:py-2 lg:text-xs lg:rounded-r-md">
+                <FileText className="w-4 h-4 mr-2 lg:w-3.5 lg:h-3.5" />
                 Waivers
               </TabsTrigger>
-              <TabsTrigger value="messages" data-testid="tab-messages" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 relative">
-                <MessageSquare className="w-4 h-4 mr-2" />
+              <TabsTrigger value="messages" data-testid="tab-messages" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 relative lg:border-b-0 lg:border-l-2 lg:data-[state=active]:border-l-red-600 lg:data-[state=active]:bg-red-50 lg:justify-start lg:w-full lg:px-3 lg:py-2 lg:text-xs lg:rounded-r-md">
+                <MessageSquare className="w-4 h-4 mr-2 lg:w-3.5 lg:h-3.5" />
                 Messages
                 {crmUnreadCount > 0 && activeTab !== 'messages' && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                  <span className="absolute -top-1 -right-1 lg:top-1 lg:right-1 min-w-[18px] h-[18px] bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
                     {crmUnreadCount > 99 ? '99+' : crmUnreadCount}
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="migrations" data-testid="tab-migrations" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <ArrowLeftRight className="w-4 h-4 mr-2" />
+              <TabsTrigger value="migrations" data-testid="tab-migrations" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 lg:border-b-0 lg:border-l-2 lg:data-[state=active]:border-l-red-600 lg:data-[state=active]:bg-red-50 lg:justify-start lg:w-full lg:px-3 lg:py-2 lg:text-xs lg:rounded-r-md">
+                <ArrowLeftRight className="w-4 h-4 mr-2 lg:w-3.5 lg:h-3.5" />
                 Migrations
               </TabsTrigger>
             </TabsList>
           </div>
+
+          <div className="lg:flex-1 lg:min-w-0">
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
@@ -861,6 +863,7 @@ export default function AdminDashboard() {
           <TabsContent value="migrations">
             <MigrationsTab organization={organization} users={users} onboardingSteps={onboardingSteps} setActiveTab={setActiveTab} />
           </TabsContent>
+          </div>
         </Tabs>
       </div>
       </div>

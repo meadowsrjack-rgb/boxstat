@@ -211,7 +211,7 @@ function StoreItemCard({
   onPurchase: (item: Program) => void;
 }) {
   return (
-    <Card className="bg-white/5 border-white/10 hover:border-white/20 transition-all group overflow-hidden">
+    <Card className="bg-white/5 border-white/10 hover:border-white/20 transition-all group overflow-hidden flex flex-col">
       {/* Cover Image with 16:9 aspect ratio */}
       {item.coverImageUrl && (
         <div className="relative aspect-[16/9] bg-black/20">
@@ -222,7 +222,7 @@ function StoreItemCard({
           />
         </div>
       )}
-      <CardContent className="p-5">
+      <CardContent className="p-5 flex flex-col flex-1">
         <div className="flex items-start justify-between mb-3">
           <div className="p-2 rounded-lg bg-purple-500/20 group-hover:bg-purple-500/30 transition-colors">
             <ShoppingBag className="h-5 w-5 text-purple-400" />
@@ -237,7 +237,7 @@ function StoreItemCard({
           {item.description || "Premium quality merchandise."}
         </p>
 
-        <div className="flex items-end justify-between">
+        <div className="flex items-end justify-between mt-auto">
           <span className="text-2xl font-bold text-white">
             ${item.price ? (item.price / 100).toFixed(2) : '0.00'}
           </span>

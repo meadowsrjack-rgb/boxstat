@@ -2494,7 +2494,7 @@ export default function UnifiedAccount() {
                       return (
                         <Card 
                           key={item.id} 
-                          className="hover:border-red-300 transition-colors cursor-pointer overflow-hidden"
+                          className="hover:border-red-300 transition-colors cursor-pointer overflow-hidden flex flex-col"
                           onClick={() => {
                             setSelectedPackage(item.id);
                             setIsStoreItemPurchase(isStore);
@@ -2511,7 +2511,7 @@ export default function UnifiedAccount() {
                               </div>
                             )}
                           </div>
-                          <CardContent className="p-4">
+                          <CardContent className="p-4 flex flex-col flex-1">
                             <div className="flex items-start justify-between mb-2">
                               <h4 className="font-semibold">{item.name}</h4>
                               {isStore && <Badge className="bg-purple-100 text-purple-700 border-0">Store</Badge>}
@@ -2519,7 +2519,7 @@ export default function UnifiedAccount() {
                             {item.description && (
                               <p className="text-sm text-gray-500 mb-2 line-clamp-2">{item.description}</p>
                             )}
-                            <Button size="sm" className="bg-red-600 hover:bg-red-700 w-full">
+                            <Button size="sm" className="bg-red-600 hover:bg-red-700 w-full mt-auto">
                               {isStore ? "Buy" : "Enroll"}
                             </Button>
                           </CardContent>

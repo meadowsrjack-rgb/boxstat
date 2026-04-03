@@ -253,21 +253,34 @@ async function getOrCreateStripeCustomer(stripeInstance: Stripe, user: any): Pro
   return stripeCustomerId;
 }
 
-function calculateStripeProcessingFee(subtotalCents: number): number {
-  if (subtotalCents <= 0) return 0;
-  const totalNeeded = (subtotalCents + 30) / (1 - 0.029);
-  return Math.round(totalNeeded - subtotalCents);
+const SERVICE_FEE_CENTS = 33;
+
+function getServiceFeeLineItem(recurring?: { interval: string; interval_count: number }): any {
+  const item: any = {
+    price_data: {
+      currency: 'usd',
+      product_data: {
+        name: 'Service Fee',
+        description: 'Secure payment processing and platform maintenance.',
+      },
+      unit_amount: SERVICE_FEE_CENTS,
+    },
+    quantity: 1,
+  };
+  if (recurring) {
+    item.price_data.recurring = recurring;
+  }
+  return item;
 }
 
-async function getPlatformFeePercent(): Promise<number> {
+async function getOrgDisplayName(organizationId: string): Promise<string> {
   try {
-    const results = await db.select().from(platformSettings)
-      .where(eq(platformSettings.key, 'boxstat_technology_fee_percent'));
-    if (results.length > 0 && results[0].value) {
-      return parseFloat(results[0].value);
+    const org = await storage.getOrganization(organizationId);
+    if (org?.name) {
+      return org.name.replace(/[^a-zA-Z0-9 .\/*]/g, '').trim() || 'BoxStat';
     }
   } catch (e) {}
-  return 2;
+  return 'BoxStat';
 }
 
 async function applyConnectChargeParams(
@@ -309,15 +322,11 @@ async function applyConnectChargeParams(
         destination: connectInfo.connectedAccountId,
       },
     };
-    const feePercent = await getPlatformFeePercent();
-    if (feePercent > 0) {
-      sessionParams.subscription_data.application_fee_percent = feePercent;
-    } else if (applicationFeeAmount && applicationFeeAmount > 0) {
+    if (applicationFeeAmount && applicationFeeAmount > 0) {
       sessionParams.subscription_data.application_fee_amount = applicationFeeAmount;
     }
     console.log(`[Connect] subscription_data applied:`, {
       transfer_data: sessionParams.subscription_data.transfer_data,
-      application_fee_percent: sessionParams.subscription_data.application_fee_percent ?? null,
       application_fee_amount: sessionParams.subscription_data.application_fee_amount ?? null,
     });
   }
@@ -1767,54 +1776,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         metadata.packageSelectionIds = unpaidSelections.map(s => s.id).join(',');
       }
       
-      // Calculate subtotal for platform fee (one-time payments only)
-      const legacySubtotal = mode === 'payment'
-        ? lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0)
-        : 0;
-      const legacyFeePercent = await getPlatformFeePercent();
-      const legacyPlatformFee = (mode === 'payment' && legacyFeePercent > 0)
-        ? Math.round(legacySubtotal * (legacyFeePercent / 100))
-        : 0;
-      if (legacyPlatformFee > 0) {
-        lineItems.push({
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Technology fee',
-              description: `${legacyFeePercent}% technology fee`,
-            },
-            unit_amount: legacyPlatformFee,
-          },
-          quantity: 1,
-        });
-      }
-
-      const processingFeeSubtotal1 = lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
-      const processingFee1 = calculateStripeProcessingFee(processingFeeSubtotal1);
-      if (processingFee1 > 0) {
-        const processingFeeItem1: any = {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Processing Fee',
-              description: 'Card processing fee',
-            },
-            unit_amount: processingFee1,
-          },
-          quantity: 1,
-        };
-        if (mode === 'subscription') {
-          const existingRecurring = lineItems[0]?.price_data?.recurring;
-          if (existingRecurring) {
-            processingFeeItem1.price_data.recurring = existingRecurring;
-          }
-        }
-        lineItems.push(processingFeeItem1);
-      }
+      // Add service fee
+      const recurringForFee = mode === 'subscription' ? lineItems[0]?.price_data?.recurring : undefined;
+      lineItems.push(getServiceFeeLineItem(recurringForFee));
 
       const stripeCustomerId = await getOrCreateStripeCustomer(orgStripe, user);
       
       const origin = `${req.protocol}://${req.get('host')}`;
+      const orgDisplayName = await getOrgDisplayName(req.user.organizationId);
       
       const sessionParams1: any = {
         customer: stripeCustomerId,
@@ -1823,10 +1792,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success_url: `${origin}/payments?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/payments?canceled=true`,
         metadata,
+        ...(mode === 'payment' ? { payment_intent_data: { statement_descriptor: orgDisplayName.substring(0, 22) } } : {}),
       };
 
-      const connectResult1 = await applyConnectChargeParams(sessionParams1, req.user.organizationId, mode, legacyPlatformFee > 0 ? legacyPlatformFee : undefined);
-      verifyConnectRouting(sessionParams1, mode, req.user.organizationId, connectResult1, { applicationFeeAmount: legacyPlatformFee, checkoutType: 'legacy_package' });
+      const connectResult1 = await applyConnectChargeParams(sessionParams1, req.user.organizationId, mode, SERVICE_FEE_CENTS);
+      verifyConnectRouting(sessionParams1, mode, req.user.organizationId, connectResult1, { applicationFeeAmount: SERVICE_FEE_CENTS, checkoutType: 'legacy_package' });
 
       console.log(`[Connect] legacy_package: creating session for org ${req.user.organizationId}`, {
         payment_intent_data: sessionParams1.payment_intent_data ?? null,
@@ -2131,73 +2101,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Add BoxStat platform technology fee as a separate line item
-      const feePercent = await getPlatformFeePercent();
-      const platformFee = feePercent > 0 ? Math.round(subtotal * (feePercent / 100)) : 0;
-      if (platformFee > 0) {
-        const platformFeeItem: any = {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Technology fee',
-              description: `${feePercent}% technology fee`,
-            },
-            unit_amount: platformFee,
-          },
-          quantity: 1,
-        };
-        
+      // Add service fee
+      {
+        let feeRecurring: any = undefined;
         if (isSubscription) {
           const feeResolved = resolveStripeInterval(program.billingIntervalDays, program.billingCycle);
-          platformFeeItem.price_data.recurring = {
-            interval: feeResolved.interval,
-            interval_count: feeResolved.interval_count,
-          };
+          feeRecurring = { interval: feeResolved.interval, interval_count: feeResolved.interval_count };
         }
-        
         if (isInstallmentPlan) {
           const feeInstInterval = resolveStripeInterval(selectedPricingOption.installmentIntervalDays);
-          platformFeeItem.price_data.recurring = {
-            interval: feeInstInterval.interval,
-            interval_count: feeInstInterval.interval_count,
-          };
+          feeRecurring = { interval: feeInstInterval.interval, interval_count: feeInstInterval.interval_count };
         }
-        
-        lineItems.push(platformFeeItem);
-      }
-      
-      const processingFeeSubtotal2 = lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
-      const processingFee2 = calculateStripeProcessingFee(processingFeeSubtotal2);
-      if (processingFee2 > 0) {
-        const processingFeeItem: any = {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Processing Fee',
-              description: 'Card processing fee',
-            },
-            unit_amount: processingFee2,
-          },
-          quantity: 1,
-        };
-        
-        if (isSubscription) {
-          const pfResolved = resolveStripeInterval(program.billingIntervalDays, program.billingCycle);
-          processingFeeItem.price_data.recurring = {
-            interval: pfResolved.interval,
-            interval_count: pfResolved.interval_count,
-          };
-        }
-        
-        if (isInstallmentPlan) {
-          const pfInstInterval = resolveStripeInterval(selectedPricingOption.installmentIntervalDays);
-          processingFeeItem.price_data.recurring = {
-            interval: pfInstInterval.interval,
-            interval_count: pfInstInterval.interval_count,
-          };
-        }
-        
-        lineItems.push(processingFeeItem);
+        lineItems.push(getServiceFeeLineItem(feeRecurring));
       }
 
       // Create Stripe Checkout Session
@@ -2313,13 +2228,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (checkoutMode === 'payment') {
+        const orgName2 = await getOrgDisplayName(req.user.organizationId);
         sessionParams.payment_intent_data = {
           receipt_email: user.email,
+          statement_descriptor: orgName2.substring(0, 22),
         };
       }
 
-      const connectResult2 = await applyConnectChargeParams(sessionParams, req.user.organizationId, checkoutMode, platformFee);
-      verifyConnectRouting(sessionParams, checkoutMode, req.user.organizationId, connectResult2, { applicationFeeAmount: platformFee, checkoutType: 'package_purchase' });
+      const connectResult2 = await applyConnectChargeParams(sessionParams, req.user.organizationId, checkoutMode, SERVICE_FEE_CENTS);
+      verifyConnectRouting(sessionParams, checkoutMode, req.user.organizationId, connectResult2, { applicationFeeAmount: SERVICE_FEE_CENTS, checkoutType: 'package_purchase' });
 
       console.log(`[Connect] package_purchase: creating session for org ${req.user.organizationId}`, {
         payment_intent_data: sessionParams.payment_intent_data ?? null,
@@ -3437,38 +3354,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         quantity: 1,
       }];
 
-      const cartFeePercent = await getPlatformFeePercent();
-      const cartPlatformFee = cartFeePercent > 0 ? Math.round(program.price * (cartFeePercent / 100)) : 0;
-      if (cartPlatformFee > 0) {
-        cartLineItems.push({
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Technology fee',
-              description: `${cartFeePercent}% technology fee`,
-            },
-            unit_amount: cartPlatformFee,
-          },
-          quantity: 1,
-        });
-      }
+      // Add service fee
+      cartLineItems.push(getServiceFeeLineItem());
 
-      const cartProcessingSubtotal = cartLineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
-      const cartProcessingFee = calculateStripeProcessingFee(cartProcessingSubtotal);
-      if (cartProcessingFee > 0) {
-        cartLineItems.push({
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Processing Fee',
-              description: 'Card processing fee',
-            },
-            unit_amount: cartProcessingFee,
-          },
-          quantity: 1,
-        });
-      }
-
+      const cartOrgName = await getOrgDisplayName(req.user.organizationId);
       const cartSessionParams: any = {
         customer: customerId,
         line_items: cartLineItems,
@@ -3477,6 +3366,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cancel_url: cancelUrl,
         payment_intent_data: {
           receipt_email: user.email,
+          statement_descriptor: cartOrgName.substring(0, 22),
         },
         metadata: {
           type: 'package_purchase',
@@ -3491,8 +3381,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       };
 
-      const connectResult3 = await applyConnectChargeParams(cartSessionParams, req.user.organizationId, 'payment', cartPlatformFee);
-      verifyConnectRouting(cartSessionParams, 'payment', req.user.organizationId, connectResult3, { applicationFeeAmount: cartPlatformFee, checkoutType: 'cart_purchase' });
+      const connectResult3 = await applyConnectChargeParams(cartSessionParams, req.user.organizationId, 'payment', SERVICE_FEE_CENTS);
+      verifyConnectRouting(cartSessionParams, 'payment', req.user.organizationId, connectResult3, { applicationFeeAmount: SERVICE_FEE_CENTS, checkoutType: 'cart_purchase' });
 
       console.log(`[Connect] cart_purchase: creating session for org ${req.user.organizationId}`, {
         payment_intent_data: cartSessionParams.payment_intent_data ?? null,
@@ -4659,34 +4549,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Add BoxStat platform technology fee
-        const bundleFeePercent = await getPlatformFeePercent();
-        const platformFee = bundleFeePercent > 0 ? Math.round(bundleSubtotal * (bundleFeePercent / 100)) : 0;
-        if (platformFee > 0) {
-          addInvoiceItems.push({
-            price_data: {
-              currency: 'usd',
-              product_data: { name: 'Technology fee' },
-              unit_amount: platformFee,
-            },
-            quantity: 1,
-            description: `Technology fee (${bundleFeePercent}%)`,
-          });
-        }
-        
-        const bundleOneTimeSubtotal = addInvoiceItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
-        const bundleOneTimeProcFee = calculateStripeProcessingFee(bundleOneTimeSubtotal);
-        if (bundleOneTimeProcFee > 0) {
-          addInvoiceItems.push({
-            price_data: {
-              currency: 'usd',
-              product_data: { name: 'Processing Fee' },
-              unit_amount: bundleOneTimeProcFee,
-            },
-            quantity: 1,
-            description: 'Card processing fee',
-          });
-        }
+        // Add service fee to one-time bundle items
+        addInvoiceItems.push(getServiceFeeLineItem());
 
         const subscriptionLineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = monthlyPriceId
           ? [{ price: monthlyPriceId, quantity: 1 }]
@@ -4703,23 +4567,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               quantity: 1,
             }];
         
-        if (selectedPricingOption.monthlyPrice > 0) {
-          const monthlyProcFee = calculateStripeProcessingFee(selectedPricingOption.monthlyPrice);
-          if (monthlyProcFee > 0) {
-            subscriptionLineItems.push({
-              price_data: {
-                currency: 'usd',
-                product_data: {
-                  name: 'Processing Fee',
-                  description: 'Card processing fee',
-                },
-                unit_amount: monthlyProcFee,
-                recurring: { interval: 'month' as const },
-              },
-              quantity: 1,
-            });
-          }
-        }
+        // Add service fee to monthly subscription
+        subscriptionLineItems.push(getServiceFeeLineItem({ interval: 'month', interval_count: 1 }));
 
         const addPlayerSubParams: any = {
           customer: stripeCustomerId,
@@ -4752,8 +4601,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         };
 
-        const connectResult4 = await applyConnectChargeParams(addPlayerSubParams, req.user.organizationId, 'subscription');
-        verifyConnectRouting(addPlayerSubParams, 'subscription', req.user.organizationId, connectResult4, { checkoutType: 'add_player_subscription' });
+        const connectResult4 = await applyConnectChargeParams(addPlayerSubParams, req.user.organizationId, 'subscription', SERVICE_FEE_CENTS);
+        verifyConnectRouting(addPlayerSubParams, 'subscription', req.user.organizationId, connectResult4, { applicationFeeAmount: SERVICE_FEE_CENTS, checkoutType: 'add_player_subscription' });
 
         console.log(`[Connect] add_player_subscription: creating session for org ${req.user.organizationId}`, {
           subscription_data: addPlayerSubParams.subscription_data ?? null,
@@ -4806,45 +4655,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Add BoxStat platform technology fee
-        const addPlayerFeePercent = await getPlatformFeePercent();
-        const platformFee = addPlayerFeePercent > 0 ? Math.round(subtotal * (addPlayerFeePercent / 100)) : 0;
-        if (platformFee > 0) {
-          lineItems.push({
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: 'Technology fee',
-                description: `${addPlayerFeePercent}% technology fee`,
-              },
-              unit_amount: platformFee,
-            },
-            quantity: 1,
-          });
-        }
+        // Add service fee
+        lineItems.push(getServiceFeeLineItem());
 
-        const addPlayerProcessingSubtotal = subtotal + platformFee;
-        const addPlayerProcessingFee = calculateStripeProcessingFee(addPlayerProcessingSubtotal);
-        if (addPlayerProcessingFee > 0) {
-          lineItems.push({
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: 'Processing Fee',
-                description: 'Card processing fee',
-              },
-              unit_amount: addPlayerProcessingFee,
-            },
-            quantity: 1,
-          });
-        }
-
+        const addPlayerOrgName = await getOrgDisplayName(req.user.organizationId);
         const addPlayerPayParams: any = {
           customer: stripeCustomerId,
           line_items: lineItems,
           mode: 'payment',
           success_url: successUrl,
           cancel_url: `${origin}/add-player?step=5&payment=cancelled`,
+          payment_intent_data: {
+            statement_descriptor: addPlayerOrgName.substring(0, 22),
+          },
           metadata: {
             type: 'add_player',
             playerId: playerUser.id,
@@ -4856,8 +4679,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         };
 
-        const connectResult5 = await applyConnectChargeParams(addPlayerPayParams, req.user.organizationId, 'payment', platformFee);
-        verifyConnectRouting(addPlayerPayParams, 'payment', req.user.organizationId, connectResult5, { applicationFeeAmount: platformFee, checkoutType: 'add_player_payment' });
+        const connectResult5 = await applyConnectChargeParams(addPlayerPayParams, req.user.organizationId, 'payment', SERVICE_FEE_CENTS);
+        verifyConnectRouting(addPlayerPayParams, 'payment', req.user.organizationId, connectResult5, { applicationFeeAmount: SERVICE_FEE_CENTS, checkoutType: 'add_player_payment' });
 
         console.log(`[Connect] add_player_payment: creating session for org ${req.user.organizationId}`, {
           payment_intent_data: addPlayerPayParams.payment_intent_data ?? null,
@@ -11649,11 +11472,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const origin = `${req.protocol}://${req.get('host')}`;
 
-      const storeSubtotal = product.price;
-      const storeFeePercent = await getPlatformFeePercent();
-      const storePlatformFee = storeFeePercent > 0 ? Math.round(storeSubtotal * (storeFeePercent / 100)) : 0;
-      const storeProcessingFee = calculateStripeProcessingFee(storeSubtotal + storePlatformFee);
-
       const storeLineItems: any[] = [
         {
           price_data: {
@@ -11668,39 +11486,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       ];
 
-      if (storePlatformFee > 0) {
-        storeLineItems.push({
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Technology fee',
-              description: `${storeFeePercent}% technology fee`,
-            },
-            unit_amount: storePlatformFee,
-          },
-          quantity: 1,
-        });
-      }
+      // Add service fee
+      storeLineItems.push(getServiceFeeLineItem());
 
-      if (storeProcessingFee > 0) {
-        storeLineItems.push({
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Processing Fee',
-              description: 'Card processing fee',
-            },
-            unit_amount: storeProcessingFee,
-          },
-          quantity: 1,
-        });
-      }
-
+      const storeOrgName = await getOrgDisplayName(orgId);
       const sessionParams: any = {
         line_items: storeLineItems,
         mode: 'payment',
         success_url: `${origin}/store-checkout-success?product=${encodeURIComponent(product.name)}`,
         cancel_url: `${origin}/store-checkout-cancel`,
+        payment_intent_data: {
+          statement_descriptor: storeOrgName.substring(0, 22),
+        },
         metadata: {
           productId,
           productCategory: 'goods',
@@ -11708,8 +11505,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       };
 
-      const connectResult = await applyConnectChargeParams(sessionParams, orgId, 'payment', storePlatformFee);
-      verifyConnectRouting(sessionParams, 'payment', orgId, connectResult, { applicationFeeAmount: storePlatformFee, checkoutType: 'qr_store_checkout' });
+      const connectResult = await applyConnectChargeParams(sessionParams, orgId, 'payment', SERVICE_FEE_CENTS);
+      verifyConnectRouting(sessionParams, 'payment', orgId, connectResult, { applicationFeeAmount: SERVICE_FEE_CENTS, checkoutType: 'qr_store_checkout' });
 
       console.log(`[Connect] qr_store_checkout: creating session for org ${orgId}`, {
         payment_intent_data: sessionParams.payment_intent_data ?? null,
@@ -15881,38 +15678,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!quoteOrgStripe) {
           return res.status(500).json({ error: "Payment processing is not configured for this organization" });
         }
-        const quoteFeePercent = await getPlatformFeePercent();
-        const quotePlatformFee = quoteFeePercent > 0 ? Math.round((quote.totalAmount || 0) * (quoteFeePercent / 100)) : 0;
-        if (quotePlatformFee > 0) {
-          lineItems.push({
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: 'Technology fee',
-                description: `${quoteFeePercent}% technology fee`,
-              },
-              unit_amount: quotePlatformFee,
-            },
-            quantity: 1,
-          });
-        }
+        // Add service fee
+        lineItems.push(getServiceFeeLineItem());
 
-        const quoteProcessingSubtotal = lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0) * (item.quantity || 1), 0);
-        const quoteProcessingFee = calculateStripeProcessingFee(quoteProcessingSubtotal);
-        if (quoteProcessingFee > 0) {
-          lineItems.push({
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: 'Processing Fee',
-                description: 'Card processing fee',
-              },
-              unit_amount: quoteProcessingFee,
-            },
-            quantity: 1,
-          });
-        }
-
+        const quoteOrgName = await getOrgDisplayName(quote.organizationId);
         const quoteSessionParams: any = {
           payment_method_types: ['card'],
           line_items: lineItems,
@@ -15920,6 +15689,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           success_url: successUrl,
           cancel_url: `${baseUrl}/checkout/${req.params.checkoutId}?checkout=cancelled`,
           customer_email: email || accountUser.email,
+          payment_intent_data: {
+            statement_descriptor: quoteOrgName.substring(0, 22),
+          },
           metadata: {
             userId: accountUser.id,
             playerId: player.id,
@@ -15928,8 +15700,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         };
 
-        const connectResult6 = await applyConnectChargeParams(quoteSessionParams, quote.organizationId, 'payment', quotePlatformFee);
-        verifyConnectRouting(quoteSessionParams, 'payment', quote.organizationId, connectResult6, { applicationFeeAmount: quotePlatformFee, checkoutType: 'quote_checkout' });
+        const connectResult6 = await applyConnectChargeParams(quoteSessionParams, quote.organizationId, 'payment', SERVICE_FEE_CENTS);
+        verifyConnectRouting(quoteSessionParams, 'payment', quote.organizationId, connectResult6, { applicationFeeAmount: SERVICE_FEE_CENTS, checkoutType: 'quote_checkout' });
 
         console.log(`[Connect] quote_checkout: creating session for org ${quote.organizationId}`, {
           payment_intent_data: quoteSessionParams.payment_intent_data ?? null,

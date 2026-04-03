@@ -10909,6 +10909,15 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
     return teams.filter((t: any) => t.programId === programId);
   };
 
+  const getContrastColor = (hex: string): string => {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.substring(0, 2), 16);
+    const g = parseInt(h.substring(2, 4), 16);
+    const b = parseInt(h.substring(4, 6), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5 ? '#111827' : '#ffffff';
+  };
+
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isUploadingPrograms, setIsUploadingPrograms] = useState(false);
 
@@ -12155,7 +12164,11 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {programs.map((program: any) => {
+              {[...programs].sort((a: any, b: any) => {
+                const aActive = a.isActive !== false ? 0 : 1;
+                const bActive = b.isActive !== false ? 0 : 1;
+                return aActive - bActive;
+              }).map((program: any) => {
                 const programTeams = getTeamsForProgram(program.id);
                 const formatPrice = (cents: number) => {
                   if (!cents) return "Free";
@@ -12194,11 +12207,21 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                     <TableCell>
                       {programTeams.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
-                          {programTeams.slice(0, 2).map((t: any) => (
-                            <Badge key={t.id} variant="secondary" className="text-xs">
-                              {t.name}
-                            </Badge>
-                          ))}
+                          {programTeams.slice(0, 2).map((t: any) => {
+                            const bgColor = t.color || undefined;
+                            const textColor = bgColor ? getContrastColor(bgColor) : undefined;
+                            return (
+                              <Badge
+                                key={t.id}
+                                variant="secondary"
+                                className="text-xs max-w-[90px] truncate inline-block"
+                                style={bgColor ? { backgroundColor: bgColor, color: textColor, borderColor: bgColor } : {}}
+                                title={t.name}
+                              >
+                                {t.name.length > 10 ? `${t.name.slice(0, 10)}\u2026` : t.name}
+                              </Badge>
+                            );
+                          })}
                           {programTeams.length > 2 && (
                             <Badge variant="secondary" className="text-xs">
                               +{programTeams.length - 2}

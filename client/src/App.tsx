@@ -125,7 +125,7 @@ import {
 // Protected Route wrapper - redirects to landing if not authenticated
 function ProtectedRoute({ component: Component }: { component: React.ComponentType<any> }) {
   const { user, isLoading } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
 
   if (isLoading) {
     // Don't show React loader if HTML startup-loader is still visible
@@ -141,7 +141,8 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   }
 
   if (!user) {
-    setLocation("/");
+    const returnTo = encodeURIComponent(location + window.location.search);
+    setLocation(`/login?returnTo=${returnTo}`);
     return null;
   }
 
@@ -151,7 +152,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 // Admin-only protected route that also gates on active platform subscription
 function ProtectedAdminRoute({ component: Component }: { component: React.ComponentType<any> }) {
   const { user, isLoading } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
 
   if (isLoading) {
     const htmlLoader = document.getElementById('startup-loader');
@@ -166,7 +167,8 @@ function ProtectedAdminRoute({ component: Component }: { component: React.Compon
   }
 
   if (!user) {
-    setLocation("/");
+    const returnTo = encodeURIComponent(location + window.location.search);
+    setLocation(`/login?returnTo=${returnTo}`);
     return null;
   }
 

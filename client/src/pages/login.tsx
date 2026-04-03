@@ -19,6 +19,16 @@ export default function LoginPage() {
   const [isSendingMagicLink, setIsSendingMagicLink] = useState(false);
   const [showMagicLink, setShowMagicLink] = useState(false);
 
+  const getReturnTo = (): string | null => {
+    const params = new URLSearchParams(window.location.search);
+    const returnTo = params.get("returnTo");
+    if (!returnTo) return null;
+    if (returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+      return returnTo;
+    }
+    return null;
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -71,8 +81,9 @@ export default function LoginPage() {
           description: "Welcome back!",
         });
 
-        let redirectPath = "/account";
-        if (response.user?.defaultDashboardView) {
+        const returnTo = getReturnTo();
+        let redirectPath = returnTo ?? "/account";
+        if (!returnTo && response.user?.defaultDashboardView) {
           if (response.user.defaultDashboardView === "parent") {
             redirectPath = "/unified-account";
           } else {

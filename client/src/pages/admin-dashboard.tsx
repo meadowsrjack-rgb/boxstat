@@ -329,6 +329,12 @@ export default function AdminDashboard() {
     window.history.replaceState({}, '', newUrl.toString());
   }, [deepLinkEventId]);
 
+  const { data: crmUnreadData } = useQuery<any>({
+    queryKey: ['/api/admin/crm-unread'],
+    refetchInterval: 30000,
+  });
+  const crmUnreadCount = crmUnreadData?.unreadCount || 0;
+
   // Fetch organization data
   const { data: organization, isLoading: orgLoading } = useQuery<any>({
     queryKey: ["/api/organization"],
@@ -637,9 +643,14 @@ export default function AdminDashboard() {
                 <FileText className="w-4 h-4 mr-2" />
                 Waivers
               </TabsTrigger>
-              <TabsTrigger value="messages" data-testid="tab-messages" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+              <TabsTrigger value="messages" data-testid="tab-messages" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 relative">
                 <MessageSquare className="w-4 h-4 mr-2" />
                 Messages
+                {crmUnreadCount > 0 && activeTab !== 'messages' && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                    {crmUnreadCount > 99 ? '99+' : crmUnreadCount}
+                  </span>
+                )}
               </TabsTrigger>
               <TabsTrigger value="migrations" data-testid="tab-migrations" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <ArrowLeftRight className="w-4 h-4 mr-2" />

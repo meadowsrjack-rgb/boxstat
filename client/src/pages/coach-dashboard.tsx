@@ -213,8 +213,29 @@ export default function CoachDashboard() {
   // HR Tab - Lead Evaluation Form state
   const [showLeadEvaluation, setShowLeadEvaluation] = useState(false);
 
+  const lastTeamChatSeenKey = `boxstat_team_chat_seen_${currentUser?.id}`;
+  const lastTeamChatSeen = typeof window !== 'undefined' ? localStorage.getItem(lastTeamChatSeenKey) : null;
+  
+  const { data: teamUnreadData } = useQuery<any>({
+    queryKey: ['/api/messages/unread-counts', lastTeamChatSeen],
+    queryFn: async () => {
+      const params = lastTeamChatSeen ? `?since=${encodeURIComponent(lastTeamChatSeen)}` : '';
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`/api/messages/unread-counts${params}`, { credentials: 'include', headers });
+      if (!res.ok) return { totalUnread: 0 };
+      return res.json();
+    },
+    refetchInterval: 30000,
+  });
+  const teamUnreadCount = teamUnreadData?.totalUnread || 0;
+
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("coachDashboardTab", activeTab);
+    if (activeTab === 'team' && typeof window !== 'undefined') {
+      localStorage.setItem(lastTeamChatSeenKey, new Date().toISOString());
+    }
   }, [activeTab]);
 
   if (!currentUser) {
@@ -604,7 +625,7 @@ export default function CoachDashboard() {
         <div className="px-6 mb-6">
           <div className="flex justify-between items-center">
             <TabButton label="calendar" activeTab={activeTab} onClick={setActiveTab} Icon={CalendarIcon} />
-            <TabButton label="team" activeTab={activeTab} onClick={setActiveTab} Icon={Users} />
+            <TabButton label="team" activeTab={activeTab} onClick={setActiveTab} Icon={Users} badgeCount={teamUnreadCount} />
             <TabButton label="profile" activeTab={activeTab} onClick={setActiveTab} Icon={User} />
             <TabButton label="docs" activeTab={activeTab} onClick={setActiveTab} Icon={FileText} />
           </div>
@@ -824,16 +845,23 @@ export default function CoachDashboard() {
 
 /* =================== Subcomponents =================== */
 
-function TabButton({ label, activeTab, onClick, Icon }: { label: any; activeTab: string; onClick: (t: any) => void; Icon: any }) {
+function TabButton({ label, activeTab, onClick, Icon, badgeCount }: { label: any; activeTab: string; onClick: (t: any) => void; Icon: any; badgeCount?: number }) {
   const active = activeTab === label;
   return (
     <button
       onClick={() => onClick(label)}
-      className={`flex flex-col items-center space-y-3 py-4 px-3 ${active ? "text-red-600" : "text-gray-400"}`}
+      className={`flex flex-col items-center space-y-3 py-4 px-3 relative ${active ? "text-red-600" : "text-gray-400"}`}
       style={{ color: active ? "#d82428" : undefined }}
       data-testid={`tab-${label}`}
     >
-      <Icon className="h-6 w-6" />
+      <div className="relative">
+        <Icon className="h-6 w-6" />
+        {badgeCount && badgeCount > 0 && !active && (
+          <span className="absolute -top-2 -right-2 min-w-[16px] h-[16px] bg-red-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">
+            {badgeCount > 99 ? '99+' : badgeCount}
+          </span>
+        )}
+      </div>
       <div className={`h-1 w-12 rounded-full transition-all duration-200 ${active ? "opacity-100" : "opacity-0"}`} style={{ backgroundColor: "#d82428" }} />
     </button>
   );

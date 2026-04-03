@@ -10461,6 +10461,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // MESSAGE ROUTES (Team Chat)
   // =============================================
   
+  app.get('/api/messages/unread-counts', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const since = req.query.since as string | undefined;
+      
+      const userTeamMemberships = await storage.getTeamMembershipsByProfile(userId);
+      const activeTeamIds = userTeamMemberships
+        .filter((tm: any) => tm.status === 'active')
+        .map((tm: any) => tm.teamId);
+      
+      if (activeTeamIds.length === 0) {
+        return res.json({ totalUnread: 0, teams: {} });
+      }
+      
+      let totalUnread = 0;
+      const teamCounts: Record<number, number> = {};
+      
+      const channels = ['players', 'parents'];
+      for (const teamId of activeTeamIds) {
+        let teamTotal = 0;
+        for (const channel of channels) {
+          const messages = await storage.getMessagesByTeam(String(teamId), channel);
+          const newMessages = since
+            ? messages.filter((m: any) => new Date(m.createdAt) > new Date(since) && m.senderId !== userId)
+            : messages.filter((m: any) => m.senderId !== userId);
+          teamTotal += newMessages.length;
+        }
+        teamCounts[teamId] = teamTotal;
+        totalUnread += teamTotal;
+      }
+      
+      res.json({ totalUnread, teams: teamCounts });
+    } catch (error: any) {
+      console.error('Error fetching unread message counts:', error);
+      res.status(500).json({ error: 'Failed to fetch unread counts' });
+    }
+  });
+
   // Legacy route (kept for backwards compatibility) - now supports channel query param
   app.get('/api/messages/team/:teamId', requireAuth, async (req: any, res) => {
     const { channel = 'players' } = req.query;

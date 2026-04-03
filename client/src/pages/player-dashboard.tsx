@@ -279,6 +279,26 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     fetchAndOpenEvent();
   }, []);
 
+  const playerUserId = (user as any)?.id;
+  const lastTeamChatSeenKey = `boxstat_team_chat_seen_${playerUserId}`;
+  const lastTeamChatSeen = typeof window !== 'undefined' ? localStorage.getItem(lastTeamChatSeenKey) : null;
+  
+  const { data: teamUnreadData } = useQuery<any>({
+    queryKey: ['/api/messages/unread-counts', lastTeamChatSeen],
+    queryFn: async () => {
+      const params = lastTeamChatSeen ? `?since=${encodeURIComponent(lastTeamChatSeen)}` : '';
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`/api/messages/unread-counts${params}`, { credentials: 'include', headers });
+      if (!res.ok) return { totalUnread: 0 };
+      return res.json();
+    },
+    enabled: !!playerUserId,
+    refetchInterval: 30000,
+  });
+  const teamUnreadCount = teamUnreadData?.totalUnread || 0;
+
   // Update URL and localStorage when activeTab changes
   const handleTabChange = (newTab: "activity" | "video" | "team" | "profile") => {
     setActiveTab(newTab);
@@ -287,6 +307,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
       const newUrl = new URL(window.location.href);
       newUrl.searchParams.set('tab', newTab);
       window.history.replaceState({}, '', newUrl.toString());
+      if (newTab === 'team') {
+        localStorage.setItem(lastTeamChatSeenKey, new Date().toISOString());
+      }
     }
   };
 
@@ -1046,7 +1069,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
           <div className="flex justify-between items-center">
             <TabButton label="activity" activeTab={activeTab} onClick={handleTabChange} Icon={CalendarIcon} />
             <TabButton label="video" activeTab={activeTab} onClick={handleTabChange} Icon={Play} />
-            <TabButton label="team" activeTab={activeTab} onClick={handleTabChange} Icon={Shirt} />
+            <TabButton label="team" activeTab={activeTab} onClick={handleTabChange} Icon={Shirt} badgeCount={teamUnreadCount} />
             <TabButton label="profile" activeTab={activeTab} onClick={handleTabChange} Icon={User} />
           </div>
         </div>
@@ -1635,20 +1658,29 @@ function TabButton({
   activeTab,
   onClick,
   Icon,
+  badgeCount,
 }: {
   label: "activity" | "video" | "team" | "profile";
   activeTab: string;
   onClick: (t: any) => void;
   Icon: any;
+  badgeCount?: number;
 }) {
   const active = activeTab === label;
   return (
     <button
       onClick={() => onClick(label as any)}
-      className={`flex flex-col items-center space-y-3 py-4 px-3 ${active ? "text-red-600" : "text-gray-400"}`}
+      className={`flex flex-col items-center space-y-3 py-4 px-3 relative ${active ? "text-red-600" : "text-gray-400"}`}
       style={{ color: active ? "#d82428" : undefined }}
     >
-      <Icon className="h-6 w-6" />
+      <div className="relative">
+        <Icon className="h-6 w-6" />
+        {badgeCount && badgeCount > 0 && !active && (
+          <span className="absolute -top-2 -right-2 min-w-[16px] h-[16px] bg-red-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">
+            {badgeCount > 99 ? '99+' : badgeCount}
+          </span>
+        )}
+      </div>
       <div
         className={`h-1 w-12 rounded-full transition-all duration-200 ${active ? "opacity-100" : "opacity-0"}`}
         style={{ backgroundColor: "#d82428" }}

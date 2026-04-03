@@ -4338,7 +4338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let players: any[] = [];
     const accountHolderId = user?.accountHolderId || id;
     
-    if (user?.role === "parent" || user?.role === "admin") {
+    if (user?.role === "parent" || user?.role === "admin" || user?.role === "coach") {
       // Get all players linked to any profile in this account
       const allUsers = await storage.getUsersByOrganization(user.organizationId);
       players = allUsers.filter(u => (u.accountHolderId === accountHolderId || u.parentId === accountHolderId || u.accountHolderId === id || u.parentId === id) && u.role === "player");

@@ -276,7 +276,7 @@ export function setupNotificationRoutes(app: Express) {
   // Mark all notifications as read
   app.post('/api/notifications/read-all', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.body?.profileId || req.user.id;
       await notificationService.markAllNotificationsAsRead(userId);
       res.json({ success: true });
     } catch (error) {

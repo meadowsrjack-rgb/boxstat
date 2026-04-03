@@ -1103,8 +1103,15 @@ function PlayerProfileCard({ player, onCoachClick, onNavigateToPayments }: { pla
 function ParentMessagesSection({ players, userId }: { players: any[]; userId?: string }) {
   const [activeChat, setActiveChat] = useState<{ type: 'team' | 'coach' | 'management'; teamId?: number; coachId?: string; teamName?: string } | null>(null);
   const [newMessage, setNewMessage] = useState("");
-  const [managementChatViewed, setManagementChatViewed] = useState(false);
-  const [lastSeenReplyCount, setLastSeenReplyCount] = useState(0);
+  const storageKey = `crm_seen_reply_count_${userId || 'unknown'}`;
+  const [managementChatViewed, setManagementChatViewed] = useState(() => {
+    const saved = localStorage.getItem(storageKey);
+    return saved !== null;
+  });
+  const [lastSeenReplyCount, setLastSeenReplyCount] = useState(() => {
+    const saved = localStorage.getItem(storageKey);
+    return saved ? parseInt(saved, 10) : 0;
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -1144,10 +1151,11 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
   useEffect(() => {
     if (activeChat?.type === 'management') {
       setLastSeenReplyCount(adminReplyCount);
-    } else if (adminReplyCount > lastSeenReplyCount && managementChatViewed) {
+      localStorage.setItem(storageKey, String(adminReplyCount));
+    } else if (adminReplyCount > lastSeenReplyCount) {
       setManagementChatViewed(false);
     }
-  }, [adminReplyCount, lastSeenReplyCount, managementChatViewed, activeChat]);
+  }, [adminReplyCount, lastSeenReplyCount, activeChat, storageKey]);
 
   // Send team message mutation (parent channel)
   const sendTeamMessageMutation = useMutation({
@@ -1332,7 +1340,7 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
           <Button
             variant="outline"
             className="w-full justify-between"
-            onClick={() => { setActiveChat({ type: 'management' }); setManagementChatViewed(true); setLastSeenReplyCount(adminReplyCount); }}
+            onClick={() => { setActiveChat({ type: 'management' }); setManagementChatViewed(true); setLastSeenReplyCount(adminReplyCount); localStorage.setItem(storageKey, String(adminReplyCount)); }}
             data-testid="button-contact-management"
           >
             <span className="flex items-center gap-2">

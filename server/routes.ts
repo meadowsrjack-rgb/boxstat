@@ -1663,72 +1663,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================
   // STRIPE PAYMENT ROUTES
   // =============================================
-  
-  // Initialize Stripe — use test keys in dev mode if available
-  const routeStripeKey = (process.env.NODE_ENV === 'development' && process.env.TESTING_STRIPE_SECRET_KEY)
-    ? process.env.TESTING_STRIPE_SECRET_KEY
-    : process.env.STRIPE_SECRET_KEY;
 
-  const stripe = routeStripeKey
-    ? new Stripe(routeStripeKey, { apiVersion: "2025-06-30.basil" })
-    : null;
-  
-  if (stripe && routeStripeKey) {
-    const keyPrefix = routeStripeKey.substring(0, 8);
+  if (stripe) {
+    const keyPrefix = stripeSecretKey!.substring(0, 8);
     const mode = keyPrefix.startsWith('sk_test') ? '🧪 TEST' : '🔴 LIVE';
     console.log(`Stripe initialized in ${mode} mode (key: ${keyPrefix}...)`);
   }
-  
-  // DEPRECATED: This endpoint is no longer used by the frontend.
-  // Use /api/payments/create-checkout instead for all new payment flows.
-  // Connect params are applied when organizationId is present in the request body.
-  app.post("/api/create-payment-intent", async (req: any, res) => {
-    if (!stripe) {
-      return res.status(500).json({ error: "Stripe is not configured" });
-    }
-    
-    console.warn("[DEPRECATED] /api/create-payment-intent called — use /api/payments/create-checkout for new payment flows.");
-
-    try {
-      const { amount, packageId, packageName, organizationId } = req.body;
-
-      const baseAmount = Math.round(amount);
-      const intentProcessingFee = calculateStripeProcessingFee(baseAmount);
-      const intentParams: any = {
-        amount: baseAmount + intentProcessingFee,
-        currency: "usd",
-        metadata: {
-          packageId: packageId || "",
-          packageName: packageName || "",
-        },
-        automatic_payment_methods: {
-          enabled: true,
-        },
-      };
-
-      // Apply Connect params if organizationId is provided and org is Connect-enabled
-      if (organizationId) {
-        const connectInfo = await getOrgConnectInfo(organizationId);
-        if (connectInfo.isConnected && connectInfo.connectedAccountId) {
-          intentParams.transfer_data = { destination: connectInfo.connectedAccountId };
-          const feePercent = await getPlatformFeePercent();
-          if (feePercent > 0) {
-            intentParams.application_fee_amount = Math.round(Math.round(amount) * (feePercent / 100));
-          }
-          console.log(`[Connect] create-payment-intent: applied transfer_data and application_fee_amount for org ${organizationId}`);
-        }
-      }
-
-      const paymentIntent = await stripe.paymentIntents.create(intentParams);
-      
-      res.json({ clientSecret: paymentIntent.client_secret });
-    } catch (error: any) {
-      res.status(500).json({ 
-        error: "Error creating payment intent", 
-        message: error.message 
-      });
-    }
-  });
   
   app.post("/api/payments/checkout-session", requireAuth, async (req: any, res) => {
     const orgStripe = await getStripeForOrg(req.user.organizationId);
@@ -1887,6 +1827,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const connectResult1 = await applyConnectChargeParams(sessionParams1, req.user.organizationId, mode, legacyPlatformFee > 0 ? legacyPlatformFee : undefined);
       verifyConnectRouting(sessionParams1, mode, req.user.organizationId, connectResult1, { applicationFeeAmount: legacyPlatformFee, checkoutType: 'legacy_package' });
+
+      console.log(`[Connect] legacy_package: creating session for org ${req.user.organizationId}`, {
+        payment_intent_data: sessionParams1.payment_intent_data ?? null,
+        subscription_data: sessionParams1.subscription_data ?? null,
+      });
 
       const session = await orgStripe.checkout.sessions.create(sessionParams1);
       
@@ -2375,6 +2320,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const connectResult2 = await applyConnectChargeParams(sessionParams, req.user.organizationId, checkoutMode, platformFee);
       verifyConnectRouting(sessionParams, checkoutMode, req.user.organizationId, connectResult2, { applicationFeeAmount: platformFee, checkoutType: 'package_purchase' });
+
+      console.log(`[Connect] package_purchase: creating session for org ${req.user.organizationId}`, {
+        payment_intent_data: sessionParams.payment_intent_data ?? null,
+        subscription_data: sessionParams.subscription_data ?? null,
+      });
 
       const session = await orgStripe2.checkout.sessions.create(sessionParams);
 
@@ -3543,6 +3493,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const connectResult3 = await applyConnectChargeParams(cartSessionParams, req.user.organizationId, 'payment', cartPlatformFee);
       verifyConnectRouting(cartSessionParams, 'payment', req.user.organizationId, connectResult3, { applicationFeeAmount: cartPlatformFee, checkoutType: 'cart_purchase' });
+
+      console.log(`[Connect] cart_purchase: creating session for org ${req.user.organizationId}`, {
+        payment_intent_data: cartSessionParams.payment_intent_data ?? null,
+      });
 
       const newSession = await orgStripe.checkout.sessions.create(cartSessionParams);
 
@@ -4801,6 +4755,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const connectResult4 = await applyConnectChargeParams(addPlayerSubParams, req.user.organizationId, 'subscription');
         verifyConnectRouting(addPlayerSubParams, 'subscription', req.user.organizationId, connectResult4, { checkoutType: 'add_player_subscription' });
 
+        console.log(`[Connect] add_player_subscription: creating session for org ${req.user.organizationId}`, {
+          subscription_data: addPlayerSubParams.subscription_data ?? null,
+        });
+
         session = await playerOrgStripe.checkout.sessions.create(addPlayerSubParams);
         
         console.log(`Created subscription checkout for bundle-to-monthly: ${pricingOptionName} -> Monthly after ${bundleDurationDays} days`);
@@ -4900,6 +4858,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const connectResult5 = await applyConnectChargeParams(addPlayerPayParams, req.user.organizationId, 'payment', platformFee);
         verifyConnectRouting(addPlayerPayParams, 'payment', req.user.organizationId, connectResult5, { applicationFeeAmount: platformFee, checkoutType: 'add_player_payment' });
+
+        console.log(`[Connect] add_player_payment: creating session for org ${req.user.organizationId}`, {
+          payment_intent_data: addPlayerPayParams.payment_intent_data ?? null,
+        });
 
         session = await playerOrgStripe.checkout.sessions.create(addPlayerPayParams);
       }
@@ -11687,8 +11649,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const origin = `${req.protocol}://${req.get('host')}`;
 
-      const sessionParams: any = {
-        line_items: [{
+      const storeSubtotal = product.price;
+      const storeFeePercent = await getPlatformFeePercent();
+      const storePlatformFee = storeFeePercent > 0 ? Math.round(storeSubtotal * (storeFeePercent / 100)) : 0;
+      const storeProcessingFee = calculateStripeProcessingFee(storeSubtotal + storePlatformFee);
+
+      const storeLineItems: any[] = [
+        {
           price_data: {
             currency: 'usd',
             product_data: {
@@ -11698,7 +11665,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
             unit_amount: product.price,
           },
           quantity: 1,
-        }],
+        },
+      ];
+
+      if (storePlatformFee > 0) {
+        storeLineItems.push({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Technology fee',
+              description: `${storeFeePercent}% technology fee`,
+            },
+            unit_amount: storePlatformFee,
+          },
+          quantity: 1,
+        });
+      }
+
+      if (storeProcessingFee > 0) {
+        storeLineItems.push({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Processing Fee',
+              description: 'Card processing fee',
+            },
+            unit_amount: storeProcessingFee,
+          },
+          quantity: 1,
+        });
+      }
+
+      const sessionParams: any = {
+        line_items: storeLineItems,
         mode: 'payment',
         success_url: `${origin}/store-checkout-success?product=${encodeURIComponent(product.name)}`,
         cancel_url: `${origin}/store-checkout-cancel`,
@@ -11709,8 +11708,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       };
 
-      const connectResult = await applyConnectChargeParams(sessionParams, orgId, 'payment', undefined);
-      
+      const connectResult = await applyConnectChargeParams(sessionParams, orgId, 'payment', storePlatformFee);
+      verifyConnectRouting(sessionParams, 'payment', orgId, connectResult, { applicationFeeAmount: storePlatformFee, checkoutType: 'qr_store_checkout' });
+
+      console.log(`[Connect] qr_store_checkout: creating session for org ${orgId}`, {
+        payment_intent_data: sessionParams.payment_intent_data ?? null,
+      });
+
       const session = await orgStripe.checkout.sessions.create(sessionParams);
       res.json({ sessionUrl: session.url, sessionId: session.id });
     } catch (error: any) {
@@ -15926,6 +15930,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const connectResult6 = await applyConnectChargeParams(quoteSessionParams, quote.organizationId, 'payment', quotePlatformFee);
         verifyConnectRouting(quoteSessionParams, 'payment', quote.organizationId, connectResult6, { applicationFeeAmount: quotePlatformFee, checkoutType: 'quote_checkout' });
+
+        console.log(`[Connect] quote_checkout: creating session for org ${quote.organizationId}`, {
+          payment_intent_data: quoteSessionParams.payment_intent_data ?? null,
+        });
 
         const session = await quoteOrgStripe.checkout.sessions.create(quoteSessionParams);
 

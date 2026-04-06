@@ -932,7 +932,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userHasNoPassword = !user.password;
       
       if (userHasNoPassword && !password) {
-        // User has no password set — allow login but flag for password setup
+        if (user.status === 'invited' || user.inviteToken) {
+          return res.status(401).json({
+            success: false,
+            message: "Please check your email for an invite link to set your password and activate your account.",
+            needsClaim: true
+          });
+        }
       } else if (userHasNoPassword && password) {
         // User trying to log in with a password but none is set
         return res.status(401).json({ 
@@ -5823,7 +5829,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     // Admin-created users are automatically verified so they can use magic link login
     userData.verified = true;
+
+    // Generate invite token for account claim if user has an email
+    if (userData.email) {
+      const inviteToken = crypto.randomBytes(32).toString('hex');
+      const inviteExpiry = new Date();
+      inviteExpiry.setDate(inviteExpiry.getDate() + 7);
+      (userData as any).inviteToken = inviteToken;
+      (userData as any).inviteTokenExpiry = inviteExpiry.toISOString();
+      (userData as any).status = 'invited';
+      (userData as any).hasRegistered = false;
+    }
+
     const user = await storage.createUser(userData);
+
+    // Send claim email in background (don't block response)
+    if (userData.email && (userData as any).inviteToken) {
+      const org = await storage.getOrganization(userData.organizationId || req.user.organizationId);
+      emailService.sendAccountClaimEmail({
+        email: userData.email,
+        firstName: userData.firstName || '',
+        inviteToken: (userData as any).inviteToken,
+        organizationName: org?.name,
+        role: userData.role || 'player',
+      }).catch(err => console.error('Failed to send account claim email:', err));
+    }
+
     res.json(user);
   });
   
@@ -13956,15 +13987,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ error: 'Invalid or expired invite link' });
       }
-      if (user.status !== 'invited') {
+      if (user.hasRegistered && user.status === 'active') {
         return res.status(400).json({ error: 'This account has already been activated' });
       }
       if (user.inviteTokenExpiry && new Date(user.inviteTokenExpiry) < new Date()) {
         return res.status(410).json({ error: 'Invite link has expired. Please contact your organization admin.' });
       }
 
-      const bcrypt = await import('bcrypt');
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const hashedPassword = hashPassword(password);
 
       await storage.updateUser(user.id, {
         password: hashedPassword,

@@ -11481,6 +11481,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.get('/api/store-product/:productId', async (req: any, res) => {
+    try {
+      const product = await storage.getProgram(req.params.productId);
+      if (!product || product.productCategory !== 'goods') {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      const totalStock = product.inventoryCount ?? null;
+      const sizeStockMap = (product.sizeStock && typeof product.sizeStock === 'object') ? product.sizeStock as Record<string, number> : null;
+      let inStock = true;
+      if (totalStock !== null && totalStock <= 0) {
+        inStock = false;
+      }
+      if (sizeStockMap && Object.keys(sizeStockMap).length > 0) {
+        const totalSizeStock = Object.values(sizeStockMap).reduce((sum: number, v: any) => sum + (Number(v) || 0), 0);
+        if (totalSizeStock <= 0) inStock = false;
+      }
+      res.json({
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        imageUrl: product.imageUrl,
+        inventoryCount: totalStock,
+        sizeStock: sizeStockMap,
+        inventorySizes: product.inventorySizes || [],
+        inStock,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: 'Failed to fetch product', message: error.message });
+    }
+  });
+
   app.post('/api/store-checkout/:productId', async (req: any, res) => {
     try {
       const productId = req.params.productId;

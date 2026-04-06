@@ -1,13 +1,32 @@
 import { useEffect, useState } from "react";
 import { useParams } from "wouter";
-import { Loader2, CheckCircle, XCircle, ShoppingBag } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, ShoppingBag, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+interface ProductInfo {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  imageUrl?: string;
+  inventoryCount: number | null;
+  inStock: boolean;
+}
 
 export default function StoreBuy() {
   const params = useParams<{ productId: string }>();
   const productId = params.productId;
-  const [status, setStatus] = useState<"loading" | "redirecting" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "checking" | "out-of-stock" | "redirecting" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
+  const [product, setProduct] = useState<ProductInfo | null>(null);
 
   useEffect(() => {
     if (!productId) {
@@ -16,25 +35,23 @@ export default function StoreBuy() {
       return;
     }
 
-    async function startCheckout() {
+    async function checkProduct() {
       try {
-        setStatus("loading");
-        const res = await fetch(`/api/store-checkout/${productId}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        });
-        const data = await res.json();
+        setStatus("checking");
+        const res = await fetch(`/api/store-product/${productId}`);
         if (!res.ok) {
+          const data = await res.json().catch(() => ({ error: "Product not found" }));
           setStatus("error");
-          setErrorMsg(data.error || "Failed to create checkout");
+          setErrorMsg(data.error || "Product not found");
           return;
         }
-        if (data.sessionUrl) {
-          setStatus("redirecting");
-          window.location.href = data.sessionUrl;
+        const data: ProductInfo = await res.json();
+        setProduct(data);
+
+        if (!data.inStock) {
+          setStatus("out-of-stock");
         } else {
-          setStatus("error");
-          setErrorMsg("No checkout URL received");
+          startCheckout();
         }
       } catch (err: any) {
         setStatus("error");
@@ -42,14 +59,40 @@ export default function StoreBuy() {
       }
     }
 
-    startCheckout();
+    checkProduct();
   }, [productId]);
+
+  async function startCheckout() {
+    try {
+      setStatus("loading");
+      const res = await fetch(`/api/store-checkout/${productId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setStatus("error");
+        setErrorMsg(data.error || "Failed to create checkout");
+        return;
+      }
+      if (data.sessionUrl) {
+        setStatus("redirecting");
+        window.location.href = data.sessionUrl;
+      } else {
+        setStatus("error");
+        setErrorMsg("No checkout URL received");
+      }
+    } catch (err: any) {
+      setStatus("error");
+      setErrorMsg(err.message || "Something went wrong");
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center">
         <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-red-600" />
-        {status === "loading" && (
+        {(status === "loading" || status === "checking") && (
           <>
             <Loader2 className="h-8 w-8 animate-spin text-red-600 mx-auto mb-3" />
             <p className="text-gray-700 font-medium">Preparing checkout...</p>
@@ -76,6 +119,43 @@ export default function StoreBuy() {
           </>
         )}
       </div>
+
+      <Dialog open={status === "out-of-stock"} onOpenChange={(open) => { if (!open) window.history.back(); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center justify-center mb-2">
+              <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center">
+                <AlertTriangle className="h-6 w-6 text-amber-600" />
+              </div>
+            </div>
+            <DialogTitle className="text-center">Currently Out of Stock</DialogTitle>
+            <DialogDescription className="text-center pt-2">
+              <span className="font-semibold text-gray-900">{product?.name}</span> is currently out of stock.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4 my-2">
+            <Clock className="h-5 w-5 text-amber-600 flex-shrink-0" />
+            <p className="text-sm text-amber-800">
+              Please allow <span className="font-semibold">2–4 weeks</span> for delivery if you choose to continue.
+            </p>
+          </div>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => window.history.back()}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 bg-red-600 hover:bg-red-700"
+              onClick={() => startCheckout()}
+            >
+              Continue to Purchase
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

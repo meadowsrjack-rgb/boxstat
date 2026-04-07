@@ -85,13 +85,31 @@ async function restoreNativeSession() {
   }
 }
 
+// Global error handlers to prevent WebView crashes on Android
+window.addEventListener('error', (event) => {
+  console.error('[Global] Uncaught error:', event.error?.message || event.message);
+  event.preventDefault();
+});
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('[Global] Unhandled promise rejection:', event.reason?.message || event.reason);
+  event.preventDefault();
+});
+
 // Initialize app
 async function initApp() {
   // Restore session first (critical for iOS app restarts)
-  await restoreNativeSession();
+  try {
+    await restoreNativeSession();
+  } catch (e) {
+    console.error('[Init] Session restore failed, continuing:', e);
+  }
   
   // Register service worker for PWA functionality
-  registerServiceWorker();
+  try {
+    registerServiceWorker();
+  } catch (e) {
+    console.error('[Init] Service worker registration failed:', e);
+  }
   
   // Render the app
   const container = document.getElementById("root");

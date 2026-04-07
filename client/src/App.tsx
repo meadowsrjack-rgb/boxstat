@@ -419,6 +419,8 @@ function AppRouter() {
       initPushNotifications().then(() => {
         console.log('Push notification listeners set up');
         registerPushNotifications();
+      }).catch(err => {
+        console.error('[Push] Failed to initialize push notifications:', err);
       });
     }
   }, [isAuthenticated, user]);

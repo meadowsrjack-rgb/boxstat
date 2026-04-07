@@ -10253,7 +10253,7 @@ function StoreTab({ organization }: any) {
                         <FormLabel>Available Sizes</FormLabel>
                         <FormDescription>Select which sizes are available</FormDescription>
                         <div className="flex flex-wrap gap-2 mt-2">
-                          {["XS", "S", "M", "L", "XL", "2XL", "3XL", "YS", "YM", "YL"].map((size) => (
+                          {["XS", "S", "M", "L", "XL", "2XL", "3XL", "YXS", "YS", "YM", "YL"].map((size) => (
                             <div key={size} className="flex items-center space-x-1">
                               <Checkbox
                                 checked={(field.value || []).includes(size)}

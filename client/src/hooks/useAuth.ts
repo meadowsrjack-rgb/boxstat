@@ -27,10 +27,25 @@ export function useAuth() {
       const url = `${API_BASE_URL}/api/auth/user`;
       console.log("📡 useAuth: Fetching from:", url);
       
-      const res = await fetch(url, {
-        headers,
-        credentials: "include",
-      });
+      const controller = new AbortController();
+      const fetchTimeoutId = setTimeout(() => {
+        console.warn("⏱️ useAuth: Auth fetch timed out after 5s, aborting");
+        controller.abort();
+      }, 5000);
+
+      let res: Response;
+      try {
+        res = await fetch(url, {
+          headers,
+          credentials: "include",
+          signal: controller.signal,
+        });
+      } catch (networkError) {
+        console.error("❌ useAuth: Network error (no connectivity or timeout):", networkError);
+        return null;
+      } finally {
+        clearTimeout(fetchTimeoutId);
+      }
       
       console.log("📥 useAuth: Response status:", res.status);
       
@@ -40,7 +55,7 @@ export function useAuth() {
       }
       if (!res.ok) {
         console.error("❌ useAuth: Fetch failed with status:", res.status);
-        throw new Error("Failed to fetch user");
+        return null;
       }
       const userData = await res.json();
       console.log("👤 useAuth: User data received:", userData?.email);

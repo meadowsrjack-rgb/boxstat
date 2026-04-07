@@ -350,9 +350,44 @@ function AppRouter() {
   const { user, isLoading, isAuthenticated } = useAuth();
   console.log('[AppRouter] path:', currentPath, 'isLoading:', isLoading, 'user:', !!user);
   const [, setLocation] = useLocation();
-  
+
   // Check if user needs profile setup
   const needsProfileSetup = isAuthenticated && user && !(user as any)?.profileCompleted;
+
+  // Safety timeout: if auth check takes >5 seconds, forcibly remove the startup
+  // loader and hide the native splash screen so the user never sees a white screen
+  useEffect(() => {
+    const dismissStartupUI = async () => {
+      const loader = document.getElementById('startup-loader');
+      if (loader) {
+        console.log('[AppRouter] Safety timeout: removing startup-loader');
+        const isNativeApp = !!(window as any).Capacitor?.isNativePlatform?.();
+        if (isNativeApp) {
+          loader.classList.add('loader-hidden');
+          setTimeout(() => loader.remove(), 500);
+        } else {
+          loader.remove();
+        }
+      }
+      try {
+        if ((window as any).Capacitor?.Plugins?.SplashScreen) {
+          await (window as any).Capacitor.Plugins.SplashScreen.hide();
+          console.log('[AppRouter] Safety timeout: SplashScreen hidden');
+        }
+      } catch (error) {
+        console.log('[AppRouter] Safety timeout: SplashScreen not available:', error);
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      if (isLoading) {
+        console.warn('[AppRouter] Auth check timed out after 5s, forcing startup UI removal');
+        dismissStartupUI();
+      }
+    }, 5000);
+
+    return () => clearTimeout(timeoutId);
+  }, [isLoading]);
 
   // Handle Splash Screen Handoff
   useEffect(() => {

@@ -95,8 +95,40 @@ window.addEventListener('unhandledrejection', (event) => {
   event.preventDefault();
 });
 
+// Absolute safety net: remove the #startup-loader after maxMs regardless of app state.
+// This ensures the iOS WebView never stays on a white/loading screen permanently.
+function installStartupLoaderSafetyTimeout(maxMs: number) {
+  const timeoutId = setTimeout(async () => {
+    const loader = document.getElementById('startup-loader');
+    if (loader) {
+      console.warn(`[Init] startup-loader still present after ${maxMs}ms – force removing`);
+      loader.remove();
+    }
+    try {
+      if ((window as any).Capacitor?.Plugins?.SplashScreen) {
+        await (window as any).Capacitor.Plugins.SplashScreen.hide();
+        console.warn('[Init] Safety timeout: SplashScreen hidden');
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, maxMs);
+
+  // Cancel the timeout once the loader is already gone (normal flow completed)
+  const observer = new MutationObserver(() => {
+    if (!document.getElementById('startup-loader')) {
+      clearTimeout(timeoutId);
+      observer.disconnect();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: false });
+}
+
 // Initialize app
 async function initApp() {
+  // Install absolute safety net: remove startup loader after 8 seconds no matter what
+  installStartupLoaderSafetyTimeout(8000);
+
   // Restore session first (critical for iOS app restarts)
   try {
     await restoreNativeSession();

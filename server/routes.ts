@@ -834,14 +834,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     const user = await storage.getUser(req.user.id);
     
-    // If parent, set activeProfileId to first child
-    if (user && user.role === "parent") {
-      const allUsers = await storage.getUsersByOrganization(user.organizationId);
-      const linkedPlayers = allUsers.filter(u => u.accountHolderId === user.id && u.role === "player");
-      if (linkedPlayers.length > 0) {
-        (user as any).activeProfileId = linkedPlayers[0].id;
-      }
-    }
+    // Note: activeProfileId is intentionally not set here so the frontend
+    // can rely on the selectedPlayerId stored in localStorage for player selection.
     
     if (user) {
       (user as any).needsPassword = !user.password;
@@ -12429,12 +12423,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id: userId } = req.user;
 
-      // Get enrollments where user is the account holder (parent) or the profile (player)
+      // Resolve the root account holder ID so enrollments are found regardless of
+      // which role/profile the JWT was issued for (parent, admin, coach, etc.)
+      const currentUser = await storage.getUser(userId);
+      const rootAccountHolderId = currentUser?.accountHolderId || userId;
+
+      // Get enrollments for the entire account: by root account holder or by any
+      // profile whose own accountHolderId maps back to the root account holder.
       const enrollments = await db.select()
         .from(productEnrollments)
         .where(
           or(
-            eq(productEnrollments.accountHolderId, userId),
+            eq(productEnrollments.accountHolderId, rootAccountHolderId),
             eq(productEnrollments.profileId, userId)
           )
         );

@@ -341,9 +341,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     return <div className="flex items-center justify-center min-h-screen-safe safe-bottom">Loading...</div>;
   }
   
-  // Fetch active profile if parent has activeProfileId OR if selectedPlayerId is in localStorage
+  // Fetch active profile - localStorage selection takes priority over server-provided activeProfileId
   const selectedPlayerId = typeof window !== "undefined" ? localStorage.getItem("selectedPlayerId") : null;
-  const activeProfileId = (currentUser as any)?.activeProfileId || selectedPlayerId;
+  const activeProfileId = selectedPlayerId || (currentUser as any)?.activeProfileId;
   const { data: activeProfile, isLoading: isLoadingActiveProfile } = useQuery<UserType>({
     queryKey: ["/api/profile", activeProfileId],
     enabled: !!activeProfileId,
@@ -2162,7 +2162,7 @@ function TeamBlock() {
   
   // Fetch active profile from localStorage (same as main dashboard)
   const localSelectedPlayerId = typeof window !== "undefined" ? localStorage.getItem("selectedPlayerId") : null;
-  const activeProfileId = (currentUser as any)?.activeProfileId || localSelectedPlayerId;
+  const activeProfileId = localSelectedPlayerId || (currentUser as any)?.activeProfileId;
   const { data: activeProfile } = useQuery<UserType>({
     queryKey: [`/api/profile/${activeProfileId}`],
     enabled: !!activeProfileId,

@@ -92,6 +92,7 @@ import {
   Eraser,
   RefreshCw,
   Globe,
+  Lock,
   Building,
   Mic,
   BellOff,
@@ -10405,6 +10406,28 @@ function StoreTab({ organization }: any) {
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="visibility"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Visibility</FormLabel>
+                    <Select value={field.value || 'public'} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="public">Everyone (leads & members)</SelectItem>
+                        <SelectItem value="members_only">Members only (requires active enrollment)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500">Public programs are visible to all users. Members-only programs are hidden until a user has an active enrollment in any program.</p>
+                  </FormItem>
+                )}
+              />
+
               {/* Required Waivers */}
               {storeWaivers.length > 0 && (
                 <FormField
@@ -10834,6 +10857,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       scheduleRequestEnabled: program.scheduleRequestEnabled || false,
       sessionLengthMinutes: program.sessionLengthMinutes,
       code: program.code || "",
+      visibility: program.visibility || "public",
     });
     setExpandedPricingOptions(new Set());
     setIsDialogOpen(true);
@@ -10880,6 +10904,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
         scheduleRequestEnabled: false,
         sessionLengthMinutes: undefined,
         code: "",
+        visibility: "public",
       });
     } else if (!editingProgram) {
       // Opening dialog for NEW program - reset to clean defaults
@@ -10919,6 +10944,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
         scheduleRequestEnabled: false,
         sessionLengthMinutes: undefined,
         code: "",
+        visibility: "public",
       });
     }
   };
@@ -11413,6 +11439,25 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                               }} />
                             </label>
                           )}
+                        </FieldWrap>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="visibility"
+                      render={({ field }) => (
+                        <FieldWrap label="Visibility">
+                          <ChipSel
+                            options={[
+                              { value: "public", label: "Everyone", Icon: Globe },
+                              { value: "members_only", label: "Members Only", Icon: Lock },
+                            ]}
+                            value={field.value || 'public'}
+                            onChange={field.onChange}
+                            testIdPrefix="chip-visibility"
+                          />
+                          <p className="text-xs text-gray-400 mt-1">Public = visible to all users. Members Only = hidden until user has an active enrollment.</p>
                         </FieldWrap>
                       )}
                     />
@@ -12262,6 +12307,9 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                         <span className={`text-xs ${program.isActive !== false ? 'text-green-600' : 'text-gray-400'}`}>
                           {program.isActive !== false ? "Active" : "Inactive"}
                         </span>
+                        {program.visibility === 'members_only' && (
+                          <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Members</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>

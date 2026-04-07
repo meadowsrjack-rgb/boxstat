@@ -478,6 +478,7 @@ export const products = pgTable("products", {
   // Schedule Request fields - allows parents to book sessions after payment
   scheduleRequestEnabled: boolean("schedule_request_enabled").default(false),
   sessionLengthMinutes: integer("session_length_minutes"), // Duration of scheduled sessions in minutes
+  visibility: varchar().default('public'), // 'public' (everyone sees it) or 'members_only' (only users with active enrollment)
 });
 
 // Program Suggested Add-ons table (many-to-many relationship between programs and store products)
@@ -1930,6 +1931,7 @@ export const insertProductSchema = z.object({
   // Schedule Request fields
   scheduleRequestEnabled: z.boolean().default(false),
   sessionLengthMinutes: z.number().nullish(),
+  visibility: z.string().default('public'), // 'public' or 'members_only'
   // Multiple pricing options within a single program
   pricingOptions: z.array(z.object({
     id: z.string(),

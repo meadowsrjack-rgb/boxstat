@@ -11470,7 +11470,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/programs', optionalAuth, async (req: any, res) => {
     const organizationId = req.user?.organizationId || 'default-org';
     const programs = await storage.getProgramsByOrganization(organizationId);
-    res.json(programs);
+
+    const hasMembersOnlyPrograms = programs.some((p: any) => p.visibility === 'members_only');
+    if (!hasMembersOnlyPrograms) {
+      return res.json(programs);
+    }
+
+    if (req.user) {
+      const userId = req.user.id;
+      const isAdmin = req.user.role === 'admin' || await hasAdminProfile(userId, organizationId);
+      if (isAdmin) {
+        return res.json(programs);
+      }
+
+      const currentUser = await storage.getUser(userId);
+      const rootAccountHolderId = currentUser?.accountHolderId || userId;
+      const enrollments = await db.select()
+        .from(productEnrollments)
+        .where(
+          or(
+            eq(productEnrollments.accountHolderId, rootAccountHolderId),
+            eq(productEnrollments.profileId, userId)
+          )
+        );
+      const hasActiveEnrollment = enrollments.some((e: any) => e.status === 'active');
+
+      if (hasActiveEnrollment) {
+        return res.json(programs);
+      }
+    }
+
+    const filtered = programs.filter((p: any) => p.visibility !== 'members_only');
+    res.json(filtered);
   });
   
   // Store products endpoint - returns products with productCategory = 'goods'
@@ -11747,13 +11778,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get a single program with its social settings
-  app.get('/api/programs/:id', async (req: any, res) => {
+  app.get('/api/programs/:id', optionalAuth, async (req: any, res) => {
     try {
       const program = await storage.getProgram(req.params.id);
       if (!program) {
         return res.status(404).json({ message: 'Program not found' });
       }
+
+      if (program.visibility === 'members_only') {
+        if (!req.user) {
+          return res.status(404).json({ message: 'Program not found' });
+        }
+        const userId = req.user.id;
+        const organizationId = req.user.organizationId;
+        const isAdmin = req.user.role === 'admin' || await hasAdminProfile(userId, organizationId);
+        if (!isAdmin) {
+          const currentUser = await storage.getUser(userId);
+          const rootAccountHolderId = currentUser?.accountHolderId || userId;
+          const enrollments = await db.select()
+            .from(productEnrollments)
+            .where(
+              or(
+                eq(productEnrollments.accountHolderId, rootAccountHolderId),
+                eq(productEnrollments.profileId, userId)
+              )
+            );
+          const hasActiveEnrollment = enrollments.some((e: any) => e.status === 'active');
+          if (!hasActiveEnrollment) {
+            return res.status(404).json({ message: 'Program not found' });
+          }
+        }
+      }
+
       res.json(program);
     } catch (error: any) {
       console.error('Error fetching program:', error);

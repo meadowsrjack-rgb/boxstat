@@ -6714,14 +6714,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.post('/api/teams', requireAuth, async (req: any, res) => {
-    const { role } = req.user;
-    if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
-      return res.status(403).json({ message: 'Only admins and coaches can create teams' });
+    try {
+      const { role } = req.user;
+      if (role !== 'admin' && role !== 'coach' && !(await hasCoachOrAdminProfile(req.user.id, req.user.organizationId))) {
+        return res.status(403).json({ message: 'Only admins and coaches can create teams' });
+      }
+      
+      const body = { ...req.body };
+      if (body.coachId === null || body.coachId === '') delete body.coachId;
+      const teamData = insertTeamSchema.parse(body);
+      const team = await storage.createTeam(teamData);
+      res.json(team);
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ZodError') {
+        console.error('Error creating team (validation):', error.message);
+        return res.status(400).json({ message: error.message });
+      }
+      console.error('Error creating team:', error);
+      res.status(500).json({ message: error instanceof Error ? error.message : 'Failed to create team' });
     }
-    
-    const teamData = insertTeamSchema.parse(req.body);
-    const team = await storage.createTeam(teamData);
-    res.json(team);
   });
   
   // Coordinator endpoint: Create team with player assignments and auto-enrollment

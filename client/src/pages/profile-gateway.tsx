@@ -82,7 +82,7 @@ export default function ProfileGateway() {
   });
 
   const hasActiveEnrollment = enrollments.some((e: any) => e.status === 'active');
-  const needsOnboarding = !isLoading && !playersLoading && !profilesLoading && user && !hasActiveEnrollment;
+  const needsOnboarding = !isLoading && !playersLoading && !profilesLoading && user && !hasActiveEnrollment && players.length === 0;
 
   if (isLoading || playersLoading || profilesLoading || switching) {
     return (

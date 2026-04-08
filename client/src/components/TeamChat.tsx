@@ -10,7 +10,6 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   Send,
   MessageCircle,
-  Crown,
   Clock,
   ChevronUp,
   Pin,
@@ -334,8 +333,7 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
                           {getSenderName(message.sender)}
                         </span>
                         {isCoach(message.sender?.userType) && (
-                          <Badge variant="outline" className="text-[10px] px-1 py-0 bg-yellow-50 text-yellow-700 border-yellow-200">
-                            <Crown className="h-2.5 w-2.5 mr-0.5" />
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-red-50 text-red-600 border-red-200 font-semibold">
                             Coach
                           </Badge>
                         )}
@@ -354,7 +352,7 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
                           ? 'bg-red-600 text-white rounded-br-sm'
                           : message.isPinned
                           ? 'bg-yellow-100 text-gray-900 rounded-bl-sm shadow-sm border border-yellow-200'
-                          : 'bg-white text-gray-900 rounded-bl-sm shadow-sm'
+                          : 'bg-gray-100 text-gray-900 rounded-bl-sm'
                       }`}
                     >
                       <p className="whitespace-pre-wrap break-words">{message.content}</p>

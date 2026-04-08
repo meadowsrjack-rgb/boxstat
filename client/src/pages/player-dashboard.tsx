@@ -1043,7 +1043,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
         {/* Tabs */}
         <div className="px-6 mb-6">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center border-b border-gray-200">
             <TabButton label="activity" activeTab={activeTab} onClick={handleTabChange} Icon={CalendarIcon} />
             <TabButton label="video" activeTab={activeTab} onClick={handleTabChange} Icon={Play} />
             <TabButton label="team" activeTab={activeTab} onClick={handleTabChange} Icon={Shirt} />
@@ -1647,7 +1647,7 @@ function TabButton({
   return (
     <button
       onClick={() => onClick(label as any)}
-      className={`flex flex-col items-center space-y-3 py-4 px-3 relative ${active ? "text-red-600" : "text-gray-400"}`}
+      className={`flex flex-col items-center space-y-3 py-4 flex-1 relative ${active ? "text-red-600" : "text-gray-400"}`}
       style={{ color: active ? "#d82428" : undefined }}
     >
       <div className="relative">
@@ -1659,7 +1659,7 @@ function TabButton({
         )}
       </div>
       <div
-        className={`h-1 w-12 rounded-full transition-all duration-200 ${active ? "opacity-100" : "opacity-0"}`}
+        className={`h-0.5 w-full absolute bottom-0 left-0 transition-all duration-200 ${active ? "opacity-100" : "opacity-0"}`}
         style={{ backgroundColor: "#d82428" }}
       />
     </button>

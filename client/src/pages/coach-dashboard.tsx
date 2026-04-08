@@ -20,7 +20,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
   Bell,
@@ -604,7 +603,7 @@ export default function CoachDashboard() {
 
         {/* Tabs (removed old Evaluate tab) */}
         <div className="px-6 mb-6">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center border-b border-gray-200">
             <TabButton label="calendar" activeTab={activeTab} onClick={setActiveTab} Icon={CalendarIcon} />
             <TabButton label="team" activeTab={activeTab} onClick={setActiveTab} Icon={Users} />
             <TabButton label="profile" activeTab={activeTab} onClick={setActiveTab} Icon={User} />
@@ -827,7 +826,7 @@ function TabButton({ label, activeTab, onClick, Icon, badgeCount }: { label: any
   return (
     <button
       onClick={() => onClick(label)}
-      className={`flex flex-col items-center space-y-3 py-4 px-3 relative ${active ? "text-red-600" : "text-gray-400"}`}
+      className={`flex flex-col items-center space-y-3 py-4 flex-1 relative ${active ? "text-red-600" : "text-gray-400"}`}
       style={{ color: active ? "#d82428" : undefined }}
       data-testid={`tab-${label}`}
     >
@@ -839,8 +838,50 @@ function TabButton({ label, activeTab, onClick, Icon, badgeCount }: { label: any
           </span>
         )}
       </div>
-      <div className={`h-1 w-12 rounded-full transition-all duration-200 ${active ? "opacity-100" : "opacity-0"}`} style={{ backgroundColor: "#d82428" }} />
+      <div className={`h-0.5 w-full absolute bottom-0 left-0 transition-all duration-200 ${active ? "opacity-100" : "opacity-0"}`} style={{ backgroundColor: "#d82428" }} />
     </button>
+  );
+}
+
+function TeamChatSection({ teamId, currentUserId }: { teamId: number; currentUserId?: string }) {
+  const [chatChannel, setChatChannel] = useState<'players' | 'parents'>('players');
+  return (
+    <div>
+      <h4 className="text-xs font-semibold tracking-widest uppercase text-gray-400 mb-3">Team Chat</h4>
+      {/* Custom underline-style sub-tabs */}
+      <div className="flex border-b border-gray-200 mb-3">
+        <button
+          onClick={() => setChatChannel('players')}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium relative transition-colors ${
+            chatChannel === 'players' ? 'text-red-600' : 'text-gray-400'
+          }`}
+          data-testid="tab-player-chat"
+        >
+          <MessageCircle className="h-4 w-4" />
+          Player Chat
+          {chatChannel === 'players' && (
+            <span className="absolute bottom-0 left-0 w-full h-0.5" style={{ backgroundColor: '#d82428' }} />
+          )}
+        </button>
+        <button
+          onClick={() => setChatChannel('parents')}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium relative transition-colors ${
+            chatChannel === 'parents' ? 'text-red-600' : 'text-gray-400'
+          }`}
+          data-testid="tab-parent-chat"
+        >
+          <Users className="h-4 w-4" />
+          Parent Chat
+          {chatChannel === 'parents' && (
+            <span className="absolute bottom-0 left-0 w-full h-0.5" style={{ backgroundColor: '#d82428' }} />
+          )}
+        </button>
+      </div>
+      <p className="text-xs text-gray-400 mb-2">
+        {chatChannel === 'players' ? 'Chat with players on this team' : 'Chat with parents of players on this team'}
+      </p>
+      <TeamChat teamId={teamId} currentProfileId={currentUserId} channel={chatChannel} />
+    </div>
   );
 }
 
@@ -1208,27 +1249,23 @@ function RosterTab({
     <div className="space-y-6 bg-gray-50 min-h-screen">
       {/* Team Header */}
       <div>
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
           onClick={() => setSelectedTeamId(null)}
-          className="mb-2 text-gray-600 hover:text-gray-900"
+          className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-3"
           data-testid="button-back-to-teams"
         >
-          <ChevronRight className="h-5 w-5 rotate-180" />
-        </Button>
-        <h3 className="text-lg font-bold text-gray-900">{selectedTeam?.name}</h3>
-        <p className="text-sm text-gray-500">
-          {selectedTeam?.programName && <span className="text-red-600 font-medium">{selectedTeam.programName}</span>}
-          {selectedTeam?.programName && selectedTeam?.ageGroup && <span className="mx-1">•</span>}
-          {selectedTeam?.ageGroup}
-        </p>
+          &lt; Teams
+        </button>
+        <h3 className="text-2xl font-bold text-gray-900">{selectedTeam?.name}</h3>
+        {selectedTeam?.programName && (
+          <p className="text-sm font-medium text-red-600 mt-0.5">{selectedTeam.programName}</p>
+        )}
       </div>
 
       {/* Roster */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h4 className="font-semibold text-gray-900">Team Roster</h4>
+          <h4 className="text-xs font-semibold tracking-widest uppercase text-gray-400">Team Roster</h4>
         </div>
         {teamRoster.length > 0 ? (
           <Card className="border-0 shadow-sm">
@@ -1250,24 +1287,18 @@ function RosterTab({
                       onClick={() => hasAccount && setSelectedPlayerId(p.appAccountId)}
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <Avatar className={`h-10 w-10 ${!hasAccount ? "grayscale" : ""}`}>
+                        <Avatar className={`h-10 w-10 flex-shrink-0 ${!hasAccount ? "grayscale" : ""}`}>
                           <AvatarImage src={p.profileImageUrl} />
-                          <AvatarFallback className="text-xs">{p.firstName?.[0]}{p.lastName?.[0]}</AvatarFallback>
+                          <AvatarFallback className="text-xs bg-gray-100 text-gray-600">{p.firstName?.[0]}{p.lastName?.[0]}</AvatarFallback>
                         </Avatar>
                         <div className="truncate">
                           <div className={`font-medium truncate flex items-center gap-2 ${
                             hasAccount ? "text-gray-900" : "text-gray-500"
                           }`} data-testid={`text-player-name-${playerId}`}>
                             {p.name}
-                            {!hasAccount && (
-                              <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full">
-                                No Account
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {p.position || "Player"}{p.jerseyNumber != null ? ` • #${p.jerseyNumber}` : ""}
-                            {p.grade && ` • Grade ${p.grade}`}
+                            <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-normal">
+                              {!hasAccount ? "No Account" : "Player"}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -1338,32 +1369,7 @@ function RosterTab({
       </div>
 
       {/* Team Chat - with tabs for Players and Parents */}
-      <div>
-        <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-          <Users className="h-4 w-4 text-blue-600" />
-          Team Chat
-        </h4>
-        <Tabs defaultValue="players" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-2">
-            <TabsTrigger value="players" data-testid="tab-player-chat">
-              <MessageCircle className="h-4 w-4 mr-2" />
-              Player Chat
-            </TabsTrigger>
-            <TabsTrigger value="parents" data-testid="tab-parent-chat">
-              <Users className="h-4 w-4 mr-2" />
-              Parent Chat
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="players">
-            <p className="text-xs text-gray-500 mb-2">Chat with players on this team</p>
-            <TeamChat teamId={selectedTeamId} currentProfileId={currentUser?.id} channel="players" />
-          </TabsContent>
-          <TabsContent value="parents">
-            <p className="text-xs text-gray-500 mb-2">Chat with parents of players on this team</p>
-            <TeamChat teamId={selectedTeamId} currentProfileId={currentUser?.id} channel="parents" />
-          </TabsContent>
-        </Tabs>
-      </div>
+      <TeamChatSection teamId={selectedTeamId} currentUserId={currentUser?.id} />
 
       {/* Flag Player Confirmation Dialog */}
       <AlertDialog open={flagDialogOpen} onOpenChange={setFlagDialogOpen}>

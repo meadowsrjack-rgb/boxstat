@@ -306,6 +306,7 @@ async function applyConnectChargeParams(
   organizationId: string,
   mode: 'payment' | 'subscription',
   applicationFeeAmount?: number,
+  subscriptionSubtotalCents?: number,
 ): Promise<{ applied: boolean; connectedAccountId: string | null; stripeConnectStatus: string | null }> {
   const connectInfo = await getOrgConnectInfo(organizationId);
   if (!connectInfo.isConnected || !connectInfo.connectedAccountId) {
@@ -340,12 +341,14 @@ async function applyConnectChargeParams(
         destination: connectInfo.connectedAccountId,
       },
     };
-    if (applicationFeeAmount && applicationFeeAmount > 0) {
-      sessionParams.subscription_data.application_fee_amount = applicationFeeAmount;
+    if (applicationFeeAmount && applicationFeeAmount > 0 && subscriptionSubtotalCents && subscriptionSubtotalCents > 0) {
+      const totalRecurringCents = subscriptionSubtotalCents + applicationFeeAmount;
+      const feePercent = Math.round((applicationFeeAmount / totalRecurringCents) * 10000) / 100;
+      sessionParams.subscription_data.application_fee_percent = feePercent;
     }
     console.log(`[Connect] subscription_data applied:`, {
       transfer_data: sessionParams.subscription_data.transfer_data,
-      application_fee_amount: sessionParams.subscription_data.application_fee_amount ?? null,
+      application_fee_percent: sessionParams.subscription_data.application_fee_percent ?? null,
     });
   }
 
@@ -1815,7 +1818,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...(mode === 'payment' ? { payment_intent_data: { statement_descriptor: orgDisplayName.substring(0, 22) } } : {}),
       };
 
-      const connectResult1 = await applyConnectChargeParams(sessionParams1, req.user.organizationId, mode, legacyServiceFeeCents);
+      const connectResult1 = await applyConnectChargeParams(sessionParams1, req.user.organizationId, mode, legacyServiceFeeCents, mode === 'subscription' ? legacySubtotal : undefined);
       verifyConnectRouting(sessionParams1, mode, req.user.organizationId, connectResult1, { applicationFeeAmount: legacyServiceFeeCents, checkoutType: 'legacy_package' });
 
       console.log(`[Connect] legacy_package: creating session for org ${req.user.organizationId}`, {
@@ -2258,7 +2261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }
 
-      const connectResult2 = await applyConnectChargeParams(sessionParams, req.user.organizationId, checkoutMode, packageServiceFeeCents);
+      const connectResult2 = await applyConnectChargeParams(sessionParams, req.user.organizationId, checkoutMode, packageServiceFeeCents, checkoutMode === 'subscription' ? subtotal : undefined);
       verifyConnectRouting(sessionParams, checkoutMode, req.user.organizationId, connectResult2, { applicationFeeAmount: packageServiceFeeCents, checkoutType: 'package_purchase' });
 
       console.log(`[Connect] package_purchase: creating session for org ${req.user.organizationId}`, {
@@ -4627,7 +4630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         };
 
-        const connectResult4 = await applyConnectChargeParams(addPlayerSubParams, req.user.organizationId, 'subscription', monthlySubServiceFeeCents);
+        const connectResult4 = await applyConnectChargeParams(addPlayerSubParams, req.user.organizationId, 'subscription', monthlySubServiceFeeCents, selectedPricingOption.monthlyPrice || 0);
         verifyConnectRouting(addPlayerSubParams, 'subscription', req.user.organizationId, connectResult4, { applicationFeeAmount: monthlySubServiceFeeCents, checkoutType: 'add_player_subscription' });
 
         console.log(`[Connect] add_player_subscription: creating session for org ${req.user.organizationId}`, {

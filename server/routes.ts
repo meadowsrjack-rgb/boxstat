@@ -253,9 +253,22 @@ async function getOrCreateStripeCustomer(stripeInstance: Stripe, user: any): Pro
   return stripeCustomerId;
 }
 
-const SERVICE_FEE_CENTS = 33;
+async function calculateServiceFeeCents(subtotalCents: number): Promise<number> {
+  let technologyFeePercent = 2;
+  try {
+    const rows = await db.select().from(platformSettings).where(eq(platformSettings.key, 'boxstat_technology_fee_percent'));
+    if (rows.length > 0 && rows[0].value) {
+      const parsed = parseFloat(rows[0].value);
+      if (!isNaN(parsed)) technologyFeePercent = parsed;
+    }
+  } catch {
+    // default to 2%
+  }
+  const feeCents = subtotalCents * (technologyFeePercent / 100) + subtotalCents * 0.029 + 30;
+  return Math.round(feeCents);
+}
 
-function getServiceFeeLineItem(recurring?: { interval: string; interval_count: number }): any {
+function buildServiceFeeLineItem(feeCents: number, recurring?: { interval: string; interval_count: number }): any {
   const item: any = {
     price_data: {
       currency: 'usd',
@@ -263,7 +276,7 @@ function getServiceFeeLineItem(recurring?: { interval: string; interval_count: n
         name: 'Service Fee',
         description: 'Secure payment processing and platform maintenance.',
       },
-      unit_amount: SERVICE_FEE_CENTS,
+      unit_amount: feeCents,
     },
     quantity: 1,
   };
@@ -271,6 +284,11 @@ function getServiceFeeLineItem(recurring?: { interval: string; interval_count: n
     item.price_data.recurring = recurring;
   }
   return item;
+}
+
+async function getServiceFeeLineItem(subtotalCents: number, recurring?: { interval: string; interval_count: number }): Promise<{ lineItem: any; feeCents: number }> {
+  const feeCents = await calculateServiceFeeCents(subtotalCents);
+  return { lineItem: buildServiceFeeLineItem(feeCents, recurring), feeCents };
 }
 
 async function getOrgDisplayName(organizationId: string): Promise<string> {
@@ -1777,8 +1795,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Add service fee
+      const legacySubtotal = lineItems.reduce((sum: number, item: any) => sum + (item.price_data?.unit_amount || 0), 0);
       const recurringForFee = mode === 'subscription' ? lineItems[0]?.price_data?.recurring : undefined;
-      lineItems.push(getServiceFeeLineItem(recurringForFee));
+      const { lineItem: legacyFeeLineItem, feeCents: legacyServiceFeeCents } = await getServiceFeeLineItem(legacySubtotal, recurringForFee);
+      lineItems.push(legacyFeeLineItem);
 
       const stripeCustomerId = await getOrCreateStripeCustomer(orgStripe, user);
       
@@ -1795,8 +1815,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...(mode === 'payment' ? { payment_intent_data: { statement_descriptor: orgDisplayName.substring(0, 22) } } : {}),
       };
 
-      const connectResult1 = await applyConnectChargeParams(sessionParams1, req.user.organizationId, mode, SERVICE_FEE_CENTS);
-      verifyConnectRouting(sessionParams1, mode, req.user.organizationId, connectResult1, { applicationFeeAmount: SERVICE_FEE_CENTS, checkoutType: 'legacy_package' });
+      const connectResult1 = await applyConnectChargeParams(sessionParams1, req.user.organizationId, mode, legacyServiceFeeCents);
+      verifyConnectRouting(sessionParams1, mode, req.user.organizationId, connectResult1, { applicationFeeAmount: legacyServiceFeeCents, checkoutType: 'legacy_package' });
 
       console.log(`[Connect] legacy_package: creating session for org ${req.user.organizationId}`, {
         payment_intent_data: sessionParams1.payment_intent_data ?? null,
@@ -2102,6 +2122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Add service fee
+      let packageServiceFeeCents: number;
       {
         let feeRecurring: any = undefined;
         if (isSubscription) {
@@ -2112,7 +2133,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const feeInstInterval = resolveStripeInterval(selectedPricingOption.installmentIntervalDays);
           feeRecurring = { interval: feeInstInterval.interval, interval_count: feeInstInterval.interval_count };
         }
-        lineItems.push(getServiceFeeLineItem(feeRecurring));
+        const { lineItem: pkgFeeLineItem, feeCents: pkgFeeCents } = await getServiceFeeLineItem(subtotal, feeRecurring);
+        packageServiceFeeCents = pkgFeeCents;
+        lineItems.push(pkgFeeLineItem);
       }
 
       // Create Stripe Checkout Session
@@ -2235,8 +2258,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }
 
-      const connectResult2 = await applyConnectChargeParams(sessionParams, req.user.organizationId, checkoutMode, SERVICE_FEE_CENTS);
-      verifyConnectRouting(sessionParams, checkoutMode, req.user.organizationId, connectResult2, { applicationFeeAmount: SERVICE_FEE_CENTS, checkoutType: 'package_purchase' });
+      const connectResult2 = await applyConnectChargeParams(sessionParams, req.user.organizationId, checkoutMode, packageServiceFeeCents);
+      verifyConnectRouting(sessionParams, checkoutMode, req.user.organizationId, connectResult2, { applicationFeeAmount: packageServiceFeeCents, checkoutType: 'package_purchase' });
 
       console.log(`[Connect] package_purchase: creating session for org ${req.user.organizationId}`, {
         payment_intent_data: sessionParams.payment_intent_data ?? null,
@@ -3355,7 +3378,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }];
 
       // Add service fee
-      cartLineItems.push(getServiceFeeLineItem());
+      const { lineItem: cartFeeLineItem, feeCents: cartServiceFeeCents } = await getServiceFeeLineItem(program.price);
+      cartLineItems.push(cartFeeLineItem);
 
       const cartOrgName = await getOrgDisplayName(req.user.organizationId);
       const cartSessionParams: any = {
@@ -3381,8 +3405,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       };
 
-      const connectResult3 = await applyConnectChargeParams(cartSessionParams, req.user.organizationId, 'payment', SERVICE_FEE_CENTS);
-      verifyConnectRouting(cartSessionParams, 'payment', req.user.organizationId, connectResult3, { applicationFeeAmount: SERVICE_FEE_CENTS, checkoutType: 'cart_purchase' });
+      const connectResult3 = await applyConnectChargeParams(cartSessionParams, req.user.organizationId, 'payment', cartServiceFeeCents);
+      verifyConnectRouting(cartSessionParams, 'payment', req.user.organizationId, connectResult3, { applicationFeeAmount: cartServiceFeeCents, checkoutType: 'cart_purchase' });
 
       console.log(`[Connect] cart_purchase: creating session for org ${req.user.organizationId}`, {
         payment_intent_data: cartSessionParams.payment_intent_data ?? null,
@@ -4550,7 +4574,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Add service fee to one-time bundle items
-        addInvoiceItems.push(getServiceFeeLineItem());
+        const { lineItem: bundleFeeLineItem } = await getServiceFeeLineItem(bundleSubtotal);
+        addInvoiceItems.push(bundleFeeLineItem);
 
         const subscriptionLineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = monthlyPriceId
           ? [{ price: monthlyPriceId, quantity: 1 }]
@@ -4568,7 +4593,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }];
         
         // Add service fee to monthly subscription
-        subscriptionLineItems.push(getServiceFeeLineItem({ interval: 'month', interval_count: 1 }));
+        const { lineItem: monthlyFeeLineItem, feeCents: monthlySubServiceFeeCents } = await getServiceFeeLineItem(selectedPricingOption.monthlyPrice || 0, { interval: 'month', interval_count: 1 });
+        subscriptionLineItems.push(monthlyFeeLineItem);
 
         const addPlayerSubParams: any = {
           customer: stripeCustomerId,
@@ -4601,8 +4627,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         };
 
-        const connectResult4 = await applyConnectChargeParams(addPlayerSubParams, req.user.organizationId, 'subscription', SERVICE_FEE_CENTS);
-        verifyConnectRouting(addPlayerSubParams, 'subscription', req.user.organizationId, connectResult4, { applicationFeeAmount: SERVICE_FEE_CENTS, checkoutType: 'add_player_subscription' });
+        const connectResult4 = await applyConnectChargeParams(addPlayerSubParams, req.user.organizationId, 'subscription', monthlySubServiceFeeCents);
+        verifyConnectRouting(addPlayerSubParams, 'subscription', req.user.organizationId, connectResult4, { applicationFeeAmount: monthlySubServiceFeeCents, checkoutType: 'add_player_subscription' });
 
         console.log(`[Connect] add_player_subscription: creating session for org ${req.user.organizationId}`, {
           subscription_data: addPlayerSubParams.subscription_data ?? null,
@@ -4656,7 +4682,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Add service fee
-        lineItems.push(getServiceFeeLineItem());
+        const { lineItem: addPlayerFeeLineItem, feeCents: addPlayerServiceFeeCents } = await getServiceFeeLineItem(subtotal);
+        lineItems.push(addPlayerFeeLineItem);
 
         const addPlayerOrgName = await getOrgDisplayName(req.user.organizationId);
         const addPlayerPayParams: any = {
@@ -4679,8 +4706,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         };
 
-        const connectResult5 = await applyConnectChargeParams(addPlayerPayParams, req.user.organizationId, 'payment', SERVICE_FEE_CENTS);
-        verifyConnectRouting(addPlayerPayParams, 'payment', req.user.organizationId, connectResult5, { applicationFeeAmount: SERVICE_FEE_CENTS, checkoutType: 'add_player_payment' });
+        const connectResult5 = await applyConnectChargeParams(addPlayerPayParams, req.user.organizationId, 'payment', addPlayerServiceFeeCents);
+        verifyConnectRouting(addPlayerPayParams, 'payment', req.user.organizationId, connectResult5, { applicationFeeAmount: addPlayerServiceFeeCents, checkoutType: 'add_player_payment' });
 
         console.log(`[Connect] add_player_payment: creating session for org ${req.user.organizationId}`, {
           payment_intent_data: addPlayerPayParams.payment_intent_data ?? null,
@@ -11586,7 +11613,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
 
       // Add service fee
-      storeLineItems.push(getServiceFeeLineItem());
+      const { lineItem: storeFeeLineItem, feeCents: storeServiceFeeCents } = await getServiceFeeLineItem(product.price);
+      storeLineItems.push(storeFeeLineItem);
 
       const storeOrgName = await getOrgDisplayName(orgId);
       const sessionParams: any = {
@@ -11604,8 +11632,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       };
 
-      const connectResult = await applyConnectChargeParams(sessionParams, orgId, 'payment', SERVICE_FEE_CENTS);
-      verifyConnectRouting(sessionParams, 'payment', orgId, connectResult, { applicationFeeAmount: SERVICE_FEE_CENTS, checkoutType: 'qr_store_checkout' });
+      const connectResult = await applyConnectChargeParams(sessionParams, orgId, 'payment', storeServiceFeeCents);
+      verifyConnectRouting(sessionParams, 'payment', orgId, connectResult, { applicationFeeAmount: storeServiceFeeCents, checkoutType: 'qr_store_checkout' });
 
       console.log(`[Connect] qr_store_checkout: creating session for org ${orgId}`, {
         payment_intent_data: sessionParams.payment_intent_data ?? null,
@@ -15808,7 +15836,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(500).json({ error: "Payment processing is not configured for this organization" });
         }
         // Add service fee
-        lineItems.push(getServiceFeeLineItem());
+        const { lineItem: quoteFeeLineItem, feeCents: quoteServiceFeeCents } = await getServiceFeeLineItem(quote.totalAmount || 0);
+        lineItems.push(quoteFeeLineItem);
 
         const quoteOrgName = await getOrgDisplayName(quote.organizationId);
         const quoteSessionParams: any = {
@@ -15829,8 +15858,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         };
 
-        const connectResult6 = await applyConnectChargeParams(quoteSessionParams, quote.organizationId, 'payment', SERVICE_FEE_CENTS);
-        verifyConnectRouting(quoteSessionParams, 'payment', quote.organizationId, connectResult6, { applicationFeeAmount: SERVICE_FEE_CENTS, checkoutType: 'quote_checkout' });
+        const connectResult6 = await applyConnectChargeParams(quoteSessionParams, quote.organizationId, 'payment', quoteServiceFeeCents);
+        verifyConnectRouting(quoteSessionParams, 'payment', quote.organizationId, connectResult6, { applicationFeeAmount: quoteServiceFeeCents, checkoutType: 'quote_checkout' });
 
         console.log(`[Connect] quote_checkout: creating session for org ${quote.organizationId}`, {
           payment_intent_data: quoteSessionParams.payment_intent_data ?? null,

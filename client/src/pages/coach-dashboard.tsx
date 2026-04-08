@@ -592,9 +592,11 @@ export default function CoachDashboard() {
         <div className="px-6 py-6 text-center">
           <div className="flex justify-center mb-2 relative cursor-pointer" onClick={() => coachPhotoInputRef.current?.click()}>
             <ProfileAvatarRing src={((coachProfile as any)?.profileImageUrl || currentUser.profileImageUrl) || undefined} initials={initials} size={88} />
-            <div className="absolute bottom-0 right-1/2 translate-x-[44px] w-7 h-7 bg-red-600 rounded-full flex items-center justify-center border-2 border-white">
-              {coachPhotoUploading ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" /> : <Camera className="w-3.5 h-3.5 text-white" />}
-            </div>
+            {coachPhotoUploading && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 text-red-600 animate-spin" />
+              </div>
+            )}
           </div>
           <div className="text-sm text-gray-600">
             Coach <span className="font-semibold text-gray-900">{currentUser.firstName}</span>

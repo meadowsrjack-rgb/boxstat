@@ -3468,9 +3468,11 @@ export default function UnifiedAccount() {
                       {user?.firstName?.[0]}{user?.lastName?.[0]}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-red-600 rounded-full flex items-center justify-center border-2 border-white">
-                    {parentPhotoUploading ? <Loader2 className="w-3 h-3 text-white animate-spin" /> : <Camera className="w-3 h-3 text-white" />}
-                  </div>
+                  {parentPhotoUploading && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Loader2 className="w-5 h-5 text-red-600 animate-spin" />
+                    </div>
+                  )}
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold" data-testid="profile-parent-name">

@@ -1032,9 +1032,11 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               initials={initials}
               size={88}
             />
-            <div className="absolute bottom-0 right-1/2 translate-x-[44px] w-7 h-7 bg-red-600 rounded-full flex items-center justify-center border-2 border-white">
-              {playerPhotoUploading ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" /> : <Camera className="w-3.5 h-3.5 text-white" />}
-            </div>
+            {playerPhotoUploading && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 text-red-600 animate-spin" />
+              </div>
+            )}
           </div>
           <div className="text-sm text-gray-600">
             Hey, <span className="font-semibold text-gray-900">{displayProfile.firstName}</span>

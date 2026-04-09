@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { getEventTypeHexColor, parseEventMeta } from "@/lib/parseEventMeta";
 import { format, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isToday as isDateToday } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -6,11 +7,13 @@ import { useToast } from "@/hooks/use-toast";
 import type { Attendance } from "@shared/schema";
 
 type UypEvent = {
-  id: string;
+  id: string | number;
   title: string;
   startTime: string; // ISO
   endTime?: string;
-  eventType?: "Practice" | "Skills" | "Game" | "Other" | string;
+  eventType?: string;
+  description?: string;
+  location?: string;
 };
 
 interface PlayerCalendarProps {
@@ -19,6 +22,7 @@ interface PlayerCalendarProps {
   currentUser: { id: string; email: string; firstName?: string; lastName?: string };
   selectedDate?: Date;
   onDateSelect?: (date: Date) => void;
+  eventTypeColors?: Record<string, string>;
 }
 
 export default function PlayerCalendar({ 
@@ -26,7 +30,8 @@ export default function PlayerCalendar({
   className = "", 
   currentUser, 
   selectedDate: externalSelectedDate,
-  onDateSelect 
+  onDateSelect,
+  eventTypeColors = {},
 }: PlayerCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [internalSelectedDate, setInternalSelectedDate] = useState(new Date());
@@ -222,14 +227,20 @@ export default function PlayerCalendar({
     );
   }, [events, selectedDate]);
 
-  // Get dates that have events for calendar display
-  const eventDateStrings = useMemo(() => {
-    const eventDates = new Set<string>();
+  // Get dates that have events for calendar display (mapped to event types for colored dots)
+  const eventDateMap = useMemo(() => {
+    const map = new Map<string, string[]>();
     events.forEach(event => {
-      eventDates.add(new Date(event.startTime).toDateString());
+      const key = new Date(event.startTime).toDateString();
+      const existing = map.get(key) || [];
+      const parsed = parseEventMeta(event);
+      const type = parsed.type;
+      if (!existing.includes(type)) existing.push(type);
+      map.set(key, existing);
     });
-    return eventDates;
+    return map;
   }, [events]);
+  const eventDateStrings = useMemo(() => new Set(eventDateMap.keys()), [eventDateMap]);
 
   const renderCalendar = () => {
     const year = currentDate.getFullYear();
@@ -372,9 +383,21 @@ export default function PlayerCalendar({
                 onClick={() => selectDate(date)}
               >
                 {format(date, 'd')}
-                {hasEvent && (
-                  <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rounded-full"></div>
-                )}
+                {hasEvent && (() => {
+                  const types = eventDateMap.get(date.toDateString()) || [];
+                  const dotsToShow = types.slice(0, 3);
+                  return (
+                    <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex gap-0.5">
+                      {dotsToShow.map((t, i) => (
+                        <div
+                          key={i}
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ backgroundColor: getEventTypeHexColor(t, eventTypeColors) }}
+                        />
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}

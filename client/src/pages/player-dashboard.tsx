@@ -69,6 +69,9 @@ import {
 } from "@/components/ui/select";
 import { PINDialog } from "@/components/PINDialog";
 import CoachProfileDialog from "@/components/CoachProfileDialog";
+import { FiltersBar } from "@/components/FiltersBar";
+import { getUserPreferences, UserPreferences } from "@/lib/userPrefs";
+import { parseEventMeta } from "@/lib/parseEventMeta";
 
 /* ===== “Wheel” option lists ===== */
 const TEAM_OPTIONS = [
@@ -206,6 +209,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   
   const [newMessage, setNewMessage] = useState("");
   const [ws, setWs] = useState<WebSocket | null>(null);
+  const [userPrefs, setUserPrefs] = useState<UserPreferences>(() => getUserPreferences());
   const { toast } = useToast();
   useAwardToast();
   const queryClient = useQueryClient();
@@ -568,31 +572,43 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
   const todayEvents = useMemo(() => {
     const today = new Date();
+    const hidden = userPrefs.hiddenEventTypes || [];
     return (allEvents || []).filter((ev: Event) => {
       const dt = new Date(ev.startTime);
-      return isSameDay(dt, today);
+      if (!isSameDay(dt, today)) return false;
+      if (hidden.length > 0) {
+        const parsed = parseEventMeta(ev);
+        if (hidden.includes(parsed.type)) return false;
+      }
+      return true;
     });
-  }, [allEvents]);
+  }, [allEvents, userPrefs.hiddenEventTypes]);
 
   const upcomingEvents = useMemo(() => {
     const today = new Date();
     const isSelectedToday = isSameDay(selectedDate, today);
+    const hidden = userPrefs.hiddenEventTypes || [];
     
+    const filterByType = (ev: Event) => {
+      if (hidden.length === 0) return true;
+      const parsed = parseEventMeta(ev);
+      return !hidden.includes(parsed.type);
+    };
+
     if (isSelectedToday) {
-      // Show actual upcoming events when today is selected
       const start = startOfDay(new Date());
       return (allEvents || [])
         .filter((ev: Event) => isAfter(new Date(ev.startTime), start))
         .filter((ev: Event) => !isSameDay(new Date(ev.startTime), new Date()))
+        .filter(filterByType)
         .slice(0, 3);
     } else {
-      // Show selected day's events when a different day is selected
       return (allEvents || []).filter((ev: Event) => {
         const dt = new Date(ev.startTime);
-        return isSameDay(dt, selectedDate);
+        return isSameDay(dt, selectedDate) && filterByType(ev);
       });
     }
-  }, [allEvents, selectedDate]);
+  }, [allEvents, selectedDate, userPrefs.hiddenEventTypes]);
 
   // Filter events relevant to the current user/player
   const relevantEvents = useMemo(() => {
@@ -624,14 +640,35 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     );
   }, [relevantEvents, selectedDate]);
 
+  // Parse events for type metadata (for filter panel)
+  const parsedRelevantEvents = useMemo(() => {
+    return relevantEvents.map(ev => parseEventMeta(ev));
+  }, [relevantEvents]);
+
+  // Apply hidden event type filters
+  const visibleParsedEvents = useMemo(() => {
+    const hidden = userPrefs.hiddenEventTypes || [];
+    if (hidden.length === 0) return parsedRelevantEvents;
+    return parsedRelevantEvents.filter(ev => !hidden.includes(ev.type));
+  }, [parsedRelevantEvents, userPrefs.hiddenEventTypes]);
+
+  const visibleEvents = useMemo(() => {
+    const hidden = userPrefs.hiddenEventTypes || [];
+    if (hidden.length === 0) return relevantEvents;
+    return relevantEvents.filter(ev => {
+      const parsed = parseEventMeta(ev);
+      return !hidden.includes(parsed.type);
+    });
+  }, [relevantEvents, userPrefs.hiddenEventTypes]);
+
   // Get dates that have events for calendar display
   const eventDateStrings = useMemo(() => {
     const eventDates = new Set<string>();
-    relevantEvents.forEach(event => {
+    visibleEvents.forEach(event => {
       eventDates.add(new Date(event.startTime || (event as any).start_time).toDateString());
     });
     return eventDates;
-  }, [relevantEvents]);
+  }, [visibleEvents]);
 
   // Calendar helper functions
   const renderCalendar = () => {
@@ -1136,18 +1173,44 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 </div>
               </div>
 
-              {/* Calendar component - moved below events */}
-              <PlayerCalendar 
-                events={relevantEvents.map(convertEventToUypEvent)} 
-                currentUser={{
-                  id: currentUser.id,
-                  email: currentUser.email || '',
-                  firstName: currentUser.firstName || undefined,
-                  lastName: currentUser.lastName || undefined
-                }} 
-                selectedDate={selectedDate}
-                onDateSelect={setSelectedDate}
-              />
+              {/* Calendar + Filter Panel */}
+              <div className="md:flex md:gap-4">
+                {/* Filter Sidebar */}
+                <div className="hidden md:block w-48 flex-shrink-0 px-2">
+                  <FiltersBar
+                    events={parsedRelevantEvents}
+                    filters={userPrefs}
+                    onFiltersChange={setUserPrefs}
+                  />
+                </div>
+                <div className="flex-1">
+                  {/* Mobile filter: collapsible */}
+                  <div className="md:hidden px-6 mb-3">
+                    <details className="bg-white rounded-xl shadow-sm">
+                      <summary className="px-4 py-2 text-sm font-medium text-gray-700 cursor-pointer select-none">Event Filters</summary>
+                      <div className="px-4 pb-3">
+                        <FiltersBar
+                          events={parsedRelevantEvents}
+                          filters={userPrefs}
+                          onFiltersChange={setUserPrefs}
+                        />
+                      </div>
+                    </details>
+                  </div>
+                  <PlayerCalendar 
+                    events={visibleEvents.map(convertEventToUypEvent)} 
+                    currentUser={{
+                      id: currentUser.id,
+                      email: currentUser.email || '',
+                      firstName: currentUser.firstName || undefined,
+                      lastName: currentUser.lastName || undefined
+                    }} 
+                    selectedDate={selectedDate}
+                    onDateSelect={setSelectedDate}
+                    eventTypeColors={userPrefs.eventTypeColors || {}}
+                  />
+                </div>
+              </div>
             </div>
           )}
 

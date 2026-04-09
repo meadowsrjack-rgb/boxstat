@@ -61,10 +61,37 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import PushNotificationSetup from "@/components/PushNotificationSetup";
 import { QRCodeSVG } from "qrcode.react";
+import { FiltersBar } from "@/components/FiltersBar";
+import { getUserPreferences, UserPreferences } from "@/lib/userPrefs";
+import { parseEventMeta } from "@/lib/parseEventMeta";
 
 /* =================== Types =================== */
 
 type UypEvent = Event;
+
+type CalendarUypEvent = {
+  id: string | number;
+  title: string;
+  startTime: string;
+  endTime?: string;
+  eventType?: string;
+  description?: string;
+  location?: string;
+};
+
+function convertToCalendarEvent(ev: UypEvent): CalendarUypEvent {
+  const startTime = ev.startTime instanceof Date ? ev.startTime.toISOString() : String(ev.startTime || '');
+  const endTime = ev.endTime instanceof Date ? ev.endTime.toISOString() : (ev.endTime ? String(ev.endTime) : undefined);
+  return {
+    id: ev.id,
+    title: ev.title || '',
+    startTime,
+    endTime,
+    eventType: ev.eventType ?? undefined,
+    description: ev.description ?? undefined,
+    location: ev.location ?? undefined,
+  };
+}
 
 type CoachTeam = {
   id: number;
@@ -135,6 +162,7 @@ export default function CoachDashboard() {
   const coachProfileId = currentUser?.role === 'coach' 
     ? currentUser?.id 
     : (coachProfile?.id || (user as any)?.activeProfileId || currentUser?.id);
+  const [coachUserPrefs, setCoachUserPrefs] = useState<UserPreferences>(() => getUserPreferences());
   const [activeTab, setActiveTab] = useState<"calendar" | "team" | "profile" | "payments">(() => {
     if (typeof window === "undefined") return "calendar";
     const stored = localStorage.getItem("coachDashboardTab");
@@ -454,24 +482,37 @@ export default function CoachDashboard() {
   /* =================== UI =================== */
   const initials = `${(currentUser.firstName || "").charAt(0)}${(currentUser.lastName || "").charAt(0)}`.toUpperCase();
 
+  const parsedCoachEvents = useMemo(() => {
+    return coachEvents.map(ev => parseEventMeta(ev));
+  }, [coachEvents]);
+
+  const visibleCoachEvents = useMemo(() => {
+    const hidden = coachUserPrefs.hiddenEventTypes || [];
+    if (hidden.length === 0) return coachEvents;
+    return coachEvents.filter(ev => {
+      const parsed = parseEventMeta(ev);
+      return !hidden.includes(parsed.type);
+    });
+  }, [coachEvents, coachUserPrefs.hiddenEventTypes]);
+
   const todayEvents = useMemo(() => {
     const today = new Date();
-    return coachEvents.filter((ev) => isSameDay(new Date((ev as any).startTime || (ev as any).start_time), today));
-  }, [coachEvents]);
+    return visibleCoachEvents.filter((ev) => isSameDay(new Date((ev as any).startTime || (ev as any).start_time), today));
+  }, [visibleCoachEvents]);
 
   const upcomingEvents = useMemo(() => {
     if (isSameDay(selectedDate, new Date())) {
       const start = startOfDay(new Date());
-      return coachEvents
+      return visibleCoachEvents
         .filter((ev) => isAfter(new Date((ev as any).startTime || (ev as any).start_time), start))
         .filter((ev) => !isSameDay(new Date((ev as any).startTime || (ev as any).start_time), new Date()))
         .slice(0, 3);
     } else {
-      return coachEvents
+      return visibleCoachEvents
         .filter((ev) => isSameDay(new Date((ev as any).startTime || (ev as any).start_time), selectedDate))
         .slice(0, 10);
     }
-  }, [coachEvents, selectedDate]);
+  }, [visibleCoachEvents, selectedDate]);
 
   // Fetch notifications for the coach
   const { data: notifications = [] } = useQuery<any[]>({
@@ -697,18 +738,42 @@ export default function CoachDashboard() {
                 </div>
               </div>
 
-              {/* Calendar component - moved below events */}
-              <PlayerCalendar 
-                events={coachEvents as any} 
-                currentUser={{ 
-                  id: currentUser.id,
-                  email: currentUser.email || "",
-                  firstName: currentUser.firstName || undefined,
-                  lastName: currentUser.lastName || undefined
-                }}
-                selectedDate={selectedDate}
-                onDateSelect={setSelectedDate}
-              />
+              {/* Calendar + Filter Panel */}
+              <div className="md:flex md:gap-4">
+                <div className="hidden md:block w-48 flex-shrink-0 px-2">
+                  <FiltersBar
+                    events={parsedCoachEvents}
+                    filters={coachUserPrefs}
+                    onFiltersChange={setCoachUserPrefs}
+                  />
+                </div>
+                <div className="flex-1">
+                  <div className="md:hidden px-6 mb-3">
+                    <details className="bg-white rounded-xl shadow-sm">
+                      <summary className="px-4 py-2 text-sm font-medium text-gray-700 cursor-pointer select-none">Event Filters</summary>
+                      <div className="px-4 pb-3">
+                        <FiltersBar
+                          events={parsedCoachEvents}
+                          filters={coachUserPrefs}
+                          onFiltersChange={setCoachUserPrefs}
+                        />
+                      </div>
+                    </details>
+                  </div>
+                  <PlayerCalendar 
+                    events={visibleCoachEvents.map(convertToCalendarEvent)} 
+                    currentUser={{ 
+                      id: currentUser.id,
+                      email: currentUser.email || "",
+                      firstName: currentUser.firstName || undefined,
+                      lastName: currentUser.lastName || undefined
+                    }}
+                    selectedDate={selectedDate}
+                    onDateSelect={setSelectedDate}
+                    eventTypeColors={coachUserPrefs.eventTypeColors || {}}
+                  />
+                </div>
+              </div>
             </div>
           )}
 

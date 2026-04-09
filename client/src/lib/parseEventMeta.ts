@@ -113,7 +113,7 @@ export function parseEventMeta(event: any): ParsedEvent {
   };
 }
 
-export function getEventTypeDotColor(type: ParsedEvent['type']): string {
+export function getEventTypeDotColor(type: ParsedEvent['type'], eventTypeColors?: Record<string, string>): string {
   switch (type) {
     case 'game':
       return 'bg-green-500';
@@ -158,4 +158,34 @@ export function getEventTypeDotColor(type: ParsedEvent['type']): string {
     default:
       return 'bg-gray-500';
   }
+}
+
+export function getEventTypeHexColor(type: string, eventTypeColors?: Record<string, string>): string {
+  if (eventTypeColors && eventTypeColors[type]) {
+    return eventTypeColors[type];
+  }
+  const colorMap: Record<string, string> = {
+    game: '#22c55e',
+    tournament: '#a855f7',
+    camp: '#f97316',
+    exhibition: '#ec4899',
+    practice: '#3b82f6',
+    skills: '#eab308',
+    workshop: '#6366f1',
+    talk: '#14b8a6',
+    combine: '#06b6d4',
+    training: '#0ea5e9',
+    meeting: '#64748b',
+    course: '#f59e0b',
+    tryout: '#ef4444',
+    'skills-assessment': '#84cc16',
+    'team-building': '#10b981',
+    'parent-meeting': '#8b5cf6',
+    'equipment-pickup': '#d946ef',
+    'photo-day': '#f43f5e',
+    'award-ceremony': '#f59e0b',
+    fnh: '#78716c',
+    other: '#6b7280',
+  };
+  return colorMap[type] || '#6b7280';
 }

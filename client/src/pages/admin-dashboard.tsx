@@ -5279,6 +5279,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
   const [deleteConfirmEvent, setDeleteConfirmEvent] = useState<any>(null);
   const [eventSortField, setEventSortField] = useState<string | null>(null);
   const [eventSortDirection, setEventSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [duplicatingEvent, setDuplicatingEvent] = useState<any>(null);
 
   // Handle eventId deep link from push notifications (prop-driven, set by AdminDashboard on mount)
   useEffect(() => {
@@ -5310,6 +5311,104 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
       setEventSortField(field);
       setEventSortDirection('asc');
     }
+  };
+
+  const handleDuplicateEvent = (event: any) => {
+    const etz = event.timezone || 'America/Los_Angeles';
+
+    const localStart = event.startTime ? utcToLocalDatetime(ensureUtcString(event.startTime), etz) : '';
+    const localEnd = event.endTime ? utcToLocalDatetime(ensureUtcString(event.endTime), etz) : '';
+
+    const allRoles = ['player', 'coach', 'parent', 'admin'];
+    const hasAllRoles = event.assignTo?.roles && allRoles.every((r: string) => event.assignTo.roles.includes(r));
+
+    let targetType = 'all';
+    if (!hasAllRoles) {
+      if (event.scheduleRequestSource && event.assignTo?.users?.length > 0) {
+        targetType = 'user';
+      } else if (event.assignTo?.teams?.length > 0) {
+        targetType = 'team';
+      } else if (event.assignTo?.programs?.length > 0) {
+        targetType = 'program';
+      } else if (event.assignTo?.divisions?.length > 0) {
+        targetType = 'division';
+      } else if (event.assignTo?.users?.length > 0) {
+        targetType = 'user';
+      } else if (event.assignTo?.roles?.length > 0) {
+        targetType = 'role';
+      } else if (event.targetType) {
+        targetType = event.targetType;
+      }
+    }
+
+    setLocationType(event.location === 'Online' ? 'online' : 'physical');
+    setEventTimezone(etz);
+
+    if (targetType === 'team') setSelectedTeams((event.assignTo?.teams || []).map(String));
+    else setSelectedTeams([]);
+    if (targetType === 'program') setSelectedPrograms((event.assignTo?.programs || []).map(String));
+    else setSelectedPrograms([]);
+    if (targetType === 'division') setSelectedDivisions((event.assignTo?.divisions || []).map(String));
+    else setSelectedDivisions([]);
+    if (targetType === 'user') setSelectedUsers((event.assignTo?.users || []).map(String));
+    else setSelectedUsers([]);
+    if (targetType === 'role') setSelectedRoles(event.assignTo?.roles || []);
+    else setSelectedRoles([]);
+
+    if (event.isRecurring || event.recurringType) {
+      setIsRecurring(true);
+      const freq = (event.recurringType && ['daily', 'weekly', 'biweekly', 'monthly'].includes(event.recurringType))
+        ? event.recurringType as 'daily' | 'weekly' | 'biweekly' | 'monthly'
+        : 'weekly';
+      setRecurrenceFrequency(freq);
+      if (freq === 'weekly' || freq === 'biweekly') {
+        const startDate = new Date(ensureUtcString(event.startTime));
+        let dayOfWeek: number[] = [];
+        if (!isNaN(startDate.getTime())) {
+          const localDayStr = new Intl.DateTimeFormat('en-US', { timeZone: etz, weekday: 'short' }).format(startDate);
+          const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+          const d = dayMap[localDayStr];
+          dayOfWeek = d !== undefined ? [d] : [];
+        }
+        setRecurrenceDays(dayOfWeek);
+      } else {
+        setRecurrenceDays([]);
+      }
+      setRecurrenceCount(4);
+      if (event.recurringEndDate) {
+        setRecurrenceEndType('date');
+        const endDateStr = typeof event.recurringEndDate === 'string' && !event.recurringEndDate.includes('T')
+          ? event.recurringEndDate.split(' ')[0]
+          : event.recurringEndDate.split('T')[0];
+        setRecurrenceEndDate(endDateStr);
+      } else {
+        setRecurrenceEndType('count');
+        setRecurrenceEndDate('');
+      }
+    } else {
+      setIsRecurring(false);
+      setRecurrenceFrequency('weekly');
+      setRecurrenceCount(4);
+      setRecurrenceDays([]);
+      setRecurrenceEndType('count');
+      setRecurrenceEndDate('');
+    }
+
+    form.reset({
+      title: `${event.title} (Copy)`,
+      type: (event.eventType || event.type || 'practice') as any,
+      startTime: localStart,
+      endTime: localEnd,
+      location: event.location || '',
+      meetingLink: event.meetingLink || '',
+      latitude: event.latitude,
+      longitude: event.longitude,
+      description: event.description || '',
+      targetType: targetType as any,
+    });
+
+    setDuplicatingEvent(event);
+    setIsDialogOpen(true);
   };
 
   const bulkDeleteEvents = useMutation({
@@ -5923,7 +6022,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
             <Download className="w-4 h-4" />
           </Button>
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setDuplicatingEvent(null); }}>
             <DialogTrigger asChild>
               <Button size="icon" title="Create Event" data-testid="button-create-event">
                 <Plus className="w-4 h-4" />
@@ -7371,6 +7470,26 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        onClick={() => handleDuplicateEvent(event)}
+                        data-testid={`button-duplicate-event-${event.id}`}
+                        title="Duplicate Event"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
+                        onClick={() => setDeleteConfirmEvent(event)}
+                        data-testid={`button-delete-event-${event.id}`}
+                        title="Delete Event"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -7646,6 +7765,10 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                 }}>
                                   <Edit className="w-4 h-4 mr-2" />
                                   Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleDuplicateEvent(event)}>
+                                  <Copy className="w-4 h-4 mr-2" />
+                                  Duplicate
                                 </DropdownMenuItem>
                                 <DropdownMenuItem 
                                   className="text-red-600 focus:text-red-600"

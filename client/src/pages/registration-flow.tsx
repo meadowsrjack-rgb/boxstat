@@ -252,13 +252,13 @@ export default function RegistrationFlow() {
   return (
     <>
       {/* iOS FULL BLEED - extends into all safe areas to prevent white gaps */}
-      <div className="ios-full-bleed" />
+      <div className="ios-full-bleed" style={{ background: 'linear-gradient(to bottom right, #111827, #1f2937, #000000)' }} />
       
       {/* DETACHED BACKGROUND LAYER - never moves with keyboard */}
       <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-black z-0 pointer-events-none" />
 
       {/* Main Content Wrapper */}
-      <div className="ios-fixed-page relative z-10 w-full bg-transparent flex flex-col">
+      <div className="ios-fixed-page relative z-10 w-full flex flex-col" style={{ backgroundColor: 'transparent' }}>
         {/* Back Button */}
         <div 
           className="fixed top-4 left-4 z-50"

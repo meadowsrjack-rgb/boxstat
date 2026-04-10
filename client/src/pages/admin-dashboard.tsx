@@ -10810,6 +10810,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
   });
 
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
+  const [iconPickerQuery, setIconPickerQuery] = useState("");
   const [categoryComboOpen, setCategoryComboOpen] = useState(false);
   const [categoryInputValue, setCategoryInputValue] = useState("");
 
@@ -11103,6 +11104,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       setSelectedAddOns([]);
       setExpandedPricingOptions(new Set());
       setIconPickerOpen(false);
+      setIconPickerQuery("");
       setNewCategoryInput("");
       form.reset({
         organizationId: organization?.id || "",
@@ -11739,33 +11741,68 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                             { value: "dumbbell", Icon: Dumbbell },
                           ] as const;
                           const selected = PROGRAM_ICONS.find(i => i.value === field.value);
+                          const filteredIcons = PROGRAM_ICONS.filter(i => i.value.toLowerCase().includes(iconPickerQuery.trim().toLowerCase()));
                           return (
                             <FieldWrap label="Icon">
                               <div className="relative">
-                                <button
-                                  type="button"
-                                  onClick={() => setIconPickerOpen(v => !v)}
+                                <div
+                                  onClick={() => { setIconPickerOpen(true); }}
                                   data-testid="icon-picker-trigger"
-                                  className="w-full h-10 px-3 rounded-md border border-gray-200 text-sm bg-white flex items-center gap-2 hover:border-gray-300 transition"
+                                  className={`flex items-center h-10 rounded-lg border bg-white cursor-pointer transition-all px-3 gap-2 ${iconPickerOpen ? "border-red-500 ring-[3px] ring-red-500/10" : "border-gray-200"}`}
                                 >
-                                  {selected ? <selected.Icon size={16} className="text-gray-600" /> : <span className="text-gray-400">Select icon</span>}
-                                  {selected && <span className="text-gray-600 capitalize">{selected.value}</span>}
-                                  <ChevronDown size={14} className="ml-auto text-gray-400" />
-                                </button>
+                                  {selected ? (
+                                    <>
+                                      <selected.Icon size={16} strokeWidth={2} className="text-gray-700" />
+                                      <span className="flex-1 text-[13.5px] text-gray-900 capitalize">{selected.value}</span>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); field.onChange(""); }}
+                                        className="p-0.5 text-gray-300 hover:text-red-500 transition-colors"
+                                      >
+                                        <X size={14} strokeWidth={2.5} />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <span className="flex-1 text-[13.5px] text-gray-400">Select icon</span>
+                                  )}
+                                  <ChevronDown size={15} className={`text-gray-400 shrink-0 transition-transform ${iconPickerOpen ? "rotate-180" : ""}`} />
+                                </div>
                                 {iconPickerOpen && (
-                                  <div className="absolute z-50 top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-2">
-                                    <div className="grid grid-cols-5 gap-1">
-                                      {PROGRAM_ICONS.map(({ value, Icon: IconComp }) => (
-                                        <button
-                                          key={value}
-                                          type="button"
-                                          data-testid={`icon-option-${value}`}
-                                          onClick={() => { field.onChange(value); setIconPickerOpen(false); }}
-                                          className={`p-2 rounded hover:bg-gray-100 transition flex items-center justify-center ${field.value === value ? 'bg-red-50 ring-1 ring-red-400' : ''}`}
-                                        >
-                                          <IconComp size={18} className={field.value === value ? 'text-red-600' : 'text-gray-600'} />
-                                        </button>
-                                      ))}
+                                  <div className="absolute z-50 top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-[10px] shadow-[0_8px_24px_rgba(0,0,0,0.08),0_2px_6px_rgba(0,0,0,0.04)] overflow-hidden">
+                                    <div className="flex items-center gap-2 px-2.5 py-2 border-b border-gray-100">
+                                      <Search size={14} className="text-gray-400" />
+                                      <input
+                                        value={iconPickerQuery}
+                                        onChange={(e) => setIconPickerQuery(e.target.value)}
+                                        placeholder="Search icons…"
+                                        autoFocus
+                                        onBlur={() => { setTimeout(() => { setIconPickerOpen(false); setIconPickerQuery(""); }, 150); }}
+                                        className="flex-1 border-none outline-none text-[13px] text-gray-900 bg-transparent placeholder:text-gray-400"
+                                      />
+                                    </div>
+                                    <div className="p-1.5 max-h-[200px] overflow-y-auto">
+                                      {filteredIcons.length > 0 ? (
+                                        <div className="grid grid-cols-5 gap-0.5">
+                                          {filteredIcons.map(({ value, Icon: IconComp }) => {
+                                            const isActive = field.value === value;
+                                            return (
+                                              <button
+                                                key={value}
+                                                type="button"
+                                                title={value}
+                                                data-testid={`icon-option-${value}`}
+                                                onMouseDown={e => e.preventDefault()}
+                                                onClick={() => { field.onChange(value); setIconPickerOpen(false); setIconPickerQuery(""); }}
+                                                className={`aspect-square flex items-center justify-center rounded-lg transition-colors ${isActive ? "bg-red-500/10 text-red-500" : "text-gray-500 hover:bg-gray-100"}`}
+                                              >
+                                                <IconComp size={18} strokeWidth={2} />
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      ) : (
+                                        <div className="py-4 text-center text-[13px] text-gray-400">No icons match "{iconPickerQuery.trim()}"</div>
+                                      )}
                                     </div>
                                   </div>
                                 )}

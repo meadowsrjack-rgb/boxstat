@@ -7214,7 +7214,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
             </Button>
           </div>
         )}
-        <div className="md:hidden mb-3">
+        <div className="mb-3">
           <details className="bg-white rounded-xl shadow-sm border">
             <summary className="px-4 py-2 text-sm font-medium text-gray-700 cursor-pointer select-none">Event Filters</summary>
             <div className="px-4 pb-3">
@@ -7222,19 +7222,12 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                 events={parsedAdminEvents}
                 filters={adminEventPrefs}
                 onFiltersChange={setAdminEventPrefs}
+                horizontal
               />
             </div>
           </details>
         </div>
-        <div className="md:flex md:gap-4">
-        <div className="hidden md:block w-48 flex-shrink-0">
-          <FiltersBar
-            events={parsedAdminEvents}
-            filters={adminEventPrefs}
-            onFiltersChange={setAdminEventPrefs}
-          />
-        </div>
-        <div className="flex-1 min-w-0">
+        <div className="w-full">
         {viewMode === "list" ? (
           <>
           <div className="overflow-x-auto">
@@ -7818,7 +7811,6 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
             </div>
           </div>
         )}
-        </div>
         </div>
       </CardContent>
       

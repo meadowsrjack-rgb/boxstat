@@ -100,9 +100,10 @@ interface FiltersBarProps {
   events: ParsedEvent[];
   filters: UserPreferences;
   onFiltersChange: (filters: UserPreferences) => void;
+  horizontal?: boolean;
 }
 
-export function FiltersBar({ events, filters, onFiltersChange }: FiltersBarProps) {
+export function FiltersBar({ events, filters, onFiltersChange, horizontal }: FiltersBarProps) {
   const usedTypes = Array.from(new Set(events.map(e => e.type))) as EventType[];
   const typesToShow = usedTypes.length > 0 ? usedTypes : ALL_EVENT_TYPES;
 
@@ -123,6 +124,28 @@ export function FiltersBar({ events, filters, onFiltersChange }: FiltersBarProps
     const newColors = { ...(filters.eventTypeColors || {}), [type]: color };
     updateFilters({ ...filters, eventTypeColors: newColors });
   };
+
+  if (horizontal) {
+    return (
+      <div className="flex flex-wrap gap-x-4 gap-y-0.5 items-center">
+        {typesToShow.map(type => {
+          const color = getEventTypeHexColor(type, filters.eventTypeColors);
+          const visible = !(filters.hiddenEventTypes || []).includes(type);
+          return (
+            <EventTypeFilterRow
+              key={type}
+              type={type}
+              label={type}
+              color={color}
+              visible={visible}
+              onToggle={() => handleToggle(type)}
+              onColorChange={color => handleColorChange(type, color)}
+            />
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-0.5">

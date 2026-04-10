@@ -13808,7 +13808,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const org = await storage.getOrganization(organizationId);
       const orgName = org?.name || 'Your organization';
 
-      const { sendMigrationInvite } = await import('./emails/inviteEmail');
+      const { sendMigrationInvite, sendPlayerAddedNotification } = await import('./emails/inviteEmail');
 
       // ── Step 1: Resolve or create program ────────────────────────────────────
       let resolvedProgramId: string | null = null;
@@ -14030,9 +14030,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
 
             if (isAlreadyActive) {
-              if (linkedPlayers.length > 0) {
-                invited++;
-                console.log(`Migration: ${parent.email} already active — players added directly, no invite email needed`);
+              const newlyAddedPlayers = linkedPlayers.filter((player) => {
+                return !existingPlayers.some(
+                  (ep: any) => ep.firstName === player.firstName && ep.lastName === player.lastName
+                );
+              });
+              if (newlyAddedPlayers.length > 0) {
+                const resolvedNewPlayers = newlyAddedPlayers.map((p) => ({
+                  ...p,
+                  teamId: p.teamId != null ? (teamIdMap[p.teamId] ?? p.teamId) : p.teamId,
+                }));
+                const notifRecord = {
+                  parent: { ...parent, id: parent.id },
+                  players: resolvedNewPlayers,
+                  programName: resolvedProgramName || undefined,
+                  teamNames: teamNameMap,
+                };
+                const notifResult = await sendPlayerAddedNotification(notifRecord, orgName);
+                if (notifResult.success) {
+                  invited++;
+                  console.log(`Migration: ${parent.email} already active — ${newlyAddedPlayers.length} player(s) added, notification sent`);
+                } else {
+                  invited++;
+                  console.warn(`Migration: ${parent.email} players added but notification failed: ${notifResult.error}`);
+                }
               } else {
                 skipped++;
                 errors.push(`${parent.email} already has an account — no new players to add`);

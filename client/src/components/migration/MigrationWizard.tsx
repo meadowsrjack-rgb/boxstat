@@ -829,7 +829,7 @@ function StaffStep({
 // ── Review step ───────────────────────────────────────────────────────────────
 
 function ReviewStep({
-  parents, players, staff, allPrograms, allTeams, onSend, isSending,
+  parents, players, staff, allPrograms, allTeams, onSend, isSending, existingEmails, organizationName,
 }: {
   parents: MigrationParent[];
   players: MigrationPlayer[];
@@ -838,6 +838,8 @@ function ReviewStep({
   allTeams: MigrationTeam[];
   onSend: () => void;
   isSending: boolean;
+  existingEmails: Set<string>;
+  organizationName?: string;
 }) {
   const noEmail   = parents.filter((p) => !p.email.trim());
   const unlinked  = players.filter((k) => !k.parentId);
@@ -916,6 +918,19 @@ function ReviewStep({
           <AlertDescription>{soon.length} subscription{soon.length > 1 ? "s expire" : " expires"} within 30 days — renewal prompt shown on first login.</AlertDescription>
         </Alert>
       )}
+
+      {(() => {
+        const activeParents = parents.filter((p) => p.email.trim() && existingEmails.has(p.email.toLowerCase()));
+        if (activeParents.length === 0) return null;
+        return (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              {activeParents.length} parent{activeParents.length > 1 ? "s" : ""} already {activeParents.length > 1 ? "have" : "has"} an active account ({activeParents.map((p) => p.firstName || p.email).join(", ")}). New players will be added to their existing account and they will receive a notification email instead of an invite.
+            </AlertDescription>
+          </Alert>
+        );
+      })()}
 
       {/* Staff summary */}
       {staff.length > 0 && (
@@ -1027,8 +1042,16 @@ function ReviewStep({
           <p className="text-muted-foreground">
             Hi {sample.firstName},{" "}
             {sampleKids.length > 0
-              ? `your player${sampleKids.length > 1 ? "s" : ""} (${sampleKids.map((k) => k.firstName).join(", ")}) have been pre-registered. Their current access is honored through the existing subscription end date — you'll be prompted to renew through Boxstat when the time comes.`
-              : "click below to claim your account on Boxstat and add your players."}
+              ? (() => {
+                  const names = sampleKids.map((k) => k.firstName).join(", ");
+                  const allHaveDates = sampleKids.every((k) => k.subscriptionEndDate);
+                  const progName = sampleKids[0]?.programId ? programMap[String(sampleKids[0].programId)]?.name : null;
+                  if (allHaveDates) {
+                    return `your player${sampleKids.length > 1 ? "s" : ""} ${names} ${sampleKids.length > 1 ? "have" : "has"} been pre-registered. Your current ${organizationName || "organization"} enrolment${progName ? ` in ${progName}` : ''} is honored until the subscription end date — please renew through BoxStat by this date to avoid unenrolment.`;
+                  }
+                  return `your player${sampleKids.length > 1 ? "s" : ""} ${names} ${sampleKids.length > 1 ? "have" : "has"} been pre-registered. To complete enrolment${progName ? ` in ${progName}` : ''}, please claim your account and subscribe through the Payments tab.`;
+                })()
+              : "click below to claim your account on BoxStat and add your players."}
           </p>
           {sampleKids[0]?.programId && programMap[String(sampleKids[0].programId)] && (
             <p className="text-xs text-muted-foreground bg-slate-50 p-2 rounded">
@@ -1082,6 +1105,14 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
 
   const { data: existingPrograms = [] } = useQuery<any[]>({ queryKey: ["/api/programs"] });
   const { data: existingTeams = [] } = useQuery<any[]>({ queryKey: ["/api/teams"] });
+  const { data: existingUsers = [] } = useQuery<any[]>({ queryKey: ["/api/users"] });
+
+  const existingActiveEmails = new Set(
+    existingUsers
+      .filter((u: any) => u.organizationId === organizationId && u.role === 'parent' && u.status !== 'invited')
+      .map((u: any) => (u.email || '').toLowerCase())
+      .filter(Boolean)
+  );
 
   const orgPrograms = existingPrograms.filter((p: any) => p.organizationId === organizationId && p.productCategory !== 'goods');
   const orgTeams = existingTeams.filter((t: any) => t.organizationId === organizationId);
@@ -1264,6 +1295,8 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
               allTeams={reviewTeams}
               onSend={send}
               isSending={isSending}
+              existingEmails={existingActiveEmails}
+              organizationName={organizationName}
             />
           );
         })()}

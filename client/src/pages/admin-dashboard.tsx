@@ -10809,8 +10809,9 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
     queryKey: ["/api/program-categories"],
   });
 
-  const [newCategoryInput, setNewCategoryInput] = useState("");
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
+  const [categoryComboOpen, setCategoryComboOpen] = useState(false);
+  const [categoryInputValue, setCategoryInputValue] = useState("");
 
   const addCategoryMutation = useMutation({
     mutationFn: async (name: string) => {
@@ -10819,7 +10820,6 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/program-categories"] });
-      setNewCategoryInput("");
     },
     onError: (err: any) => {
       const msg = err?.message?.includes('409') || err?.status === 409
@@ -11616,39 +11616,102 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                         name="displayCategory"
                         render={({ field }) => (
                           <FieldWrap label="Category">
-                            <select
-                              value={field.value || ""}
-                              onChange={e => field.onChange(e.target.value)}
-                              data-testid="select-program-category"
-                              className="w-full h-10 px-3 rounded-md border border-gray-200 text-sm bg-white outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition"
-                            >
-                              <option value="">— Select category —</option>
-                              {orgCategories.map(cat => (
-                                <option key={cat.id} value={cat.name}>{cat.name}</option>
-                              ))}
-                            </select>
-                            <div className="flex gap-1.5 mt-1.5">
+                            <div className="relative">
                               <input
                                 type="text"
-                                value={newCategoryInput}
-                                onChange={e => setNewCategoryInput(e.target.value)}
+                                data-testid="select-program-category"
+                                value={categoryComboOpen ? categoryInputValue : (field.value || "")}
+                                onChange={e => {
+                                  setCategoryInputValue(e.target.value);
+                                  setCategoryComboOpen(true);
+                                }}
+                                onFocus={() => {
+                                  setCategoryInputValue(field.value || "");
+                                  setCategoryComboOpen(true);
+                                }}
+                                onBlur={() => {
+                                  setTimeout(() => setCategoryComboOpen(false), 150);
+                                }}
                                 onKeyDown={e => {
                                   if (e.key === 'Enter') {
                                     e.preventDefault();
-                                    if (newCategoryInput.trim()) addCategoryMutation.mutate(newCategoryInput.trim());
+                                    const trimmed = categoryInputValue.trim();
+                                    if (!trimmed || addCategoryMutation.isPending) return;
+                                    const match = orgCategories.find(c => c.name.toLowerCase() === trimmed.toLowerCase());
+                                    if (match) {
+                                      field.onChange(match.name);
+                                      setCategoryInputValue("");
+                                      setCategoryComboOpen(false);
+                                    } else {
+                                      addCategoryMutation.mutate(trimmed, {
+                                        onSuccess: () => {
+                                          field.onChange(trimmed);
+                                          setCategoryInputValue("");
+                                          setCategoryComboOpen(false);
+                                        }
+                                      });
+                                    }
+                                  } else if (e.key === 'Escape') {
+                                    setCategoryComboOpen(false);
                                   }
                                 }}
-                                placeholder="Add new category..."
-                                className="flex-1 min-w-0 h-8 px-2 rounded border border-gray-200 text-xs outline-none focus:ring-1 focus:ring-red-500/20 focus:border-red-500 transition"
+                                placeholder="— Select or create category —"
+                                className="w-full h-10 px-3 rounded-md border border-gray-200 text-sm bg-white outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition"
                               />
-                              <button
-                                type="button"
-                                onClick={() => { if (newCategoryInput.trim()) addCategoryMutation.mutate(newCategoryInput.trim()); }}
-                                disabled={!newCategoryInput.trim() || addCategoryMutation.isPending}
-                                className="h-8 px-2 rounded bg-red-600 text-white text-xs font-medium hover:bg-red-700 disabled:opacity-40 transition"
-                              >
-                                Add
-                              </button>
+                              {categoryComboOpen && (
+                                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                                  {(() => {
+                                    const filtered = orgCategories.filter(c =>
+                                      c.name.toLowerCase().includes(categoryInputValue.toLowerCase())
+                                    );
+                                    const exactMatch = orgCategories.some(c =>
+                                      c.name.toLowerCase() === categoryInputValue.trim().toLowerCase()
+                                    );
+                                    return (
+                                      <>
+                                        {filtered.map(cat => (
+                                          <button
+                                            key={cat.id}
+                                            type="button"
+                                            onMouseDown={e => e.preventDefault()}
+                                            onClick={() => {
+                                              field.onChange(cat.name);
+                                              setCategoryInputValue("");
+                                              setCategoryComboOpen(false);
+                                            }}
+                                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 transition"
+                                          >
+                                            {cat.name}
+                                          </button>
+                                        ))}
+                                        {categoryInputValue.trim() && !exactMatch && (
+                                          <button
+                                            type="button"
+                                            onMouseDown={e => e.preventDefault()}
+                                            onClick={() => {
+                                              const trimmed = categoryInputValue.trim();
+                                              addCategoryMutation.mutate(trimmed, {
+                                                onSuccess: () => {
+                                                  field.onChange(trimmed);
+                                                  setCategoryInputValue("");
+                                                  setCategoryComboOpen(false);
+                                                }
+                                              });
+                                            }}
+                                            disabled={addCategoryMutation.isPending}
+                                            className="w-full text-left px-3 py-2 text-sm text-red-600 font-medium hover:bg-red-50 transition disabled:opacity-40"
+                                          >
+                                            Create &ldquo;{categoryInputValue.trim()}&rdquo;
+                                          </button>
+                                        )}
+                                        {filtered.length === 0 && !categoryInputValue.trim() && (
+                                          <div className="px-3 py-2 text-sm text-gray-400">No categories yet</div>
+                                        )}
+                                      </>
+                                    );
+                                  })()}
+                                </div>
+                              )}
                             </div>
                             {orgCategories.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-1.5">

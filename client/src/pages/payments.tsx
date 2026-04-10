@@ -1,20 +1,18 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription as DialogDesc, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Loader2, CreditCard, Package, DollarSign, AlertCircle, CheckCircle2, Check,
-  XCircle, RefreshCw, Star, Sparkles, ShoppingBag, Crown, 
-  Zap, Gift, ArrowRight, Clock, Users, ChevronRight, Trophy
+  Loader2, DollarSign, AlertCircle, CheckCircle2, Check,
+  XCircle, RefreshCw, ShoppingBag,
+  Gift, Clock, Users, ChevronRight, Trophy, ChevronLeft, History
 } from "lucide-react";
-import type { Payment, Program as ProgramType } from "@/utils/deriveStatus";
+import type { Payment } from "@/utils/deriveStatus";
 
 type Program = {
   id: string;
@@ -33,8 +31,11 @@ type Program = {
   displayCategory?: string;
   iconName?: string;
   coverImageUrl?: string;
+  imageUrls?: string[];
   inventorySizes?: string[];
   sizeStock?: Record<string, number>;
+  pricingOptions?: any[];
+  durationDays?: number;
 };
 
 type Enrollment = {
@@ -53,264 +54,13 @@ type ChildPlayer = {
   lastName: string;
 };
 
-function HeroSection({ enrollments, programs }: { enrollments: Enrollment[], programs: Program[] }) {
-  const activeEnrollments = enrollments.filter(e => e.status === 'active');
-  const subscriptions = activeEnrollments.filter(e => {
-    const program = programs.find(p => p.id === e.programId);
-    return program?.type === 'Subscription';
-  });
-  const packCredits = activeEnrollments.reduce((sum, e) => {
-    const program = programs.find(p => p.id === e.programId);
-    if (program?.type === 'Pack' && e.remainingCredits) {
-      return sum + e.remainingCredits;
-    }
-    return sum;
-  }, 0);
-
-  return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-600/20 via-red-900/10 to-black border border-red-500/20">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-red-500/10 via-transparent to-transparent" />
-      <div className="relative p-6 md:p-8">
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Your Membership</h2>
-            <p className="text-white/60">Manage your programs and purchases</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {subscriptions.length > 0 && (
-              <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white border-0 px-3 py-1">
-                <Crown className="h-3.5 w-3.5 mr-1" />
-                Club Member
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-lg bg-green-500/20">
-                <CheckCircle2 className="h-5 w-5 text-green-400" />
-              </div>
-              <span className="text-white/60 text-sm">Active Programs</span>
-            </div>
-            <p className="text-3xl font-bold text-white" data-testid="stat-active-programs">
-              {activeEnrollments.length}
-            </p>
-          </div>
-
-          <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-lg bg-blue-500/20">
-                <Zap className="h-5 w-5 text-blue-400" />
-              </div>
-              <span className="text-white/60 text-sm">Session Credits</span>
-            </div>
-            <p className="text-3xl font-bold text-white" data-testid="stat-session-credits">
-              {packCredits}
-            </p>
-          </div>
-
-          <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-lg bg-amber-500/20">
-                <Star className="h-5 w-5 text-amber-400" />
-              </div>
-              <span className="text-white/60 text-sm">Subscriptions</span>
-            </div>
-            <p className="text-3xl font-bold text-white" data-testid="stat-subscriptions">
-              {subscriptions.length}
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ProgramCard({ 
-  program, 
-  onEnroll, 
-  isEnrolled 
-}: { 
-  program: Program; 
-  onEnroll: (program: Program) => void;
-  isEnrolled: boolean;
-}) {
-  const getTypeIcon = () => {
-    switch (program.type) {
-      case 'Subscription': return <Crown className="h-4 w-4" />;
-      case 'Pack': return <Package className="h-4 w-4" />;
-      default: return <Sparkles className="h-4 w-4" />;
-    }
-  };
-
-  const getTypeBadge = () => {
-    switch (program.type) {
-      case 'Subscription': 
-        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Subscription</Badge>;
-      case 'Pack': 
-        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">{program.sessionCount} Sessions</Badge>;
-      default: 
-        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">One-Time</Badge>;
-    }
-  };
-
-  return (
-    <Card className="bg-white/5 border-white/10 hover:border-white/20 transition-all group">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between mb-3">
-          <div className="p-2 rounded-lg bg-red-500/20 group-hover:bg-red-500/30 transition-colors">
-            {getTypeIcon()}
-          </div>
-          {getTypeBadge()}
-        </div>
-        
-        <h3 className="text-lg font-semibold text-white mb-1">{program.name}</h3>
-        <p className="text-white/50 text-sm mb-4 line-clamp-2">
-          {program.description || "Join this program and elevate your game."}
-        </p>
-
-        <div className="flex items-end justify-between">
-          <div>
-            <span className="text-2xl font-bold text-white">
-              ${program.price ? (program.price / 100).toFixed(2) : '0.00'}
-            </span>
-            {program.type === 'Subscription' && program.billingCycle && (
-              <span className="text-white/40 text-sm">/{program.billingCycle.toLowerCase()}</span>
-            )}
-          </div>
-          
-          {isEnrolled ? (
-            <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-              <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-              Enrolled
-            </Badge>
-          ) : (
-            <Button 
-              size="sm" 
-              className="bg-red-600 hover:bg-red-700 text-white"
-              onClick={() => onEnroll(program)}
-              data-testid={`button-enroll-${program.id}`}
-            >
-              Enroll
-              <ArrowRight className="h-4 w-4 ml-1" />
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function StoreItemCard({ 
-  item, 
-  onPurchase 
-}: { 
-  item: Program; 
-  onPurchase: (item: Program) => void;
-}) {
-  return (
-    <Card className="bg-white/5 border-white/10 hover:border-white/20 transition-all group overflow-hidden flex flex-col">
-      {/* Cover Image with 16:9 aspect ratio */}
-      {item.coverImageUrl && (
-        <div className="relative aspect-[16/9] bg-black/20">
-          <img 
-            src={item.coverImageUrl} 
-            alt={item.name}
-            className="w-full h-full object-contain"
-          />
-        </div>
-      )}
-      <CardContent className="p-5 flex flex-col flex-1">
-        <div className="flex items-start justify-between mb-3">
-          <div className="p-2 rounded-lg bg-purple-500/20 group-hover:bg-purple-500/30 transition-colors">
-            <ShoppingBag className="h-5 w-5 text-purple-400" />
-          </div>
-          <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-            In Stock
-          </Badge>
-        </div>
-        
-        <h3 className="text-lg font-semibold text-white mb-1">{item.name}</h3>
-        <p className="text-white/50 text-sm mb-4 line-clamp-2">
-          {item.description || "Premium quality merchandise."}
-        </p>
-
-        <div className="flex items-end justify-between mt-auto">
-          <span className="text-2xl font-bold text-white">
-            ${item.price ? (item.price / 100).toFixed(2) : '0.00'}
-          </span>
-          
-          <Button 
-            size="sm" 
-            variant="outline"
-            className="border-white/20 text-white hover:bg-white/10"
-            onClick={() => onPurchase(item)}
-            data-testid={`button-buy-${item.id}`}
-          >
-            <ShoppingBag className="h-4 w-4 mr-1" />
-            Buy
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function RecommendedAddons({ 
-  enrollments, 
-  programs, 
-  storeItems,
-  onPurchase 
-}: { 
-  enrollments: Enrollment[];
-  programs: Program[];
-  storeItems: Program[];
-  onPurchase: (item: Program) => void;
-}) {
-  const activeEnrollments = enrollments.filter(e => e.status === 'active');
-  
-  if (activeEnrollments.length === 0 || storeItems.length === 0) {
-    return null;
-  }
-
-  const recommendedItems = storeItems.slice(0, 3);
-
-  return (
-    <Card className="bg-gradient-to-br from-purple-900/20 to-purple-950/10 border-purple-500/20">
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          <Gift className="h-5 w-5 text-purple-400" />
-          <CardTitle className="text-white">Recommended For You</CardTitle>
-        </div>
-        <CardDescription className="text-white/60">
-          Complete your experience with these popular add-ons
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {recommendedItems.map(item => (
-            <div 
-              key={item.id}
-              className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all cursor-pointer group"
-              onClick={() => onPurchase(item)}
-            >
-              <div className="p-2 rounded-lg bg-purple-500/20">
-                <ShoppingBag className="h-4 w-4 text-purple-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{item.name}</p>
-                <p className="text-xs text-white/50">${item.price ? (item.price / 100).toFixed(2) : '0'}</p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-white/30 group-hover:text-purple-400 transition-colors" />
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+type SuggestedAddOn = {
+  productId: string;
+  programId: string;
+  displayOrder: number;
+  isRequired: boolean;
+  product: Program;
+};
 
 function BillingHistorySection({ payments, programs }: { payments: Payment[], programs: Program[] }) {
   const tableData = useMemo(() => {
@@ -388,13 +138,317 @@ function BillingHistorySection({ payments, programs }: { payments: Payment[], pr
   );
 }
 
-type SuggestedAddOn = {
-  productId: string;
-  programId: string;
-  displayOrder: number;
-  isRequired: boolean;
-  product: Program;
-};
+function ProgramCard({ 
+  program, 
+  onEnroll, 
+  isEnrolled 
+}: { 
+  program: Program; 
+  onEnroll: (program: Program) => void;
+  isEnrolled: boolean;
+}) {
+  const isTryout = (program.displayCategory || '').toLowerCase() === 'tryout' ||
+    (program.type || '').toLowerCase() === 'tryout';
+  
+  const categoryLabel = program.displayCategory 
+    ? program.displayCategory.charAt(0).toUpperCase() + program.displayCategory.slice(1)
+    : 'Program';
+
+  const basePrice = useMemo(() => {
+    if (program.pricingOptions && program.pricingOptions.length > 0) {
+      const defaultOpt = program.pricingOptions.find((o: any) => o.isDefault) || program.pricingOptions[0];
+      return defaultOpt?.price;
+    }
+    return program.price;
+  }, [program]);
+
+  const priceDisplay = useMemo(() => {
+    if (basePrice === undefined || basePrice === null) return null;
+    const dollars = (basePrice / 100).toFixed(2);
+    return `$${dollars}`;
+  }, [basePrice]);
+
+  return (
+    <div
+      className="bg-white/5 border border-white/10 hover:border-white/20 hover:shadow-lg transition-all rounded-xl p-5 flex flex-col cursor-pointer"
+      onClick={() => onEnroll(program)}
+      data-testid={`program-card-${program.id}`}
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded ${
+          isTryout
+            ? 'bg-purple-500/20 text-purple-400'
+            : 'bg-white/10 text-white/60'
+        }`}>
+          {categoryLabel}
+        </span>
+        {priceDisplay && (
+          <span className="ml-auto text-sm font-semibold text-red-400">{priceDisplay}</span>
+        )}
+      </div>
+      <h3 className="text-base font-semibold text-white mb-1">{program.name}</h3>
+      <p className="text-white/50 text-sm line-clamp-2 flex-1">
+        {program.description || "Join this program and elevate your game."}
+      </p>
+      <button
+        className={`mt-4 w-full py-2 text-sm font-semibold rounded-lg transition-colors ${
+          isEnrolled
+            ? 'bg-green-500/20 text-green-400 cursor-default'
+            : isTryout
+              ? 'bg-purple-600 hover:bg-purple-700 text-white'
+              : 'bg-red-600 hover:bg-red-700 text-white'
+        }`}
+        onClick={(e) => { e.stopPropagation(); if (!isEnrolled) onEnroll(program); }}
+        data-testid={`button-enroll-${program.id}`}
+      >
+        {isEnrolled ? (
+          <span className="flex items-center justify-center gap-1">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Enrolled
+          </span>
+        ) : isTryout ? "Register" : "Enroll"}
+      </button>
+    </div>
+  );
+}
+
+function StoreItemCard({ 
+  item, 
+  onClick
+}: { 
+  item: Program; 
+  onClick: (item: Program) => void;
+}) {
+  const allImages = useMemo(() => {
+    const urls: string[] = [];
+    if (item.imageUrls && item.imageUrls.length > 0) {
+      urls.push(...item.imageUrls);
+    } else if (item.coverImageUrl) {
+      urls.push(item.coverImageUrl);
+    }
+    return urls;
+  }, [item]);
+
+  const hasImages = allImages.length > 0;
+
+  const categoryLabel = item.displayCategory
+    ? item.displayCategory.charAt(0).toUpperCase() + item.displayCategory.slice(1)
+    : 'Store';
+
+  const priceDisplay = item.price ? `$${(item.price / 100).toFixed(2)}` : 'Free';
+
+  return (
+    <div
+      className="bg-white/5 border border-white/10 hover:border-white/20 hover:shadow-lg transition-all rounded-xl overflow-hidden flex flex-col cursor-pointer"
+      onClick={() => onClick(item)}
+      data-testid={`store-card-${item.id}`}
+    >
+      {hasImages && (
+        <div className="relative aspect-[4/3] bg-black/20">
+          <img
+            src={allImages[0]}
+            alt={item.name}
+            className="w-full h-full object-contain"
+          />
+          {allImages.length > 1 && (
+            <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+              +{allImages.length - 1} more
+            </div>
+          )}
+        </div>
+      )}
+      <div className="p-4 flex flex-col flex-1">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/60 bg-white/10 px-2 py-0.5 rounded w-fit mb-2">
+          {categoryLabel}
+        </span>
+        <h3 className="text-sm font-semibold text-white mb-1">{item.name}</h3>
+        <p className="text-white/50 text-xs line-clamp-2 flex-1">
+          {item.description || "Premium quality merchandise."}
+        </p>
+        <div className="flex items-center justify-between mt-3">
+          <span className="text-base font-bold text-white">{priceDisplay}</span>
+          <span className="text-xs text-white/40">View →</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StoreItemDialog({
+  item,
+  onClose,
+  onPurchase,
+}: {
+  item: Program | null;
+  onClose: () => void;
+  onPurchase: (item: Program, selectedOption?: any) => void;
+}) {
+  const [imgIndex, setImgIndex] = useState(0);
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
+
+  const allImages = useMemo(() => {
+    if (!item) return [];
+    const urls: string[] = [];
+    if (item.imageUrls && item.imageUrls.length > 0) {
+      urls.push(...item.imageUrls);
+    } else if (item.coverImageUrl) {
+      urls.push(item.coverImageUrl);
+    }
+    return urls;
+  }, [item]);
+
+  const hasPricingOptions = !!(item?.pricingOptions && item.pricingOptions.length > 0);
+
+  useEffect(() => {
+    setImgIndex(0);
+    if (item?.pricingOptions && item.pricingOptions.length > 0) {
+      const defaultOpt = item.pricingOptions.find((o: any) => o.isDefault) || item.pricingOptions[0];
+      setSelectedOptionId(defaultOpt?.id || null);
+    } else {
+      setSelectedOptionId(null);
+    }
+  }, [item?.id]);
+
+  const selectedOption = useMemo(() => {
+    if (!item || !hasPricingOptions) return null;
+    return item.pricingOptions!.find((o: any) => o.id === selectedOptionId) || item.pricingOptions![0];
+  }, [item, hasPricingOptions, selectedOptionId]);
+
+  const displayedPrice = useMemo(() => {
+    if (selectedOption) {
+      const dollars = (selectedOption.price / 100).toFixed(2);
+      const billingCycle = selectedOption.billingCycle && selectedOption.billingCycle !== 'One-Time'
+        ? `/${selectedOption.billingCycle.toLowerCase()}`
+        : '';
+      return `$${dollars}${billingCycle}`;
+    }
+    return item?.price ? `$${(item.price / 100).toFixed(2)}` : 'Free';
+  }, [selectedOption, item?.price]);
+
+  if (!item) return null;
+
+  return (
+    <Dialog open={!!item} onOpenChange={() => onClose()}>
+      <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-lg">{item.name}</DialogTitle>
+          {item.displayCategory && (
+            <DialogDesc className="text-white/50 text-xs uppercase tracking-wider">
+              {item.displayCategory.charAt(0).toUpperCase() + item.displayCategory.slice(1)}
+            </DialogDesc>
+          )}
+        </DialogHeader>
+
+        {allImages.length > 0 && (
+          <div className="relative aspect-[16/9] bg-black/30 rounded-lg overflow-hidden">
+            <img
+              src={allImages[imgIndex]}
+              alt={`${item.name} image ${imgIndex + 1}`}
+              className="w-full h-full object-contain"
+            />
+            {allImages.length > 1 && (
+              <>
+                <button
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 transition-colors"
+                  onClick={() => setImgIndex(i => (i - 1 + allImages.length) % allImages.length)}
+                  data-testid="carousel-prev"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 transition-colors"
+                  onClick={() => setImgIndex(i => (i + 1) % allImages.length)}
+                  data-testid="carousel-next"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                  {allImages.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setImgIndex(i)}
+                      className={`w-1.5 h-1.5 rounded-full transition-colors ${i === imgIndex ? 'bg-white' : 'bg-white/40'}`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        <p className="text-white/70 text-sm leading-relaxed">
+          {item.description || "Premium quality merchandise."}
+        </p>
+
+        {item.inventorySizes && item.inventorySizes.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {item.inventorySizes.map(size => (
+              <span key={size} className="px-2 py-0.5 bg-white/10 rounded text-xs text-white/70">{size}</span>
+            ))}
+          </div>
+        )}
+
+        {/* Pricing options */}
+        {hasPricingOptions && (
+          <div className="space-y-2">
+            <p className="text-xs text-white/50 uppercase tracking-wider">Select an option</p>
+            <div className="space-y-2">
+              {item.pricingOptions!.map((opt: any) => {
+                const isSelected = selectedOptionId === opt.id;
+                const optPrice = `$${(opt.price / 100).toFixed(2)}`;
+                const billingLabel = opt.billingCycle && opt.billingCycle !== 'One-Time'
+                  ? `/${opt.billingCycle.toLowerCase()}`
+                  : '';
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => setSelectedOptionId(opt.id)}
+                    data-testid={`pricing-option-${opt.id}`}
+                    className={`w-full flex items-center justify-between p-3 rounded-lg border text-left transition-all ${
+                      isSelected
+                        ? 'border-red-500 bg-red-500/10'
+                        : 'border-white/10 bg-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    <div>
+                      <span className="text-sm font-medium text-white">{opt.name}</span>
+                      {opt.savingsNote && (
+                        <span className="ml-2 text-xs text-green-400">{opt.savingsNote}</span>
+                      )}
+                      {opt.comparePrice && (
+                        <span className="ml-2 text-xs text-white/40 line-through">${(opt.comparePrice / 100).toFixed(2)}</span>
+                      )}
+                    </div>
+                    <span className={`text-sm font-bold ${isSelected ? 'text-red-400' : 'text-white'}`}>
+                      {optPrice}{billingLabel}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <DialogFooter className="flex items-center justify-between gap-3 pt-2">
+          <span className="text-2xl font-bold text-white">{displayedPrice}</span>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose} className="border-white/20 text-white hover:bg-white/10">
+              Cancel
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => { onClose(); onPurchase(item, selectedOption || undefined); }}
+              data-testid={`button-buy-${item.id}`}
+            >
+              <ShoppingBag className="h-4 w-4 mr-1" />
+              Buy Now
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function EnrollmentDialog({ 
   program, 
@@ -430,7 +484,6 @@ function EnrollmentDialog({
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const isPerFamily = program?.billingModel === 'Per Family';
   
-  // Fetch suggested add-ons for this program
   const { data: suggestedAddOns = [] } = useQuery<SuggestedAddOn[]>({
     queryKey: ["/api/programs", program?.id, "suggested-add-ons"],
     queryFn: async () => {
@@ -442,12 +495,10 @@ function EnrollmentDialog({
     enabled: !!program?.id,
   });
   
-  // Update suggested add-on IDs when data loads
   useEffect(() => {
     setSuggestedAddOnIds(suggestedAddOns.map(s => s.productId));
   }, [suggestedAddOns]);
   
-  // Reset state when dialog opens/closes
   useEffect(() => {
     if (program) {
       setCurrentStep(1);
@@ -461,10 +512,8 @@ function EnrollmentDialog({
   
   if (!program) return null;
   
-  // Only show add-ons step if there are suggested add-ons for this program
   const hasSuggestedAddOns = suggestedAddOnIds.length > 0;
   
-  // Sort store items: suggested first (by display order), then others
   const sortedStoreItems = useMemo(() => {
     if (!hasSuggestedAddOns) return storeItems;
     
@@ -479,7 +528,6 @@ function EnrollmentDialog({
       }
     }
     
-    // Sort suggested by display order
     const addOnOrderMap = new Map(suggestedAddOns.map(s => [s.productId, s.displayOrder]));
     suggested.sort((a, b) => (addOnOrderMap.get(a.id) || 0) - (addOnOrderMap.get(b.id) || 0));
     
@@ -797,9 +845,13 @@ export default function PaymentsPage() {
   const [selectedStoreItem, setSelectedStoreItem] = useState<Program | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedStoreCategory, setSelectedStoreCategory] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'programs' | 'store'>('programs');
+  const hasUserSelectedTab = useRef(false);
+  const [progFilter, setProgFilter] = useState<string>("All");
+  const [storeFilter, setStoreFilter] = useState<string>("All");
   const [appliedCoupon, setAppliedCoupon] = useState<{ id: number; code: string; discountType: string; discountValue: number } | null>(null);
-  
+  const [showHistory, setShowHistory] = useState(false);
+
   const urlParams = new URLSearchParams(window.location.search);
   const paymentSuccess = urlParams.get('success') === 'true';
   const paymentCanceled = urlParams.get('canceled') === 'true';
@@ -845,19 +897,51 @@ export default function PaymentsPage() {
     enabled: !!user,
   });
 
-  // Filter products - services include those without productCategory for backward compatibility
   const programs = allProducts.filter(p => (!p.productCategory || p.productCategory === 'service') && p.isActive !== false);
   const storeItems = allProducts.filter(p => p.productCategory === 'goods' && p.isActive !== false);
   
   const enrolledProgramIds = new Set(enrollments.filter(e => e.status === 'active').map(e => e.programId));
+  const hasActiveEnrollments = enrolledProgramIds.size > 0;
+
+  // Smart default tab: Store if already enrolled, Programs otherwise
+  // Only runs once on initial data load; user tab selection takes priority afterward
+  useEffect(() => {
+    if (!enrollmentsLoading && !productsLoading && !hasUserSelectedTab.current) {
+      setActiveTab(hasActiveEnrollments ? 'store' : 'programs');
+    }
+  }, [enrollmentsLoading, productsLoading]);
+
+  // Category filter helpers
+  const programCategories = useMemo(() => {
+    const cats = [...new Set(programs.map(p => p.displayCategory || 'general'))].filter(c => c !== 'general');
+    return ['All', ...cats];
+  }, [programs]);
+
+  const storeCategories = useMemo(() => {
+    const cats = [...new Set(storeItems.map(p => p.displayCategory || 'general'))].filter(c => c !== 'general');
+    return ['All', ...cats];
+  }, [storeItems]);
+
+  const filteredPrograms = useMemo(() => {
+    if (progFilter === 'All') return programs;
+    return programs.filter(p => (p.displayCategory || 'general') === progFilter);
+  }, [programs, progFilter]);
+
+  const filteredStore = useMemo(() => {
+    if (storeFilter === 'All') return storeItems;
+    return storeItems.filter(p => (p.displayCategory || 'general') === storeFilter);
+  }, [storeItems, storeFilter]);
+
+  const getCatCount = (items: Program[], cat: string) => {
+    if (cat === 'All') return items.length;
+    return items.filter(p => (p.displayCategory || 'general') === cat).length;
+  };
 
   const handleEnroll = async (playerId: string | null) => {
     if (!selectedProgram) return;
-    
     try {
       setLoading(true);
       setError(null);
-
       const response = await fetch('/api/payments/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -869,16 +953,12 @@ export default function PaymentsPage() {
           cancelUrl: `${window.location.origin}/payments?canceled=true`,
         }),
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to create checkout');
       }
-
       const data = await response.json();
-      if (data.sessionUrl) {
-        window.location.href = data.sessionUrl;
-      }
+      if (data.sessionUrl) window.location.href = data.sessionUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setLoading(false);
@@ -887,11 +967,9 @@ export default function PaymentsPage() {
   
   const handleEnrollWithAddOns = async (playerId: string | null, addOnIds: string[]) => {
     if (!selectedProgram) return;
-    
     try {
       setLoading(true);
       setError(null);
-
       const response = await fetch('/api/payments/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -904,46 +982,38 @@ export default function PaymentsPage() {
           cancelUrl: `${window.location.origin}/payments?canceled=true`,
         }),
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to create checkout');
       }
-
       const data = await response.json();
-      if (data.sessionUrl) {
-        window.location.href = data.sessionUrl;
-      }
+      if (data.sessionUrl) window.location.href = data.sessionUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setLoading(false);
     }
   };
 
-  const handlePurchaseItem = async (item: Program) => {
+  const handlePurchaseItem = async (item: Program, selectedOption?: any) => {
     try {
       setLoading(true);
       setError(null);
-
       const response = await fetch('/api/payments/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           packageId: item.id,
+          ...(selectedOption ? { selectedPricingOptionId: selectedOption.id } : {}),
           successUrl: `${window.location.origin}/payments?success=true&session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: `${window.location.origin}/payments?canceled=true`,
         }),
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to create checkout');
       }
-
       const data = await response.json();
-      if (data.sessionUrl) {
-        window.location.href = data.sessionUrl;
-      }
+      if (data.sessionUrl) window.location.href = data.sessionUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setLoading(false);
@@ -967,24 +1037,56 @@ export default function PaymentsPage() {
         background: `radial-gradient(1200px 600px at 50% -10%, rgba(216,36,40,0.15), transparent 60%), #000`
       }}
     >
-      <div className="mx-auto max-w-6xl p-4 md:p-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Payment Center</h1>
-            <p className="text-white/60">Enroll in programs and manage your purchases</p>
+      {/* Header + Tabs */}
+      <div className="bg-black/50 border-b border-white/10 px-4 md:px-8 pt-6 pb-0">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-start justify-between mb-1">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Programs & Store</h1>
+              <p className="text-white/50 text-sm mt-0.5">Browse programs, tryouts, and gear for your player.</p>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => window.location.reload()}
+              className="text-white/40 hover:text-white hover:bg-white/10 mt-1"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => window.location.reload()}
-            className="border-white/20 text-white hover:bg-white/10"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-        </div>
 
+          {/* Tab bar */}
+          <div className="flex gap-0 mt-4">
+            {[
+              { key: 'programs' as const, label: 'Programs', count: programs.length },
+              { key: 'store' as const, label: 'Store', count: storeItems.length },
+            ].map(t => {
+              const active = activeTab === t.key;
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => { hasUserSelectedTab.current = true; setActiveTab(t.key); }}
+                  data-testid={`tab-${t.key}`}
+                  className={`px-6 py-2.5 text-sm font-semibold border-b-2 transition-all ${
+                    active
+                      ? 'text-red-400 border-red-500'
+                      : 'text-white/50 border-transparent hover:text-white/80'
+                  }`}
+                >
+                  {t.label}
+                  <span className={`ml-1.5 text-[11px] font-bold px-1.5 py-0.5 rounded-full align-middle ${
+                    active ? 'bg-red-600 text-white' : 'bg-white/10 text-white/50'
+                  }`}>
+                    {t.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 space-y-5">
         {/* Alerts */}
         {paymentSuccess && (
           <Alert className="bg-green-500/10 border-green-500/20" data-testid="alert-payment-success">
@@ -994,7 +1096,6 @@ export default function PaymentsPage() {
             </AlertDescription>
           </Alert>
         )}
-
         {paymentCanceled && (
           <Alert className="bg-amber-500/10 border-amber-500/20" data-testid="alert-payment-canceled">
             <XCircle className="h-5 w-5 text-amber-400" />
@@ -1003,7 +1104,6 @@ export default function PaymentsPage() {
             </AlertDescription>
           </Alert>
         )}
-
         {error && !selectedProgram && (
           <Alert className="bg-red-500/10 border-red-500/20" data-testid="alert-payment-error">
             <AlertCircle className="h-5 w-5 text-red-400" />
@@ -1011,57 +1111,43 @@ export default function PaymentsPage() {
           </Alert>
         )}
 
-        {/* Hero Section */}
-        <HeroSection enrollments={enrollments} programs={programs} />
+        {/* Programs Tab */}
+        {activeTab === 'programs' && (
+          <div className="space-y-4">
+            {/* Category filter pills */}
+            {programCategories.length > 1 && (
+              <div className="flex flex-wrap gap-2" data-testid="programs-category-filter">
+                {programCategories.map(cat => {
+                  const count = getCatCount(programs, cat);
+                  const active = progFilter === cat;
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => setProgFilter(cat)}
+                      data-testid={`filter-prog-${cat}`}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-full border transition-all ${
+                        active
+                          ? 'border-red-500 bg-red-500/10 text-red-400'
+                          : 'border-white/15 bg-white/5 text-white/60 hover:border-white/30 hover:text-white'
+                      }`}
+                    >
+                      {cat}
+                      <span className="ml-1.5 opacity-60 text-xs">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
-        {/* Recommended Add-ons */}
-        <RecommendedAddons 
-          enrollments={enrollments}
-          programs={programs}
-          storeItems={storeItems}
-          onPurchase={handlePurchaseItem}
-        />
-
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="programs" className="w-full">
-          <TabsList className="w-full grid grid-cols-3 bg-white/5 border border-white/10 p-1">
-            <TabsTrigger 
-              value="programs" 
-              className="data-[state=active]:bg-red-600 data-[state=active]:text-white"
-              data-testid="tab-programs"
-            >
-              <Trophy className="h-4 w-4 mr-2" />
-              Programs
-            </TabsTrigger>
-            <TabsTrigger 
-              value="store" 
-              className="data-[state=active]:bg-red-600 data-[state=active]:text-white"
-              data-testid="tab-store"
-            >
-              <ShoppingBag className="h-4 w-4 mr-2" />
-              Store
-            </TabsTrigger>
-            <TabsTrigger 
-              value="history" 
-              className="data-[state=active]:bg-red-600 data-[state=active]:text-white"
-              data-testid="tab-history"
-            >
-              <Clock className="h-4 w-4 mr-2" />
-              History
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="programs" className="mt-6">
-            {programs.length === 0 ? (
-              <Card className="bg-white/5 border-white/10">
-                <CardContent className="py-12 text-center">
-                  <Trophy className="h-12 w-12 mx-auto mb-4 text-white/30" />
-                  <p className="text-white/60">No programs available at this time</p>
-                </CardContent>
-              </Card>
+            {filteredPrograms.length === 0 ? (
+              <div className="text-center py-16 text-white/40">
+                <Trophy className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                <p>No programs in this category</p>
+                <button onClick={() => setProgFilter('All')} className="mt-3 text-sm text-red-400 hover:underline">Show all</button>
+              </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {programs.map(program => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredPrograms.map(program => (
                   <ProgramCard
                     key={program.id}
                     program={program}
@@ -1071,125 +1157,103 @@ export default function PaymentsPage() {
                 ))}
               </div>
             )}
-          </TabsContent>
+          </div>
+        )}
 
-          <TabsContent value="store" className="mt-6">
-            {storeItems.length === 0 ? (
-              <Card className="bg-white/5 border-white/10">
-                <CardContent className="py-12 text-center">
-                  <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-white/30" />
-                  <p className="text-white/60">No store items available at this time</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {/* Category filter buttons */}
-                {(() => {
-                  const uniqueCategories = [...new Set(storeItems.map((p) => p.displayCategory || 'general'))] as string[];
-                  
+        {/* Store Tab */}
+        {activeTab === 'store' && (
+          <div className="space-y-4">
+            {/* Category filter pills */}
+            {storeCategories.length > 1 && (
+              <div className="flex flex-wrap gap-2" data-testid="store-category-filter">
+                {storeCategories.map(cat => {
+                  const count = getCatCount(storeItems, cat);
+                  const active = storeFilter === cat;
                   return (
-                    <div className="flex overflow-x-auto flex-nowrap gap-2 pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]" data-testid="store-category-filter">
-                      <Button
-                        variant={!selectedStoreCategory ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setSelectedStoreCategory(null)}
-                        className={!selectedStoreCategory ? "bg-red-600 text-white" : "border-white/20 text-white hover:bg-white/10"}
-                        data-testid="filter-all-store"
-                      >
-                        All
-                      </Button>
-                      {uniqueCategories.filter(c => c !== 'general').map((category) => {
-                        const count = storeItems.filter((p) => (p.displayCategory || 'general') === category).length;
-                        
-                        return (
-                          <Button
-                            key={category}
-                            variant={selectedStoreCategory === category ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setSelectedStoreCategory(category)}
-                            className={selectedStoreCategory === category ? "bg-red-600 text-white" : "border-white/20 text-white hover:bg-white/10"}
-                            data-testid={`filter-${category}`}
-                          >
-                            {category.charAt(0).toUpperCase() + category.slice(1)} ({count})
-                          </Button>
-                        );
-                      })}
-                    </div>
+                    <button
+                      key={cat}
+                      onClick={() => setStoreFilter(cat)}
+                      data-testid={`filter-store-${cat}`}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-full border transition-all ${
+                        active
+                          ? 'border-red-500 bg-red-500/10 text-red-400'
+                          : 'border-white/15 bg-white/5 text-white/60 hover:border-white/30 hover:text-white'
+                      }`}
+                    >
+                      {cat}
+                      <span className="ml-1.5 opacity-60 text-xs">{count}</span>
+                    </button>
                   );
-                })()}
-                
-                {/* Filtered store items */}
-                {(() => {
-                  const filteredItems = storeItems.filter((item) => {
-                    if (!selectedStoreCategory) return true;
-                    return (item.displayCategory || 'general') === selectedStoreCategory;
-                  });
-                  
-                  if (filteredItems.length === 0 && selectedStoreCategory) {
-                    return (
-                      <Card className="bg-white/5 border-white/10">
-                        <CardContent className="py-12 text-center">
-                          <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-white/30" />
-                          <p className="text-white/60">No items in this category</p>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="mt-4 border-white/20 text-white hover:bg-white/10"
-                            onClick={() => setSelectedStoreCategory(null)}
-                          >
-                            Show all items
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    );
-                  }
-                  
-                  return (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                      {filteredItems.map(item => (
-                        <StoreItemCard
-                          key={item.id}
-                          item={item}
-                          onPurchase={handlePurchaseItem}
-                        />
-                      ))}
-                    </div>
-                  );
-                })()}
+                })}
               </div>
             )}
-          </TabsContent>
 
-          <TabsContent value="history" className="mt-6">
-            <Card className="bg-white/5 border-white/10">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  Payment History
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <BillingHistorySection payments={payments} programs={allProducts} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            {storeItems.length === 0 ? (
+              <div className="text-center py-16 text-white/40">
+                <ShoppingBag className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                <p>No store items available at this time</p>
+              </div>
+            ) : filteredStore.length === 0 ? (
+              <div className="text-center py-12 text-white/40">
+                <ShoppingBag className="h-8 w-8 mx-auto mb-3 opacity-30" />
+                <p>No items in this category</p>
+                <button onClick={() => setStoreFilter('All')} className="mt-3 text-sm text-red-400 hover:underline">Show all</button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {filteredStore.map(item => (
+                  <StoreItemCard
+                    key={item.id}
+                    item={item}
+                    onClick={(i) => setSelectedStoreItem(i)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* Enrollment Dialog */}
-        <EnrollmentDialog
-          program={selectedProgram}
-          children={children}
-          storeItems={storeItems}
-          onClose={() => { setSelectedProgram(null); setAppliedCoupon(null); setError(null); }}
-          onConfirm={handleEnroll}
-          onConfirmWithAddOns={handleEnrollWithAddOns}
-          isLoading={loading}
-          onCouponApplied={setAppliedCoupon}
-          appliedCoupon={appliedCoupon}
-          error={error}
-          onClearError={() => setError(null)}
-        />
+        {/* Payment History – secondary section always visible at bottom */}
+        <div className="border-t border-white/10 pt-4">
+          <button
+            onClick={() => setShowHistory(h => !h)}
+            className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors"
+            data-testid="toggle-history"
+          >
+            <History className="h-4 w-4" />
+            Payment History
+            <ChevronRight className={`h-4 w-4 transition-transform ${showHistory ? 'rotate-90' : ''}`} />
+          </button>
+
+          {showHistory && (
+            <div className="mt-4">
+              <BillingHistorySection payments={payments} programs={allProducts} />
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Store Item Carousel Dialog */}
+      <StoreItemDialog
+        item={selectedStoreItem}
+        onClose={() => setSelectedStoreItem(null)}
+        onPurchase={handlePurchaseItem}
+      />
+
+      {/* Enrollment Dialog */}
+      <EnrollmentDialog
+        program={selectedProgram}
+        children={children}
+        storeItems={storeItems}
+        onClose={() => { setSelectedProgram(null); setAppliedCoupon(null); setError(null); }}
+        onConfirm={handleEnroll}
+        onConfirmWithAddOns={handleEnrollWithAddOns}
+        isLoading={loading}
+        onCouponApplied={setAppliedCoupon}
+        appliedCoupon={appliedCoupon}
+        error={error}
+        onClearError={() => setError(null)}
+      />
     </div>
   );
 }

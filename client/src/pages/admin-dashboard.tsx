@@ -9548,6 +9548,7 @@ function StoreTab({ organization }: any) {
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
   const [selectedSuggestedPrograms, setSelectedSuggestedPrograms] = useState<string[]>([]);
   const [productImageUrl, setProductImageUrl] = useState<string>("");
+  const [productImageUrls, setProductImageUrls] = useState<string[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
 
@@ -9682,7 +9683,8 @@ function StoreTab({ organization }: any) {
         type: data.isRecurring ? "Subscription" : (isTraining ? "Pack" : "One-Time"),
         billingCycle: data.isRecurring ? "Subscription" : null,
         billingIntervalDays: data.isRecurring ? (data.billingIntervalDays || 30) : null,
-        coverImageUrl: productImageUrl || null,
+        coverImageUrl: productImageUrl || (productImageUrls.length > 0 ? productImageUrls[0] : null),
+        imageUrls: productImageUrls,
         tags: data.storeCategory ? [data.storeCategory] : [],
         sessionCount: isTraining ? (data.sessionCount || 0) : null,
         inventorySizes: isGear ? (data.inventorySizes || []) : [],
@@ -9716,6 +9718,7 @@ function StoreTab({ organization }: any) {
       setEditingProduct(null);
       setSelectedSuggestedPrograms([]);
       setProductImageUrl("");
+      setProductImageUrls([]);
       form.reset();
     },
     onError: (error: any) => {
@@ -9745,6 +9748,7 @@ function StoreTab({ organization }: any) {
   const handleEdit = async (product: any) => {
     setEditingProduct(product);
     setProductImageUrl(product.coverImageUrl || "");
+    setProductImageUrls(product.imageUrls || []);
     form.reset({
       organizationId: product.organizationId,
       name: product.name,
@@ -9784,6 +9788,7 @@ function StoreTab({ organization }: any) {
     setEditingProduct(null);
     setSelectedSuggestedPrograms([]);
     setProductImageUrl("");
+    setProductImageUrls([]);
     form.reset({
       organizationId: organization?.id || "",
       name: "",
@@ -9805,41 +9810,69 @@ function StoreTab({ organization }: any) {
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
     
     setUploadingImage(true);
-    const formData = new FormData();
-    formData.append('image', file);
+    const uploadedUrls: string[] = [];
     
     try {
-      // Get auth token from localStorage for file upload
-      const token = localStorage.getItem('authToken');
-      const headers: HeadersInit = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        const token = localStorage.getItem('authToken');
+        const headers: HeadersInit = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        
+        const response = await fetch('/api/upload/product-image', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+          headers,
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to upload image');
+        }
+        
+        const data = await response.json();
+        if (data.imageUrl) uploadedUrls.push(data.imageUrl);
       }
       
-      const response = await fetch('/api/upload/product-image', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-        headers,
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to upload image');
+      setProductImageUrls(prev => [...prev, ...uploadedUrls]);
+      if (!productImageUrl && uploadedUrls.length > 0) {
+        setProductImageUrl(uploadedUrls[0]);
       }
-      
-      const data = await response.json();
-      setProductImageUrl(data.imageUrl);
-      toast({ title: "Image uploaded successfully" });
+      toast({ title: `${uploadedUrls.length} image(s) uploaded successfully` });
     } catch (error: any) {
       toast({ title: "Failed to upload image", description: error.message, variant: "destructive" });
     } finally {
       setUploadingImage(false);
+      e.target.value = "";
     }
+  };
+
+  const handleRemoveImage = (idx: number) => {
+    setProductImageUrls(prev => {
+      const next = prev.filter((_, i) => i !== idx);
+      if (productImageUrl === prev[idx]) {
+        setProductImageUrl(next[0] || "");
+      }
+      return next;
+    });
+  };
+
+  const handleMoveImage = (idx: number, direction: 'up' | 'down') => {
+    setProductImageUrls(prev => {
+      const next = [...prev];
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= next.length) return prev;
+      [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
+      setProductImageUrl(next[0] || "");
+      return next;
+    });
   };
 
   const formatPrice = (cents: number) => {
@@ -10048,12 +10081,19 @@ function StoreTab({ organization }: any) {
                     />
                   </TableCell>
                   <TableCell>
-                    {product.coverImageUrl ? (
-                      <img 
-                        src={product.coverImageUrl} 
-                        alt={product.name} 
-                        className="w-12 h-12 rounded-lg object-cover"
-                      />
+                    {product.coverImageUrl || (product.imageUrls && product.imageUrls.length > 0) ? (
+                      <div className="relative w-12 h-12">
+                        <img 
+                          src={product.coverImageUrl || product.imageUrls?.[0]} 
+                          alt={product.name} 
+                          className="w-12 h-12 rounded-lg object-cover"
+                        />
+                        {product.imageUrls && product.imageUrls.length > 1 && (
+                          <span className="absolute -bottom-1 -right-1 bg-gray-700 text-white text-[8px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                            {product.imageUrls.length}
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
                         <Package className="w-5 h-5 text-gray-400" />
@@ -10229,38 +10269,66 @@ function StoreTab({ organization }: any) {
               />
 
               <div className="space-y-2">
-                <Label>Product Image</Label>
-                <div className="flex items-center gap-4">
-                  {productImageUrl ? (
-                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border">
-                      <img src={productImageUrl} alt="Product" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => setProductImageUrl("")}
-                        className="absolute top-1 right-1 p-1 bg-red-500 rounded-full text-white hover:bg-red-600"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
-                      <ImageIcon className="w-6 h-6 text-gray-400" />
-                    </div>
-                  )}
-                  <div className="flex-1">
+                <Label>Product Images <span className="text-xs text-gray-400 font-normal">(multiple supported — drag arrows to reorder)</span></Label>
+                {productImageUrls.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {productImageUrls.map((url, idx) => (
+                      <div key={idx} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 group">
+                        <img src={url} alt={`Product image ${idx + 1}`} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(idx)}
+                          className="absolute top-1 right-1 p-0.5 bg-red-500 rounded-full text-white hover:bg-red-600"
+                          data-testid={`button-remove-image-${idx}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                        {idx === 0 && (
+                          <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] text-center py-0.5">Cover</span>
+                        )}
+                        <div className="absolute top-1 left-1 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {idx > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleMoveImage(idx, 'up')}
+                              className="p-0.5 bg-black/60 rounded text-white hover:bg-black/80"
+                              title="Move left"
+                              data-testid={`button-move-image-up-${idx}`}
+                            >
+                              <ChevronLeft className="w-3 h-3" />
+                            </button>
+                          )}
+                          {idx < productImageUrls.length - 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleMoveImage(idx, 'down')}
+                              className="p-0.5 bg-black/60 rounded text-white hover:bg-black/80"
+                              title="Move right"
+                              data-testid={`button-move-image-down-${idx}`}
+                            >
+                              <ChevronRight className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors text-sm text-gray-600">
+                    <ImageIcon className="w-4 h-4 text-gray-400" />
+                    {uploadingImage ? "Uploading..." : "Add image(s)"}
                     <Input
                       type="file"
                       accept="image/*"
+                      multiple
+                      className="hidden"
                       onChange={handleImageUpload}
                       disabled={uploadingImage}
                       data-testid="input-product-image"
                     />
-                    {uploadingImage ? (
-                      <p className="text-xs text-gray-500 mt-1">Uploading...</p>
-                    ) : (
-                      <p className="text-xs text-gray-400 mt-1">1280 × 720px (16:9) recommended</p>
-                    )}
-                  </div>
+                  </label>
+                  <p className="text-xs text-gray-400">PNG, JPG · First image = cover</p>
                 </div>
               </div>
 

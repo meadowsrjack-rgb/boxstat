@@ -457,6 +457,7 @@ export const products = pgTable("products", {
   displayCategory: varchar("display_category").default('general'), // For filter buttons: basketball, training, camps, clinics, etc.
   iconName: varchar("icon_name"), // Icon identifier for display
   coverImageUrl: varchar("cover_image_url"), // Cover photo for program overview
+  imageUrls: text("image_urls").array().default(sql`ARRAY[]::text[]`), // Multiple images for store items (carousel)
   requiredGearProductIds: text("required_gear_product_ids").array().default(sql`ARRAY[]::text[]`), // Store product IDs required for this program
   code: varchar(), // Short import code (e.g. "SKA", "THU12") for CSV/XLSX bulk import matching
   seasonStartDate: timestamp("season_start_date", { mode: 'string' }), // Program season start
@@ -1915,6 +1916,7 @@ export const insertProductSchema = z.object({
   displayCategory: z.string().default('general'), // For filter buttons
   iconName: z.string().optional(), // Icon identifier
   coverImageUrl: z.string().nullish(),
+  imageUrls: z.array(z.string()).default([]),
   requiredGearProductIds: z.array(z.string()).default([]),
   code: z.string().optional(),
   seasonStartDate: z.string().optional(),

@@ -7373,15 +7373,21 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                       </div>
                     </TableCell>
                     <TableCell className="px-2 py-1.5">
-                      <Badge className={`text-[10px] px-1.5 py-0 ${
-                        (event.eventType || event.type) === 'practice' ? 'bg-blue-100 text-blue-700' :
-                        (event.eventType || event.type) === 'game' ? 'bg-red-100 text-red-700' :
-                        (event.eventType || event.type) === 'training' ? 'bg-green-100 text-green-700' :
-                        (event.eventType || event.type) === 'meeting' ? 'bg-purple-100 text-purple-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
-                        {(event.eventType || event.type || 'unknown').charAt(0).toUpperCase() + (event.eventType || event.type || 'unknown').slice(1)}
-                      </Badge>
+                      {(() => {
+                        const parsedType = parseEventMeta(event).type;
+                        const hexColor = getEventTypeHexColor(parsedType, adminEventPrefs.eventTypeColors);
+                        return (
+                          <Badge
+                            className="text-[10px] px-1.5 py-0 border-0"
+                            style={{
+                              backgroundColor: `${hexColor}20`,
+                              color: hexColor,
+                            }}
+                          >
+                            {parsedType.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                          </Badge>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="px-2 py-1.5 text-xs">{dateTimeDisplay}</TableCell>
                     <TableCell className="px-2 py-1.5 text-xs max-w-[140px] truncate">

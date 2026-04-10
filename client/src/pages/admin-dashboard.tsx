@@ -1778,7 +1778,6 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   const [parentSearchQuery, setParentSearchQuery] = useState('');
   const [parentSearchOpen, setParentSearchOpen] = useState(false);
   const [selectedParentId, setSelectedParentId] = useState<string>('');
-  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [viewingUser, setViewingUser] = useState<any>(null);
   const [selectedDivision, setSelectedDivision] = useState<string>("");
@@ -2537,32 +2536,6 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
             <CardDescription>Manage players, coaches, parents, and admins</CardDescription>
           </div>
           <div className="flex gap-2">
-          <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="icon" title="Bulk Upload" data-testid="button-bulk-upload-users">
-                <Upload className="w-4 h-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Bulk Upload Users</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <p className="text-sm text-gray-600">Upload a CSV or XLSX file. For XLSX, include sheets named <strong>Parents</strong>, <strong>Players</strong>, <strong>Coaches</strong>, and/or <strong>Admins</strong>. Columns: First name, Last name, Email, Phone, Role, Status, Team, Team Code, Program, Program Code, Parent Email, Start Date, End Date.</p>
-                <Input
-                  type="file"
-                  accept=".csv,.xlsx,.xls"
-                  onChange={handleBulkUpload}
-                  data-testid="input-csv-upload"
-                />
-                <Button variant="outline" className="w-full" onClick={downloadUserTemplate} data-testid="button-download-template">
-                  <Download className="w-4 h-4 mr-2" />
-                  Download XLSX Template
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-          
           <Button variant="outline" size="icon" title="Download Data" onClick={downloadUsersData} data-testid="button-download-users">
             <Download className="w-4 h-4" />
           </Button>
@@ -2578,11 +2551,6 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
               form.setValue('accountHolderId', undefined);
             }
           }}>
-            <DialogTrigger asChild>
-              <Button size="icon" title="Add User" data-testid="button-add-new-user">
-                <Plus className="w-4 h-4" />
-              </Button>
-            </DialogTrigger>
             <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New User</DialogTitle>
@@ -11180,7 +11148,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
   const [isUploadingPrograms, setIsUploadingPrograms] = useState(false);
 
   const downloadProgramTemplate = () => {
-    const csvContent = "Name,Description,Type,Price,Billing Cycle,Access Tag,Duration Days,Session Count,Compare Price,Savings Note,Is Active\nYouth Club Monthly,Monthly basketball membership,Subscription,7500,Monthly,club_member,30,,,,true\n10-Session Pack,Credit-based training,Pack,5000,,pack_holder,,10,,,true";
+    const csvContent = "Name,Code,Description,Category,Icon,Visibility,Type,Price,Billing Model,Billing Interval Days,Allow Installments,Installments,Pay In Full Discount,Access Tag,Duration Days,Session Count,Compare Price,Savings Note,Is Active\nYouth Club Monthly,YCM,Monthly basketball membership,general,,public,Subscription,7500,Per Player,30,false,,,club_member,30,,,,true\n10-Session Pack,10SP,Credit-based training,general,,public,Pack,5000,Per Player,,false,,,pack_holder,,10,,,true";
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -11191,15 +11159,23 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
   };
 
   const downloadProgramsData = () => {
-    const csvHeaders = "Name,Description,Type,Price,Billing Cycle,Access Tag,Duration Days,Session Count,Compare Price,Savings Note,Is Active";
+    const csvHeaders = "Name,Code,Description,Category,Icon,Visibility,Type,Price,Billing Model,Billing Interval Days,Allow Installments,Installments,Pay In Full Discount,Access Tag,Duration Days,Session Count,Compare Price,Savings Note,Is Active";
     const servicePrograms = programs.filter((p: any) => p.productCategory === 'service' || !p.productCategory);
     const csvRows = servicePrograms.map((program: any) => {
       return [
         program.name || "",
+        program.code || "",
         program.description || "",
+        program.displayCategory || program.category || "general",
+        program.iconName || "",
+        program.visibility || "public",
         program.type || "Subscription",
         program.price || 0,
-        program.billingCycle || "",
+        program.billingModel || "Per Player",
+        program.billingIntervalDays || "",
+        program.allowInstallments ? "true" : "false",
+        program.installments || "",
+        program.payInFullDiscount || "",
         program.accessTag || "club_member",
         program.durationDays || "",
         program.sessionCount || "",
@@ -11434,29 +11410,41 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       
       const dataLines = lines.slice(1);
       let successCount = 0;
+      const getVal = (row: string[], key: string) => {
+        const idx = headers.indexOf(key);
+        return idx >= 0 ? (row[idx] || '').trim() : '';
+      };
       for (const line of dataLines) {
-        const values = parseCSVLine(line);
-        if (values.length >= 1 && values[0]) {
-          try {
-            await apiRequest("POST", "/api/programs", {
-              organizationId: organization?.id,
-              name: values[0],
-              description: values[1] || "",
-              type: values[2] || "Subscription",
-              price: parseInt(values[3]) || 0,
-              billingCycle: values[4] || "Monthly",
-              accessTag: values[5] || "club_member",
-              durationDays: values[6] ? parseInt(values[6]) : undefined,
-              sessionCount: values[7] ? parseInt(values[7]) : undefined,
-              comparePrice: values[8] ? parseInt(values[8]) : undefined,
-              savingsNote: values[9] || undefined,
-              isActive: values[10]?.toLowerCase() !== "false",
-              productCategory: "service",
-            });
-            successCount++;
-          } catch (error) {
-            console.error("Failed to create program:", error);
-          }
+        const values = parseCSVLine(line).map(v => v.replace(/\r/g, ''));
+        const name = getVal(values, 'name') || values[0];
+        if (!name) continue;
+        try {
+          await apiRequest("POST", "/api/programs", {
+            organizationId: organization?.id,
+            name,
+            code: getVal(values, 'code') || undefined,
+            description: getVal(values, 'description') || "",
+            displayCategory: getVal(values, 'category') || "general",
+            iconName: getVal(values, 'icon') || undefined,
+            visibility: getVal(values, 'visibility') || "public",
+            type: getVal(values, 'type') || "Subscription",
+            price: parseInt(getVal(values, 'price')) || 0,
+            billingModel: getVal(values, 'billing model') || "Per Player",
+            billingIntervalDays: getVal(values, 'billing interval days') ? parseInt(getVal(values, 'billing interval days')) : undefined,
+            allowInstallments: getVal(values, 'allow installments')?.toLowerCase() === 'true',
+            installments: getVal(values, 'installments') ? parseInt(getVal(values, 'installments')) : undefined,
+            payInFullDiscount: getVal(values, 'pay in full discount') ? parseInt(getVal(values, 'pay in full discount')) : undefined,
+            accessTag: getVal(values, 'access tag') || "club_member",
+            durationDays: getVal(values, 'duration days') ? parseInt(getVal(values, 'duration days')) : undefined,
+            sessionCount: getVal(values, 'session count') ? parseInt(getVal(values, 'session count')) : undefined,
+            comparePrice: getVal(values, 'compare price') ? parseInt(getVal(values, 'compare price')) : undefined,
+            savingsNote: getVal(values, 'savings note') || undefined,
+            isActive: getVal(values, 'is active')?.toLowerCase() !== "false",
+            productCategory: "service",
+          });
+          successCount++;
+        } catch (error) {
+          console.error("Failed to create program:", error);
         }
       }
       queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
@@ -11493,7 +11481,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                   <p className="text-sm font-medium">Stripe Import (Recommended)</p>
                   <p className="text-sm text-gray-600">Download your prices.csv directly from Stripe and upload it here. Prices will be grouped by product automatically.</p>
                   <p className="text-sm font-medium mt-3">Manual Format</p>
-                  <p className="text-sm text-gray-600">Or use columns: Name, Description, Type, Price (in cents), Billing Cycle, Access Tag, Duration Days, Session Count, Compare Price, Savings Note, Is Active</p>
+                  <p className="text-sm text-gray-600">Or use columns: Name, Code, Description, Category, Icon, Visibility, Type, Price (in cents), Billing Model, Billing Interval Days, Allow Installments, Installments, Pay In Full Discount, Access Tag, Duration Days, Session Count, Compare Price, Savings Note, Is Active</p>
                 </div>
                 {isUploadingPrograms ? (
                   <div className="flex items-center justify-center py-4 gap-2">
@@ -15028,6 +15016,8 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
   const [playerSearch, setPlayerSearch] = useState('');
   const [coachSearch, setCoachSearch] = useState('');
   const [editorForm, setEditorForm] = useState<any>({});
+  const [isTeamUploadOpen, setIsTeamUploadOpen] = useState(false);
+  const [isUploadingTeams, setIsUploadingTeams] = useState(false);
 
   const PRESET_COLORS = ['#DC2626', '#2563EB', '#16A34A', '#7C3AED', '#F59E0B', '#EC4899', '#0891B2', '#1D4ED8', '#4F46E5', '#059669'];
   const COACH_ROLES: Record<string, string> = { HC: 'Head Coach', AC: 'Assistant Coach', TM: 'Team Manager', SC: 'Strength Coach' };
@@ -15303,6 +15293,115 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
     }
   };
 
+  const downloadTeamTemplate = () => {
+    const csvContent = "Name,Program,Division,Season,Location,Color,Notes\nThunder U12,Youth Club,U12,Fall 2025,Main Gym,#DC2626,\nLightning U10,Skills Academy,U10,Spring 2025,East Court,#2563EB,Practice on Tuesdays";
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'teams-template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const downloadTeamsData = () => {
+    const csvHeaders = "Name,Program,Division,Season,Location,Color,Notes";
+    const csvRows = teams.map((team: any) => {
+      const program = allPrograms.find((p: any) => String(p.id) === String(team.programId));
+      return [
+        team.name || "",
+        program?.name || "",
+        team.division || "",
+        team.season || "",
+        team.location || "",
+        team.color || "",
+        team.notes || ""
+      ].map((val: string) => `"${String(val).replace(/"/g, '""')}"`).join(",");
+    });
+    const csvContent = [csvHeaders, ...csvRows].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'teams-data.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const parseTeamCSVLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+        else { inQuotes = !inQuotes; }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  };
+
+  const handleBulkUploadTeams = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || isUploadingTeams) return;
+    setIsUploadingTeams(true);
+    try {
+      const text = await file.text();
+      const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(line => line.trim());
+      if (lines.length < 2) {
+        toast({ title: "Invalid CSV", description: "File must have a header row and at least one data row", variant: "destructive" });
+        return;
+      }
+      const headers = parseTeamCSVLine(lines[0]).map(h => h.toLowerCase().trim());
+      const getVal = (row: string[], key: string) => {
+        const idx = headers.indexOf(key);
+        return idx >= 0 ? (row[idx] || '').trim() : '';
+      };
+      const dataLines = lines.slice(1);
+      let successCount = 0;
+      for (const line of dataLines) {
+        const values = parseTeamCSVLine(line).map(v => v.replace(/\r/g, ''));
+        const name = getVal(values, 'name') || values[0];
+        if (!name) continue;
+        const programNameOrCode = getVal(values, 'program');
+        const matchedProgram = allPrograms.find((p: any) =>
+          (p.code && p.code.toLowerCase() === programNameOrCode.toLowerCase()) ||
+          p.name?.toLowerCase() === programNameOrCode.toLowerCase()
+        );
+        try {
+          await apiRequest("POST", "/api/teams", {
+            name,
+            programId: matchedProgram?.id || undefined,
+            division: getVal(values, 'division') || undefined,
+            season: getVal(values, 'season') || undefined,
+            location: getVal(values, 'location') || undefined,
+            color: getVal(values, 'color') || '#DC2626',
+            notes: getVal(values, 'notes') || undefined,
+            organizationId: organization?.id ? String(organization.id) : undefined,
+          });
+          successCount++;
+        } catch (error) {
+          console.error("Failed to create team:", error);
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      toast({ title: `Bulk upload complete`, description: `Created ${successCount} teams` });
+      setIsTeamUploadOpen(false);
+    } catch (error) {
+      console.error("Team CSV upload error:", error);
+      toast({ title: "Upload failed", description: "An error occurred while processing the CSV file", variant: "destructive" });
+    } finally {
+      setIsUploadingTeams(false);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-8">
       {/* Header */}
@@ -15323,6 +15422,41 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
               className="pl-9 w-48 h-9 text-sm"
             />
           </div>
+          <Dialog open={isTeamUploadOpen} onOpenChange={setIsTeamUploadOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon" title="Bulk Upload Teams" data-testid="button-bulk-upload-teams">
+                <Upload className="w-4 h-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Bulk Upload Teams</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">Upload a CSV with columns: Name, Program (name or code), Division, Season, Location, Color, Notes</p>
+                {isUploadingTeams ? (
+                  <div className="flex items-center justify-center py-4 gap-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-600"></div>
+                    <span className="text-sm text-gray-600">Importing teams...</span>
+                  </div>
+                ) : (
+                  <Input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleBulkUploadTeams}
+                    data-testid="input-team-csv-upload"
+                  />
+                )}
+                <Button variant="outline" className="w-full" onClick={downloadTeamTemplate} disabled={isUploadingTeams} data-testid="button-download-team-template">
+                  <Download className="w-4 h-4 mr-2" />
+                  Download CSV Template
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Button variant="outline" size="icon" title="Download Teams Data" onClick={downloadTeamsData} data-testid="button-download-teams">
+            <Download className="w-4 h-4" />
+          </Button>
           <Button size="sm" onClick={() => openNewTeamEditor()} className="bg-red-600 hover:bg-red-700 text-white">
             <Plus className="w-4 h-4 mr-1.5" />
             Add Team

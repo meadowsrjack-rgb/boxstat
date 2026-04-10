@@ -11617,7 +11617,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                         control={form.control}
                         name="displayCategory"
                         render={({ field }) => {
-                          const selectedCats: string[] = field.value ? field.value.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
+                          const selectedCats: string[] = field.value ? field.value.split(",").map((s: string) => s.trim()).filter(Boolean).filter((s: string) => s.toLowerCase() !== "general") : [];
                           const toggleCat = (name: string) => {
                             const next = selectedCats.includes(name) ? selectedCats.filter(c => c !== name) : [...selectedCats, name];
                             field.onChange(next.join(", "));

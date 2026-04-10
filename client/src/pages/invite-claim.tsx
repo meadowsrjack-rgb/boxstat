@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { queryClient } from "@/lib/queryClient";
+import { authPersistence } from "@/services/authPersistence";
 import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 
 export default function InviteClaim() {
@@ -14,11 +17,13 @@ export default function InviteClaim() {
   const token = params.token;
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user, isLoading: authLoading } = useAuth();
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [claimed, setClaimed] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const { data: inviteInfo, isLoading, error } = useQuery<{ firstName: string; lastName: string; email: string }>({
     queryKey: ["/api/migration/claim", token],
@@ -30,8 +35,24 @@ export default function InviteClaim() {
       }
       return res.json();
     },
+    enabled: !authLoading,
     retry: false,
   });
+
+  useEffect(() => {
+    if (authLoading || !inviteInfo || loggingOut) return;
+    if (user && user.email && inviteInfo.email && user.email.toLowerCase() !== inviteInfo.email.toLowerCase()) {
+      setLoggingOut(true);
+      (async () => {
+        try {
+          await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        } catch (_) {}
+        await authPersistence.clearAll();
+        queryClient.clear();
+        window.location.reload();
+      })();
+    }
+  }, [user, authLoading, inviteInfo, loggingOut]);
 
   const claimMutation = useMutation({
     mutationFn: async () => {
@@ -69,13 +90,13 @@ export default function InviteClaim() {
     claimMutation.mutate();
   };
 
-  if (isLoading) {
+  if (isLoading || authLoading || loggingOut) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="py-12 flex items-center justify-center gap-3 text-gray-500">
             <Loader2 className="h-5 w-5 animate-spin" />
-            Verifying invite link...
+            {loggingOut ? "Signing you out..." : "Verifying invite link..."}
           </CardContent>
         </Card>
       </div>

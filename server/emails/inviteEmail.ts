@@ -38,7 +38,7 @@ function buildEmailHtml(record: InviteRecord, inviteUrl: string, orgName: string
 
   let introText: string;
   if (!hasPlayers) {
-    introText = `<strong style="color:#1a202c">${orgName}</strong> has moved to BoxStat for managing memberships and payments. Click below to claim your account and get set up.`;
+    introText = `<strong style="color:#1a202c">${orgName}</strong> has moved to BoxStat for managing payments. Click below to claim your account and get set up.`;
   } else if (allHaveSubDates) {
     const firstEndDate = formatDate(players[0].subscriptionEndDate!);
     introText = `Your player${players.length > 1 ? "s" : ""} ${playerNames} ${players.length > 1 ? "have" : "has"} been pre-registered. Your current ${orgName} enrolment${programName ? ` in ${programName}` : ''} is honored until ${firstEndDate} — please renew through BoxStat by this date to avoid unenrolment.`;
@@ -63,8 +63,8 @@ function buildEmailHtml(record: InviteRecord, inviteUrl: string, orgName: string
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
 
         <!-- Header -->
-        <tr><td style="background:#ffffff;border-radius:12px 12px 0 0;padding:32px;text-align:center">
-          <img src="${process.env.APP_URL || process.env.DOMAIN}/assets/logo-full" alt="BoxStat" style="height:360px;width:auto;display:inline-block" />
+        <tr><td style="background:#ffffff;border-radius:12px 12px 0 0;padding:16px;text-align:center">
+          <img src="${process.env.APP_URL || process.env.DOMAIN}/assets/logo-full" alt="BoxStat" style="height:48px;width:auto;display:inline-block" />
         </td></tr>
 
         <!-- Body -->
@@ -157,8 +157,8 @@ function buildPlayerAddedEmailHtml(record: InviteRecord, orgName: string): strin
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
 
         <!-- Header -->
-        <tr><td style="background:#ffffff;border-radius:12px 12px 0 0;padding:32px;text-align:center">
-          <img src="${appUrl}/assets/logo-full" alt="BoxStat" style="height:360px;width:auto;display:inline-block" />
+        <tr><td style="background:#ffffff;border-radius:12px 12px 0 0;padding:16px;text-align:center">
+          <img src="${appUrl}/assets/logo-full" alt="BoxStat" style="height:48px;width:auto;display:inline-block" />
         </td></tr>
 
         <!-- Body -->

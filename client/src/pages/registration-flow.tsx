@@ -355,6 +355,17 @@ export default function RegistrationFlow() {
                 <p className="text-gray-600 text-xs mt-4">
                   Don't see it? Check your spam folder.
                 </p>
+                <button
+                  type="button"
+                  className="text-red-400 hover:text-red-300 text-sm mt-3 underline underline-offset-2"
+                  onClick={() => {
+                    setEmailSent(false);
+                    setIsPollingVerification(false);
+                    setVerificationSessionId(null);
+                  }}
+                >
+                  Didn't work? Try again
+                </button>
               </div>
             )}
 

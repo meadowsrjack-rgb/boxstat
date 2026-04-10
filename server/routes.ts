@@ -14185,10 +14185,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (user.inviteTokenExpiry && new Date(user.inviteTokenExpiry) < new Date()) {
         return res.status(410).json({ error: 'Invite link has expired. Please contact your organization admin.' });
       }
+      const org = user.organizationId ? await storage.getOrganization(user.organizationId) : null;
+      const allUsers = user.organizationId ? await storage.getUsersByOrganization(user.organizationId) : [];
+      const linkedPlayers = allUsers.filter((u: any) =>
+        u.role === 'player' && (u.accountHolderId === user.id || u.parentId === user.id)
+      );
       res.json({
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+        role: user.role,
+        organizationName: org?.name || null,
+        players: linkedPlayers.map((p: any) => ({
+          id: p.id,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          teamId: p.teamId,
+          packageSelected: p.packageSelected,
+          subscriptionEndDate: p.subscriptionEndDate,
+        })),
       });
     } catch (error: any) {
       console.error('Error fetching claim info:', error);
@@ -14200,7 +14215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/migration/claim/:token', async (req: any, res) => {
     try {
       const { token } = req.params;
-      const { password } = req.body;
+      const { password, firstName, lastName, phoneNumber, address, city, state, postalCode } = req.body;
 
       if (!password || password.length < 8) {
         return res.status(400).json({ error: 'Password must be at least 8 characters' });
@@ -14219,7 +14234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const hashedPassword = hashPassword(password);
 
-      await storage.updateUser(user.id, {
+      const updateData: any = {
         password: hashedPassword,
         status: 'active',
         activatedAt: new Date().toISOString(),
@@ -14227,7 +14242,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         inviteTokenExpiry: null,
         hasRegistered: true,
         verified: true,
-      });
+      };
+      if (firstName) updateData.firstName = firstName;
+      if (lastName) updateData.lastName = lastName;
+      if (phoneNumber) updateData.phoneNumber = phoneNumber;
+      if (address) updateData.address = address;
+      if (city) updateData.city = city;
+      if (state) updateData.state = state;
+      if (postalCode) updateData.postalCode = postalCode;
+
+      await storage.updateUser(user.id, updateData);
+
+      // Also activate all same-email profiles in this org
+      if (user.email && user.organizationId) {
+        const allOrgUsers = await storage.getUsersByOrganization(user.organizationId);
+        const sameEmailProfiles = allOrgUsers.filter((u: any) =>
+          u.id !== user.id && u.email?.toLowerCase() === user.email!.toLowerCase() && u.status === 'invited'
+        );
+        for (const profile of sameEmailProfiles) {
+          await storage.updateUser(profile.id, {
+            status: 'active',
+            hasRegistered: true,
+            verified: true,
+            inviteToken: null,
+            inviteTokenExpiry: null,
+          });
+        }
+      }
 
       res.json({ success: true, email: user.email });
     } catch (error: any) {

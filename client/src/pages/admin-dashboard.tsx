@@ -11614,123 +11614,108 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                       <FormField
                         control={form.control}
                         name="displayCategory"
-                        render={({ field }) => (
+                        render={({ field }) => {
+                          const selectedCats: string[] = field.value ? field.value.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
+                          const toggleCat = (name: string) => {
+                            const next = selectedCats.includes(name) ? selectedCats.filter(c => c !== name) : [...selectedCats, name];
+                            field.onChange(next.join(", "));
+                          };
+                          const displayValue = categoryComboOpen ? categoryInputValue : (selectedCats.length > 0 ? selectedCats.join(", ") : "");
+                          const filtered = orgCategories.filter(c => c.name.toLowerCase().includes(categoryInputValue.toLowerCase()));
+                          const exactMatch = orgCategories.some(c => c.name.toLowerCase() === categoryInputValue.trim().toLowerCase());
+                          const showCreate = categoryInputValue.trim().length > 0 && !exactMatch;
+                          return (
                           <FieldWrap label="Category">
-                            <div className="relative">
-                              <input
-                                type="text"
-                                data-testid="select-program-category"
-                                value={categoryComboOpen ? categoryInputValue : (field.value || "")}
-                                onChange={e => {
-                                  setCategoryInputValue(e.target.value);
-                                  setCategoryComboOpen(true);
-                                }}
-                                onFocus={() => {
-                                  setCategoryInputValue(field.value || "");
-                                  setCategoryComboOpen(true);
-                                }}
-                                onBlur={() => {
-                                  setTimeout(() => setCategoryComboOpen(false), 150);
-                                }}
-                                onKeyDown={e => {
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    const trimmed = categoryInputValue.trim();
-                                    if (!trimmed || addCategoryMutation.isPending) return;
-                                    const match = orgCategories.find(c => c.name.toLowerCase() === trimmed.toLowerCase());
-                                    if (match) {
-                                      field.onChange(match.name);
-                                      setCategoryInputValue("");
+                            <div className="relative" ref={undefined}>
+                              <div
+                                onClick={() => { setCategoryComboOpen(true); }}
+                                className={`relative flex items-center h-10 rounded-lg border bg-white cursor-text transition-all ${categoryComboOpen ? "border-red-500 ring-[3px] ring-red-500/10" : "border-gray-200"}`}
+                              >
+                                <input
+                                  type="text"
+                                  data-testid="select-program-category"
+                                  value={displayValue}
+                                  onChange={e => { setCategoryInputValue(e.target.value); setCategoryComboOpen(true); }}
+                                  onFocus={() => { setCategoryComboOpen(true); setCategoryInputValue(""); }}
+                                  onBlur={() => { setTimeout(() => { setCategoryComboOpen(false); setCategoryInputValue(""); }, 150); }}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      const trimmed = categoryInputValue.trim();
+                                      if (!trimmed || addCategoryMutation.isPending) return;
+                                      const match = orgCategories.find(c => c.name.toLowerCase() === trimmed.toLowerCase());
+                                      if (match) {
+                                        toggleCat(match.name);
+                                        setCategoryInputValue("");
+                                      } else {
+                                        addCategoryMutation.mutate(trimmed, {
+                                          onSuccess: () => { toggleCat(trimmed); setCategoryInputValue(""); }
+                                        });
+                                      }
+                                    } else if (e.key === 'Escape') {
                                       setCategoryComboOpen(false);
-                                    } else {
-                                      addCategoryMutation.mutate(trimmed, {
-                                        onSuccess: () => {
-                                          field.onChange(trimmed);
-                                          setCategoryInputValue("");
-                                          setCategoryComboOpen(false);
-                                        }
-                                      });
                                     }
-                                  } else if (e.key === 'Escape') {
-                                    setCategoryComboOpen(false);
-                                  }
-                                }}
-                                placeholder="— Select or create category —"
-                                className="w-full h-10 px-3 rounded-md border border-gray-200 text-sm bg-white outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition"
-                              />
+                                  }}
+                                  placeholder="Select or create category…"
+                                  className="flex-1 h-full px-3 border-none outline-none text-[13.5px] bg-transparent text-gray-900"
+                                />
+                                <ChevronDown size={15} className={`mr-2.5 text-gray-400 shrink-0 transition-transform ${categoryComboOpen ? "rotate-180" : ""}`} />
+                              </div>
                               {categoryComboOpen && (
-                                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                                  {(() => {
-                                    const filtered = orgCategories.filter(c =>
-                                      c.name.toLowerCase().includes(categoryInputValue.toLowerCase())
-                                    );
-                                    const exactMatch = orgCategories.some(c =>
-                                      c.name.toLowerCase() === categoryInputValue.trim().toLowerCase()
-                                    );
+                                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-[10px] shadow-[0_8px_24px_rgba(0,0,0,0.08),0_2px_6px_rgba(0,0,0,0.04)] max-h-[220px] overflow-y-auto p-1">
+                                  {filtered.map(cat => {
+                                    const isSelected = selectedCats.includes(cat.name);
                                     return (
-                                      <>
-                                        {filtered.map(cat => (
-                                          <button
-                                            key={cat.id}
-                                            type="button"
+                                      <button
+                                        key={cat.id}
+                                        type="button"
+                                        onMouseDown={e => e.preventDefault()}
+                                        onClick={() => toggleCat(cat.name)}
+                                        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-md text-[13.5px] transition-colors ${isSelected ? "text-red-600 font-medium bg-red-500/[0.06]" : "text-gray-700 hover:bg-gray-100"}`}
+                                      >
+                                        <span className="flex-1 text-left">{cat.name}</span>
+                                        <span className="flex items-center gap-1">
+                                          {isSelected && <Check size={14} strokeWidth={2.5} className="text-red-500" />}
+                                          <span
                                             onMouseDown={e => e.preventDefault()}
-                                            onClick={() => {
-                                              field.onChange(cat.name);
-                                              setCategoryInputValue("");
-                                              setCategoryComboOpen(false);
-                                            }}
-                                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 transition"
+                                            onClick={e => { e.stopPropagation(); deleteCategoryMutation.mutate(cat.id); }}
+                                            className="inline-flex items-center justify-center p-1 rounded text-gray-300 hover:text-red-500 transition-colors cursor-pointer"
                                           >
-                                            {cat.name}
-                                          </button>
-                                        ))}
-                                        {categoryInputValue.trim() && !exactMatch && (
-                                          <button
-                                            type="button"
-                                            onMouseDown={e => e.preventDefault()}
-                                            onClick={() => {
-                                              const trimmed = categoryInputValue.trim();
-                                              addCategoryMutation.mutate(trimmed, {
-                                                onSuccess: () => {
-                                                  field.onChange(trimmed);
-                                                  setCategoryInputValue("");
-                                                  setCategoryComboOpen(false);
-                                                }
-                                              });
-                                            }}
-                                            disabled={addCategoryMutation.isPending}
-                                            className="w-full text-left px-3 py-2 text-sm text-red-600 font-medium hover:bg-red-50 transition disabled:opacity-40"
-                                          >
-                                            Create &ldquo;{categoryInputValue.trim()}&rdquo;
-                                          </button>
-                                        )}
-                                        {filtered.length === 0 && !categoryInputValue.trim() && (
-                                          <div className="px-3 py-2 text-sm text-gray-400">No categories yet</div>
-                                        )}
-                                      </>
+                                            <X size={12} strokeWidth={2.5} />
+                                          </span>
+                                        </span>
+                                      </button>
                                     );
-                                  })()}
+                                  })}
+                                  {filtered.length === 0 && !showCreate && (
+                                    <div className="px-2.5 py-2 text-[13px] text-gray-400 text-center">No categories found</div>
+                                  )}
+                                  {showCreate && (
+                                    <>
+                                      {filtered.length > 0 && <div className="h-px bg-gray-200 mx-2 my-1" />}
+                                      <button
+                                        type="button"
+                                        onMouseDown={e => e.preventDefault()}
+                                        onClick={() => {
+                                          const trimmed = categoryInputValue.trim();
+                                          addCategoryMutation.mutate(trimmed, {
+                                            onSuccess: () => { toggleCat(trimmed); setCategoryInputValue(""); }
+                                          });
+                                        }}
+                                        disabled={addCategoryMutation.isPending}
+                                        className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-[13.5px] text-red-600 font-medium hover:bg-red-500/[0.06] transition-colors disabled:opacity-40"
+                                      >
+                                        <Plus size={14} strokeWidth={2.5} />
+                                        Create "{categoryInputValue.trim()}"
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               )}
                             </div>
-                            {orgCategories.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1.5">
-                                {orgCategories.map(cat => (
-                                  <span key={cat.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-xs text-gray-600">
-                                    {cat.name}
-                                    <button
-                                      type="button"
-                                      onClick={() => deleteCategoryMutation.mutate(cat.id)}
-                                      className="ml-0.5 hover:text-red-600 transition"
-                                    >
-                                      <X size={10} />
-                                    </button>
-                                  </span>
-                                ))}
-                              </div>
-                            )}
                           </FieldWrap>
-                        )}
+                          );
+                        }}
                       />
                       <FormField
                         control={form.control}

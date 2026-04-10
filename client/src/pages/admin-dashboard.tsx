@@ -10864,6 +10864,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       scheduleRequestEnabled: false,
       sessionLengthMinutes: undefined as number | undefined,
       code: "",
+      visibility: "public",
     },
   });
 
@@ -12285,17 +12286,34 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                     </>
                   </Section>
 
-                  {/* Active Program toggle */}
-                  <FormField control={form.control} name="isActive" render={({ field }) => (
+                  {/* Program Visibility selector */}
+                  <FormField control={form.control} name="visibility" render={({ field }) => (
                     <div className="px-5 py-3 border border-gray-200 rounded-lg">
-                      <TogRow
-                        label="Active Program"
-                        description="Visible and open for enrollment when active"
-                        value={!!field.value}
-                        onChange={field.onChange}
-                        testId="checkbox-program-active"
-                        accentColor="green"
-                      />
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">Program Visibility</p>
+                          <p className="text-xs text-gray-500 mt-0.5">Control who can see this program</p>
+                        </div>
+                        <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => field.onChange("public")}
+                            className={`px-3 py-1.5 text-sm font-medium transition-colors ${field.value === "public" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                          >
+                            Public
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => field.onChange("members_only")}
+                            className={`px-3 py-1.5 text-sm font-medium transition-colors border-l border-gray-200 ${field.value === "members_only" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                          >
+                            Members Only
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-2">
+                        {field.value === "members_only" ? "Only users with an active enrollment can view this program." : "Anyone can view this program."}
+                      </p>
                     </div>
                   )} />
 
@@ -12454,8 +12472,10 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                         <span className={`text-xs ${program.isActive !== false ? 'text-green-600' : 'text-gray-400'}`}>
                           {program.isActive !== false ? "Active" : "Inactive"}
                         </span>
-                        {program.visibility === 'members_only' && (
-                          <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Members</span>
+                        {program.visibility === 'members_only' ? (
+                          <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Members Only</span>
+                        ) : (
+                          <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">Public</span>
                         )}
                       </div>
                     </TableCell>

@@ -1183,7 +1183,7 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
 
   if (done && result) {
     return (
-      <div className="max-w-xl mx-auto text-center py-12 space-y-4">
+      <div className="max-w-2xl mx-auto text-center py-12 space-y-4">
         <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mx-auto">
           <CheckCircle2 className="text-green-600" size={32} />
         </div>
@@ -1208,7 +1208,7 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="w-full">
       <StepBar current={step} />
 
       <div className="bg-white border border-border rounded-xl p-6 shadow-sm">

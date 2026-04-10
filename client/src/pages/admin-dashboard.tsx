@@ -1939,11 +1939,14 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   const deleteUser = useMutation({
     mutationFn: async ({ id, profileOnly }: { id: string; profileOnly?: boolean }) => {
       const url = profileOnly ? `/api/users/${id}?profileOnly=true` : `/api/users/${id}`;
-      return await apiRequest("DELETE", url, {});
+      const res = await apiRequest("DELETE", url, {});
+      const data = await res.json();
+      return data;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({ title: variables.profileOnly ? "Profile deleted successfully" : "Account and all profiles deleted successfully" });
+      const count = data?.deletedCount || 1;
+      toast({ title: variables.profileOnly ? "Profile deleted successfully" : `Account deleted — ${count} profile${count === 1 ? '' : 's'} removed` });
       setViewingUser(null);
     },
     onError: () => {
@@ -5185,29 +5188,32 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 {deleteConfirmUser?.role === 'parent' ? (
-                  <>
-                    <p className="text-sm text-gray-700 font-medium">
-                      Deleting this parent account will permanently remove the account and ALL associated profiles:
-                    </p>
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-1">
-                      <p className="text-sm font-medium text-red-800">
-                        {deleteConfirmUser?.firstName} {deleteConfirmUser?.lastName} (Parent)
-                      </p>
-                      {users
-                        .filter((u: any) => u.accountHolderId === deleteConfirmUser?.id || 
-                          (u.email?.toLowerCase() === deleteConfirmUser?.email?.toLowerCase() && u.id !== deleteConfirmUser?.id))
-                        .map((child: any) => (
-                          <p key={child.id} className="text-sm text-red-700 pl-4 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                            {child.firstName} {child.lastName} ({child.role})
+                  (() => {
+                    const associatedProfiles = users.filter((u: any) => u.accountHolderId === deleteConfirmUser?.id || 
+                      (u.email?.toLowerCase() === deleteConfirmUser?.email?.toLowerCase() && u.id !== deleteConfirmUser?.id));
+                    const totalCount = 1 + associatedProfiles.length;
+                    return (
+                      <>
+                        <p className="text-sm text-gray-700 font-medium">
+                          Deleting this parent account will permanently remove <span className="text-red-600">{totalCount} user{totalCount === 1 ? '' : 's'}</span> — the account and ALL associated profiles:
+                        </p>
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-1">
+                          <p className="text-sm font-medium text-red-800">
+                            {deleteConfirmUser?.firstName} {deleteConfirmUser?.lastName} (Parent)
                           </p>
-                        ))
-                      }
-                    </div>
-                    <p className="text-sm text-red-600 font-medium">
-                      This will delete all enrollments, payments, waivers, team memberships, and awards for these profiles. This action cannot be undone.
-                    </p>
-                  </>
+                          {associatedProfiles.map((child: any) => (
+                            <p key={child.id} className="text-sm text-red-700 pl-4 flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                              {child.firstName} {child.lastName} ({child.role})
+                            </p>
+                          ))}
+                        </div>
+                        <p className="text-sm text-red-600 font-medium">
+                          This will delete all enrollments, payments, waivers, team memberships, and awards for these profiles. This action cannot be undone.
+                        </p>
+                      </>
+                    );
+                  })()
                 ) : (
                   <p className="text-sm text-gray-700">
                     Are you sure you want to delete the profile for <strong>{deleteConfirmUser?.firstName} {deleteConfirmUser?.lastName}</strong> ({deleteConfirmUser?.role})? 

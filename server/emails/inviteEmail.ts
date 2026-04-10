@@ -62,8 +62,8 @@ function buildEmailHtml(record: InviteRecord, inviteUrl: string, orgName: string
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
 
         <!-- Header -->
-        <tr><td style="background:#ffffff;border-radius:12px 12px 0 0;padding:16px;text-align:center">
-          <img src="${process.env.APP_URL || process.env.DOMAIN}/assets/logo-full" alt="BoxStat" style="height:48px;width:auto;display:inline-block" />
+        <tr><td style="background:#ffffff;border-radius:12px 12px 0 0;padding:32px 16px;text-align:center">
+          <img src="${process.env.APP_URL || process.env.DOMAIN}/assets/logo-full" alt="BoxStat" style="height:120px;width:auto;display:inline-block" />
         </td></tr>
 
         <!-- Body -->
@@ -156,8 +156,8 @@ function buildPlayerAddedEmailHtml(record: InviteRecord, orgName: string): strin
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
 
         <!-- Header -->
-        <tr><td style="background:#ffffff;border-radius:12px 12px 0 0;padding:16px;text-align:center">
-          <img src="${appUrl}/assets/logo-full" alt="BoxStat" style="height:48px;width:auto;display:inline-block" />
+        <tr><td style="background:#ffffff;border-radius:12px 12px 0 0;padding:32px 16px;text-align:center">
+          <img src="${appUrl}/assets/logo-full" alt="BoxStat" style="height:120px;width:auto;display:inline-block" />
         </td></tr>
 
         <!-- Body -->

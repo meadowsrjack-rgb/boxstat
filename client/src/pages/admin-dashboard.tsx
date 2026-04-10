@@ -122,6 +122,9 @@ import type { EventWindow } from "@shared/schema";
 import EventDetailModal from "@/components/EventDetailModal";
 import { SKILL_CATEGORIES } from "@/components/CoachAwardDialogs";
 import LeadEvaluationForm from "@/components/LeadEvaluationForm";
+import { FiltersBar } from "@/components/FiltersBar";
+import { getUserPreferences, UserPreferences } from "@/lib/userPrefs";
+import { parseEventMeta, getEventTypeHexColor } from "@/lib/parseEventMeta";
 import {
   Section,
   FieldWrap,
@@ -5280,6 +5283,20 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
   const [eventSortField, setEventSortField] = useState<string | null>(null);
   const [eventSortDirection, setEventSortDirection] = useState<'asc' | 'desc'>('asc');
   const [duplicatingEvent, setDuplicatingEvent] = useState<any>(null);
+  const [adminEventPrefs, setAdminEventPrefs] = useState<UserPreferences>(() => getUserPreferences());
+
+  const parsedAdminEvents = useMemo(() => {
+    return events.map((ev: any) => parseEventMeta(ev));
+  }, [events]);
+
+  const visibleEvents = useMemo(() => {
+    const hidden = adminEventPrefs.hiddenEventTypes || [];
+    if (hidden.length === 0) return events;
+    return events.filter((ev: any) => {
+      const parsed = parseEventMeta(ev);
+      return !hidden.includes(parsed.type);
+    });
+  }, [events, adminEventPrefs.hiddenEventTypes]);
 
   // Handle eventId deep link from push notifications (prop-driven, set by AdminDashboard on mount)
   useEffect(() => {
@@ -7197,6 +7214,27 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
             </Button>
           </div>
         )}
+        <div className="md:hidden mb-3">
+          <details className="bg-white rounded-xl shadow-sm border">
+            <summary className="px-4 py-2 text-sm font-medium text-gray-700 cursor-pointer select-none">Event Filters</summary>
+            <div className="px-4 pb-3">
+              <FiltersBar
+                events={parsedAdminEvents}
+                filters={adminEventPrefs}
+                onFiltersChange={setAdminEventPrefs}
+              />
+            </div>
+          </details>
+        </div>
+        <div className="md:flex md:gap-4">
+        <div className="hidden md:block w-48 flex-shrink-0">
+          <FiltersBar
+            events={parsedAdminEvents}
+            filters={adminEventPrefs}
+            onFiltersChange={setAdminEventPrefs}
+          />
+        </div>
+        <div className="flex-1 min-w-0">
         {viewMode === "list" ? (
           <>
           <div className="overflow-x-auto">
@@ -7205,8 +7243,8 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
               <TableRow>
                 <TableHead className="w-10 px-2">
                   <Checkbox 
-                    checked={events.length > 0 && selectedEventIds.size === events.length}
-                    onCheckedChange={() => toggleAllEvents(events.map((e: any) => e.id))}
+                    checked={visibleEvents.length > 0 && selectedEventIds.size === visibleEvents.length}
+                    onCheckedChange={() => toggleAllEvents(visibleEvents.map((e: any) => e.id))}
                     aria-label="Select all events"
                   />
                 </TableHead>
@@ -7228,7 +7266,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
             </TableHeader>
             <TableBody>
               {(() => {
-                const sortedEvents = [...events].sort((a: any, b: any) => {
+                const sortedEvents = [...visibleEvents].sort((a: any, b: any) => {
                   const field = eventSortField;
                   if (!field) {
                     return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
@@ -7499,10 +7537,10 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
             </TableBody>
           </Table>
           </div>
-          {events.length > EVENTS_PAGE_SIZE && (
+          {visibleEvents.length > EVENTS_PAGE_SIZE && (
             <div className="flex items-center justify-between mt-4 px-2">
               <span className="text-sm text-gray-500">
-                Showing {((eventsPage - 1) * EVENTS_PAGE_SIZE) + 1}–{Math.min(eventsPage * EVENTS_PAGE_SIZE, events.length)} of {events.length} events
+                Showing {((eventsPage - 1) * EVENTS_PAGE_SIZE) + 1}–{Math.min(eventsPage * EVENTS_PAGE_SIZE, visibleEvents.length)} of {visibleEvents.length} events
               </span>
               <div className="flex items-center gap-2">
                 <Button
@@ -7514,12 +7552,12 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
                 <span className="text-sm font-medium">
-                  Page {eventsPage} of {Math.ceil(events.length / EVENTS_PAGE_SIZE)}
+                  Page {eventsPage} of {Math.ceil(visibleEvents.length / EVENTS_PAGE_SIZE)}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={eventsPage >= Math.ceil(events.length / EVENTS_PAGE_SIZE)}
+                  disabled={eventsPage >= Math.ceil(visibleEvents.length / EVENTS_PAGE_SIZE)}
                   onClick={() => setEventsPage(p => p + 1)}
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -7570,25 +7608,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                 </Button>
               </div>
               
-              {/* Event Type Legend */}
-              <div className="flex items-center gap-3 text-xs">
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-blue-100 border border-blue-300" />
-                  <span className="text-gray-600">Practice</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-red-100 border border-red-300" />
-                  <span className="text-gray-600">Game</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-purple-100 border border-purple-300" />
-                  <span className="text-gray-600">Tournament</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-green-100 border border-green-300" />
-                  <span className="text-gray-600">Meeting</span>
-                </div>
-              </div>
+              
             </div>
             <div className="border rounded-lg overflow-hidden">
               {/* Calendar Header - Days of Week */}
@@ -7627,7 +7647,7 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                     const mm = String(month + 1).padStart(2, '0');
                     const dd = String(day).padStart(2, '0');
                     const dateStr = `${year}-${mm}-${dd}`;
-                    const dayEvents = events.filter((event: any) => {
+                    const dayEvents = visibleEvents.filter((event: any) => {
                       const etz = event.timezone || 'America/Los_Angeles';
                       const d = new Date(ensureUtcString(event.startTime || ''));
                       if (isNaN(d.getTime())) return false;
@@ -7636,13 +7656,6 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                       const localDateStr = `${getPart('year')}-${getPart('month')}-${getPart('day')}`;
                       return localDateStr === dateStr;
                     });
-                    
-                    const eventTypeColors: Record<string, string> = {
-                      practice: 'bg-blue-100 text-blue-700 border-blue-300',
-                      game: 'bg-red-100 text-red-700 border-red-300',
-                      tournament: 'bg-purple-100 text-purple-700 border-purple-300',
-                      meeting: 'bg-green-100 text-green-700 border-green-300',
-                    };
                     
                     cells.push(
                       <div 
@@ -7662,9 +7675,12 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                             <DropdownMenu key={event.id}>
                               <DropdownMenuTrigger asChild>
                                 <button
-                                  className={`w-full text-left text-xs p-1 rounded border cursor-pointer hover:opacity-80 transition-opacity ${
-                                    eventTypeColors[event.type] || 'bg-gray-100 text-gray-700 border-gray-300'
-                                  }`}
+                                  className="w-full text-left text-xs p-1 rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                                  style={{
+                                    backgroundColor: `${getEventTypeHexColor(parseEventMeta(event).type, adminEventPrefs.eventTypeColors)}20`,
+                                    borderColor: `${getEventTypeHexColor(parseEventMeta(event).type, adminEventPrefs.eventTypeColors)}60`,
+                                    color: getEventTypeHexColor(parseEventMeta(event).type, adminEventPrefs.eventTypeColors),
+                                  }}
                                   data-testid={`calendar-event-${event.id}`}
                                 >
                                   <div className="font-medium truncate">{event.title}</div>
@@ -7796,6 +7812,8 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
             </div>
           </div>
         )}
+        </div>
+        </div>
       </CardContent>
       
       {/* Delete Event Confirmation Dialog */}

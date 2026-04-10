@@ -806,6 +806,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.sendFile(logoPath);
   });
 
+  // Serve BoxStat full logo for emails
+  app.get('/assets/logo-full', (req, res) => {
+    const logoPath = new URL('../attached_assets/logofull_light_1775785908348.png', import.meta.url).pathname;
+    res.sendFile(logoPath);
+  });
+
   app.get('/assets/org-logo/uyp', (req, res) => {
     const logoPath = new URL('../attached_assets/image_1770353179552.png', import.meta.url).pathname;
     res.sendFile(logoPath);

@@ -44,11 +44,8 @@ function buildEmailHtml(record: InviteRecord, inviteUrl: string, orgName: string
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
 
         <!-- Header -->
-        <tr><td style="background:#0B1F3A;border-radius:12px 12px 0 0;padding:24px 32px;text-align:center">
-          <span style="font-size:20px;font-weight:600;color:white;letter-spacing:-.3px">
-            <span style="display:inline-block;background:#C0392B;border-radius:6px;width:28px;height:28px;line-height:28px;text-align:center;font-size:14px;margin-right:8px;vertical-align:middle">B</span>
-            Boxstat
-          </span>
+        <tr><td style="background:#ffffff;border-radius:12px 12px 0 0;padding:24px 32px;text-align:center">
+          <img src="${process.env.APP_URL || process.env.DOMAIN}/assets/logo-full" alt="Boxstat" style="height:120px;width:auto;display:inline-block" />
         </td></tr>
 
         <!-- Body -->

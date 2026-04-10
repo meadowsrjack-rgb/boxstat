@@ -482,6 +482,21 @@ export const products = pgTable("products", {
   visibility: varchar().default('public'), // 'public' (everyone sees it) or 'members_only' (only users with active enrollment)
 });
 
+// Program Categories table (org-specific categories for programs)
+export const programCategories = pgTable("program_categories", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  name: varchar().notNull(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+export const insertProgramCategorySchema = createInsertSchema(programCategories).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertProgramCategory = z.infer<typeof insertProgramCategorySchema>;
+export type ProgramCategory = typeof programCategories.$inferSelect;
+
 // Program Suggested Add-ons table (many-to-many relationship between programs and store products)
 // Links goods (store products) as suggested add-ons for service (programs)
 export const programSuggestedAddOns = pgTable("program_suggested_add_ons", {

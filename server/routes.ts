@@ -15543,6 +15543,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // =============================================
+  // PROGRAM CATEGORIES (org-specific)
+  // =============================================
+
+  app.get("/api/program-categories", requireAuth, async (req: any, res) => {
+    try {
+      const cats = await storage.getProgramCategoriesByOrganization(req.user.organizationId);
+      res.json(cats);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/program-categories", requireAuth, async (req: any, res) => {
+    try {
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) return res.status(403).json({ error: "Admin access required" });
+      const { name } = req.body;
+      if (!name || typeof name !== 'string' || !name.trim()) {
+        return res.status(400).json({ error: "Category name is required" });
+      }
+      const normalizedName = name.trim();
+      const existing = await storage.getProgramCategoriesByOrganization(req.user.organizationId);
+      const duplicate = existing.some(c => c.name.toLowerCase() === normalizedName.toLowerCase());
+      if (duplicate) {
+        return res.status(409).json({ error: "Category already exists" });
+      }
+      const cat = await storage.createProgramCategory({ organizationId: req.user.organizationId, name: normalizedName });
+      res.status(201).json(cat);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/program-categories/:id", requireAuth, async (req: any, res) => {
+    try {
+      const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
+      if (!isAdminUser) return res.status(403).json({ error: "Admin access required" });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+      await storage.deleteProgramCategory(id, req.user.organizationId);
+      res.json({ ok: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // =============================================
   // QUOTE CHECKOUTS
   // =============================================
   

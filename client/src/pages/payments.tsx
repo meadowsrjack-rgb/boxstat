@@ -285,6 +285,7 @@ function StoreItemDialog({
 }) {
   const [imgIndex, setImgIndex] = useState(0);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
+  const touchStartX = useRef<number | null>(null);
 
   const allImages = useMemo(() => {
     if (!item) return [];
@@ -340,7 +341,22 @@ function StoreItemDialog({
         </DialogHeader>
 
         {allImages.length > 0 && (
-          <div className="relative aspect-[16/9] bg-black/30 rounded-lg overflow-hidden">
+          <div
+            className="relative aspect-[16/9] bg-black/30 rounded-lg overflow-hidden"
+            onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
+            onTouchMove={e => { e.preventDefault(); }}
+            onTouchEnd={e => {
+              if (touchStartX.current === null) return;
+              const dx = e.changedTouches[0].clientX - touchStartX.current;
+              touchStartX.current = null;
+              if (Math.abs(dx) < 40) return;
+              if (dx < 0) {
+                setImgIndex(i => (i + 1) % allImages.length);
+              } else {
+                setImgIndex(i => (i - 1 + allImages.length) % allImages.length);
+              }
+            }}
+          >
             <img
               src={allImages[imgIndex]}
               alt={`${item.name} image ${imgIndex + 1}`}

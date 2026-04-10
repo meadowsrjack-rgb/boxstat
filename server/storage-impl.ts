@@ -89,6 +89,9 @@ import {
   type Refund,
   type InsertRefund,
   refunds,
+  type ProgramCategory,
+  type InsertProgramCategory,
+  programCategories,
 } from "@shared/schema";
 
 // =============================================
@@ -410,6 +413,11 @@ export interface IStorage {
   getCouponsByProgram(programId: string, organizationId?: string): Promise<Coupon[]>;
   updateCoupon(id: number, updates: Partial<Coupon>): Promise<Coupon | undefined>;
   deleteCoupon(id: number, organizationId?: string): Promise<void>;
+
+  // Program Category operations (org-specific)
+  getProgramCategoriesByOrganization(organizationId: string): Promise<ProgramCategory[]>;
+  createProgramCategory(data: InsertProgramCategory): Promise<ProgramCategory>;
+  deleteProgramCategory(id: number, organizationId: string): Promise<void>;
 }
 
 // =============================================
@@ -2607,6 +2615,11 @@ class MemStorage implements IStorage {
   async getCouponsByProgram(programId: string, organizationId?: string): Promise<Coupon[]> { return []; }
   async updateCoupon(id: number, updates: Partial<Coupon>): Promise<Coupon | undefined> { return undefined; }
   async deleteCoupon(id: number, organizationId?: string): Promise<void> {}
+
+  // Program Category operations (MemStorage stubs)
+  async getProgramCategoriesByOrganization(organizationId: string): Promise<ProgramCategory[]> { return []; }
+  async createProgramCategory(data: InsertProgramCategory): Promise<ProgramCategory> { throw new Error("Not implemented"); }
+  async deleteProgramCategory(id: number, organizationId: string): Promise<void> {}
 }
 
 // =============================================
@@ -6541,6 +6554,20 @@ class DatabaseStorage implements IStorage {
     const conditions = [eq(coupons.id, id)];
     if (organizationId) conditions.push(eq(coupons.organizationId, organizationId));
     await db.update(coupons).set({ isActive: false }).where(and(...conditions));
+  }
+
+  // Program Category operations
+  async getProgramCategoriesByOrganization(organizationId: string): Promise<ProgramCategory[]> {
+    return db.select().from(programCategories).where(eq(programCategories.organizationId, organizationId));
+  }
+
+  async createProgramCategory(data: InsertProgramCategory): Promise<ProgramCategory> {
+    const [result] = await db.insert(programCategories).values(data).returning();
+    return result;
+  }
+
+  async deleteProgramCategory(id: number, organizationId: string): Promise<void> {
+    await db.delete(programCategories).where(and(eq(programCategories.id, id), eq(programCategories.organizationId, organizationId)));
   }
 }
 

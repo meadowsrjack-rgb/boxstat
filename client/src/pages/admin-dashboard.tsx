@@ -102,6 +102,9 @@ import {
   MapPin,
   Info,
   Hash,
+  Dumbbell,
+  Heart,
+  Zap,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -10801,6 +10804,43 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
     queryKey: ["/api/waivers"],
   });
 
+  // Fetch org-specific program categories
+  const { data: orgCategories = [] } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ["/api/program-categories"],
+  });
+
+  const [newCategoryInput, setNewCategoryInput] = useState("");
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
+
+  const addCategoryMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await apiRequest("POST", "/api/program-categories", { name });
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/program-categories"] });
+      setNewCategoryInput("");
+    },
+    onError: (err: any) => {
+      const msg = err?.message?.includes('409') || err?.status === 409
+        ? "Category already exists"
+        : "Failed to add category";
+      toast({ title: msg, variant: "destructive" });
+    },
+  });
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/program-categories/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/program-categories"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete category", variant: "destructive" });
+    },
+  });
+
   // Fetch store products (goods) for add-on selection
   const { data: allProducts = [] } = useQuery<any[]>({
     queryKey: ["/api/programs"],
@@ -11062,6 +11102,8 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       setEditingProgram(null);
       setSelectedAddOns([]);
       setExpandedPricingOptions(new Set());
+      setIconPickerOpen(false);
+      setNewCategoryInput("");
       form.reset({
         organizationId: organization?.id || "",
         name: "",
@@ -11574,45 +11616,115 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                         name="displayCategory"
                         render={({ field }) => (
                           <FieldWrap label="Category">
-                            <ChipSel
-                              options={[
-                                { value: "general", label: "General", Icon: Layers },
-                                { value: "training", label: "Training", Icon: Target },
-                                { value: "camps", label: "Camps", Icon: Tent },
-                                { value: "clinics", label: "Clinics", Icon: Shield },
-                                { value: "league", label: "League", Icon: Trophy },
-                                { value: "tournament", label: "Tournament", Icon: Award },
-                                { value: "membership", label: "Membership", Icon: Ticket },
-                              ]}
-                              value={field.value}
-                              onChange={field.onChange}
-                              testIdPrefix="chip-category"
-                            />
+                            <select
+                              value={field.value || ""}
+                              onChange={e => field.onChange(e.target.value)}
+                              data-testid="select-program-category"
+                              className="w-full h-10 px-3 rounded-md border border-gray-200 text-sm bg-white outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition"
+                            >
+                              <option value="">— Select category —</option>
+                              {orgCategories.map(cat => (
+                                <option key={cat.id} value={cat.name}>{cat.name}</option>
+                              ))}
+                            </select>
+                            <div className="flex gap-1.5 mt-1.5">
+                              <input
+                                type="text"
+                                value={newCategoryInput}
+                                onChange={e => setNewCategoryInput(e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (newCategoryInput.trim()) addCategoryMutation.mutate(newCategoryInput.trim());
+                                  }
+                                }}
+                                placeholder="Add new category..."
+                                className="flex-1 min-w-0 h-8 px-2 rounded border border-gray-200 text-xs outline-none focus:ring-1 focus:ring-red-500/20 focus:border-red-500 transition"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => { if (newCategoryInput.trim()) addCategoryMutation.mutate(newCategoryInput.trim()); }}
+                                disabled={!newCategoryInput.trim() || addCategoryMutation.isPending}
+                                className="h-8 px-2 rounded bg-red-600 text-white text-xs font-medium hover:bg-red-700 disabled:opacity-40 transition"
+                              >
+                                Add
+                              </button>
+                            </div>
+                            {orgCategories.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1.5">
+                                {orgCategories.map(cat => (
+                                  <span key={cat.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-xs text-gray-600">
+                                    {cat.name}
+                                    <button
+                                      type="button"
+                                      onClick={() => deleteCategoryMutation.mutate(cat.id)}
+                                      className="ml-0.5 hover:text-red-600 transition"
+                                    >
+                                      <X size={10} />
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </FieldWrap>
                         )}
                       />
                       <FormField
                         control={form.control}
                         name="iconName"
-                        render={({ field }) => (
-                          <FieldWrap label="Icon">
-                            <ChipSel
-                              options={[
-                                { value: "target", label: "Basketball", Icon: Target },
-                                { value: "tent", label: "Camps", Icon: Tent },
-                                { value: "users", label: "Team", Icon: Users },
-                                { value: "trophy", label: "Trophy", Icon: Trophy },
-                                { value: "calendar", label: "Calendar", Icon: Calendar },
-                                { value: "star", label: "Star", Icon: Star },
-                                { value: "medal", label: "Medal", Icon: Award },
-                                { value: "crown", label: "Crown", Icon: Crown },
-                              ]}
-                              value={field.value}
-                              onChange={field.onChange}
-                              testIdPrefix="chip-icon"
-                            />
-                          </FieldWrap>
-                        )}
+                        render={({ field }) => {
+                          const PROGRAM_ICONS = [
+                            { value: "target", Icon: Target },
+                            { value: "tent", Icon: Tent },
+                            { value: "users", Icon: Users },
+                            { value: "trophy", Icon: Trophy },
+                            { value: "calendar", Icon: Calendar },
+                            { value: "star", Icon: Star },
+                            { value: "award", Icon: Award },
+                            { value: "crown", Icon: Crown },
+                            { value: "shield", Icon: Shield },
+                            { value: "layers", Icon: Layers },
+                            { value: "ticket", Icon: Ticket },
+                            { value: "zap", Icon: Zap },
+                            { value: "flag", Icon: Flag },
+                            { value: "heart", Icon: Heart },
+                            { value: "dumbbell", Icon: Dumbbell },
+                          ] as const;
+                          const selected = PROGRAM_ICONS.find(i => i.value === field.value);
+                          return (
+                            <FieldWrap label="Icon">
+                              <div className="relative">
+                                <button
+                                  type="button"
+                                  onClick={() => setIconPickerOpen(v => !v)}
+                                  data-testid="icon-picker-trigger"
+                                  className="w-full h-10 px-3 rounded-md border border-gray-200 text-sm bg-white flex items-center gap-2 hover:border-gray-300 transition"
+                                >
+                                  {selected ? <selected.Icon size={16} className="text-gray-600" /> : <span className="text-gray-400">Select icon</span>}
+                                  {selected && <span className="text-gray-600 capitalize">{selected.value}</span>}
+                                  <ChevronDown size={14} className="ml-auto text-gray-400" />
+                                </button>
+                                {iconPickerOpen && (
+                                  <div className="absolute z-50 top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-2">
+                                    <div className="grid grid-cols-5 gap-1">
+                                      {PROGRAM_ICONS.map(({ value, Icon: IconComp }) => (
+                                        <button
+                                          key={value}
+                                          type="button"
+                                          data-testid={`icon-option-${value}`}
+                                          onClick={() => { field.onChange(value); setIconPickerOpen(false); }}
+                                          className={`p-2 rounded hover:bg-gray-100 transition flex items-center justify-center ${field.value === value ? 'bg-red-50 ring-1 ring-red-400' : ''}`}
+                                        >
+                                          <IconComp size={18} className={field.value === value ? 'text-red-600' : 'text-gray-600'} />
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </FieldWrap>
+                          );
+                        }}
                       />
                     </div>
                     {/* Cover Image */}

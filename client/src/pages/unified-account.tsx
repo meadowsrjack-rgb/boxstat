@@ -1644,6 +1644,7 @@ export default function UnifiedAccount() {
   // Store tab state
   const [selectedStorePlayer, setSelectedStorePlayer] = useState<string>("");
   const [selectedStoreCategory, setSelectedStoreCategory] = useState<string>("");
+  const [storeViewTab, setStoreViewTab] = useState<"programs" | "store">("programs");
   
   // Settings drawer state
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
@@ -2346,6 +2347,22 @@ export default function UnifiedAccount() {
               </div>
             </div>
 
+            {/* Programs / Store Tabs */}
+            <div className="flex border-b border-gray-200">
+              <button
+                onClick={() => { setStoreViewTab("programs"); setSelectedStoreCategory(""); }}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${storeViewTab === "programs" ? "border-red-600 text-red-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+              >
+                Programs
+              </button>
+              <button
+                onClick={() => { setStoreViewTab("store"); setSelectedStoreCategory(""); }}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${storeViewTab === "store" ? "border-red-600 text-red-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+              >
+                Store
+              </button>
+            </div>
+
             {/* Category Filter Buttons - Dynamic from programs */}
             {(() => {
               const categoryIconMap: Record<string, any> = {
@@ -2375,9 +2392,9 @@ export default function UnifiedAccount() {
                 digital: "Digital Academy",
               };
               
-              // Get unique categories from programs and store products
+              const tabCategory = storeViewTab === "programs" ? "service" : "goods";
               const activePrograms = programs?.filter((p: any) => 
-                p.isActive !== false && p.price && p.price > 0 && (p.productCategory === 'service' || p.productCategory === 'goods')
+                p.isActive !== false && p.price && p.price > 0 && p.productCategory === tabCategory
               ) || [];
               
               // Store products use tags[0] for category, programs use displayCategory
@@ -2444,11 +2461,11 @@ export default function UnifiedAccount() {
                 return p.displayCategory || 'general';
               };
               
+              const gridTabCategory = storeViewTab === "programs" ? "service" : "goods";
               const filteredProducts = programs?.filter((p: any) => {
                 const isActive = p.isActive !== false;
                 const hasPrice = p.price && p.price > 0;
-                const isServiceOrGoods = p.productCategory === 'service' || p.productCategory === 'goods';
-                if (!isActive || !hasPrice || !isServiceOrGoods) return false;
+                if (!isActive || !hasPrice || p.productCategory !== gridTabCategory) return false;
                 
                 if (!selectedStoreCategory) return true; // Show all when no filter
                 

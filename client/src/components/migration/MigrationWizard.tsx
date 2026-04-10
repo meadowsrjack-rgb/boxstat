@@ -1035,23 +1035,25 @@ function ReviewStep({
             From: Boxstat &lt;invites@boxstat.app&gt; · To: {(sample as MigrationParent).email || "member@email.com"}
           </div>
           <div className="font-medium">
-            {sampleKids.length > 0
-              ? "Your organization has moved to Boxstat — your players are ready"
-              : "You've been invited to join your organization on Boxstat"}
+            {(() => {
+              const anyHaveDates = sampleKids.some((k) => k.subscriptionEndDate);
+              if (sampleKids.length > 0 && anyHaveDates) return `${organizationName || "Your organization"} has moved to BoxStat — your players are ready`;
+              return `You've been invited to join ${organizationName || "your organization"} on BoxStat`;
+            })()}
           </div>
           <p className="text-muted-foreground">
             Hi {sample.firstName},{" "}
             {sampleKids.length > 0
               ? (() => {
                   const names = sampleKids.map((k) => k.firstName).join(", ");
-                  const allHaveDates = sampleKids.every((k) => k.subscriptionEndDate);
+                  const anyHaveDates = sampleKids.some((k) => k.subscriptionEndDate);
                   const progName = sampleKids[0]?.programId ? programMap[String(sampleKids[0].programId)]?.name : null;
-                  if (allHaveDates) {
-                    return `your player${sampleKids.length > 1 ? "s" : ""} ${names} ${sampleKids.length > 1 ? "have" : "has"} been pre-registered. Your current ${organizationName || "organization"} enrolment${progName ? ` in ${progName}` : ''} is honored until the subscription end date — please renew through BoxStat by this date to avoid unenrolment.`;
+                  if (anyHaveDates) {
+                    return `${organizationName || "your organization"} has moved to BoxStat for managing payments. Your player${sampleKids.length > 1 ? "s" : ""} ${names} ${sampleKids.length > 1 ? "have" : "has"} been pre-registered. Your current ${organizationName || "organization"} enrolment${progName ? ` in ${progName}` : ''} is honored until the subscription end date — please renew through BoxStat by this date to avoid unenrolment.`;
                   }
-                  return `your player${sampleKids.length > 1 ? "s" : ""} ${names} ${sampleKids.length > 1 ? "have" : "has"} been pre-registered. To complete enrolment${progName ? ` in ${progName}` : ''}, please claim your account and subscribe through the Payments tab.`;
+                  return `you've been invited to join ${organizationName || "your organization"} on BoxStat. Your player${sampleKids.length > 1 ? "s" : ""} ${names} ${sampleKids.length > 1 ? "have" : "has"} been pre-registered. To complete enrolment${progName ? ` in ${progName}` : ''}, please claim your account and subscribe through the Payments tab.`;
                 })()
-              : "click below to claim your account on BoxStat and add your players."}
+              : `you've been invited to join ${organizationName || "your organization"} on BoxStat. Click below to claim your account and get set up.`}
           </p>
           {sampleKids[0]?.programId && programMap[String(sampleKids[0].programId)] && (
             <p className="text-xs text-muted-foreground bg-slate-50 p-2 rounded">

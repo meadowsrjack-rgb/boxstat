@@ -14,7 +14,6 @@ function buildEmailHtml(record: InviteRecord, inviteUrl: string, orgName: string
   const { parent, players, programName, teamNames } = record;
   const hasPlayers = players.length > 0;
   const playerNames = players.map((p) => p.firstName).join(", ");
-  const allHaveSubDates = hasPlayers && players.every((p) => p.subscriptionEndDate);
   const anyHasSubDate = hasPlayers && players.some((p) => p.subscriptionEndDate);
 
   const playerRows = players
@@ -38,12 +37,12 @@ function buildEmailHtml(record: InviteRecord, inviteUrl: string, orgName: string
 
   let introText: string;
   if (!hasPlayers) {
-    introText = `<strong style="color:#1a202c">${orgName}</strong> has moved to BoxStat for managing payments. Click below to claim your account and get set up.`;
-  } else if (allHaveSubDates) {
-    const firstEndDate = formatDate(players[0].subscriptionEndDate!);
-    introText = `Your player${players.length > 1 ? "s" : ""} ${playerNames} ${players.length > 1 ? "have" : "has"} been pre-registered. Your current ${orgName} enrolment${programName ? ` in ${programName}` : ''} is honored until ${firstEndDate} — please renew through BoxStat by this date to avoid unenrolment.`;
+    introText = `You've been invited to join <strong style="color:#1a202c">${orgName}</strong> on BoxStat. Click below to claim your account and get set up.`;
+  } else if (anyHasSubDate) {
+    const firstEndDate = formatDate(players.find((p) => p.subscriptionEndDate)!.subscriptionEndDate!);
+    introText = `<strong style="color:#1a202c">${orgName}</strong> has moved to BoxStat for managing payments. Your player${players.length > 1 ? "s" : ""} ${playerNames} ${players.length > 1 ? "have" : "has"} been pre-registered. Your current ${orgName} enrolment${programName ? ` in ${programName}` : ''} is honored until ${firstEndDate} — please renew through BoxStat by this date to avoid unenrolment.`;
   } else {
-    introText = `Your player${players.length > 1 ? "s" : ""} ${playerNames} ${players.length > 1 ? "have" : "has"} been pre-registered. To complete enrolment${programName ? ` in ${programName}` : ''}, please claim your account and subscribe through the Payments tab.`;
+    introText = `You've been invited to join <strong style="color:#1a202c">${orgName}</strong> on BoxStat. Your player${players.length > 1 ? "s" : ""} ${playerNames} ${players.length > 1 ? "have" : "has"} been pre-registered. To complete enrolment${programName ? ` in ${programName}` : ''}, please claim your account and subscribe through the Payments tab.`;
   }
 
   let calloutText: string;
@@ -240,8 +239,9 @@ export async function sendMigrationInvite(
   const { parent, players } = record;
 
   const playerNames = players.map((p) => p.firstName);
+  const hasSubDates = players.some((p) => p.subscriptionEndDate);
   const subject =
-    playerNames.length > 0
+    playerNames.length > 0 && hasSubDates
       ? `${orgName} has moved to BoxStat — your players are ready`
       : `You've been invited to join ${orgName} on BoxStat`;
 

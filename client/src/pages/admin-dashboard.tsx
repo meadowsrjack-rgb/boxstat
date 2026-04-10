@@ -10746,7 +10746,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
   const [editingProgram, setEditingProgram] = useState<any>(null);
   const [deleteConfirmProgram, setDeleteConfirmProgram] = useState<any>(null);
   const [selectedProgramIds, setSelectedProgramIds] = useState<Set<string>>(new Set());
-  const [availabilitySlots, setAvailabilitySlots] = useState<{dayOfWeek: number, startTime: string, endTime: string}[]>([]);
+  const [availabilitySlots, setAvailabilitySlots] = useState<{daysOfWeek: number[], startTime: string, endTime: string}[]>([]);
   const [expandedPricingOptions, setExpandedPricingOptions] = useState<Set<string>>(new Set());
   const tableRef = useDragScroll();
 
@@ -10836,10 +10836,19 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       fetch(`/api/programs/${editingProgram.id}/availability`)
         .then(res => res.ok ? res.json() : [])
         .then((slots: any[]) => {
-          setAvailabilitySlots(slots.map((s: any) => ({
-            dayOfWeek: s.dayOfWeek,
-            startTime: s.startTime,
-            endTime: s.endTime,
+          const grouped = new Map<string, number[]>();
+          const timeMap = new Map<string, {startTime: string, endTime: string}>();
+          for (const s of slots) {
+            const key = `${s.startTime}-${s.endTime}`;
+            if (!grouped.has(key)) {
+              grouped.set(key, []);
+              timeMap.set(key, { startTime: s.startTime, endTime: s.endTime });
+            }
+            grouped.get(key)!.push(s.dayOfWeek);
+          }
+          setAvailabilitySlots(Array.from(grouped.entries()).map(([key, days]) => ({
+            daysOfWeek: days.sort((a, b) => a - b),
+            ...timeMap.get(key)!,
           })));
         })
         .catch(() => setAvailabilitySlots([]));
@@ -10940,7 +10949,8 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
         }
         const progId = editingProgram.id;
         if (progId && data.scheduleRequestEnabled) {
-          await apiRequest("PUT", `/api/programs/${progId}/availability`, { slots: availabilitySlots.map(s => ({ ...s, isRecurring: true })) });
+          const expandedSlots = availabilitySlots.flatMap(s => s.daysOfWeek.map(d => ({ dayOfWeek: d, startTime: s.startTime, endTime: s.endTime, isRecurring: true })));
+          await apiRequest("PUT", `/api/programs/${progId}/availability`, { slots: expandedSlots });
         }
         return result;
       }
@@ -10951,7 +10961,8 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       }
       const progId = editingProgram ? (editingProgram as any).id : result?.id;
       if (progId && data.scheduleRequestEnabled) {
-        await apiRequest("PUT", `/api/programs/${progId}/availability`, { slots: availabilitySlots.map(s => ({ ...s, isRecurring: true })) });
+        const expandedSlots = availabilitySlots.flatMap(s => s.daysOfWeek.map(d => ({ dayOfWeek: d, startTime: s.startTime, endTime: s.endTime, isRecurring: true })));
+        await apiRequest("PUT", `/api/programs/${progId}/availability`, { slots: expandedSlots });
       }
       return result;
     },
@@ -12245,9 +12256,9 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                                 <div className="flex gap-1">
                                                   {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d, dayIdx) => {
                                                     const dayOfWeek = dayIdx === 6 ? 0 : dayIdx + 1;
-                                                    const isSelected = slot.dayOfWeek === dayOfWeek;
+                                                    const isSelected = slot.daysOfWeek.includes(dayOfWeek);
                                                     return (
-                                                      <button key={d} type="button" onClick={() => { const updated = [...availabilitySlots]; updated[slotIndex] = { ...updated[slotIndex], dayOfWeek }; setAvailabilitySlots(updated); }} className={`flex-1 py-1.5 rounded text-xs font-semibold transition-colors ${isSelected ? "bg-red-600 text-white" : "bg-white border border-gray-200 text-gray-400 hover:border-gray-300"}`}>{d}</button>
+                                                      <button key={d} type="button" onClick={() => { const updated = [...availabilitySlots]; const days = updated[slotIndex].daysOfWeek; updated[slotIndex] = { ...updated[slotIndex], daysOfWeek: isSelected ? days.filter(dd => dd !== dayOfWeek) : [...days, dayOfWeek].sort((a, b) => a - b) }; setAvailabilitySlots(updated); }} className={`flex-1 py-1.5 rounded text-xs font-semibold transition-colors ${isSelected ? "bg-red-600 text-white" : "bg-white border border-gray-200 text-gray-400 hover:border-gray-300"}`}>{d}</button>
                                                     );
                                                   })}
                                                 </div>
@@ -12264,7 +12275,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                               </div>
                                             ))}
                                           </div>
-                                          <button type="button" onClick={() => setAvailabilitySlots([...availabilitySlots, { dayOfWeek: 1, startTime: "09:00", endTime: "17:00" }])} className="w-full py-2.5 mt-2 rounded-lg border border-dashed border-gray-300 text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-600 transition-colors flex items-center justify-center gap-1.5">
+                                          <button type="button" onClick={() => setAvailabilitySlots([...availabilitySlots, { daysOfWeek: [1], startTime: "09:00", endTime: "17:00" }])} className="w-full py-2.5 mt-2 rounded-lg border border-dashed border-gray-300 text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-600 transition-colors flex items-center justify-center gap-1.5">
                                             <Plus size={14} /> Add Time Slot
                                           </button>
                                         </div>

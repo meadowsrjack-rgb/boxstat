@@ -358,6 +358,10 @@ export default function InviteClaim() {
                       toast({ title: "Name required", description: "Please enter your first and last name.", variant: "destructive" });
                       return;
                     }
+                    if (!phoneNumber.trim()) {
+                      toast({ title: "Phone required", description: "Please enter your phone number.", variant: "destructive" });
+                      return;
+                    }
                     setStep(2);
                   }}
                 >
@@ -409,17 +413,28 @@ export default function InviteClaim() {
 
                 <Button
                   className="w-full bg-red-600 hover:bg-red-700 text-white h-12 text-base mt-4"
-                  onClick={() => setStep(3)}
+                  onClick={() => {
+                    if (!address.trim()) {
+                      toast({ title: "Address required", description: "Please enter your street address.", variant: "destructive" });
+                      return;
+                    }
+                    if (!city.trim()) {
+                      toast({ title: "City required", description: "Please enter your city.", variant: "destructive" });
+                      return;
+                    }
+                    if (!state.trim()) {
+                      toast({ title: "State required", description: "Please enter your state.", variant: "destructive" });
+                      return;
+                    }
+                    if (!postalCode.trim()) {
+                      toast({ title: "ZIP code required", description: "Please enter your ZIP / postal code.", variant: "destructive" });
+                      return;
+                    }
+                    setStep(3);
+                  }}
                 >
                   Continue
                 </Button>
-                <button
-                  type="button"
-                  className="w-full text-center text-gray-500 text-sm hover:text-gray-400"
-                  onClick={() => setStep(3)}
-                >
-                  Skip for now
-                </button>
               </div>
             )}
 

@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, AlertCircle, Loader2, X, Plus, Users, Baby, Send, Package } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2, X, Plus, Users, Baby, Send, Package, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
@@ -126,19 +126,18 @@ function StepBar({ current }: { current: Step }) {
 
 interface ProgramsStepProps {
   organizationId: string;
-  selectedProgram: MigrationProgram | null;
-  setSelectedProgram: (p: MigrationProgram | null) => void;
   selectedTeams: MigrationTeam[];
   setSelectedTeams: React.Dispatch<React.SetStateAction<MigrationTeam[]>>;
   createdPrograms: MigrationProgram[];
   setCreatedPrograms: React.Dispatch<React.SetStateAction<MigrationProgram[]>>;
 }
 
-function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, selectedTeams, setSelectedTeams, createdPrograms, setCreatedPrograms }: ProgramsStepProps) {
+function ProgramsStep({ organizationId, selectedTeams, setSelectedTeams, createdPrograms, setCreatedPrograms }: ProgramsStepProps) {
   const [showNewForm, setShowNewForm] = useState(false);
   const [newProgramName, setNewProgramName] = useState("");
   const [newProgramCode, setNewProgramCode] = useState("");
-  const [newTeamName, setNewTeamName] = useState("");
+  const [newTeamName, setNewTeamName] = useState<Record<string, string>>({});
+  const [showNewTeamForm, setShowNewTeamForm] = useState<Record<string, boolean>>({});
 
   const { data: existingPrograms = [] } = useQuery<any[]>({ queryKey: ["/api/programs"] });
   const { data: existingTeams = [] } = useQuery<any[]>({ queryKey: ["/api/teams"] });
@@ -146,25 +145,11 @@ function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, sel
   const orgPrograms = existingPrograms.filter((p: any) => p.organizationId === organizationId && p.productCategory !== 'goods');
   const orgTeams = existingTeams.filter((t: any) => t.organizationId === organizationId);
 
-  const selectProgram = (prog: MigrationProgram) => {
-    setSelectedProgram(prog);
-    if (!prog.isNew) {
-      const programTeams = orgTeams
-        .filter((t: any) => t.programId === prog.id)
-        .map((t: any) => ({ id: t.id, name: t.name, programId: prog.id, isNew: false }));
-      setSelectedTeams(programTeams);
-    } else {
-      setSelectedTeams([]);
-    }
-  };
-
   const addNewProgram = () => {
     if (!newProgramName.trim()) return;
     const tempId = `migration-new-${Date.now()}`;
     const newProg: MigrationProgram = { id: tempId, name: newProgramName.trim(), code: newProgramCode.trim(), isNew: true };
     setCreatedPrograms((prev) => [...prev, newProg]);
-    setSelectedProgram(newProg);
-    setSelectedTeams([]);
     setNewProgramName("");
     setNewProgramCode("");
     setShowNewForm(false);
@@ -172,80 +157,120 @@ function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, sel
 
   const removeCreatedProgram = (id: string) => {
     setCreatedPrograms((prev) => prev.filter((p) => p.id !== id));
-    if (selectedProgram?.id === id) {
-      setSelectedProgram(null);
-      setSelectedTeams([]);
-    }
+    setSelectedTeams((prev) => prev.filter((t) => t.programId !== id));
   };
 
-  const addExistingTeam = (teamId: string) => {
-    const team = orgTeams.find((t: any) => t.id === parseInt(teamId));
-    if (!team) return;
-    if (selectedTeams.some((t) => t.id === team.id)) return;
-    setSelectedTeams((prev) => [...prev, { id: team.id, name: team.name, programId: selectedProgram?.id || "", isNew: false }]);
-  };
-
-  const addNewTeam = () => {
-    if (!newTeamName.trim()) return;
+  const addNewTeam = (progId: string) => {
+    const name = newTeamName[progId]?.trim();
+    if (!name) return;
     const tempId = -(Date.now());
-    setSelectedTeams((prev) => [...prev, { id: tempId, name: newTeamName.trim(), programId: selectedProgram?.id || "", isNew: true }]);
-    setNewTeamName("");
+    setSelectedTeams((prev) => [...prev, { id: tempId, name, programId: progId, isNew: true }]);
+    setNewTeamName((prev) => ({ ...prev, [progId]: "" }));
+    setShowNewTeamForm((prev) => ({ ...prev, [progId]: false }));
   };
 
   const removeTeam = (id: number) => setSelectedTeams((prev) => prev.filter((t) => t.id !== id));
 
-  const teamsForCurrentProgram = selectedProgram
-    ? orgTeams.filter((t: any) => t.programId === selectedProgram.id && !selectedProgram.isNew)
-    : [];
-
   const allPrograms: { prog: MigrationProgram; source: "existing" | "new" }[] = [
-    ...orgPrograms.map((p: any) => ({ prog: { id: p.id, name: p.name, code: p.code || "", isNew: false } as MigrationProgram, source: "existing" as const })),
+    ...orgPrograms.map((p: any) => ({ prog: { id: String(p.id), name: p.name, code: p.code || "", isNew: false } as MigrationProgram, source: "existing" as const })),
     ...(createdPrograms || []).map((p) => ({ prog: p, source: "new" as const })),
   ];
+
+  const getTeamsForProgram = (progId: string, isNewProg: boolean) => {
+    const strProgId = String(progId);
+    if (isNewProg) {
+      return selectedTeams.filter((t) => String(t.programId) === strProgId);
+    }
+    const existingForProg = orgTeams
+      .filter((t: any) => String(t.programId) === strProgId)
+      .map((t: any) => ({ id: t.id, name: t.name, programId: strProgId, isNew: false } as MigrationTeam));
+    const addedNew = selectedTeams.filter((t) => String(t.programId) === strProgId && t.isNew);
+    return [...existingForProg, ...addedNew];
+  };
 
   return (
     <div className="space-y-6">
       <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-lg p-3 text-sm text-blue-800">
-        Select a program to add migrated players to, or create a new one. You can also pre-assign teams.
+        Add programs and teams which you will add migrated players to.
       </div>
 
       <div className="space-y-3">
-        <div className="text-sm font-medium">Program</div>
+        <div className="text-sm font-medium">Programs</div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           {allPrograms.map(({ prog, source }) => {
-            const isSelected = selectedProgram?.id === prog.id;
+            const teams = getTeamsForProgram(prog.id, prog.isNew);
             return (
-              <div
-                key={prog.id}
-                className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors text-left cursor-pointer
-                  ${isSelected
-                    ? "border-green-300 bg-green-50 ring-1 ring-green-200"
-                    : "border-border bg-background hover:bg-muted/50"}`}
-                onClick={() => selectProgram(prog)}
-              >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
-                  ${isSelected ? "bg-green-100" : "bg-blue-50"}`}>
-                  {isSelected
-                    ? <CheckCircle2 size={16} className="text-green-600" />
-                    : <Package size={16} className="text-blue-600" />}
+              <div key={prog.id} className="border border-border rounded-lg overflow-hidden">
+                <div className="flex items-center gap-3 p-3 bg-background">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-blue-50">
+                    <Package size={16} className="text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{prog.name}</div>
+                    {prog.code && <div className="text-xs text-muted-foreground">{prog.code}</div>}
+                  </div>
+                  {source === "new" && (
+                    <Badge variant="outline" className="text-[10px] shrink-0 bg-amber-50 text-amber-700 border-amber-200">New</Badge>
+                  )}
+                  {source === "new" && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); removeCreatedProgram(prog.id); }}
+                      className="text-muted-foreground hover:text-destructive p-1 rounded shrink-0"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{prog.name}</div>
-                  {prog.code && <div className="text-xs text-muted-foreground">{prog.code}</div>}
+
+                <div className="border-t border-border bg-muted/20 px-3 py-2 space-y-1">
+                  {teams.map((t) => (
+                    <div key={t.id} className="flex items-center gap-2 py-1">
+                      <Users size={12} className="text-muted-foreground shrink-0" />
+                      <span className="text-xs flex-1 truncate">{t.name}</span>
+                      {t.isNew && (
+                        <>
+                          <Badge variant="outline" className="text-[10px] shrink-0 bg-amber-50 text-amber-700 border-amber-200">New</Badge>
+                          <button
+                            type="button"
+                            onClick={() => removeTeam(t.id)}
+                            className="text-muted-foreground hover:text-destructive p-1 rounded shrink-0"
+                          >
+                            <X size={12} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+
+                  {showNewTeamForm[prog.id] ? (
+                    <div className="flex gap-2 pt-1">
+                      <Input
+                        placeholder="Team name (e.g. Blue, U12 Boys)"
+                        value={newTeamName[prog.id] ?? ""}
+                        onChange={(e) => setNewTeamName((prev) => ({ ...prev, [prog.id]: e.target.value }))}
+                        onKeyDown={(e) => e.key === "Enter" && addNewTeam(prog.id)}
+                        className="h-7 text-xs"
+                        autoFocus
+                      />
+                      <Button size="sm" className="h-7 text-xs px-2" onClick={() => addNewTeam(prog.id)} disabled={!newTeamName[prog.id]?.trim()}>
+                        Add
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs px-2" onClick={() => setShowNewTeamForm((prev) => ({ ...prev, [prog.id]: false }))}>
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowNewTeamForm((prev) => ({ ...prev, [prog.id]: true }))}
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+                    >
+                      <Plus size={12} /> Add team
+                    </button>
+                  )}
                 </div>
-                {source === "new" && (
-                  <Badge variant="outline" className="text-[10px] shrink-0 bg-amber-50 text-amber-700 border-amber-200">New</Badge>
-                )}
-                {source === "new" && !isSelected && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); removeCreatedProgram(prog.id); }}
-                    className="text-muted-foreground hover:text-destructive p-1 rounded shrink-0"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
               </div>
             );
           })}
@@ -283,52 +308,6 @@ function ProgramsStep({ organizationId, selectedProgram, setSelectedProgram, sel
           )}
         </div>
       </div>
-
-      {selectedProgram && (
-        <div className="space-y-3">
-          <div className="text-sm font-medium">Teams <span className="text-muted-foreground font-normal">(optional)</span></div>
-
-          <div className="space-y-2">
-            {selectedTeams.map((t) => (
-              <div
-                key={t.id}
-                className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background text-left"
-              >
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${t.isNew ? "bg-amber-50" : "bg-slate-100"}`}>
-                  <Users size={14} className={t.isNew ? "text-amber-600" : "text-slate-500"} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{t.name}</div>
-                </div>
-                {t.isNew && (
-                  <>
-                    <Badge variant="outline" className="text-[10px] shrink-0 bg-amber-50 text-amber-700 border-amber-200">New</Badge>
-                    <button
-                      type="button"
-                      onClick={() => removeTeam(t.id)}
-                      className="text-muted-foreground hover:text-destructive p-1 rounded shrink-0"
-                    >
-                      <X size={14} />
-                    </button>
-                  </>
-                )}
-              </div>
-            ))}
-
-            <div className="flex gap-2">
-              <Input
-                placeholder="New team name (e.g. Blue, U12 Boys)"
-                value={newTeamName}
-                onChange={(e) => setNewTeamName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addNewTeam()}
-              />
-              <Button size="sm" variant="outline" onClick={addNewTeam} disabled={!newTeamName.trim()}>
-                <Plus size={14} className="mr-1" /> Add
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -391,8 +370,8 @@ function ParentsStep({
         <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
           <thead>
             <tr className="bg-muted/50">
-              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[22%]">First name</th>
-              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[22%]">Last name</th>
+              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[22%]">First name *</th>
+              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[22%]">Last name *</th>
               <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[32%]">Email *</th>
               <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[18%]">Phone</th>
               <th className="w-[6%]" />
@@ -436,16 +415,18 @@ function ParentsStep({
 // ── Players step ──────────────────────────────────────────────────────────────
 
 function PlayersStep({
-  parents, players, setPlayers, selectedProgram, selectedTeams, createdPrograms, orgPrograms, orgTeams,
+  parents, players, setPlayers, selectedTeams, createdPrograms, orgPrograms, orgTeams,
+  noSubDateAcknowledged, setNoSubDateAcknowledged,
 }: {
   parents: MigrationParent[];
   players: MigrationPlayer[];
   setPlayers: React.Dispatch<React.SetStateAction<MigrationPlayer[]>>;
-  selectedProgram: MigrationProgram | null;
   selectedTeams: MigrationTeam[];
   createdPrograms: MigrationProgram[];
   orgPrograms: any[];
   orgTeams: any[];
+  noSubDateAcknowledged: boolean;
+  setNoSubDateAcknowledged: (v: boolean) => void;
 }) {
   const [pasteRaw, setPasteRaw] = useState("");
 
@@ -454,10 +435,20 @@ function PlayersStep({
     ...createdPrograms,
   ];
 
-  const getTeamsForProgram = (programId: string | null) => {
+  const getTeamsForProgram = (programId: string | null): MigrationTeam[] => {
     if (!programId) return [];
-    return selectedTeams.filter((t) => t.programId === programId);
+    const existingForProg = orgTeams
+      .filter((t: any) => String(t.programId) === String(programId))
+      .map((t: any) => ({ id: t.id, name: t.name, programId: String(t.programId), isNew: false } as MigrationTeam));
+    const newTeams = selectedTeams.filter((t) => String(t.programId) === String(programId) && t.isNew);
+    const seen = new Set(existingForProg.map((t) => t.id));
+    return [...existingForProg, ...newTeams.filter((t) => !seen.has(t.id))];
   };
+
+  const allAvailableTeams: MigrationTeam[] = [
+    ...orgTeams.map((t: any) => ({ id: t.id, name: t.name, programId: String(t.programId), isNew: false } as MigrationTeam)),
+    ...selectedTeams.filter((t) => t.isNew),
+  ];
 
   const add = () =>
     setPlayers((p) => [...p, {
@@ -485,7 +476,7 @@ function PlayersStep({
       .filter((r) => r.first)
       .map((r) => {
         const parent = parents.find((p) => p.email.toLowerCase() === r.parentEmail.toLowerCase());
-        const matchedTeam = selectedTeams.find((t) => t.name.toLowerCase() === r.team?.toLowerCase());
+        const matchedTeam = allAvailableTeams.find((t) => t.name.toLowerCase() === r.team?.toLowerCase());
         return {
           id: uid(),
           firstName: r.first,
@@ -501,7 +492,11 @@ function PlayersStep({
     setPasteRaw("");
   };
 
-  const hasTeams = selectedTeams.length > 0;
+  const hasTeams = allAvailableTeams.length > 0;
+  const anyPlayerHasProgram = players.some((k) => k.programId);
+  const subEndDateRequired = anyPlayerHasProgram;
+
+  const SUB_END_DATE_TOOLTIP = "This is the date their subscription to this program ends. The customer will be enrolled in the selected program. BoxStat has a 3 month grace period before the customer must re-enrol through BoxStat. They will be reminded of this date.";
 
   return (
     <div className="space-y-4">
@@ -537,12 +532,19 @@ function PlayersStep({
         <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
           <thead>
             <tr className="bg-muted/50">
-              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[16%]">First name</th>
-              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[16%]">Last name</th>
+              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[16%]">First name *</th>
+              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[16%]">Last name *</th>
               <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[20%]">Parent *</th>
-              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[14%]">Sub end date</th>
               {allPrograms.length > 0 && <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[16%]">Program</th>}
               {hasTeams && <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[14%]">Team</th>}
+              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[14%]">
+                <span className="flex items-center gap-1">
+                  Sub end date{subEndDateRequired ? " *" : ""}
+                  <span title={SUB_END_DATE_TOOLTIP} className="cursor-help text-muted-foreground/70 hover:text-muted-foreground">
+                    <Info size={12} />
+                  </span>
+                </span>
+              </th>
               <th className="w-[6%]" />
             </tr>
           </thead>
@@ -575,7 +577,6 @@ function PlayersStep({
                       </SelectContent>
                     </Select>
                   </td>
-                  <td className="px-1 py-1"><Input value={k.subscriptionEndDate} onChange={(e) => upd(k.id, "subscriptionEndDate", e.target.value)} placeholder="MM/DD/YYYY" className="border-0 shadow-none h-8 text-sm px-2" /></td>
                   {allPrograms.length > 0 && (
                     <td className="px-1 py-1">
                       <Select
@@ -611,6 +612,7 @@ function PlayersStep({
                       </Select>
                     </td>
                   )}
+                  <td className="px-1 py-1"><Input value={k.subscriptionEndDate} onChange={(e) => upd(k.id, "subscriptionEndDate", e.target.value)} placeholder="MM/DD/YYYY" className="border-0 shadow-none h-8 text-sm px-2" /></td>
                   <td className="px-1 py-1 text-center">
                     <button onClick={() => remove(k.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded">
                       <X size={14} />
@@ -629,6 +631,20 @@ function PlayersStep({
       >
         <Plus size={14} /> Add player
       </button>
+
+      {players.length > 0 && players.some((k) => !k.subscriptionEndDate?.trim()) && (
+        <label className="flex items-start gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={noSubDateAcknowledged}
+            onChange={(e) => setNoSubDateAcknowledged(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-amber-300 accent-amber-600 shrink-0"
+          />
+          <span className="text-sm text-amber-900">
+            I acknowledge that players without a subscription end date will need to be enrolled by their parent through the Payments tab after signing in. They cannot be enrolled by an admin. The invite email will still list any assigned program or team.
+          </span>
+        </label>
+      )}
     </div>
   );
 }
@@ -636,12 +652,12 @@ function PlayersStep({
 // ── Review step ───────────────────────────────────────────────────────────────
 
 function ReviewStep({
-  parents, players, selectedProgram, selectedTeams, onSend, isSending,
+  parents, players, allPrograms, allTeams, onSend, isSending,
 }: {
   parents: MigrationParent[];
   players: MigrationPlayer[];
-  selectedProgram: MigrationProgram | null;
-  selectedTeams: MigrationTeam[];
+  allPrograms: MigrationProgram[];
+  allTeams: MigrationTeam[];
   onSend: () => void;
   isSending: boolean;
 }) {
@@ -660,7 +676,8 @@ function ReviewStep({
     kids: players.filter((k) => k.parentId === par.id),
   }));
 
-  const teamMap = Object.fromEntries(selectedTeams.map((t) => [t.id, t.name]));
+  const programMap = Object.fromEntries(allPrograms.map((p) => [String(p.id), p]));
+  const teamMap = Object.fromEntries(allTeams.map((t) => [t.id, t.name]));
 
   return (
     <div className="space-y-5">
@@ -679,14 +696,14 @@ function ReviewStep({
       </div>
 
       {/* Program/team summary */}
-      {selectedProgram && (
+      {allPrograms.length > 0 && (
         <div className="flex items-start gap-3 p-3 bg-slate-50 border border-border rounded-lg text-sm">
           <Package size={16} className="text-muted-foreground mt-0.5 shrink-0" />
           <div>
-            <div className="font-medium">{selectedProgram.name}{selectedProgram.code ? ` · ${selectedProgram.code}` : ""}</div>
-            {selectedTeams.length > 0 && (
+            <div className="font-medium">{allPrograms.map((p) => p.name).join(", ")}</div>
+            {allTeams.length > 0 && (
               <div className="text-xs text-muted-foreground mt-1">
-                Teams: {selectedTeams.map((t) => t.name).join(", ")}
+                Teams: {allTeams.map((t) => t.name).join(", ")}
               </div>
             )}
           </div>
@@ -746,8 +763,8 @@ function ReviewStep({
                     {k.teamId && teamMap[k.teamId] && (
                       <Badge variant="outline" className="text-xs font-normal">{teamMap[k.teamId]}</Badge>
                     )}
-                    {selectedProgram && (
-                      <Badge variant="outline" className="text-xs font-normal text-blue-700 border-blue-200 bg-blue-50">{selectedProgram.name}</Badge>
+                    {k.programId && programMap[String(k.programId)] && (
+                      <Badge variant="outline" className="text-xs font-normal text-blue-700 border-blue-200 bg-blue-50">{programMap[String(k.programId)].name}</Badge>
                     )}
                     <ExpiryBadge expiry={k.subscriptionEndDate} />
                   </div>
@@ -782,9 +799,9 @@ function ReviewStep({
               ? `your player${sampleKids.length > 1 ? "s" : ""} (${sampleKids.map((k) => k.firstName).join(", ")}) have been pre-registered. Their current access is honored through the existing subscription end date — you'll be prompted to renew through Boxstat when the time comes.`
               : "click below to claim your account on Boxstat and add your players."}
           </p>
-          {selectedProgram && (
+          {sampleKids[0]?.programId && programMap[String(sampleKids[0].programId)] && (
             <p className="text-xs text-muted-foreground bg-slate-50 p-2 rounded">
-              Program: <strong>{selectedProgram.name}</strong>
+              Program: <strong>{programMap[String(sampleKids[0].programId)].name}</strong>
               {sampleKids[0]?.teamId && teamMap[sampleKids[0].teamId] ? ` · Team: ${teamMap[sampleKids[0].teamId]}` : ""}
             </p>
           )}
@@ -822,11 +839,11 @@ function ReviewStep({
 export function MigrationWizard({ organizationId, organizationName, onComplete }: MigrationWizardProps) {
   const { toast } = useToast();
   const [step, setStep]                   = useState<Step>("programs");
-  const [selectedProgram, setSelectedProgram] = useState<MigrationProgram | null>(null);
   const [selectedTeams, setSelectedTeams] = useState<MigrationTeam[]>([]);
   const [createdPrograms, setCreatedPrograms] = useState<MigrationProgram[]>([]);
   const [parents, setParents]             = useState<MigrationParent[]>([]);
   const [players, setPlayers]             = useState<MigrationPlayer[]>([]);
+  const [noSubDateAcknowledged, setNoSubDateAcknowledged] = useState(false);
   const [isSending, setIsSending]         = useState(false);
   const [done, setDone]                   = useState(false);
   const [result, setResult]               = useState<MigrationResult | null>(null);
@@ -854,13 +871,19 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
   }, [parents, toast]);
 
   const validatePlayers = useCallback(() => {
+    if (players.length === 0) return true;
     const unlinked = players.filter((k) => !k.parentId);
     if (unlinked.length) {
       toast({ title: "Unlinked players", description: `${unlinked.length} player(s) aren't linked to a parent.`, variant: "destructive" });
       return false;
     }
+    const missingSubDate = players.filter((k) => !k.subscriptionEndDate?.trim());
+    if (missingSubDate.length && !noSubDateAcknowledged) {
+      toast({ title: "Acknowledgment required", description: `${missingSubDate.length} player(s) have no subscription end date. Please check the acknowledgment checkbox to continue.`, variant: "destructive" });
+      return false;
+    }
     return true;
-  }, [players, toast]);
+  }, [players, noSubDateAcknowledged, toast]);
 
   const next = () => {
     if (step === "programs") {
@@ -876,14 +899,39 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
 
   const back = () => setStep(stepOrder[stepIdx - 1]);
 
+  const allMigrationPrograms = [
+    ...orgPrograms.map((p: any) => ({ id: String(p.id), name: p.name, code: p.code || "", isNew: false } as MigrationProgram)),
+    ...createdPrograms,
+  ];
+
+  const allMigrationTeams: MigrationTeam[] = [
+    ...orgTeams.map((t: any) => ({ id: t.id, name: t.name, programId: String(t.programId), isNew: false } as MigrationTeam)),
+    ...selectedTeams.filter((t) => t.isNew),
+  ];
+
   const send = async () => {
     setIsSending(true);
     try {
+      const firstPlayerProgramId = players.find((k) => k.programId)?.programId ?? null;
+      const payloadProgram = firstPlayerProgramId
+        ? allMigrationPrograms.find((p) => String(p.id) === String(firstPlayerProgramId)) ?? null
+        : null;
+
+      const referencedTeamIds = new Set(players.filter((k) => k.teamId != null).map((k) => k.teamId as number));
+      const referencedExistingTeams = allMigrationTeams.filter((t) => !t.isNew && referencedTeamIds.has(t.id));
+      const newTeamsForProgram = selectedTeams.filter((t) => t.isNew && (
+        !payloadProgram || String(t.programId) === String(payloadProgram.id)
+      ));
+      const allPayloadTeams: MigrationTeam[] = [
+        ...referencedExistingTeams,
+        ...newTeamsForProgram,
+      ];
+
       const payload = {
         parents,
         players,
-        program: selectedProgram,
-        teams: selectedTeams,
+        program: payloadProgram,
+        teams: allPayloadTeams,
       };
       const data: MigrationResult = await apiRequest("POST", "/api/migration/send-invites", payload);
       setResult(data);
@@ -941,8 +989,6 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
         {step === "programs" && (
           <ProgramsStep
             organizationId={organizationId}
-            selectedProgram={selectedProgram}
-            setSelectedProgram={setSelectedProgram}
             selectedTeams={selectedTeams}
             setSelectedTeams={setSelectedTeams}
             createdPrograms={createdPrograms}
@@ -955,23 +1001,30 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
             parents={parents}
             players={players}
             setPlayers={setPlayers}
-            selectedProgram={selectedProgram}
             selectedTeams={selectedTeams}
             createdPrograms={createdPrograms}
             orgPrograms={orgPrograms}
             orgTeams={orgTeams}
+            noSubDateAcknowledged={noSubDateAcknowledged}
+            setNoSubDateAcknowledged={setNoSubDateAcknowledged}
           />
         )}
-        {step === "review" && (
-          <ReviewStep
-            parents={parents}
-            players={players}
-            selectedProgram={selectedProgram}
-            selectedTeams={selectedTeams}
-            onSend={send}
-            isSending={isSending}
-          />
-        )}
+        {step === "review" && (() => {
+          const usedProgramIds = new Set(players.filter((k) => k.programId).map((k) => String(k.programId)));
+          const usedTeamIds = new Set(players.filter((k) => k.teamId != null).map((k) => k.teamId as number));
+          const reviewPrograms = allMigrationPrograms.filter((p) => usedProgramIds.has(String(p.id)));
+          const reviewTeams = allMigrationTeams.filter((t) => usedTeamIds.has(t.id));
+          return (
+            <ReviewStep
+              parents={parents}
+              players={players}
+              allPrograms={reviewPrograms}
+              allTeams={reviewTeams}
+              onSend={send}
+              isSending={isSending}
+            />
+          );
+        })()}
 
         <div className="flex justify-between pt-6 mt-6 border-t border-border">
           {stepIdx > 0

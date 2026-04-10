@@ -16,6 +16,15 @@ export interface MigrationPlayer {
   teamId?: number | null;
 }
 
+export interface MigrationStaff {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: "coach" | "admin";
+  teamIds: number[]; // for coaches: IDs of teams (migration temp IDs) they're assigned to
+}
+
 export interface MigrationProgram {
   id: string;
   name: string;
@@ -33,6 +42,7 @@ export interface MigrationTeam {
 export interface MigrationPayload {
   parents: MigrationParent[];
   players: MigrationPlayer[];
+  staff?: MigrationStaff[];
   program?: MigrationProgram | null;
   teams?: MigrationTeam[];
 }

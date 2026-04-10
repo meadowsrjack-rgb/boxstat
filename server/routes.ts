@@ -13773,9 +13773,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isNew: z.boolean().default(false),
   });
 
+  const migrationStaffSchema = z.object({
+    id: z.coerce.number().optional(),
+    firstName: z.string().default(''),
+    lastName: z.string().default(''),
+    email: z.string().email('Invalid staff email'),
+    role: z.enum(['coach', 'admin']),
+    teamIds: z.array(z.number()).optional().default([]),
+  });
+
   const sendInvitesSchema = z.object({
     parents: z.array(migrationParentSchema).min(1, 'At least one parent is required'),
     players: z.array(migrationPlayerSchema).optional().default([]),
+    staff: z.array(migrationStaffSchema).optional().default([]),
     program: migrationProgramSchema,
     teams: z.array(migrationTeamSchema).optional().default([]),
   });
@@ -13793,7 +13803,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!parseResult.success) {
         return res.status(400).json({ error: 'Invalid payload', details: parseResult.error.flatten() });
       }
-      const { parents, players, program: migrationProgram, teams: migrationTeams } = parseResult.data;
+      const { parents, players, staff: migrationStaff, program: migrationProgram, teams: migrationTeams } = parseResult.data;
 
       const org = await storage.getOrganization(organizationId);
       const orgName = org?.name || 'Your organization';
@@ -13864,6 +13874,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             teamIdMap[mt.id] = mt.id;
             teamNameMap[mt.id] = mt.name;
+          }
+        }
+      }
+
+      // ── Step 3: Process staff (coaches and admins) ────────────────────────────
+      if (migrationStaff && migrationStaff.length > 0) {
+        for (const staffMember of migrationStaff) {
+          if (!staffMember.email?.trim()) continue;
+          try {
+            const existingStaff = await storage.getUserByEmail(staffMember.email.toLowerCase(), organizationId);
+            let staffUserId: string;
+
+            if (existingStaff) {
+              staffUserId = existingStaff.id;
+              console.log(`[Migration] Staff ${staffMember.email} already exists — skipping user creation`);
+            } else {
+              staffUserId = crypto.randomUUID();
+              const inviteToken = crypto.randomBytes(32).toString('hex');
+              const inviteTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+              await db.insert(users).values({
+                id: staffUserId,
+                email: staffMember.email.toLowerCase(),
+                firstName: staffMember.firstName || null,
+                lastName: staffMember.lastName || null,
+                role: staffMember.role,
+                userType: staffMember.role,
+                organizationId,
+                status: 'invited',
+                isActive: true,
+                hasRegistered: false,
+                inviteToken,
+                inviteTokenExpiry,
+              });
+              console.log(`[Migration] Created shadow staff user: ${staffUserId} (${staffMember.email}) role=${staffMember.role}`);
+            }
+
+            // Insert team memberships for coaches — only for teams that passed through
+            // the validated teamIdMap (teams explicitly included in the migration payload)
+            if (staffMember.role === 'coach' && staffMember.teamIds && staffMember.teamIds.length > 0) {
+              for (const tempTeamId of staffMember.teamIds) {
+                const realTeamId = teamIdMap[tempTeamId];
+                if (!realTeamId) {
+                  console.warn(`[Migration] Staff team assignment skipped: team ID ${tempTeamId} not in validated migration teams`);
+                  continue;
+                }
+                await db.insert(teamMemberships).values({
+                  teamId: realTeamId,
+                  profileId: staffUserId,
+                  role: 'coach',
+                  status: 'active',
+                }).onConflictDoNothing();
+              }
+            }
+          } catch (staffErr) {
+            console.error(`[Migration] Error processing staff ${staffMember.email}:`, staffErr);
           }
         }
       }

@@ -12,15 +12,15 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, AlertCircle, Loader2, X, Plus, Users, Baby, Send, Package, Info } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2, X, Plus, Users, Baby, Send, Package, Info, UserCog } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
-import type { MigrationParent, MigrationPlayer, MigrationResult, MigrationProgram, MigrationTeam } from "@shared/types/migration";
+import type { MigrationParent, MigrationPlayer, MigrationStaff, MigrationResult, MigrationProgram, MigrationTeam } from "@shared/types/migration";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Step = "programs" | "parents" | "players" | "review";
+type Step = "programs" | "parents" | "players" | "staff" | "review";
 
 interface MigrationWizardProps {
   organizationId: string;
@@ -95,6 +95,7 @@ const STEPS: { id: Step; label: string; icon: React.ReactNode }[] = [
   { id: "programs", label: "Programs & Teams", icon: <Package size={14} /> },
   { id: "parents",  label: "Parents",          icon: <Users size={14} /> },
   { id: "players",  label: "Players",          icon: <Baby size={14} /> },
+  { id: "staff",    label: "Staff",            icon: <UserCog size={14} /> },
   { id: "review",   label: "Review & send",    icon: <Send size={14} /> },
 ];
 
@@ -649,13 +650,190 @@ function PlayersStep({
   );
 }
 
+// ── Staff step ────────────────────────────────────────────────────────────────
+
+function StaffStep({
+  staff, setStaff, selectedTeams,
+}: {
+  staff: MigrationStaff[];
+  setStaff: React.Dispatch<React.SetStateAction<MigrationStaff[]>>;
+  selectedTeams: MigrationTeam[];
+}) {
+  const [pasteRaw, setPasteRaw] = useState("");
+  const [activeRole, setActiveRole] = useState<"coach" | "admin">("coach");
+
+  const coaches = staff.filter((s) => s.role === "coach");
+  const admins = staff.filter((s) => s.role === "admin");
+
+  const add = (role: "coach" | "admin") =>
+    setStaff((prev) => [...prev, { id: uid(), firstName: "", lastName: "", email: "", role, teamIds: [] }]);
+
+  const remove = (id: number) => setStaff((prev) => prev.filter((s) => s.id !== id));
+
+  const upd = (id: number, key: keyof MigrationStaff, value: string | number[] | "coach" | "admin") =>
+    setStaff((prev) => prev.map((s) => (s.id === id ? { ...s, [key]: value } : s)));
+
+  const toggleTeam = (staffId: number, teamId: number) => {
+    setStaff((prev) => prev.map((s) => {
+      if (s.id !== staffId) return s;
+      const teamIds = s.teamIds.includes(teamId)
+        ? s.teamIds.filter((tid) => tid !== teamId)
+        : [...s.teamIds, teamId];
+      return { ...s, teamIds };
+    }));
+  };
+
+  const importPaste = (role: "coach" | "admin") => {
+    const rows = parsePaste(pasteRaw);
+    const imported = rows
+      .filter((r) => r.first || r.email)
+      .map((r) => ({ id: uid(), firstName: r.first, lastName: r.last, email: r.email, role, teamIds: [] }));
+    if (!imported.length) return;
+    setStaff((prev) => [...prev, ...imported]);
+    setPasteRaw("");
+  };
+
+  const renderTable = (role: "coach" | "admin") => {
+    const rows = role === "coach" ? coaches : admins;
+    return (
+      <div className="space-y-4">
+        <Tabs defaultValue="manual">
+          <TabsList className="mb-4">
+            <TabsTrigger value="manual">Enter manually</TabsTrigger>
+            <TabsTrigger value="paste">Paste from spreadsheet</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="paste" className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Copy rows from Excel or Google Sheets with a header row. Columns detected automatically.
+            </p>
+            <Textarea
+              value={pasteRaw}
+              onChange={(e) => setPasteRaw(e.target.value)}
+              placeholder={"First Name\tLast Name\tEmail\nJohn\tSmith\tjohn@email.com"}
+              className="font-mono text-xs min-h-[100px]"
+            />
+            <Button variant="default" size="sm" onClick={() => importPaste(role)} disabled={!pasteRaw.trim()}>
+              Import {role === "coach" ? "coaches" : "admins"}
+            </Button>
+          </TabsContent>
+
+          <TabsContent value="manual" />
+        </Tabs>
+
+        <div className="border border-border rounded-lg overflow-hidden">
+          <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
+            <thead>
+              <tr className="bg-muted/50">
+                <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[20%]">First name</th>
+                <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[20%]">Last name</th>
+                <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[28%]">Email *</th>
+                {role === "coach" && selectedTeams.length > 0 && (
+                  <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[28%]">Teams</th>
+                )}
+                <th className="w-[6%]" />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={role === "coach" && selectedTeams.length > 0 ? 4 : 3} className="px-3 py-8 text-center text-sm text-muted-foreground">
+                    No {role === "coach" ? "coaches" : "admins"} yet — add one below or paste from a spreadsheet
+                  </td>
+                </tr>
+              ) : (
+                rows.map((s) => (
+                  <tr key={s.id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                    <td className="px-1 py-1"><Input value={s.firstName} onChange={(e) => upd(s.id, "firstName", e.target.value)} placeholder="First" className="border-0 shadow-none h-8 text-sm px-2" /></td>
+                    <td className="px-1 py-1"><Input value={s.lastName}  onChange={(e) => upd(s.id, "lastName",  e.target.value)} placeholder="Last"  className="border-0 shadow-none h-8 text-sm px-2" /></td>
+                    <td className="px-1 py-1"><Input value={s.email}     onChange={(e) => upd(s.id, "email",     e.target.value)} placeholder="email@example.com" type="email" className="border-0 shadow-none h-8 text-sm px-2" /></td>
+                    {role === "coach" && selectedTeams.length > 0 && (
+                      <td className="px-1 py-1">
+                        <div className="flex flex-wrap gap-1 px-2 py-1">
+                          {selectedTeams.map((t) => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => toggleTeam(s.id, t.id)}
+                              className={`text-xs px-2 py-0.5 rounded border transition-colors ${
+                                s.teamIds.includes(t.id)
+                                  ? "bg-slate-900 text-white border-slate-900"
+                                  : "bg-background text-muted-foreground border-border hover:border-foreground"
+                              }`}
+                            >
+                              {t.name}
+                            </button>
+                          ))}
+                        </div>
+                      </td>
+                    )}
+                    <td className="px-1 py-1 text-center">
+                      <button onClick={() => remove(s.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded">
+                        <X size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        <button
+          onClick={() => add(role)}
+          className="w-full py-2 border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:border-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1"
+        >
+          <Plus size={14} /> Add {role === "coach" ? "coach" : "admin"}
+        </button>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-lg p-3 text-sm text-blue-800">
+        Add coaches and admin staff. Coaches can be assigned to teams. Staff members do not require subscription dates.
+      </div>
+
+      <div className="flex gap-2 border-b border-border">
+        <button
+          type="button"
+          onClick={() => setActiveRole("coach")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+            activeRole === "coach"
+              ? "border-slate-900 text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Coaches {coaches.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{coaches.length}</Badge>}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveRole("admin")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+            activeRole === "admin"
+              ? "border-slate-900 text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Admins {admins.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{admins.length}</Badge>}
+        </button>
+      </div>
+
+      <div className="pt-2">
+        {activeRole === "coach" ? renderTable("coach") : renderTable("admin")}
+      </div>
+    </div>
+  );
+}
+
 // ── Review step ───────────────────────────────────────────────────────────────
 
 function ReviewStep({
-  parents, players, allPrograms, allTeams, onSend, isSending,
+  parents, players, staff, allPrograms, allTeams, onSend, isSending,
 }: {
   parents: MigrationParent[];
   players: MigrationPlayer[];
+  staff: MigrationStaff[];
   allPrograms: MigrationProgram[];
   allTeams: MigrationTeam[];
   onSend: () => void;
@@ -667,6 +845,9 @@ function ReviewStep({
   const soon      = players.filter((k) => expiryStatus(k.subscriptionEndDate) === "soon");
   const canSend   = noEmail.length === 0 && unlinked.length === 0 && parents.length > 0;
   const inviteCount = parents.filter((p) => p.email.trim()).length;
+
+  const coaches = staff.filter((s) => s.role === "coach");
+  const admins  = staff.filter((s) => s.role === "admin");
 
   const sample     = parents.find((p) => p.email) ?? { firstName: "Member", lastName: "", email: "member@email.com" };
   const sampleKids = players.filter((k) => k.parentId === (sample as MigrationParent).id);
@@ -734,6 +915,56 @@ function ReviewStep({
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{soon.length} subscription{soon.length > 1 ? "s expire" : " expires"} within 30 days — renewal prompt shown on first login.</AlertDescription>
         </Alert>
+      )}
+
+      {/* Staff summary */}
+      {staff.length > 0 && (
+        <div className="border border-border rounded-lg overflow-hidden">
+          <div className="px-4 py-2 bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wide border-b border-border flex items-center gap-2">
+            <UserCog size={12} /> Staff
+          </div>
+          <div className="divide-y divide-border">
+            {coaches.length > 0 && (
+              <div className="px-4 py-3">
+                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Coaches ({coaches.length})</div>
+                <div className="space-y-1">
+                  {coaches.map((s) => (
+                    <div key={s.id} className="flex items-center gap-2 text-sm">
+                      <div className="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center text-[10px] font-medium text-emerald-700 shrink-0">
+                        {initials(s.firstName, s.lastName)}
+                      </div>
+                      <span className="flex-1">{s.firstName} {s.lastName}</span>
+                      <span className="text-xs text-muted-foreground">{s.email}</span>
+                      {s.teamIds.length > 0 && (
+                        <div className="flex gap-1">
+                          {s.teamIds.map((tid) => teamMap[tid] && (
+                            <Badge key={tid} variant="outline" className="text-xs font-normal">{teamMap[tid]}</Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {admins.length > 0 && (
+              <div className="px-4 py-3">
+                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Admins ({admins.length})</div>
+                <div className="space-y-1">
+                  {admins.map((s) => (
+                    <div key={s.id} className="flex items-center gap-2 text-sm">
+                      <div className="w-6 h-6 rounded-full bg-violet-50 flex items-center justify-center text-[10px] font-medium text-violet-700 shrink-0">
+                        {initials(s.firstName, s.lastName)}
+                      </div>
+                      <span className="flex-1">{s.firstName} {s.lastName}</span>
+                      <span className="text-xs text-muted-foreground">{s.email}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Families */}
@@ -844,6 +1075,7 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
   const [parents, setParents]             = useState<MigrationParent[]>([]);
   const [players, setPlayers]             = useState<MigrationPlayer[]>([]);
   const [noSubDateAcknowledged, setNoSubDateAcknowledged] = useState(false);
+  const [staff, setStaff]                 = useState<MigrationStaff[]>([]);
   const [isSending, setIsSending]         = useState(false);
   const [done, setDone]                   = useState(false);
   const [result, setResult]               = useState<MigrationResult | null>(null);
@@ -854,7 +1086,7 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
   const orgPrograms = existingPrograms.filter((p: any) => p.organizationId === organizationId && p.productCategory !== 'goods');
   const orgTeams = existingTeams.filter((t: any) => t.organizationId === organizationId);
 
-  const stepOrder: Step[] = ["programs", "parents", "players", "review"];
+  const stepOrder: Step[] = ["programs", "parents", "players", "staff", "review"];
   const stepIdx = stepOrder.indexOf(step);
 
   const validateParents = useCallback(() => {
@@ -930,6 +1162,7 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
       const payload = {
         parents,
         players,
+        staff,
         program: payloadProgram,
         teams: allPayloadTeams,
       };
@@ -983,6 +1216,7 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
           {step === "programs" && "Programs & Teams"}
           {step === "parents" && "Parent contacts"}
           {step === "players" && "Players"}
+          {step === "staff"   && "Staff"}
           {step === "review"  && "Review & send invites"}
         </h2>
 
@@ -1009,6 +1243,13 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
             setNoSubDateAcknowledged={setNoSubDateAcknowledged}
           />
         )}
+        {step === "staff" && (
+          <StaffStep
+            staff={staff}
+            setStaff={setStaff}
+            selectedTeams={selectedTeams}
+          />
+        )}
         {step === "review" && (() => {
           const usedProgramIds = new Set(players.filter((k) => k.programId).map((k) => String(k.programId)));
           const usedTeamIds = new Set(players.filter((k) => k.teamId != null).map((k) => k.teamId as number));
@@ -1018,6 +1259,7 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
             <ReviewStep
               parents={parents}
               players={players}
+              staff={staff}
               allPrograms={reviewPrograms}
               allTeams={reviewTeams}
               onSend={send}

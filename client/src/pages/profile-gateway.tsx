@@ -26,7 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { authPersistence } from "@/services/authPersistence";
 
 export default function ProfileGateway() {
@@ -63,21 +63,26 @@ export default function ProfileGateway() {
     },
   });
 
+  const userId = (user as any)?.id;
+
   const { data: players = [], isLoading: playersLoading } = useQuery<any[]>({
-    queryKey: ["/api/account/players"],
+    queryKey: ["/api/account/players", userId],
+    queryFn: () => apiRequest("/api/account/players"),
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
   });
 
   // Fetch all account profiles to detect admin/coach roles across the account
   const { data: accountProfiles = [], isLoading: profilesLoading } = useQuery<any[]>({
-    queryKey: ["/api/account/profiles"],
+    queryKey: ["/api/account/profiles", userId],
+    queryFn: () => apiRequest("/api/account/profiles"),
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: enrollments = [] } = useQuery<any[]>({
-    queryKey: ["/api/enrollments"],
+    queryKey: ["/api/enrollments", userId],
+    queryFn: () => apiRequest("/api/enrollments"),
     enabled: !!user,
   });
 
@@ -113,6 +118,8 @@ export default function ProfileGateway() {
       const data = await apiRequest("/api/auth/switch-profile", { method: "POST", data: { role } });
       if (data.token) {
         await authPersistence.setToken(data.token);
+        queryClient.invalidateQueries({ queryKey: ["/api/account/profiles"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
         setSwitching(false);
         return true;
       }
@@ -176,6 +183,7 @@ export default function ProfileGateway() {
     localStorage.removeItem('selectedPlayerId');
     localStorage.removeItem('viewingAsParent');
     localStorage.removeItem('lastViewedProfileType');
+    queryClient.clear();
     // Use full page reload to clear all React state
     window.location.href = '/';
   };

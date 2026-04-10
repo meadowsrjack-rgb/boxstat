@@ -5,7 +5,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -919,6 +919,21 @@ export function CoachSecurityPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+
+  const handleSignOut = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (e) {
+      // Continue with logout even if API fails
+    }
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('selectedPlayerId');
+    localStorage.removeItem('viewingAsParent');
+    localStorage.removeItem('lastViewedProfileType');
+    queryClient.clear();
+    window.location.href = '/';
+  };
+
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -1169,7 +1184,7 @@ export function CoachSecurityPage() {
                 <Button
                   variant="outline"
                   className="text-red-600 hover:text-red-800 border-red-300 hover:bg-red-50"
-                  onClick={() => window.location.href = "/api/logout"}
+                  onClick={handleSignOut}
                   data-testid="button-logout"
                 >
                   Log Out

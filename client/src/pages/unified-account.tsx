@@ -2026,15 +2026,16 @@ export default function UnifiedAccount() {
   const handleSignOut = async () => {
     try {
       await apiRequest("POST", "/api/auth/logout", {});
-      toast({ title: "Signed out successfully" });
-      setLocation("/");
     } catch (error) {
-      toast({ 
-        title: "Sign out failed", 
-        description: "Please try again",
-        variant: "destructive" 
-      });
+      // Continue with logout even if API fails
     }
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
+    localStorage.removeItem('selectedPlayerId');
+    localStorage.removeItem('viewingAsParent');
+    localStorage.removeItem('lastViewedProfileType');
+    queryClient.clear();
+    window.location.href = "/";
   };
 
   if (playersLoading) {

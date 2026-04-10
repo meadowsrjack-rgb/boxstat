@@ -7,6 +7,7 @@ import { useLocation } from "wouter";
 interface Enrollment {
   id: number;
   programId: string;
+  profileId: string | null;
   endDate: string | null;
   status: string;
 }
@@ -14,6 +15,12 @@ interface Enrollment {
 interface Program {
   id: string;
   name: string;
+}
+
+interface Player {
+  id: string;
+  firstName: string;
+  lastName: string;
 }
 
 function daysUntil(dateStr: string): number {
@@ -33,7 +40,12 @@ export function EnrollmentExpiryBanner() {
     queryKey: ["/api/programs"],
   });
 
+  const { data: players = [] } = useQuery<Player[]>({
+    queryKey: ["/api/account/players"],
+  });
+
   const programMap = Object.fromEntries(programs.map((p) => [p.id, p.name]));
+  const playerMap = Object.fromEntries(players.map((p) => [p.id, `${p.firstName} ${p.lastName}`.trim()]));
 
   const expiringSoon = enrollments.filter((e) => {
     if (e.status !== "active" || !e.endDate) return false;
@@ -48,6 +60,8 @@ export function EnrollmentExpiryBanner() {
       {expiringSoon.map((e) => {
         const days = daysUntil(e.endDate!);
         const programName = programMap[e.programId] || "your program";
+        const playerName = e.profileId ? playerMap[e.profileId] : null;
+        const subject = playerName ? `${playerName}'s enrollment` : "Your enrollment";
         return (
           <Alert
             key={e.id}
@@ -57,10 +71,10 @@ export function EnrollmentExpiryBanner() {
             <AlertDescription className="flex items-center justify-between gap-4">
               <span className="text-amber-800 text-sm">
                 {days === 0
-                  ? `Your enrollment in ${programName} expires today.`
+                  ? `${subject} in ${programName} expires today.`
                   : days === 1
-                  ? `Your enrollment in ${programName} ends tomorrow.`
-                  : `Your enrollment in ${programName} ends in ${days} day${days !== 1 ? "s" : ""}.`}{" "}
+                  ? `${subject} in ${programName} ends tomorrow.`
+                  : `${subject} in ${programName} ends in ${days} days.`}{" "}
                 Re-enroll through the Payments tab to avoid unenrollment.
               </span>
               <Button

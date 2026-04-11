@@ -849,7 +849,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="events">
-            <EventsTab events={events} teams={teams} programs={programs} organization={organization} currentUser={currentUser} users={users} initialEventId={deepLinkEventId} onDeepLinkHandled={() => setDeepLinkEventId(null)} />
+            <EventsTab events={events} teams={teams} programs={programs} organization={organization} currentUser={currentUser} users={users} facilities={facilities} initialEventId={deepLinkEventId} onDeepLinkHandled={() => setDeepLinkEventId(null)} />
           </TabsContent>
 
           <TabsContent value="awards">
@@ -5219,7 +5219,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
 }
 
 // Events Tab - Full Implementation with Calendar and List View
-function EventsTab({ events, teams, programs, organization, currentUser, users, initialEventId, onDeepLinkHandled }: any) {
+function EventsTab({ events, teams, programs, organization, currentUser, users, facilities, initialEventId, onDeepLinkHandled }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);

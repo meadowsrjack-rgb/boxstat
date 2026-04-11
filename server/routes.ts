@@ -8340,15 +8340,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // If context=parent is passed, aggregate events for linked players instead
     if (role === 'admin' && !childProfileId && context !== 'parent') {
       console.log('  Admin viewing admin dashboard - showing all events');
-      return res.json(allEvents);
+      return res.json(await enrichEventsWithFacility(allEvents));
     }
     
-    // Parent-role users who also have an admin profile should see all events when not in a parent context
     if (role !== 'admin' && !childProfileId && context !== 'parent') {
       const isAdmin = await hasAdminProfile(userId, organizationId);
       if (isAdmin) {
         console.log('  Parent role with admin profile viewing admin dashboard - showing all events');
-        return res.json(allEvents);
+        return res.json(await enrichEventsWithFacility(allEvents));
       }
     }
     
@@ -8394,7 +8393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`  Aggregated ${aggregatedEvents.length} unique events for ${linkedPlayers.length} players`);
       console.log('🔍 EVENT FILTERING DEBUG - End\n');
-      return res.json(aggregatedEvents);
+      return res.json(await enrichEventsWithFacility(aggregatedEvents));
     }
     
     // Verify user exists to prevent data leaks

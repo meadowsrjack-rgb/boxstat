@@ -124,6 +124,12 @@ export class NotificationScheduler {
       scheduled: false
     });
 
+    const missingLocationJob = cron.schedule('0 8 * * *', async () => {
+      await this.processMissingLocationAlerts();
+    }, {
+      scheduled: false
+    });
+
     this.jobs.set('eventReminders', eventReminderJob);
     this.jobs.set('checkinAvailable', checkinAvailableJob);
     this.jobs.set('rsvpClosing', rsvpClosingJob);
@@ -131,6 +137,7 @@ export class NotificationScheduler {
     this.jobs.set('abandonedCartReminders', abandonedCartRemindersJob);
     this.jobs.set('enrollmentExpiry', enrollmentExpiryJob);
     this.jobs.set('enrollmentExpiryWarnings', enrollmentExpiryWarningsJob);
+    this.jobs.set('missingLocationAlerts', missingLocationJob);
 
     // Start all jobs
     this.jobs.forEach((job, name) => {
@@ -1073,6 +1080,93 @@ export class NotificationScheduler {
       }
     } catch (error) {
       console.error('[Enrollment Expiry Warnings] Error:', error);
+    }
+  }
+
+  private async processMissingLocationAlerts() {
+    try {
+      console.log('[Missing Location] Processing missing location alerts...');
+      const now = new Date();
+      const fortyEightHoursOut = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+      const twentyFourHoursOut = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+      const upcomingEvents = await storage.getUpcomingEventsWithinHours(48);
+
+      const missingLocation = upcomingEvents.filter((e: Event) => {
+        if (e.status !== 'active' || !e.isActive) return false;
+        const hasLocation = e.location && String(e.location).trim().length > 0;
+        const hasFacility = !!(e as any).facilityId;
+        const hasMeetingLink = (e as any).meetingLink && String((e as any).meetingLink).trim().length > 0;
+        return !hasLocation && !hasFacility && !hasMeetingLink;
+      });
+
+      if (missingLocation.length === 0) {
+        console.log('[Missing Location] No events missing location found');
+        return;
+      }
+
+      console.log(`[Missing Location] Found ${missingLocation.length} events missing location`);
+
+      const orgGroups = new Map<string, Event[]>();
+      for (const event of missingLocation) {
+        const orgId = (event as any).organizationId || 'default-org';
+        if (!orgGroups.has(orgId)) orgGroups.set(orgId, []);
+        orgGroups.get(orgId)!.push(event);
+      }
+
+      for (const [orgId, orgEvents] of orgGroups) {
+        const adminIds = await getOrgAdminIds(orgId);
+        if (adminIds.length === 0) continue;
+
+        const urgentEvents = orgEvents.filter(e => new Date(e.startTime) <= twentyFourHoursOut);
+        const soonEvents = orgEvents.filter(e => new Date(e.startTime) > twentyFourHoursOut);
+
+        for (const adminId of adminIds) {
+          if (urgentEvents.length > 0) {
+            const alreadySent = await notificationService.hasRecentNotification(
+              adminId, 'missing_location_urgent', 'missing_location', 720
+            );
+            if (!alreadySent) {
+              const titles = urgentEvents.slice(0, 3).map(e => e.title).join(', ');
+              const extra = urgentEvents.length > 3 ? ` +${urgentEvents.length - 3} more` : '';
+              await pushNotifications.notifyAllAdmins(
+                storage,
+                '📍 Events Need Location (< 24h)',
+                `${urgentEvents.length} event${urgentEvents.length > 1 ? 's' : ''} within 24 hours still need a location: ${titles}${extra}`,
+                orgId,
+                '/admin-dashboard?tab=events'
+              );
+              break;
+            }
+          }
+
+          if (soonEvents.length > 0) {
+            const alreadySent = await notificationService.hasRecentNotification(
+              adminId, 'missing_location_reminder', 'missing_location', 720
+            );
+            if (!alreadySent) {
+              const titles = soonEvents.slice(0, 3).map(e => e.title).join(', ');
+              const extra = soonEvents.length > 3 ? ` +${soonEvents.length - 3} more` : '';
+              await storage.createNotification({
+                organizationId: orgId,
+                title: '📍 Events Need Location Assigned',
+                message: `${soonEvents.length} upcoming event${soonEvents.length > 1 ? 's' : ''} need a location: ${titles}${extra}`,
+                types: ['notification'],
+                recipientTarget: 'users',
+                recipientUserIds: adminIds,
+                deliveryChannels: ['in_app'],
+                sentBy: 'system',
+                status: 'sent',
+              });
+              break;
+            }
+          }
+        }
+      }
+
+      console.log('[Missing Location] Processing complete');
+    } catch (error) {
+      console.error('[Missing Location] Error processing missing location alerts:', error);
     }
   }
 

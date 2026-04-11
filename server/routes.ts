@@ -8299,6 +8299,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // 4. Upcoming events missing location (next 7 days, active, no location/facility/meetingLink)
+      const now = new Date();
+      const sevenDaysOut = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const missingLocationEvents = orgEvents.filter((e: any) => {
+        if (e.status !== 'active' || !e.isActive) return false;
+        const start = new Date(e.startTime);
+        if (start <= now || start > sevenDaysOut) return false;
+        const hasLocation = e.location && e.location.trim().length > 0;
+        const hasFacility = !!e.facilityId;
+        const hasMeetingLink = e.meetingLink && e.meetingLink.trim().length > 0;
+        return !hasLocation && !hasFacility && !hasMeetingLink;
+      });
+      if (missingLocationEvents.length > 0) {
+        alerts.push({
+          type: 'missing_location',
+          count: missingLocationEvents.length,
+          message: `${missingLocationEvents.length} upcoming event${missingLocationEvents.length > 1 ? 's' : ''} need${missingLocationEvents.length === 1 ? 's' : ''} a location assigned`,
+          details: missingLocationEvents.slice(0, 10).map((e: any) => ({
+            eventId: e.id,
+            title: e.title,
+            startTime: e.startTime,
+            eventType: e.eventType,
+          })),
+        });
+      }
+
       res.json(alerts);
     } catch (error: any) {
       console.error('Error fetching admin alerts:', error);

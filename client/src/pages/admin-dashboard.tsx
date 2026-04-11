@@ -100,6 +100,7 @@ import {
   Crown,
   Tent,
   MapPin,
+  MapPinOff,
   Info,
   Hash,
   Dumbbell,
@@ -549,6 +550,7 @@ export default function AdminDashboard() {
                 low_credits: { icon: CreditCard, bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-800', tab: 'programs' },
                 payment_overdue: { icon: DollarSign, bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-800', tab: 'users' },
                 pending_requests: { icon: Clock, bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', tab: 'events' },
+                missing_location: { icon: MapPinOff, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800', tab: 'events' },
               };
               const config = alertConfig[alert.type] || { icon: AlertCircle, bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-800', tab: 'overview' };
               const Icon = config.icon;
@@ -603,6 +605,12 @@ export default function AdminDashboard() {
                           {alert.type === 'payment_overdue' && alert.details?.length > 0 && (
                             <p className="text-xs text-red-600 mt-0.5 truncate">
                               {alert.details.slice(0, 3).map((d: any) => d.name).join(', ')}
+                              {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
+                            </p>
+                          )}
+                          {alert.type === 'missing_location' && alert.details?.length > 0 && (
+                            <p className="text-xs text-amber-600 mt-0.5 truncate">
+                              {alert.details.slice(0, 3).map((d: any) => d.title).join(', ')}
                               {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
                             </p>
                           )}

@@ -1092,10 +1092,9 @@ export class NotificationScheduler {
 
       const missingLocation = upcomingEvents.filter((e: Event) => {
         if (e.status !== 'active' || !e.isActive) return false;
-        const hasLocation = e.location && String(e.location).trim().length > 0;
-        const hasFacility = !!(e as any).facilityId;
-        const hasMeetingLink = (e as any).meetingLink && String((e as any).meetingLink).trim().length > 0;
-        return !hasLocation && !hasFacility && !hasMeetingLink;
+        const hasLocation = e.location && e.location.trim().length > 0;
+        const hasFacility = !!e.facilityId;
+        return !hasLocation && !hasFacility;
       });
 
       if (missingLocation.length === 0) {
@@ -1107,7 +1106,7 @@ export class NotificationScheduler {
 
       const orgGroups = new Map<string, Event[]>();
       for (const event of missingLocation) {
-        const orgId = (event as any).organizationId || 'default-org';
+        const orgId = event.organizationId || 'default-org';
         if (!orgGroups.has(orgId)) orgGroups.set(orgId, []);
         orgGroups.get(orgId)!.push(event);
       }
@@ -1117,30 +1116,39 @@ export class NotificationScheduler {
         if (adminIds.length === 0) continue;
 
         const urgentEvents = orgEvents.filter(e => new Date(e.startTime) <= twentyFourHoursOut);
-        const allTitles = orgEvents.slice(0, 3).map(e => e.title).join(', ');
-        const allExtra = orgEvents.length > 3 ? ` +${orgEvents.length - 3} more` : '';
-
-        const channels: ('in_app' | 'push')[] = urgentEvents.length > 0
-          ? ['in_app', 'push']
-          : ['in_app'];
-
-        const titleText = urgentEvents.length > 0
-          ? `📍 ${urgentEvents.length} Event${urgentEvents.length > 1 ? 's' : ''} Need Location (< 24h)`
-          : '📍 Events Need Location Assigned';
 
         try {
+          const allTitles = orgEvents.slice(0, 3).map(e => e.title).join(', ');
+          const allExtra = orgEvents.length > 3 ? ` +${orgEvents.length - 3} more` : '';
           await adminNotificationService.createNotification({
             organizationId: orgId,
             types: ['notification'],
-            title: titleText,
+            title: '📍 Events Need Location Assigned',
             message: `${orgEvents.length} upcoming event${orgEvents.length > 1 ? 's' : ''} need a location: ${allTitles}${allExtra}`,
             recipientTarget: 'users',
             recipientUserIds: adminIds,
-            deliveryChannels: channels,
+            deliveryChannels: ['in_app'],
             sentBy: 'system',
             status: 'sent',
           }, { url: '/admin-dashboard?tab=events' });
-          console.log(`[Missing Location] Notified ${adminIds.length} admins for org ${orgId} (${channels.join(', ')})`);
+
+          if (urgentEvents.length > 0) {
+            const urgentTitles = urgentEvents.slice(0, 3).map(e => e.title).join(', ');
+            const urgentExtra = urgentEvents.length > 3 ? ` +${urgentEvents.length - 3} more` : '';
+            await adminNotificationService.createNotification({
+              organizationId: orgId,
+              types: ['notification'],
+              title: `📍 ${urgentEvents.length} Event${urgentEvents.length > 1 ? 's' : ''} Need Location (< 24h)`,
+              message: `${urgentEvents.length} event${urgentEvents.length > 1 ? 's' : ''} within 24 hours still need a location: ${urgentTitles}${urgentExtra}`,
+              recipientTarget: 'users',
+              recipientUserIds: adminIds,
+              deliveryChannels: ['in_app', 'push'],
+              sentBy: 'system',
+              status: 'sent',
+            }, { url: '/admin-dashboard?tab=events' });
+          }
+
+          console.log(`[Missing Location] Notified ${adminIds.length} admins for org ${orgId}${urgentEvents.length > 0 ? ' (with push for urgent)' : ''}`);
         } catch (notifError) {
           console.error(`[Missing Location] Failed to notify admins for org ${orgId}:`, notifError);
         }

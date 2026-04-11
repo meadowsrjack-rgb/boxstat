@@ -1471,6 +1471,7 @@ export interface Event {
   proxyCheckinRoles?: string[];
   playerRsvpEnabled?: boolean; // If false, only parent/guardian can RSVP for players
   timezone?: string; // IANA timezone identifier (e.g., "America/Los_Angeles")
+  meetingLink?: string | null;
   facilityId?: number | null;
   courtName?: string | null;
   facilityName?: string;

@@ -1094,7 +1094,8 @@ export class NotificationScheduler {
         if (e.status !== 'active' || !e.isActive) return false;
         const hasLocation = e.location && e.location.trim().length > 0;
         const hasFacility = !!e.facilityId;
-        return !hasLocation && !hasFacility;
+        const hasMeetingLink = e.meetingLink && e.meetingLink.trim().length > 0;
+        return !hasLocation && !hasFacility && !hasMeetingLink;
       });
 
       if (missingLocation.length === 0) {

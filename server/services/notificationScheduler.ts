@@ -1121,35 +1121,25 @@ export class NotificationScheduler {
         try {
           const allTitles = orgEvents.slice(0, 3).map(e => e.title).join(', ');
           const allExtra = orgEvents.length > 3 ? ` +${orgEvents.length - 3} more` : '';
+          const hasUrgent = urgentEvents.length > 0;
+
+          const titleText = hasUrgent
+            ? `📍 ${urgentEvents.length} Event${urgentEvents.length > 1 ? 's' : ''} Need Location (< 24h)`
+            : '📍 Events Need Location Assigned';
+
           await adminNotificationService.createNotification({
             organizationId: orgId,
             types: ['notification'],
-            title: '📍 Events Need Location Assigned',
+            title: titleText,
             message: `${orgEvents.length} upcoming event${orgEvents.length > 1 ? 's' : ''} need a location: ${allTitles}${allExtra}`,
             recipientTarget: 'users',
             recipientUserIds: adminIds,
-            deliveryChannels: ['in_app'],
+            deliveryChannels: hasUrgent ? ['in_app', 'push'] : ['in_app'],
             sentBy: 'system',
             status: 'sent',
           }, { url: '/admin-dashboard?tab=events' });
 
-          if (urgentEvents.length > 0) {
-            const urgentTitles = urgentEvents.slice(0, 3).map(e => e.title).join(', ');
-            const urgentExtra = urgentEvents.length > 3 ? ` +${urgentEvents.length - 3} more` : '';
-            await adminNotificationService.createNotification({
-              organizationId: orgId,
-              types: ['notification'],
-              title: `📍 ${urgentEvents.length} Event${urgentEvents.length > 1 ? 's' : ''} Need Location (< 24h)`,
-              message: `${urgentEvents.length} event${urgentEvents.length > 1 ? 's' : ''} within 24 hours still need a location: ${urgentTitles}${urgentExtra}`,
-              recipientTarget: 'users',
-              recipientUserIds: adminIds,
-              deliveryChannels: ['in_app', 'push'],
-              sentBy: 'system',
-              status: 'sent',
-            }, { url: '/admin-dashboard?tab=events' });
-          }
-
-          console.log(`[Missing Location] Notified ${adminIds.length} admins for org ${orgId}${urgentEvents.length > 0 ? ' (with push for urgent)' : ''}`);
+          console.log(`[Missing Location] Notified ${adminIds.length} admins for org ${orgId}${hasUrgent ? ' (with push for urgent)' : ''}`);
         } catch (notifError) {
           console.error(`[Missing Location] Failed to notify admins for org ${orgId}:`, notifError);
         }

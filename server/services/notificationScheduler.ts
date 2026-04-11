@@ -1086,9 +1086,7 @@ export class NotificationScheduler {
   private async processMissingLocationAlerts() {
     try {
       console.log('[Missing Location] Processing missing location alerts...');
-      const now = new Date();
-      const fortyEightHoursOut = new Date(now.getTime() + 48 * 60 * 60 * 1000);
-      const twentyFourHoursOut = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const twentyFourHoursOut = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
       const upcomingEvents = await storage.getUpcomingEventsWithinHours(48);
 
@@ -1119,48 +1117,32 @@ export class NotificationScheduler {
         if (adminIds.length === 0) continue;
 
         const urgentEvents = orgEvents.filter(e => new Date(e.startTime) <= twentyFourHoursOut);
-        const soonEvents = orgEvents.filter(e => new Date(e.startTime) > twentyFourHoursOut);
+        const allTitles = orgEvents.slice(0, 3).map(e => e.title).join(', ');
+        const allExtra = orgEvents.length > 3 ? ` +${orgEvents.length - 3} more` : '';
 
-        for (const adminId of adminIds) {
-          if (urgentEvents.length > 0) {
-            const alreadySent = await notificationService.hasRecentNotification(
-              adminId, 'missing_location_urgent', 'missing_location', 720
-            );
-            if (!alreadySent) {
-              const titles = urgentEvents.slice(0, 3).map(e => e.title).join(', ');
-              const extra = urgentEvents.length > 3 ? ` +${urgentEvents.length - 3} more` : '';
-              await pushNotifications.notifyAllAdmins(
-                storage,
-                '📍 Events Need Location (< 24h)',
-                `${urgentEvents.length} event${urgentEvents.length > 1 ? 's' : ''} within 24 hours still need a location: ${titles}${extra}`,
-                orgId,
-                '/admin-dashboard?tab=events'
-              );
-              break;
-            }
-          }
+        const channels: ('in_app' | 'push')[] = urgentEvents.length > 0
+          ? ['in_app', 'push']
+          : ['in_app'];
 
-          if (soonEvents.length > 0) {
-            const alreadySent = await notificationService.hasRecentNotification(
-              adminId, 'missing_location_reminder', 'missing_location', 720
-            );
-            if (!alreadySent) {
-              const titles = soonEvents.slice(0, 3).map(e => e.title).join(', ');
-              const extra = soonEvents.length > 3 ? ` +${soonEvents.length - 3} more` : '';
-              await storage.createNotification({
-                organizationId: orgId,
-                title: '📍 Events Need Location Assigned',
-                message: `${soonEvents.length} upcoming event${soonEvents.length > 1 ? 's' : ''} need a location: ${titles}${extra}`,
-                types: ['notification'],
-                recipientTarget: 'users',
-                recipientUserIds: adminIds,
-                deliveryChannels: ['in_app'],
-                sentBy: 'system',
-                status: 'sent',
-              });
-              break;
-            }
-          }
+        const titleText = urgentEvents.length > 0
+          ? `📍 ${urgentEvents.length} Event${urgentEvents.length > 1 ? 's' : ''} Need Location (< 24h)`
+          : '📍 Events Need Location Assigned';
+
+        try {
+          await adminNotificationService.createNotification({
+            organizationId: orgId,
+            types: ['notification'],
+            title: titleText,
+            message: `${orgEvents.length} upcoming event${orgEvents.length > 1 ? 's' : ''} need a location: ${allTitles}${allExtra}`,
+            recipientTarget: 'users',
+            recipientUserIds: adminIds,
+            deliveryChannels: channels,
+            sentBy: 'system',
+            status: 'sent',
+          }, { url: '/admin-dashboard?tab=events' });
+          console.log(`[Missing Location] Notified ${adminIds.length} admins for org ${orgId} (${channels.join(', ')})`);
+        } catch (notifError) {
+          console.error(`[Missing Location] Failed to notify admins for org ${orgId}:`, notifError);
         }
       }
 

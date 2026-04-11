@@ -739,40 +739,32 @@ export default function CoachDashboard() {
               </div>
 
               {/* Calendar + Filter Panel */}
-              <div className="md:flex md:gap-4">
-                <div className="hidden md:block w-48 flex-shrink-0 px-2">
-                  <FiltersBar
-                    events={parsedCoachEvents}
-                    filters={coachUserPrefs}
-                    onFiltersChange={setCoachUserPrefs}
-                  />
+              <div>
+                <div className="mb-3">
+                  <details className="bg-white rounded-xl shadow-sm border">
+                    <summary className="px-4 py-2 text-sm font-medium text-gray-700 cursor-pointer select-none">Event Filters</summary>
+                    <div className="px-4 pb-3">
+                      <FiltersBar
+                        events={parsedCoachEvents}
+                        filters={coachUserPrefs}
+                        onFiltersChange={setCoachUserPrefs}
+                        horizontal
+                      />
+                    </div>
+                  </details>
                 </div>
-                <div className="flex-1">
-                  <div className="md:hidden px-6 mb-3">
-                    <details className="bg-white rounded-xl shadow-sm">
-                      <summary className="px-4 py-2 text-sm font-medium text-gray-700 cursor-pointer select-none">Event Filters</summary>
-                      <div className="px-4 pb-3">
-                        <FiltersBar
-                          events={parsedCoachEvents}
-                          filters={coachUserPrefs}
-                          onFiltersChange={setCoachUserPrefs}
-                        />
-                      </div>
-                    </details>
-                  </div>
-                  <PlayerCalendar 
-                    events={visibleCoachEvents.map(convertToCalendarEvent)} 
-                    currentUser={{ 
-                      id: currentUser.id,
-                      email: currentUser.email || "",
-                      firstName: currentUser.firstName || undefined,
-                      lastName: currentUser.lastName || undefined
-                    }}
-                    selectedDate={selectedDate}
-                    onDateSelect={setSelectedDate}
-                    eventTypeColors={coachUserPrefs.eventTypeColors || {}}
-                  />
-                </div>
+                <PlayerCalendar 
+                  events={visibleCoachEvents.map(convertToCalendarEvent)} 
+                  currentUser={{ 
+                    id: currentUser.id,
+                    email: currentUser.email || "",
+                    firstName: currentUser.firstName || undefined,
+                    lastName: currentUser.lastName || undefined
+                  }}
+                  selectedDate={selectedDate}
+                  onDateSelect={setSelectedDate}
+                  eventTypeColors={coachUserPrefs.eventTypeColors || {}}
+                />
               </div>
             </div>
           )}

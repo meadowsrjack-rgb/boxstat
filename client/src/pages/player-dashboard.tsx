@@ -1173,42 +1173,32 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               </div>
 
               {/* Calendar + Filter Panel */}
-              <div className="md:flex md:gap-4">
-                {/* Filter Sidebar */}
-                <div className="hidden md:block w-48 flex-shrink-0 px-2">
-                  <FiltersBar
-                    events={parsedRelevantEvents}
-                    filters={userPrefs}
-                    onFiltersChange={setUserPrefs}
-                  />
+              <div>
+                <div className="mb-3">
+                  <details className="bg-white rounded-xl shadow-sm border">
+                    <summary className="px-4 py-2 text-sm font-medium text-gray-700 cursor-pointer select-none">Event Filters</summary>
+                    <div className="px-4 pb-3">
+                      <FiltersBar
+                        events={parsedRelevantEvents}
+                        filters={userPrefs}
+                        onFiltersChange={setUserPrefs}
+                        horizontal
+                      />
+                    </div>
+                  </details>
                 </div>
-                <div className="flex-1">
-                  {/* Mobile filter: collapsible */}
-                  <div className="md:hidden px-6 mb-3">
-                    <details className="bg-white rounded-xl shadow-sm">
-                      <summary className="px-4 py-2 text-sm font-medium text-gray-700 cursor-pointer select-none">Event Filters</summary>
-                      <div className="px-4 pb-3">
-                        <FiltersBar
-                          events={parsedRelevantEvents}
-                          filters={userPrefs}
-                          onFiltersChange={setUserPrefs}
-                        />
-                      </div>
-                    </details>
-                  </div>
-                  <PlayerCalendar 
-                    events={visibleEvents.map(convertEventToUypEvent)} 
-                    currentUser={{
-                      id: currentUser.id,
-                      email: currentUser.email || '',
-                      firstName: currentUser.firstName || undefined,
-                      lastName: currentUser.lastName || undefined
-                    }} 
-                    selectedDate={selectedDate}
-                    onDateSelect={setSelectedDate}
-                    eventTypeColors={userPrefs.eventTypeColors || {}}
-                  />
-                </div>
+                <PlayerCalendar 
+                  events={visibleEvents.map(convertEventToUypEvent)} 
+                  currentUser={{
+                    id: currentUser.id,
+                    email: currentUser.email || '',
+                    firstName: currentUser.firstName || undefined,
+                    lastName: currentUser.lastName || undefined
+                  }} 
+                  selectedDate={selectedDate}
+                  onDateSelect={setSelectedDate}
+                  eventTypeColors={userPrefs.eventTypeColors || {}}
+                />
               </div>
             </div>
           )}

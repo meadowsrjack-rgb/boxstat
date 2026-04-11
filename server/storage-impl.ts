@@ -4656,6 +4656,10 @@ class DatabaseStorage implements IStorage {
       // Schedule request fields
       scheduleRequestEnabled: updates.scheduleRequestEnabled,
       sessionLengthMinutes: updates.sessionLengthMinutes,
+      // Visibility and payment fields
+      visibility: updates.visibility,
+      allowInstallments: updates.allowInstallments,
+      payInFullDiscount: updates.payInFullDiscount,
     };
 
     // Remove undefined values

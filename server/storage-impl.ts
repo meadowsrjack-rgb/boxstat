@@ -3822,6 +3822,8 @@ class DatabaseStorage implements IStorage {
       requestedByUserId: (event as any).requestedByUserId ?? undefined,
       enrollmentId: (event as any).enrollmentId ?? undefined,
       programId: (event as any).programId ?? undefined,
+      facilityId: (event as any).facilityId ?? null,
+      courtName: (event as any).courtName ?? null,
     };
 
     const results = await db.insert(schema.events).values(dbEvent).returning();

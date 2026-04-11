@@ -2307,12 +2307,14 @@ export default function UnifiedAccount() {
                                   })}
                                 </span>
                               </div>
+                              {(event.location || event.courtName) && (
                               <div className="flex items-center gap-1">
                                 <MapPin className="w-3.5 h-3.5" />
-                                <span className="truncate max-w-[150px]" data-testid={`event-location-${event.id}`}>
-                                  {event.location}
+                                <span className="truncate max-w-[200px]" data-testid={`event-location-${event.id}`}>
+                                  {event.courtName ? `${event.courtName}${event.location ? ` · ${event.location}` : ''}` : event.location}
                                 </span>
                               </div>
+                              )}
                             </div>
                           </div>
                         </div>

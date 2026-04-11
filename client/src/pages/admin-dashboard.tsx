@@ -362,6 +362,11 @@ export default function AdminDashboard() {
     queryKey: ["/api/events"],
   });
 
+  // Fetch facilities for location picker
+  const { data: facilities = [] } = useQuery<any[]>({
+    queryKey: ["/api/facilities"],
+  });
+
   // Fetch programs
   const { data: programs = [], isLoading: programsLoading } = useQuery<any[]>({
     queryKey: ["/api/programs"],
@@ -5467,6 +5472,8 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
     longitude: z.number().optional(),
     description: z.string().optional(),
     targetType: z.enum(["all", "user", "team", "division", "program", "role"]),
+    facilityId: z.number().nullable().optional(),
+    courtName: z.string().optional(),
   });
 
   const form = useForm({
@@ -5482,6 +5489,8 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
       longitude: undefined,
       description: "",
       targetType: "all" as const,
+      facilityId: null,
+      courtName: "",
     },
   });
 
@@ -6146,6 +6155,54 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                         </div>
 
                         {locationType === 'physical' ? (
+                          <>
+                          {facilities.length > 0 && (
+                            <div className="space-y-2">
+                              <label className="text-xs font-medium text-muted-foreground">Facility</label>
+                              <Select
+                                value={form.getValues("facilityId") ? String(form.getValues("facilityId")) : "none"}
+                                onValueChange={(value) => {
+                                  if (value === "none") {
+                                    form.setValue("facilityId", null as any);
+                                    form.setValue("location", "");
+                                    form.setValue("latitude", undefined as any);
+                                    form.setValue("longitude", undefined as any);
+                                  } else {
+                                    const fac = facilities.find((f: any) => String(f.id) === value);
+                                    if (fac) {
+                                      form.setValue("facilityId", fac.id);
+                                      form.setValue("location", fac.address);
+                                      form.setValue("latitude", fac.latitude);
+                                      form.setValue("longitude", fac.longitude);
+                                    }
+                                  }
+                                }}
+                              >
+                                <SelectTrigger data-testid="select-event-facility">
+                                  <SelectValue placeholder="Select a saved facility" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">None (enter manually)</SelectItem>
+                                  {facilities.filter((f: any) => f.isActive !== false).map((f: any) => (
+                                    <SelectItem key={f.id} value={String(f.id)}>
+                                      {f.name} — {f.address}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                          {form.watch("facilityId") && (
+                            <div className="space-y-2">
+                              <label className="text-xs font-medium text-muted-foreground">Court / Field</label>
+                              <Input
+                                value={form.watch("courtName") || ""}
+                                onChange={(e) => form.setValue("courtName", e.target.value)}
+                                placeholder="e.g. Court 3, Gym B, Field A"
+                                data-testid="input-event-court"
+                              />
+                            </div>
+                          )}
                           <FormField
                             control={form.control}
                             name="location"
@@ -6158,16 +6215,20 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                       field.onChange(location.name);
                                       form.setValue("latitude", location.lat ?? undefined as any);
                                       form.setValue("longitude", location.lng ?? undefined as any);
+                                      form.setValue("facilityId", null as any);
                                     }}
                                     placeholder="Search for a venue or address..."
                                     className="w-full"
                                   />
                                 </FormControl>
-                                <p className="text-xs text-muted-foreground">Search and select a location — enables GPS check-in geo-fencing</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {form.watch("facilityId") ? "Facility address auto-filled. Override with manual search if needed." : "Search and select a location — enables GPS check-in geo-fencing"}
+                                </p>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
+                          </>
                         ) : (
                           <FormField
                             control={form.control}
@@ -6668,6 +6729,53 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                         </div>
                         {editLocationType === 'physical' ? (
                           <>
+                            {facilities.length > 0 && (
+                              <div className="space-y-2">
+                                <label className="text-xs font-medium text-muted-foreground">Facility</label>
+                                <Select
+                                  value={editingEvent.facilityId ? String(editingEvent.facilityId) : "none"}
+                                  onValueChange={(value) => {
+                                    if (value === "none") {
+                                      setEditingEvent({...editingEvent, facilityId: null, location: '', latitude: undefined, longitude: undefined});
+                                    } else {
+                                      const fac = facilities.find((f: any) => String(f.id) === value);
+                                      if (fac) {
+                                        setEditingEvent({
+                                          ...editingEvent,
+                                          facilityId: fac.id,
+                                          location: fac.address,
+                                          latitude: fac.latitude,
+                                          longitude: fac.longitude,
+                                        });
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger data-testid="select-edit-event-facility">
+                                    <SelectValue placeholder="Select a saved facility" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">None (enter manually)</SelectItem>
+                                    {facilities.filter((f: any) => f.isActive !== false).map((f: any) => (
+                                      <SelectItem key={f.id} value={String(f.id)}>
+                                        {f.name} — {f.address}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                            {editingEvent.facilityId && (
+                              <div className="space-y-2">
+                                <label className="text-xs font-medium text-muted-foreground">Court / Field</label>
+                                <Input
+                                  value={editingEvent.courtName || ""}
+                                  onChange={(e) => setEditingEvent({...editingEvent, courtName: e.target.value})}
+                                  placeholder="e.g. Court 3, Gym B, Field A"
+                                  data-testid="input-edit-event-court"
+                                />
+                              </div>
+                            )}
                             <LocationSearch
                               value={editingEvent.location === 'Online' ? '' : (editingEvent.location || "")}
                               onLocationSelect={(location) => {
@@ -6675,13 +6783,16 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                   ...editingEvent,
                                   location: location.name,
                                   latitude: location.lat ?? undefined,
-                                  longitude: location.lng ?? undefined
+                                  longitude: location.lng ?? undefined,
+                                  facilityId: null,
                                 });
                               }}
                               placeholder="Search for a venue or address..."
                               className="w-full"
                             />
-                            <p className="text-xs text-muted-foreground">Search and select a location — enables GPS check-in geo-fencing</p>
+                            <p className="text-xs text-muted-foreground">
+                              {editingEvent.facilityId ? "Facility address auto-filled above. Override with manual search if needed." : "Search and select a location — enables GPS check-in geo-fencing"}
+                            </p>
                           </>
                         ) : (
                           <>
@@ -7366,7 +7477,11 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                           Online
                           <ExternalLink className="w-3 h-3" />
                         </a>
-                      ) : event.location || "-"}
+                      ) : (
+                        <span title={[event.courtName, event.location].filter(Boolean).join(' · ')}>
+                          {event.courtName ? `${event.courtName} · ${event.location || ''}` : event.location || "-"}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="px-2 py-1.5 text-xs max-w-[150px] truncate" title={forDisplay}>
                       {forDisplay}

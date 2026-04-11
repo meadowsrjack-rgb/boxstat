@@ -3848,6 +3848,8 @@ class DatabaseStorage implements IStorage {
       playerRsvpEnabled: updates.playerRsvpEnabled,
       timezone: (updates as any).timezone,
       status: updates.status,
+      facilityId: (updates as any).facilityId,
+      courtName: (updates as any).courtName,
     };
 
     if ('scheduleRequestSource' in updates) {

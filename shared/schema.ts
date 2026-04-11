@@ -709,6 +709,8 @@ export const events = pgTable("events", {
   enrollmentId: integer("enrollment_id"), // Enrollment used for credit deduction
   programId: varchar("program_id"), // Program this session belongs to
   scheduleRequestNote: text("schedule_request_note"), // Optional note from parent
+  facilityId: integer("facility_id"), // Links to facilities table for location/court info
+  courtName: varchar("court_name"), // Specific court/field within the facility (e.g. "Court 3")
 });
 
 // Event Targets table (normalized targeting for events)

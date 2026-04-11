@@ -8908,13 +8908,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }, null, 2));
       
       const existingEvent = await storage.getEvent(req.params.id);
-      if (existingEvent?.scheduleRequestSource && existingEvent?.status === 'pending') {
+      const wasScheduleRequest = existingEvent?.scheduleRequestSource && existingEvent?.status === 'pending';
+      if (wasScheduleRequest) {
         req.body.scheduleRequestSource = null;
         req.body.status = 'active';
+      }
+
+      if (req.body.facilityId) {
+        try {
+          const facility = await storage.getFacility(req.body.facilityId);
+          if (facility) {
+            if (!req.body.location) {
+              req.body.location = facility.address;
+            }
+            if (!req.body.latitude && facility.latitude) {
+              req.body.latitude = facility.latitude;
+            }
+            if (!req.body.longitude && facility.longitude) {
+              req.body.longitude = facility.longitude;
+            }
+          }
+        } catch (e) {
+          console.error('Error fetching facility for event:', e);
+        }
       }
       
       const updated = await storage.updateEvent(req.params.id, req.body);
       console.log('📍 UPDATE EVENT - Result playerRsvpEnabled:', updated?.playerRsvpEnabled);
+
+      if (wasScheduleRequest && existingEvent?.requestedByUserId) {
+        try {
+          let locationText = '';
+          if (req.body.facilityId) {
+            const facility = await storage.getFacility(req.body.facilityId);
+            if (facility) {
+              locationText = facility.name;
+              if (req.body.courtName) locationText += ` — ${req.body.courtName}`;
+              locationText += ` (${facility.address})`;
+            }
+          } else if (updated?.location) {
+            locationText = updated.location;
+            if (req.body.courtName) locationText += ` — ${req.body.courtName}`;
+          }
+
+          const startFormatted = updated?.startTime
+            ? new Date(updated.startTime).toLocaleString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric',
+                hour: 'numeric', minute: '2-digit',
+                timeZone: updated.timezone || 'America/Los_Angeles'
+              })
+            : '';
+
+          await storage.createNotification({
+            organizationId: existingEvent.organizationId || 'default-org',
+            userId: existingEvent.requestedByUserId,
+            type: 'schedule_confirmed',
+            title: 'Session Confirmed',
+            message: `Your session "${updated?.title || existingEvent.title}" has been confirmed${startFormatted ? ` for ${startFormatted}` : ''}${locationText ? `. Location: ${locationText}` : ''}.`,
+            data: {
+              eventId: updated?.id || existingEvent.id,
+              facilityId: req.body.facilityId || null,
+              courtName: req.body.courtName || null,
+            },
+          });
+        } catch (e) {
+          console.error('Error sending schedule confirmation notification:', e);
+        }
+      }
+
       res.json(updated);
     } catch (error: any) {
       console.error('Error updating event:', error);

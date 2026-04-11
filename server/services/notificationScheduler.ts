@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import { storage } from '../storage';
 import { notificationService } from './notificationService';
-import { pushNotifications } from './pushNotificationHelper';
+import { pushNotifications, resolveEventParticipants } from './pushNotificationHelper';
 import { analyzePlayerAttendance, getOrgPlayers, getTeamCoachIds, getOrgAdminIds } from './attendanceTracker';
 import type { Event } from '@shared/schema';
 import { db } from '../db';
@@ -15,56 +15,7 @@ export class NotificationScheduler {
   // Helper to get all participants for an event based on assignTo targeting
   // Returns string user IDs (e.g., "1764873247759-aecinrbny")
   private async getEventParticipants(event: Event): Promise<string[]> {
-    const participantIds = new Set<string>();
-    
-    // First check teamId (legacy direct team assignment)
-    if (event.teamId) {
-      const teamMembers = await storage.getUsersByTeam(event.teamId.toString());
-      teamMembers.forEach(m => participantIds.add(String(m.id)));
-    }
-    
-    // Then check assignTo for role-based targeting
-    const assignTo = event.assignTo as { teams?: string[], roles?: string[], users?: string[], programs?: string[], divisions?: string[] } | null;
-    
-    if (assignTo) {
-      // Team targeting
-      if (assignTo.teams && assignTo.teams.length > 0) {
-        for (const teamId of assignTo.teams) {
-          const teamMembers = await storage.getUsersByTeam(teamId);
-          teamMembers.forEach(m => participantIds.add(String(m.id)));
-        }
-      }
-      
-      // User targeting (direct user IDs - keep as strings!)
-      if (assignTo.users && assignTo.users.length > 0) {
-        for (const userId of assignTo.users) {
-          participantIds.add(userId);
-        }
-      }
-      
-      // Role targeting
-      if (assignTo.roles && assignTo.roles.length > 0) {
-        const orgId = (event as any).organizationId || 'default-org';
-        for (const role of assignTo.roles) {
-          const roleUsers = await storage.getUsersByRole(orgId, role);
-          roleUsers.forEach(u => participantIds.add(String(u.id)));
-        }
-      }
-      
-      // Program targeting
-      if (assignTo.programs && assignTo.programs.length > 0) {
-        for (const programId of assignTo.programs) {
-          const enrollments = await storage.getEnrollmentsByProgram(programId);
-          for (const enrollment of enrollments) {
-            if (enrollment.userId) {
-              participantIds.add(enrollment.userId);
-            }
-          }
-        }
-      }
-    }
-    
-    return Array.from(participantIds);
+    return resolveEventParticipants(event, storage);
   }
 
   start() {

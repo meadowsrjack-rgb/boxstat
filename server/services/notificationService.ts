@@ -897,6 +897,26 @@ export class NotificationService {
     });
   }
 
+  async notifyEventUpdated(userId: string | number, eventId: number, eventTitle: string, changeSummary: string): Promise<void> {
+    const userIdStr = userId.toString();
+    try {
+      const preferences = await this.getNotificationPreferences(userIdStr);
+      if (preferences && preferences.eventChanges === false) {
+        return;
+      }
+    } catch {
+      // Proceed with notification if preference check fails
+    }
+    await this.sendMultiChannelNotification({
+      userId: userIdStr,
+      title: `Event Updated: ${eventTitle}`,
+      message: changeSummary,
+      type: 'event_updated',
+      data: { eventId, eventTitle },
+      channels: ['in_app', 'push']
+    });
+  }
+
 }
 
 export const notificationService = new NotificationService();

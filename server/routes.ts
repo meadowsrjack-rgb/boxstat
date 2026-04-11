@@ -42,7 +42,7 @@ import {
 } from "@shared/schema";
 import { evaluateAwardsForUser } from "./utils/awardEngine";
 import { populateAwards } from "./utils/populateAwards";
-import { pushNotifications } from "./services/pushNotificationHelper";
+import { pushNotifications, resolveEventParticipants } from "./services/pushNotificationHelper";
 import { notificationScheduler } from "./services/notificationScheduler";
 import { notificationService } from "./services/notificationService";
 import { analyzePlayerAttendance, getTeamCoachIds, getOrgAdminIds, triggerRealTimeAttendanceNotifications } from "./services/attendanceTracker";
@@ -8957,6 +8957,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.body.status = 'active';
       }
 
+      // Capture key fields before update to detect meaningful changes
+      const preUpdateSnapshot = existingEvent ? {
+        startTime: existingEvent.startTime,
+        endTime: existingEvent.endTime,
+        location: existingEvent.location,
+        facilityId: existingEvent.facilityId,
+        courtName: existingEvent.courtName,
+        title: existingEvent.title,
+        meetingLink: existingEvent.meetingLink,
+      } : null;
+
       if (req.body.facilityId) {
         try {
           const facility = await storage.getFacility(req.body.facilityId);
@@ -9016,6 +9027,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         } catch (e) {
           console.error('Error sending schedule confirmation notification:', e);
+        }
+      }
+
+      // Notify participants of meaningful event changes (skip for pending schedule requests being confirmed)
+      if (!wasScheduleRequest && preUpdateSnapshot && updated && existingEvent?.status === 'active') {
+        try {
+          const tz = updated.timezone || existingEvent?.timezone || 'America/Los_Angeles';
+          const changes: string[] = [];
+
+          // Detect title change
+          if (req.body.title !== undefined && req.body.title !== preUpdateSnapshot.title) {
+            changes.push(`title changed to "${req.body.title}"`);
+          }
+
+          // Detect time changes using normalized epoch ms comparison to avoid string-format differences
+          const toEpoch = (v: unknown): number | null => {
+            if (v == null) return null;
+            const t = new Date(v as string).getTime();
+            return isNaN(t) ? null : t;
+          };
+          const oldStartMs = toEpoch(preUpdateSnapshot.startTime);
+          const newStartMs = req.body.startTime !== undefined ? toEpoch(req.body.startTime) : oldStartMs;
+          const oldEndMs = toEpoch(preUpdateSnapshot.endTime);
+          const newEndMs = req.body.endTime !== undefined ? toEpoch(req.body.endTime) : oldEndMs;
+
+          if (newStartMs !== null && newStartMs !== oldStartMs) {
+            const startFormatted = new Date(newStartMs).toLocaleString('en-US', {
+              weekday: 'short', month: 'short', day: 'numeric',
+              hour: 'numeric', minute: '2-digit', timeZone: tz,
+            });
+            changes.push(`new start time: ${startFormatted}`);
+          }
+          if (newEndMs !== null && newEndMs !== oldEndMs) {
+            const endFormatted = new Date(newEndMs).toLocaleTimeString('en-US', {
+              hour: 'numeric', minute: '2-digit', timeZone: tz,
+            });
+            changes.push(`new end time: ${endFormatted}`);
+          }
+
+          // Detect facility change
+          if (req.body.facilityId !== undefined && req.body.facilityId !== preUpdateSnapshot.facilityId) {
+            if (req.body.facilityId) {
+              try {
+                const facility = await storage.getFacility(req.body.facilityId);
+                changes.push(`new location: ${facility?.name || req.body.facilityId}`);
+              } catch {
+                changes.push('location updated');
+              }
+            } else {
+              // facilityId removed — report free-text location if provided, else generic
+              changes.push(req.body.location ? `new location: ${req.body.location}` : 'facility location removed');
+            }
+          } else if (req.body.location !== undefined && req.body.location !== preUpdateSnapshot.location && !req.body.facilityId) {
+            changes.push(`new location: ${req.body.location}`);
+          }
+
+          // Detect court change
+          if (req.body.courtName !== undefined && req.body.courtName !== preUpdateSnapshot.courtName) {
+            changes.push(req.body.courtName ? `court changed to ${req.body.courtName}` : 'court removed');
+          }
+
+          // Detect meeting link change
+          if (req.body.meetingLink !== undefined && req.body.meetingLink !== preUpdateSnapshot.meetingLink) {
+            changes.push(req.body.meetingLink ? 'meeting link updated' : 'meeting link removed');
+          }
+
+          if (changes.length > 0) {
+            const eventTitle = updated.title || existingEvent.title || 'Event';
+            const shortDate = oldStartMs !== null
+              ? new Date(oldStartMs).toLocaleDateString('en-US', {
+                  weekday: 'short', month: 'short', day: 'numeric', timeZone: tz,
+                })
+              : '';
+            const changeSummary = `${eventTitle}${shortDate ? ` on ${shortDate}` : ''} has been updated: ${changes.join(', ')}.`;
+
+            // Resolve participants via the shared helper (mirrors scheduler's getEventParticipants)
+            const participantList = await resolveEventParticipants(updated, storage);
+            console.log(`📢 Event updated: notifying ${participantList.length} participant(s). Changes: ${changeSummary}`);
+            const eventId = updated.id;
+            for (const userId of participantList) {
+              try {
+                await notificationService.notifyEventUpdated(userId, eventId, eventTitle, changeSummary);
+              } catch (e) {
+                console.error(`Error sending event update notification to ${userId}:`, e);
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Error processing event update notifications:', e);
         }
       }
 

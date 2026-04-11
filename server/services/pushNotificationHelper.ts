@@ -1,6 +1,7 @@
 import { notificationService } from "./notificationService";
 import { db } from "../db";
 import { users, events, teams, programs, products } from "../../shared/schema";
+import type { Event } from "../../shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import type { IStorage } from "../storage";
 
@@ -698,3 +699,51 @@ export const pushNotifications = {
 };
 
 export default pushNotifications;
+
+/**
+ * Resolve all participant user IDs for an event using the standard targeting logic:
+ * direct teamId, assignTo.teams, assignTo.users, assignTo.roles, assignTo.programs.
+ *
+ * This mirrors the private `getEventParticipants` method in NotificationScheduler so
+ * that event-update notifications in routes.ts stay permanently aligned with reminder logic.
+ */
+export async function resolveEventParticipants(event: Event, storage: IStorage): Promise<string[]> {
+  const participantIds = new Set<string>();
+
+  if (event.teamId) {
+    const teamMembers = await storage.getUsersByTeam(event.teamId.toString());
+    teamMembers.forEach(m => participantIds.add(String(m.id)));
+  }
+
+  const assignTo = event.assignTo;
+  if (assignTo) {
+    if (assignTo.teams && assignTo.teams.length > 0) {
+      for (const teamId of assignTo.teams) {
+        const teamMembers = await storage.getUsersByTeam(teamId);
+        teamMembers.forEach(m => participantIds.add(String(m.id)));
+      }
+    }
+    if (assignTo.users && assignTo.users.length > 0) {
+      for (const userId of assignTo.users) {
+        participantIds.add(userId);
+      }
+    }
+    if (assignTo.roles && assignTo.roles.length > 0) {
+      const orgId = event.organizationId || 'default-org';
+      for (const role of assignTo.roles) {
+        const roleUsers = await storage.getUsersByRole(orgId, role);
+        roleUsers.forEach(u => participantIds.add(String(u.id)));
+      }
+    }
+    if (assignTo.programs && assignTo.programs.length > 0) {
+      for (const programId of assignTo.programs) {
+        const enrollments = await storage.getEnrollmentsByProgram(programId);
+        for (const enrollment of enrollments) {
+          if (enrollment.userId) participantIds.add(enrollment.userId);
+        }
+      }
+    }
+  }
+
+  return Array.from(participantIds);
+}

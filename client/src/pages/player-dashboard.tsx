@@ -2341,15 +2341,32 @@ function SaveProfile({
       await queryClient.cancelQueries({ queryKey: ["/api/auth/user"] });
       const previousProfile = queryClient.getQueryData(["/api/profile", profileId]);
       const previousAuth = queryClient.getQueryData(["/api/auth/user"]);
-      queryClient.setQueryData(["/api/profile", profileId], (old: any) => old ? { ...old, ...payload } : old);
+      const normalizedPayload = {
+        ...payload,
+        address: payload.city ?? payload.address,
+        jerseyNumber: payload.jerseyNumber !== undefined && payload.jerseyNumber !== ""
+          ? parseInt(payload.jerseyNumber, 10)
+          : payload.jerseyNumber,
+      };
+      queryClient.setQueryData(["/api/profile", profileId], (old: any) => old ? { ...old, ...normalizedPayload } : old);
       queryClient.setQueryData(["/api/auth/user"], (old: any) => {
-        if (old && String(old.id) === String(profileId)) return { ...old, ...payload };
+        if (old && String(old.id) === String(profileId)) return { ...old, ...normalizedPayload };
         return old;
       });
       return { previousProfile, previousAuth };
     },
-    onSuccess: () => {
+    onSuccess: (serverData: any) => {
+      if (serverData && typeof serverData === "object") {
+        queryClient.setQueryData(["/api/profile", profileId], (old: any) =>
+          old ? { ...old, ...serverData } : serverData
+        );
+        queryClient.setQueryData(["/api/auth/user"], (old: any) => {
+          if (old && String(old.id) === String(profileId)) return { ...old, ...serverData };
+          return old;
+        });
+      }
       toast({ title: "Profile updated", description: "Changes saved." });
+      setIsEditingProfile(false);
       queryClient.invalidateQueries({ queryKey: [`/api/profile/${profileId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/profile", profileId] });
       queryClient.invalidateQueries({ queryKey: [`/api/profile/${currentUser.id}`] });
@@ -2358,7 +2375,6 @@ function SaveProfile({
       queryClient.invalidateQueries({ queryKey: ["/api/child-profiles", currentUser.id] });
       queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
       queryClient.invalidateQueries({ queryKey: ["/api/account/profiles"] });
-      setIsEditingProfile(false);
     },
     onError: (e, _payload, context) => {
       if (context?.previousProfile) {

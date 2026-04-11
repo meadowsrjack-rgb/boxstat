@@ -1471,6 +1471,9 @@ export interface Event {
   proxyCheckinRoles?: string[];
   playerRsvpEnabled?: boolean; // If false, only parent/guardian can RSVP for players
   timezone?: string; // IANA timezone identifier (e.g., "America/Los_Angeles")
+  facilityId?: number | null;
+  courtName?: string | null;
+  facilityName?: string;
   createdAt: Date;
 }
 
@@ -1512,6 +1515,8 @@ export const insertEventSchema = z.object({
   isActive: z.boolean().default(true),
   playerRsvpEnabled: z.boolean().default(true),
   timezone: z.string().default('America/Los_Angeles'),
+  facilityId: z.number().nullable().optional(),
+  courtName: z.string().nullable().optional(),
   isRecurring: z.boolean().optional().default(false),
   recurringType: z.string().nullable().optional(),
   recurringEndDate: z.string().nullable().optional(),

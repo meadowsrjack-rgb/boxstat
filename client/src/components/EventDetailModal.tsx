@@ -1049,7 +1049,7 @@ export default function EventDetailModal({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-white font-semibold text-sm leading-tight">{venueName}</p>
-                      {(event as any).courtName && <p className="text-blue-300 text-xs mt-0.5 leading-snug">{(event as any).courtName}</p>}
+                      {event.courtName && <p className="text-blue-300 text-xs mt-0.5 leading-snug">{event.courtName}</p>}
                       {address && <p className="text-gray-400 text-xs mt-0.5 leading-snug">{address}</p>}
                     </div>
                     <Navigation className="h-4 w-4 text-gray-500 flex-shrink-0" />

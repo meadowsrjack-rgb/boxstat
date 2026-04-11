@@ -5804,6 +5804,8 @@ class DatabaseStorage implements IStorage {
       enrollmentId: dbEvent.enrollmentId ?? undefined,
       programId: dbEvent.programId ?? undefined,
       scheduleRequestNote: dbEvent.scheduleRequestNote ?? undefined,
+      facilityId: dbEvent.facilityId ?? null,
+      courtName: dbEvent.courtName ?? null,
     };
   }
 

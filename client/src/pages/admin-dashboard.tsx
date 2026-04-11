@@ -6163,10 +6163,10 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                 value={form.getValues("facilityId") ? String(form.getValues("facilityId")) : "none"}
                                 onValueChange={(value) => {
                                   if (value === "none") {
-                                    form.setValue("facilityId", null as any);
+                                    form.setValue("facilityId", null);
                                     form.setValue("location", "");
-                                    form.setValue("latitude", undefined as any);
-                                    form.setValue("longitude", undefined as any);
+                                    form.setValue("latitude", undefined);
+                                    form.setValue("longitude", undefined);
                                   } else {
                                     const fac = facilities.find((f: any) => String(f.id) === value);
                                     if (fac) {
@@ -6213,9 +6213,9 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                                     value={field.value || ""}
                                     onLocationSelect={(location) => {
                                       field.onChange(location.name);
-                                      form.setValue("latitude", location.lat ?? undefined as any);
-                                      form.setValue("longitude", location.lng ?? undefined as any);
-                                      form.setValue("facilityId", null as any);
+                                      form.setValue("latitude", location.lat ?? undefined);
+                                      form.setValue("longitude", location.lng ?? undefined);
+                                      form.setValue("facilityId", null);
                                     }}
                                     placeholder="Search for a venue or address..."
                                     className="w-full"

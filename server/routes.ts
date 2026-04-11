@@ -8306,6 +8306,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  async function enrichEventsWithFacility(events: any[]): Promise<any[]> {
+    const facilityIds = [...new Set(events.filter(e => e.facilityId).map(e => e.facilityId))];
+    if (facilityIds.length === 0) return events;
+    const facilityMap = new Map<number, any>();
+    for (const fId of facilityIds) {
+      try {
+        const fac = await storage.getFacility(fId);
+        if (fac) facilityMap.set(fId, fac);
+      } catch {}
+    }
+    return events.map(e => {
+      if (e.facilityId && facilityMap.has(e.facilityId)) {
+        const fac = facilityMap.get(e.facilityId)!;
+        return { ...e, facilityName: fac.name };
+      }
+      return e;
+    });
+  }
+
   app.get('/api/events', requireAuth, async (req: any, res) => {
     const { organizationId, id: userId, role } = req.user;
     const { childProfileId, context } = req.query;
@@ -8419,7 +8438,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('  Filtered result:', filteredEvents.length, 'events shown');
     console.log('🔍 EVENT FILTERING DEBUG - End\n');
     
-    res.json(filteredEvents);
+    res.json(await enrichEventsWithFacility(filteredEvents));
   });
   
   app.get('/api/events/upcoming', requireAuth, async (req: any, res) => {
@@ -8429,14 +8448,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Admins see all events ONLY when viewing their own dashboard (not a child's)
     if (role === 'admin' && !childProfileId) {
-      return res.json(allEvents);
+      return res.json(await enrichEventsWithFacility(allEvents));
     }
     
-    // Parent-role users who also have an admin profile should see all upcoming events when not in a child context
     if (role !== 'admin' && !childProfileId) {
       const isAdmin = await hasAdminProfile(userId, organizationId);
       if (isAdmin) {
-        return res.json(allEvents);
+        return res.json(await enrichEventsWithFacility(allEvents));
       }
     }
     
@@ -8461,7 +8479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Filter events using shared helper
     const filteredEvents = filterEventsByScope(allEvents, role, teamIds, divisionIds, programIds, targetUserId, false, hasLinkedPlayers);
     
-    res.json(filteredEvents);
+    res.json(await enrichEventsWithFacility(filteredEvents));
   });
   
   // Get coach's primary team

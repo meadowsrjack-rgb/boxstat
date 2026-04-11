@@ -2307,11 +2307,15 @@ export default function UnifiedAccount() {
                                   })}
                                 </span>
                               </div>
-                              {(event.location || event.courtName) && (
+                              {(event.location || event.courtName || event.facilityName) && (
                               <div className="flex items-center gap-1">
                                 <MapPin className="w-3.5 h-3.5" />
-                                <span className="truncate max-w-[200px]" data-testid={`event-location-${event.id}`}>
-                                  {event.courtName ? `${event.courtName}${event.location ? ` · ${event.location}` : ''}` : event.location}
+                                <span className="truncate max-w-[250px]" data-testid={`event-location-${event.id}`}>
+                                  {[
+                                    event.facilityName,
+                                    event.courtName,
+                                    event.location && event.location !== event.facilityName ? event.location : null
+                                  ].filter(Boolean).join(' · ') || event.location}
                                 </span>
                               </div>
                               )}

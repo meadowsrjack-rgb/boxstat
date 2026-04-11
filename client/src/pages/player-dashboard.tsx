@@ -418,31 +418,31 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   });
 
   // Calculate overall skill average from evaluation scores
+  // Handles both flat scores {shooting: 4.35} and nested scores {SHOOTING: {LAYUP: 4, 2PT: 3}}
   const calculateOverallSkillAverage = (evaluation: any): number => {
-    // API returns skillsData (not scores) for compatibility with PlayerCard
-    if (!evaluation?.skillsData) return 0;
-    
-    const scores = evaluation.skillsData;
-    let totalScore = 0;
-    let totalSkills = 0;
-    
-    // Iterate through all categories
-    Object.values(scores).forEach((category: any) => {
-      if (category && typeof category === 'object') {
-        // Iterate through all skills in the category
-        Object.values(category).forEach((skillValue: any) => {
-          if (typeof skillValue === 'number') {
-            totalScore += skillValue;
-            totalSkills++;
+    const skillsData = evaluation?.skillsData || evaluation?.scores;
+    if (!skillsData || typeof skillsData !== 'object') return 0;
+
+    const allScores: number[] = [];
+
+    Object.values(skillsData).forEach((value: any) => {
+      if (typeof value === 'number') {
+        // Flat format: {shooting: 4.35}
+        allScores.push(value);
+      } else if (typeof value === 'object' && value !== null) {
+        // Nested format: {SHOOTING: {LAYUP: 4, 2PT: 3}}
+        Object.values(value).forEach((subValue: any) => {
+          if (typeof subValue === 'number') {
+            allScores.push(subValue);
           }
         });
       }
     });
-    
-    if (totalSkills === 0) return 0;
-    
+
+    if (allScores.length === 0) return 0;
+
     // Average is out of 5, convert to percentage
-    const average = totalScore / totalSkills;
+    const average = allScores.reduce((sum, val) => sum + val, 0) / allScores.length;
     return Math.round((average / 5) * 100);
   };
 

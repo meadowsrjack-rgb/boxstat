@@ -1,4 +1,5 @@
 import { AWARDS } from "@shared/awards.registry";
+import type { InsertAwardDefinition } from "@shared/schema";
 import type { IStorage } from "../storage";
 
 /**
@@ -23,15 +24,28 @@ export async function populateAwards(storage: IStorage, organizationId: string) 
         ? `/trophiesbadges/${fileName}` 
         : `/trophiesbadges/${fileName}.png`;
 
+      // Determine triggerCategory based on triggerSources
+      const isManual = award.triggerSources?.includes("coachAward") || award.progressKind === "manual";
+      const triggerCategory = isManual ? "manual" : undefined;
+
       // Check if this specific award already exists by name
       const exists = existingAwards.find(a => a.name === award.name);
       if (exists) {
+        const updates: Partial<InsertAwardDefinition> = {};
         // Update the image URL if it has changed
         if (exists.imageUrl !== imageUrl) {
-          await storage.updateAwardDefinition(exists.id, {
-            imageUrl: imageUrl
-          });
-          console.log(`  📝 Updated image URL for "${award.name}": ${imageUrl}`);
+          updates.imageUrl = imageUrl;
+        }
+        // Fix triggerCategory if this is a coachAward and it's not already 'manual'
+        if (triggerCategory === "manual" && exists.triggerCategory !== "manual") {
+          updates.triggerCategory = "manual";
+          console.log(`  📝 Fixed triggerCategory for "${award.name}" to 'manual'`);
+        }
+        if (Object.keys(updates).length > 0) {
+          await storage.updateAwardDefinition(exists.id, updates);
+          if (updates.imageUrl) {
+            console.log(`  📝 Updated image URL for "${award.name}": ${imageUrl}`);
+          }
         }
         skipped++;
         continue;
@@ -83,6 +97,7 @@ export async function populateAwards(storage: IStorage, organizationId: string) 
         tier: tier,
         class: award.category,
         prestige: prestige,
+        triggerCategory: triggerCategory,
         triggerField: triggerField,
         triggerOperator: triggerOperator,
         triggerValue: triggerValue,

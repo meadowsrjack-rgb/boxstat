@@ -8137,6 +8137,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       queryClient.invalidateQueries({ queryKey: ["/api/award-definitions"] });
       toast({ title: "Award updated successfully" });
       setEditingAward(null);
+      setIsDialogOpen(false);
       setSelectedIconId("");
     },
     onError: () => {

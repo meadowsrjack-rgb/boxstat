@@ -2765,6 +2765,25 @@ class DatabaseStorage implements IStorage {
     }
   }
 
+  async backfillManualAwardTriggerCategory(): Promise<void> {
+    try {
+      const { AWARDS } = await import('@shared/awards.registry');
+      const manualAwardNames = AWARDS
+        .filter(a => a.triggerSources?.includes("coachAward") || a.progressKind === "manual")
+        .map(a => a.name);
+      
+      if (manualAwardNames.length === 0) return;
+
+      await db.update(schema.awardDefinitions)
+        .set({ triggerCategory: 'manual' })
+        .where(inArray(schema.awardDefinitions.name, manualAwardNames));
+      
+      console.log(`✅ Backfilled triggerCategory='manual' for ${manualAwardNames.length} coach award definitions`);
+    } catch (error) {
+      console.error('Error backfilling manual award trigger categories:', error);
+    }
+  }
+
   async migrateAwardTierNames(): Promise<void> {
     try {
       const tierRenameMap: Record<string, string> = {

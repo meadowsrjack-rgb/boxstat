@@ -117,7 +117,7 @@ export default function MarketingLanding() {
               <Button 
                 variant="ghost" 
                 className="text-white hover:bg-white/10 hover:text-white hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all duration-300"
-                onClick={() => setForkModalOpen(true)}
+                onClick={() => setLocation('/login')}
               >
                 Sign In
               </Button>

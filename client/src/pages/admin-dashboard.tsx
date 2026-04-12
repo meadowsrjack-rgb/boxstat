@@ -9394,8 +9394,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       <Dialog open={!!recipientsAward} onOpenChange={(open) => { if (!open) { setRecipientsAward(null); setGivingFromRecipients(false); setGivePlayerSearch(""); } }}>
         <DialogContent className="max-w-[95vw] w-full max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between gap-2 flex-wrap">
-              <span>Recipients: {recipientsAward?.name}</span>
+            <DialogTitle className="flex items-center gap-2 flex-wrap">
               <Button
                 size="sm"
                 className="bg-[#c0392b] hover:bg-[#a93226] text-white"
@@ -9404,6 +9403,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                 <Award className="w-4 h-4 mr-1" />
                 {givingFromRecipients ? "Cancel" : "Give Award"}
               </Button>
+              <span>Recipients: {recipientsAward?.name}</span>
             </DialogTitle>
           </DialogHeader>
 

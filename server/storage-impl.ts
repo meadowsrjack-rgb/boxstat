@@ -2765,7 +2765,7 @@ class DatabaseStorage implements IStorage {
     }
   }
 
-  async initializeAwardDefinitions(): Promise<void> {
+  async migrateAwardTierNames(): Promise<void> {
     try {
       const tierRenameMap: Record<string, string> = {
         'Prospect': 'Bronze',
@@ -2788,7 +2788,13 @@ class DatabaseStorage implements IStorage {
           .set({ targetTier: newTier })
           .where(eq(schema.awardDefinitions.targetTier, oldTier));
       }
+    } catch (error) {
+      console.error('Error migrating award tier names:', error);
+    }
+  }
 
+  async initializeAwardDefinitions(): Promise<void> {
+    try {
       // Check if award definitions already exist for the default organization
       const existingAwards = await this.getAwardDefinitions(this.defaultOrgId);
       

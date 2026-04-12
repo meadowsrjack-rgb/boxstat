@@ -760,6 +760,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize organizations (always, not just dev)
   await (storage as any).initializeOrganizations?.();
 
+  // Migrate old award tier names to new ones
+  await (storage as any).migrateAwardTierNames?.();
+
   // Initialize test users and facilities in development
   if (process.env.NODE_ENV === 'development') {
     await (storage as any).initializeTestUsers?.();

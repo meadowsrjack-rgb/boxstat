@@ -122,25 +122,14 @@ function CircularRingMeter({
         </text>
 
         {/* Label close under number */}
-        {label === 'Legend' && (
-          <defs>
-            <linearGradient id="legend-text-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#e74c4c" />
-              <stop offset="25%" stopColor="#f59e0b" />
-              <stop offset="50%" stopColor="#22c55e" />
-              <stop offset="75%" stopColor="#3b82f6" />
-              <stop offset="100%" stopColor="#a855f7" />
-            </linearGradient>
-          </defs>
-        )}
         <text
           x={center}
           y={center + 20}
           textAnchor="middle"
           fontFamily="ui-sans-serif, system-ui"
-          fontWeight={label === 'Legend' ? 700 : 400}
+          fontWeight={400}
           fontSize={9}
-          fill={label === 'Legend' ? 'url(#legend-text-gradient)' : '#334155'}
+          fill='#334155'
         >
           {label}
         </text>

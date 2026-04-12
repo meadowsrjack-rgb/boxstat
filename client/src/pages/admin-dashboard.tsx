@@ -15338,6 +15338,7 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
       name: team.name || '',
       programId: team.programId || '',
       division: team.division || '',
+      level: team.level || '',
       season: team.season || '',
       location: team.location || '',
       color: team.color || '#DC2626',
@@ -15358,6 +15359,7 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
       name: '',
       programId: programId || '',
       division: '',
+      level: '',
       season: '',
       location: '',
       color: '#DC2626',
@@ -15379,6 +15381,7 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
       name: editorForm.name.trim(),
       programId: editorForm.programId || undefined,
       division: editorForm.division || undefined,
+      level: editorForm.level || undefined,
       season: editorForm.season || undefined,
       location: editorForm.location || undefined,
       color: editorForm.color || undefined,
@@ -15403,6 +15406,7 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
       name: `${team.name} (Copy)`,
       programId: team.programId || undefined,
       division: team.division || undefined,
+      level: team.level || undefined,
       season: team.season || undefined,
       location: team.location || undefined,
       color: team.color || undefined,
@@ -16070,10 +16074,21 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs font-semibold text-gray-700 mb-1.5 block">Division</Label>
                       <Input value={editorForm.division || ''} onChange={e => setEditorForm((f: any) => ({ ...f, division: e.target.value }))} placeholder="e.g. U10, U12" />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-700 mb-1.5 block">Level</Label>
+                      <Select value={editorForm.level || ''} onValueChange={v => setEditorForm((f: any) => ({ ...f, level: v }))}>
+                        <SelectTrigger data-testid="select-team-level"><SelectValue placeholder="Select level" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="beginner">Beginner</SelectItem>
+                          <SelectItem value="intermediate">Intermediate</SelectItem>
+                          <SelectItem value="advanced">Advanced</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label className="text-xs font-semibold text-gray-700 mb-1.5 block">Season</Label>

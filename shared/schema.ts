@@ -597,6 +597,7 @@ export const teams = pgTable("teams", {
   programType: varchar("program_type"), // DEPRECATED: use programId instead
   divisionId: integer("division_id"),
   division: varchar("division"), // Free-form division text like "U10", "U12"
+  level: varchar("level"), // beginner, intermediate, advanced
   coachId: varchar("coach_id"),
   headCoachIds: varchar("head_coach_ids").array().default(sql`ARRAY[]::varchar[]`),
   assistantCoachIds: varchar("assistant_coach_ids").array().default(sql`ARRAY[]::varchar[]`),
@@ -1379,7 +1380,8 @@ export interface Team {
   programId?: string;
   programType?: string;
   divisionId?: number;
-  division?: string; // Free-form division text like "U10", "U12"
+  division?: string;
+  level?: string;
   coachId?: string;
   headCoachIds?: string[];
   assistantCoachIds?: string[];
@@ -1402,7 +1404,8 @@ export const insertTeamSchema = z.object({
   programId: z.string().optional(),
   programType: z.string().optional(),
   divisionId: z.number().optional(),
-  division: z.string().optional(), // Free-form division text like "U10", "U12"
+  division: z.string().optional(),
+  level: z.string().optional(),
   coachId: z.string().optional(),
   headCoachIds: z.array(z.string()).default([]),
   assistantCoachIds: z.array(z.string()).default([]),

@@ -45,7 +45,7 @@ export function AwardBadge({ tier, icon, size = 80, locked = false, className = 
       {LucideIcon && (
         <LucideIcon
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white/90 drop-shadow-md"
-          size={size * 0.38}
+          size={size * 0.32}
           strokeWidth={1.8}
         />
       )}

@@ -8067,15 +8067,12 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     }
   };
 
-  // Fetch all user awards for the organization (for recipient counts)
+  const [givePlayerSearch, setGivePlayerSearch] = useState("");
+  const [givingFromRecipients, setGivingFromRecipients] = useState(false);
+
+  // Fetch all user awards for the organization (for recipient counts + recipients dialog)
   const { data: allOrgAwards = [] } = useQuery<any[]>({
     queryKey: ["/api/user-awards/organization"],
-  });
-
-  // Fetch user awards for recipients dialog view
-  const { data: userAwards = [], refetch: refetchUserAwards } = useQuery<any[]>({
-    queryKey: ["/api/user-awards", recipientsAward?.id],
-    enabled: !!recipientsAward,
   });
 
   const awardFormSchema = z.object({
@@ -8205,11 +8202,26 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       return await apiRequest("DELETE", `/api/user-awards/${id}`, {});
     },
     onSuccess: () => {
-      refetchUserAwards();
+      queryClient.invalidateQueries({ queryKey: ["/api/user-awards/organization"] });
       toast({ title: "User award removed successfully" });
     },
     onError: () => {
       toast({ title: "Failed to remove user award", variant: "destructive" });
+    },
+  });
+
+  const giveAwardFromRecipients = useMutation({
+    mutationFn: async ({ userId, awardId }: { userId: string; awardId: number }) => {
+      return await apiRequest("POST", "/api/user-awards", { userId, awardId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user-awards/organization"] });
+      setGivePlayerSearch("");
+      setGivingFromRecipients(false);
+      toast({ title: "Award given successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to give award", description: error.message, variant: "destructive" });
     },
   });
 

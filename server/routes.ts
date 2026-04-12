@@ -12600,9 +12600,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })(),
           // Team/group assignments within this program, with member data
           teams: await Promise.all(programTeams.map(async ({ membership, team }) => {
-            // Get members for this team
+            // Get members for this team (exclude admins from player-facing roster)
             const teamMembers = allTeamMembers
-              .filter(m => m.membership.teamId === team?.id)
+              .filter(m => m.membership.teamId === team?.id && m.user?.role !== 'admin')
               .map(({ membership: m, user }) => ({
                 id: user?.id,
                 name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,

@@ -80,7 +80,7 @@ export default function TrophiesBadgesPage() {
   const earnedTabRef = useRef<HTMLButtonElement>(null);
   const availableTabRef = useRef<HTMLButtonElement>(null);
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
-  const [selectedAward, setSelectedAward] = useState<EarnedAward | null>(null);
+  const [selectedAward, setSelectedAward] = useState<(EarnedAward | AwardDefinition) & { earnedDate?: string } | null>(null);
 
   const urlParams = new URLSearchParams(searchString);
   const urlPlayerId = urlParams.get("playerId");
@@ -457,6 +457,7 @@ export default function TrophiesBadgesPage() {
                     key={award.id}
                     className="flex items-center gap-3.5 px-4 py-3.5 bg-[#fafafa] rounded-xl border border-[#f0f0f0] hover:bg-[#f5f5f5] hover:border-[#e0e0e0] transition-colors cursor-pointer"
                     data-testid={`card-available-award-${award.id}`}
+                    onClick={() => setSelectedAward(award)}
                   >
                     <AwardBadge
                       tier={award.tier}
@@ -527,8 +528,18 @@ export default function TrophiesBadgesPage() {
             )}
             <div className="flex items-center gap-2 text-xs text-[#999]">
               <span className="font-semibold">{selectedAward.tier}</span>
-              <span>·</span>
-              <span>Earned {formatDate(selectedAward.earnedDate)}</span>
+              {selectedAward.earnedDate && (
+                <>
+                  <span>·</span>
+                  <span>Earned {formatDate(selectedAward.earnedDate)}</span>
+                </>
+              )}
+              {!selectedAward.earnedDate && 'threshold' in selectedAward && selectedAward.threshold ? (
+                <>
+                  <span>·</span>
+                  <span>{selectedAward.threshold} XP to unlock</span>
+                </>
+              ) : null}
             </div>
           </div>
         </div>

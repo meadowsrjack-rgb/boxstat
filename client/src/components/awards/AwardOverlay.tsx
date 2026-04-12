@@ -1,8 +1,9 @@
 import { Award } from "@shared/awards.types";
-import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { AwardBadge } from "./AwardBadge";
+import { isIconIdentifier } from "./awardIcons";
 
 interface AwardOverlayProps {
   award: Award;
@@ -11,44 +12,9 @@ interface AwardOverlayProps {
   onClose: () => void;
 }
 
-const TIER_COLORS: Record<string, string> = {
-  Bronze: "border-[#f5d0a9] bg-[#fdf2e6] text-[#92400e]",
-  Silver: "border-[#cbd5e1] bg-[#f1f5f9] text-[#475569]",
-  Gold: "border-[#fde047] bg-[#fefce8] text-[#854d0e]",
-  Platinum: "border-[#67e8f9] bg-[#ecfeff] text-[#155e75]",
-  Diamond: "border-[#c4b5fd] bg-[#f5f3ff] text-[#5b21b6]",
-  Legend: "border-[#c4b5fd] text-white",
-  HallOfFamer: "border-[#c4b5fd] bg-[#f5f3ff] text-[#5b21b6]",
-  HOF: "border-[#c4b5fd] bg-[#f5f3ff] text-[#5b21b6]",
-  Superstar: "border-[#67e8f9] bg-[#ecfeff] text-[#155e75]",
-  AllStar: "border-[#fde047] bg-[#fefce8] text-[#854d0e]",
-  "All-Star": "border-[#fde047] bg-[#fefce8] text-[#854d0e]",
-  Starter: "border-[#cbd5e1] bg-[#f1f5f9] text-[#475569]",
-  Prospect: "border-[#f5d0a9] bg-[#fdf2e6] text-[#92400e]",
-  Team: "border-[#f5d0a9] bg-[#fdf2e6] text-[#92400e]",
-};
-
-const TIER_GRADIENTS: Record<string, string> = {
-  Bronze: "from-[#f5d0a9] to-[#92400e]",
-  Silver: "from-[#cbd5e1] to-[#475569]",
-  Gold: "from-[#fde047] to-[#854d0e]",
-  Platinum: "from-[#67e8f9] to-[#155e75]",
-  Diamond: "from-[#c4b5fd] to-[#5b21b6]",
-  Legend: "",
-  HallOfFamer: "from-[#c4b5fd] to-[#5b21b6]",
-  HOF: "from-[#c4b5fd] to-[#5b21b6]",
-  Superstar: "from-[#67e8f9] to-[#155e75]",
-  AllStar: "from-[#fde047] to-[#854d0e]",
-  "All-Star": "from-[#fde047] to-[#854d0e]",
-  Starter: "from-[#cbd5e1] to-[#475569]",
-  Prospect: "from-[#f5d0a9] to-[#92400e]",
-  Team: "from-[#f5d0a9] to-[#92400e]",
-};
-
 export function AwardOverlay({ award, progress, isOpen, onClose }: AwardOverlayProps) {
-  const tierColor = TIER_COLORS[award.tier];
-  const tierGradient = TIER_GRADIENTS[award.tier];
   const locked = !progress.earned;
+  const iconId = award.imageUrl && isIconIdentifier(award.imageUrl) ? award.imageUrl : null;
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -58,40 +24,17 @@ export function AwardOverlay({ award, progress, isOpen, onClose }: AwardOverlayP
         </SheetHeader>
         
         <div className="space-y-6 mt-6">
-          {/* Award Icon & Status */}
           <div className="flex items-center gap-4">
-            <div className="relative">
-              <div
-                className={`w-20 h-20 rounded-full p-1 ${tierGradient ? `bg-gradient-to-br ${tierGradient}` : ''}`}
-                style={!tierGradient ? { background: 'linear-gradient(135deg, #e74c4c, #f59e0b, #22c55e, #3b82f6, #a855f7)' } : undefined}
-              >
-                <div className="w-full h-full bg-white rounded-full flex items-center justify-center">
-                  <img 
-                    src={`/assets/awards/${award.iconName}.png`} 
-                    alt={award.name} 
-                    className={`w-12 h-12 object-contain ${locked ? 'grayscale opacity-60' : ''}`}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = award.kind === 'Trophy' ? 
-                        '/assets/awards/default-trophy.png' : 
-                        '/assets/awards/default-badge.png';
-                    }}
-                  />
-                </div>
-              </div>
-              {locked && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-2xl">🔒</div>
-                </div>
-              )}
-            </div>
+            <AwardBadge
+              tier={award.tier}
+              icon={iconId}
+              size={80}
+              locked={locked}
+            />
             
             <div className="flex-1">
-              <Badge
-                variant="outline"
-                className={tierColor}
-                style={(award.tier === 'Legend' || award.tier === 'Legacy') ? { background: 'linear-gradient(90deg, #e74c4c, #f59e0b, #22c55e, #3b82f6, #a855f7)' } : undefined}
-              >
-                {award.tier} {award.kind}
+              <Badge variant="outline">
+                {award.tier}
               </Badge>
               <div className="text-sm text-muted-foreground mt-1">
                 {award.category}
@@ -104,7 +47,6 @@ export function AwardOverlay({ award, progress, isOpen, onClose }: AwardOverlayP
             </div>
           </div>
 
-          {/* Description */}
           <div>
             <h3 className="font-medium mb-2">Description</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
@@ -112,7 +54,6 @@ export function AwardOverlay({ award, progress, isOpen, onClose }: AwardOverlayP
             </p>
           </div>
 
-          {/* Progress Section */}
           {award.progressKind !== "none" && (
             <div>
               <h3 className="font-medium mb-3">Progress</h3>
@@ -145,7 +86,6 @@ export function AwardOverlay({ award, progress, isOpen, onClose }: AwardOverlayP
             </div>
           )}
 
-          {/* Requirements/How to Earn */}
           <div>
             <h3 className="font-medium mb-2">How to Earn</h3>
             <div className="text-sm text-muted-foreground space-y-1">
@@ -175,7 +115,6 @@ export function AwardOverlay({ award, progress, isOpen, onClose }: AwardOverlayP
             </div>
           </div>
 
-          {/* Tags */}
           {award.tags && award.tags.length > 0 && (
             <div>
               <h3 className="font-medium mb-2">Tags</h3>

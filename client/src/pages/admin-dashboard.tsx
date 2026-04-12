@@ -118,7 +118,8 @@ import { insertDivisionSchema, insertNotificationSchema, insertTeamSchema } from
 import { LocationSearch } from "@/components/LocationSearch";
 import AttendanceList from "@/components/AttendanceList";
 import { IconPicker } from "@/components/awards/IconPicker";
-import { getAwardIcon, isIconIdentifier } from "@/components/awards/awardIcons";
+import { isIconIdentifier } from "@/components/awards/awardIcons";
+import { AwardBadge } from "@/components/awards/AwardBadge";
 import { format } from "date-fns";
 import RevenueTrendChart from "@/components/RevenueTrendChart";
 import { TIMEZONE_OPTIONS, getBrowserTimezone, localDatetimeToUTC, utcToLocalDatetime, getTimezoneAbbreviation, ensureUtcString } from "@/lib/time";
@@ -8086,7 +8087,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     resolver: zodResolver(awardFormSchema),
     defaultValues: {
       name: "",
-      tier: "Grey" as const,
+      tier: "Bronze" as const,
       description: "",
       imageUrl: "",
       active: true,
@@ -8291,7 +8292,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     
     form.reset({
       name: award.name || "",
-      tier: award.tier || "Grey",
+      tier: award.tier || "Bronze",
       description: award.description || "",
       imageUrl: award.imageUrl || "",
       active: award.active ?? true,
@@ -8361,7 +8362,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
           await apiRequest("POST", "/api/awards", {
             organizationId: organization?.id,
             name: values[0],
-            tier: values[1] || "Grey",
+            tier: values[1] || "Bronze",
             threshold: parseInt(values[2]) || 0,
             description: values[3] || "",
             imageUrl: values[4] || "",
@@ -8520,17 +8521,14 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                     control={form.control}
                     name="imageUrl"
                     render={({ field }) => {
-                      const IconPreview = selectedIconId ? getAwardIcon(selectedIconId) : null;
-                      const legacyImageUrl = !selectedIconId && field.value && !isIconIdentifier(field.value) ? field.value : null;
+                      const currentTier = form.getValues("tier") || "Bronze";
                       return (
                         <FormItem>
                           <FormLabel>Award Icon</FormLabel>
                           <div className="space-y-2">
-                            {IconPreview && (
+                            {selectedIconId && (
                               <div className="flex items-center gap-3 p-2 border rounded-lg bg-muted/50">
-                                <div className="w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center">
-                                  <IconPreview className="h-6 w-6 text-primary" />
-                                </div>
+                                <AwardBadge tier={currentTier} icon={selectedIconId} size={48} />
                                 <span className="text-sm font-medium">{selectedIconId}</span>
                                 <Button
                                   type="button"
@@ -8547,10 +8545,10 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                                 </Button>
                               </div>
                             )}
-                            {legacyImageUrl && (
+                            {!selectedIconId && (
                               <div className="flex items-center gap-3 p-2 border rounded-lg bg-muted/50">
-                                <img src={legacyImageUrl} alt="Current award image" className="w-10 h-10 rounded-md object-contain bg-white/10" />
-                                <span className="text-xs text-muted-foreground flex-1 truncate">Legacy image (select an icon below to replace)</span>
+                                <AwardBadge tier={currentTier} size={48} />
+                                <span className="text-xs text-muted-foreground flex-1">Select an icon below</span>
                               </div>
                             )}
                             <IconPicker
@@ -9231,7 +9229,6 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
               </tr>
             ) : (
               filteredAwards.map((award: any) => {
-                const AwardIconComponent = award.imageUrl && isIconIdentifier(award.imageUrl) ? getAwardIcon(award.imageUrl) : null;
                 const recipientCount = getRecipientCount(award.id);
                 return (
                   <tr
@@ -9248,15 +9245,11 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                     </td>
                     <td className="py-3 px-4 align-middle">
                       <div className="flex items-center gap-3.5 min-w-[260px]">
-                        <div className="w-11 h-11 rounded-[10px] flex-shrink-0 overflow-hidden bg-[#f6f6f4] flex items-center justify-center shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-                          {AwardIconComponent ? (
-                            <AwardIconComponent className="w-6 h-6 text-[#6b7280]" />
-                          ) : award.imageUrl ? (
-                            <img src={award.imageUrl} alt={award.name} className="w-full h-full object-contain" data-testid={`img-award-${award.id}`} />
-                          ) : (
-                            <Award className="w-6 h-6 text-[#9ca3af]" data-testid={`icon-badge-${award.id}`} />
-                          )}
-                        </div>
+                        <AwardBadge
+                          tier={award.tier}
+                          icon={award.imageUrl && isIconIdentifier(award.imageUrl) ? award.imageUrl : null}
+                          size={44}
+                        />
                         <div>
                           <div className="font-semibold text-sm leading-tight text-[#1a1a1a]">{award.name}</div>
                           {award.description && (
@@ -9266,10 +9259,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                       </div>
                     </td>
                     <td className="py-3 px-4 align-middle">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${award.tier === 'Legend' ? 'border border-[#c4b5fd]' : getTierBadgeColor(award.tier)}`}
-                        style={award.tier === 'Legend' ? { background: 'linear-gradient(90deg, #e74c4c, #f59e0b, #22c55e, #3b82f6, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' } : undefined}
-                      >
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold whitespace-nowrap text-[#6b7280]">
                         {award.tier}
                       </span>
                     </td>

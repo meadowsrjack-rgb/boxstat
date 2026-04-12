@@ -3,9 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppMode } from "@/hooks/useAppMode";
-import { Medal, ArrowLeft, Trophy, ChevronDown } from "lucide-react";
+import { ArrowLeft, Trophy, ChevronDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getAwardIcon, isIconIdentifier } from "@/components/awards/awardIcons";
+import { isIconIdentifier } from "@/components/awards/awardIcons";
+import { AwardBadge } from "@/components/awards/AwardBadge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,33 +53,6 @@ interface AwardWithDetails extends AwardDefinition {
   notes?: string;
 }
 
-const TIER_ICON_BG: Record<TierType, string> = {
-  Bronze: "bg-[#fdf2e6] text-[#92400e]",
-  Silver: "bg-[#f1f5f9] text-[#475569]",
-  Gold: "bg-[#fefce8] text-[#854d0e]",
-  Platinum: "bg-[#ecfeff] text-[#155e75]",
-  Diamond: "bg-[#f5f3ff] text-[#5b21b6]",
-  Legend: "bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6]",
-};
-
-const TIER_BADGE: Record<TierType, string> = {
-  Bronze: "bg-[#fdf2e6] text-[#92400e] border border-[#f5d0a9]",
-  Silver: "bg-[#f1f5f9] text-[#475569] border border-[#cbd5e1]",
-  Gold: "bg-[#fefce8] text-[#854d0e] border border-[#fde047]",
-  Platinum: "bg-[#ecfeff] text-[#155e75] border border-[#67e8f9]",
-  Diamond: "bg-[#f5f3ff] text-[#5b21b6] border border-[#c4b5fd]",
-  Legend: "bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6] border border-[#c4b5fd]",
-};
-
-const TIER_PROGRESS_COLOR: Record<TierType, string> = {
-  Bronze: "bg-[#f5d0a9]",
-  Silver: "bg-[#cbd5e1]",
-  Gold: "bg-[#fde047]",
-  Platinum: "bg-[#67e8f9]",
-  Diamond: "bg-[#c4b5fd]",
-  Legend: "bg-[#c4b5fd]",
-};
-
 const TRIGGER_LABELS: Record<TriggerCategory, string> = {
   checkin: "Check-in",
   system: "Collection",
@@ -86,24 +60,6 @@ const TRIGGER_LABELS: Record<TriggerCategory, string> = {
   store: "Store",
   manual: "Manual"
 };
-
-function AwardIcon({ award, className }: { award: AwardDefinition; className?: string }) {
-  const iconId = award.imageUrl;
-  if (iconId && isIconIdentifier(iconId)) {
-    const LucideIcon = getAwardIcon(iconId)!;
-    return <LucideIcon className={className} />;
-  }
-  if (iconId) {
-    return (
-      <img
-        src={iconId}
-        alt={award.name}
-        className="w-full h-full object-contain"
-      />
-    );
-  }
-  return <Medal className={className} />;
-}
 
 export default function TrophiesBadgesPage() {
   const { user } = useAuth();
@@ -431,9 +387,11 @@ export default function TrophiesBadgesPage() {
                   className="flex items-center gap-3.5 px-4 py-3.5 bg-[#fafafa] rounded-xl border border-[#f0f0f0] hover:bg-[#f5f5f5] hover:border-[#e0e0e0] transition-colors cursor-pointer"
                   data-testid={`card-award-${award.id}`}
                 >
-                  <div className={`w-[60px] h-[60px] flex-shrink-0 rounded-xl flex items-center justify-center ${TIER_ICON_BG[award.tier]}`}>
-                    <AwardIcon award={award} className="w-[26px] h-[26px]" />
-                  </div>
+                  <AwardBadge
+                    tier={award.tier}
+                    icon={award.imageUrl && isIconIdentifier(award.imageUrl) ? award.imageUrl : null}
+                    size={60}
+                  />
                   <div className="flex-1 min-w-0">
                     <h4 className="text-[14px] font-semibold text-[#1a1a1a] mb-0.5 truncate" data-testid={`text-award-name-${award.id}`}>
                       {award.name}
@@ -449,8 +407,7 @@ export default function TrophiesBadgesPage() {
                     </p>
                   </div>
                   <span
-                    className={`text-[10px] font-semibold tracking-[0.03em] px-2 py-[3px] rounded-[6px] flex-shrink-0 ${award.tier === 'Legend' ? 'border border-[#c4b5fd]' : TIER_BADGE[award.tier]}`}
-                    style={award.tier === 'Legend' ? { background: 'linear-gradient(90deg, #e74c4c, #f59e0b, #22c55e, #3b82f6, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' } : undefined}
+                    className="text-[10px] font-semibold tracking-[0.03em] px-2 py-[3px] rounded-[6px] flex-shrink-0 text-[#999]"
                     data-testid={`badge-tier-${award.id}`}
                   >
                     {award.tier}
@@ -495,9 +452,12 @@ export default function TrophiesBadgesPage() {
                     className="flex items-center gap-3.5 px-4 py-3.5 bg-[#fafafa] rounded-xl border border-[#f0f0f0] hover:bg-[#f5f5f5] hover:border-[#e0e0e0] transition-colors cursor-pointer"
                     data-testid={`card-available-award-${award.id}`}
                   >
-                    <div className={`w-[60px] h-[60px] flex-shrink-0 rounded-xl flex items-center justify-center ${TIER_ICON_BG[award.tier]}`}>
-                      <AwardIcon award={award} className="w-[26px] h-[26px]" />
-                    </div>
+                    <AwardBadge
+                      tier={award.tier}
+                      icon={award.imageUrl && isIconIdentifier(award.imageUrl) ? award.imageUrl : null}
+                      size={60}
+                      locked={true}
+                    />
                     <div className="flex-1 min-w-0">
                       <h4 className="text-[14px] font-semibold text-[#1a1a1a] mb-0.5 truncate" data-testid={`text-available-award-name-${award.id}`}>
                         {award.name}
@@ -511,7 +471,7 @@ export default function TrophiesBadgesPage() {
                         <div className="flex items-center gap-2 mt-1.5">
                           <div className="flex-1 h-1 bg-[#e8e8e8] rounded-[2px] overflow-hidden">
                             <div
-                              className={`h-full rounded-[2px] transition-all duration-400 ${TIER_PROGRESS_COLOR[award.tier]}`}
+                              className="h-full rounded-[2px] transition-all duration-400 bg-primary"
                               style={{ width: `${progressPct}%` }}
                             />
                           </div>
@@ -522,8 +482,7 @@ export default function TrophiesBadgesPage() {
                       )}
                     </div>
                     <span
-                      className={`text-[10px] font-semibold tracking-[0.03em] px-2 py-[3px] rounded-[6px] flex-shrink-0 ${award.tier === 'Legend' ? 'border border-[#c4b5fd]' : TIER_BADGE[award.tier]}`}
-                      style={award.tier === 'Legend' ? { background: 'linear-gradient(90deg, #e74c4c, #f59e0b, #22c55e, #3b82f6, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' } : undefined}
+                      className="text-[10px] font-semibold tracking-[0.03em] px-2 py-[3px] rounded-[6px] flex-shrink-0 text-[#999]"
                       data-testid={`badge-tier-available-${award.id}`}
                     >
                       {award.tier}

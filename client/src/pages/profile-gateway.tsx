@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -28,6 +28,15 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { authPersistence } from "@/services/authPersistence";
+
+// Helper: fire-and-forget prefetch that won't block navigation
+function prefetchQuery(queryKey: string) {
+  if (queryClient.getQueryData([queryKey])) return;
+  queryClient.prefetchQuery({
+    queryKey: [queryKey],
+    staleTime: 5 * 60 * 1000,
+  });
+}
 
 export default function ProfileGateway() {
   const { user, isLoading } = useAuth();
@@ -80,6 +89,46 @@ export default function ProfileGateway() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Prefetch data for each visible dashboard once profiles are loaded
+  useEffect(() => {
+    if (!user || isLoading || profilesLoading || playersLoading) return;
+    const role = (user as any)?.role;
+    if (role === "admin" || accountProfiles.some((p: any) => p.role === "admin")) {
+      prefetchQuery("/api/admin/overview-stats");
+    }
+    if (role === "coach" || accountProfiles.some((p: any) => p.role === "coach")) {
+      prefetchQuery("/api/coach/team");
+    }
+    // Prefetch generic events (coaches/admins use this key)
+    prefetchQuery("/api/events");
+    // Prefetch player-specific events for each visible player card
+    for (const player of players) {
+      if (player?.id) {
+        const childProfileId = player.id.toString();
+        const childEventsKey = `/api/events?childProfileId=${childProfileId}`;
+        if (!queryClient.getQueryData([childEventsKey])) {
+          queryClient.prefetchQuery({
+            queryKey: [childEventsKey],
+            staleTime: 5 * 60 * 1000,
+          });
+        }
+        // Prefetch tasks and awards for each player
+        if (!queryClient.getQueryData(["/api/users", player.id, "tasks"])) {
+          queryClient.prefetchQuery({
+            queryKey: ["/api/users", player.id, "tasks"],
+            staleTime: 5 * 60 * 1000,
+          });
+        }
+        if (!queryClient.getQueryData(["/api/users", player.id, "awards"])) {
+          queryClient.prefetchQuery({
+            queryKey: ["/api/users", player.id, "awards"],
+            staleTime: 5 * 60 * 1000,
+          });
+        }
+      }
+    }
+  }, [user, isLoading, profilesLoading, playersLoading, accountProfiles, players]);
+
   const { data: enrollments = [] } = useQuery<any[]>({
     queryKey: ["/api/enrollments", userId],
     queryFn: () => apiRequest("/api/enrollments"),
@@ -118,6 +167,8 @@ export default function ProfileGateway() {
       const data = await apiRequest("/api/auth/switch-profile", { method: "POST", data: { role } });
       if (data.token) {
         await authPersistence.setToken(data.token);
+        // Only invalidate auth-related queries — preserve all cached dashboard data
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         queryClient.invalidateQueries({ queryKey: ["/api/account/profiles"] });
         queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
         setSwitching(false);
@@ -143,28 +194,22 @@ export default function ProfileGateway() {
       if (parentProfile && userRole !== "parent") {
         const ok = await switchToRole("parent");
         if (!ok) return;
-        window.location.href = "/parent-dashboard";
-      } else {
-        setLocation("/parent-dashboard");
       }
+      setLocation("/parent-dashboard");
     } else if (type === "coach") {
       const coachProfile = accountProfiles.find((p: any) => p.role === "coach");
       if (coachProfile && userRole !== "coach") {
         const ok = await switchToRole("coach");
         if (!ok) return;
-        window.location.href = "/coach-dashboard";
-      } else {
-        setLocation("/coach-dashboard");
       }
+      setLocation("/coach-dashboard");
     } else if (type === "admin") {
       const adminProfile = accountProfiles.find((p: any) => p.role === "admin");
       if (adminProfile && userRole !== "admin") {
         const ok = await switchToRole("admin");
         if (!ok) return;
-        window.location.href = "/admin-dashboard";
-      } else {
-        setLocation("/admin-dashboard");
       }
+      setLocation("/admin-dashboard");
     } else if (type === "player" && playerId) {
       localStorage.setItem("selectedPlayerId", playerId);
       localStorage.setItem("viewingAsParent", "true");

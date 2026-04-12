@@ -8193,8 +8193,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const startOfYear = new Date(now.getFullYear(), 0, 1);
 
-      const orgUsers = await db.select().from(users).where(eq(users.organizationId, organizationId));
-      const orgPlayerIds = orgUsers.filter(u => u.role === 'player').map(u => u.id);
+      // Use SQL aggregates instead of loading all user rows into JS
+      const userCountsResult = await db.execute(
+        sql`SELECT
+              role,
+              COUNT(*) as count
+            FROM users
+            WHERE organization_id = ${organizationId}
+            GROUP BY role`
+      );
+      const userCountRows = (userCountsResult.rows || userCountsResult) as any[];
+      const countByRole: Record<string, number> = {};
+      for (const row of userCountRows) {
+        countByRole[row.role] = parseInt(row.count) || 0;
+      }
+
+      // Fetch player IDs only (needed for enrollment cross-filter and awards)
+      const orgPlayerRows = await db.select({ id: users.id }).from(users).where(
+        and(eq(users.organizationId, organizationId), eq(users.role, 'player'))
+      );
+      const orgPlayerIds = orgPlayerRows.map(u => u.id);
 
       const activeEnrollments = await db.select().from(productEnrollments)
         .where(and(
@@ -8243,12 +8261,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       const orgPlayerIdsSet = new Set(orgPlayerIds);
-      const allAwards = await db.select().from(userAwards)
-        .where(
-          orgPlayerIds.length > 0 ? inArray(userAwards.userId, orgPlayerIds) : sql`false`
-        );
 
-      const monthlyAwards = allAwards.filter(a => a.awardedAt && new Date(a.awardedAt) >= startOfMonth);
+      // Use SQL COUNT for awards instead of loading all rows
+      const awardsCountResult = await db.execute(
+        orgPlayerIds.length > 0
+          ? sql`SELECT
+                  COUNT(*) as total,
+                  COUNT(*) FILTER (WHERE awarded_at >= ${startOfMonth.toISOString()}) as this_month
+                FROM user_awards
+                WHERE user_id = ANY(${orgPlayerIds})`
+          : sql`SELECT 0 as total, 0 as this_month`
+      );
+      const awardsCountRows = (awardsCountResult.rows || awardsCountResult) as any[];
+      const awardsAllTime = parseInt(awardsCountRows[0]?.total) || 0;
+      const awardsThisMonth = parseInt(awardsCountRows[0]?.this_month) || 0;
 
       const storeProducts = await db.select().from(products)
         .where(and(
@@ -8306,31 +8332,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      const allPayments = await db.execute(
-        sql`SELECT amount, paid_at, created_at FROM payments
+      // Move all revenue aggregation to SQL — single query handles total, monthly, yearly, and trend buckets
+      const revenueSummaryResult = await db.execute(
+        sql`SELECT
+              COALESCE(SUM(amount), 0) as revenue_total,
+              COALESCE(SUM(amount) FILTER (WHERE COALESCE(paid_at, created_at) >= ${startOfMonth.toISOString()}), 0) as revenue_this_month,
+              COALESCE(SUM(amount) FILTER (WHERE COALESCE(paid_at, created_at) >= ${startOfYear.toISOString()}), 0) as revenue_this_year
+            FROM payments
             WHERE organization_id = ${organizationId} AND status = 'completed'`
       );
+      const revSummaryRows = (revenueSummaryResult.rows || revenueSummaryResult) as any[];
+      const revenueTotal = parseInt(revSummaryRows[0]?.revenue_total) || 0;
+      const revenueThisMonth = parseInt(revSummaryRows[0]?.revenue_this_month) || 0;
+      const revenueThisYear = parseInt(revSummaryRows[0]?.revenue_this_year) || 0;
 
-      let revenueThisMonth = 0;
-      let revenueThisYear = 0;
-      let revenueTotal = 0;
+      // Build the 6-month trend using SQL GROUP BY
+      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      const monthlyTrendResult = await db.execute(
+        sql`SELECT
+              TO_CHAR(DATE_TRUNC('month', COALESCE(paid_at, created_at)), 'YYYY-MM') as month_key,
+              COALESCE(SUM(amount), 0) as amount
+            FROM payments
+            WHERE organization_id = ${organizationId}
+              AND status = 'completed'
+              AND COALESCE(paid_at, created_at) >= ${sixMonthsAgo.toISOString()}
+            GROUP BY month_key
+            ORDER BY month_key ASC`
+      );
+      // Build ordered 6-month bucket map (fill missing months with 0)
       const monthlyRevenue: Record<string, number> = {};
       for (let i = 5; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         monthlyRevenue[key] = 0;
       }
-      for (const p of (allPayments.rows || allPayments) as any[]) {
-        const amount = p.amount || 0;
-        revenueTotal += amount;
-        const paidDate = p.paid_at ? new Date(p.paid_at) : (p.created_at ? new Date(p.created_at) : null);
-        if (paidDate) {
-          if (paidDate >= startOfMonth) revenueThisMonth += amount;
-          if (paidDate >= startOfYear) revenueThisYear += amount;
-          const monthKey = `${paidDate.getFullYear()}-${String(paidDate.getMonth() + 1).padStart(2, '0')}`;
-          if (monthlyRevenue[monthKey] !== undefined) {
-            monthlyRevenue[monthKey] += amount;
-          }
+      for (const row of (monthlyTrendResult.rows || monthlyTrendResult) as any[]) {
+        if (row.month_key && monthlyRevenue[row.month_key] !== undefined) {
+          monthlyRevenue[row.month_key] = parseInt(row.amount) || 0;
         }
       }
 
@@ -8355,9 +8393,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         enrolledPlayers: enrolledPlayerCount,
         notEnrolledPlayers: notEnrolledPlayers,
         totalPlayers,
-        totalAdmins: orgUsers.filter(u => u.role === 'admin').length,
-        totalCoaches: orgUsers.filter(u => u.role === 'coach').length,
-        totalParents: orgUsers.filter(u => u.role === 'parent').length,
+        totalAdmins: countByRole['admin'] || 0,
+        totalCoaches: countByRole['coach'] || 0,
+        totalParents: countByRole['parent'] || 0,
         revenueThisMonth,
         revenueThisYear,
         revenueTotal,
@@ -8366,8 +8404,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalCheckins: parseInt(checkinRows[0]?.count) || 0,
         attendanceInvited: totalInvited,
         attendanceActual: totalAttended,
-        awardsThisMonth: monthlyAwards.length,
-        awardsAllTime: allAwards.length,
+        awardsThisMonth,
+        awardsAllTime,
         store: {
           totalProducts: activeStoreProducts.length,
           storeRevenue,

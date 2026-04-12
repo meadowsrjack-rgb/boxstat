@@ -12,6 +12,7 @@ import PlayerSearch from "@/components/PlayerSearch";
 import PlayerCard from "@/components/PlayerCard";
 import TeamChat from "@/components/TeamChat";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -389,9 +390,43 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   // ---- Early guard
   const currentUser = user as UserType | null;
   
-  // Early return if no user
+  // Early return if no user — show skeleton shell instead of blank screen
   if (!currentUser) {
-    return <div className="flex items-center justify-center min-h-screen-safe safe-bottom">Loading...</div>;
+    return (
+      <div className="min-h-screen-safe bg-gray-50 safe-bottom" data-testid="loading-player-dashboard">
+        {/* Skeleton header */}
+        <div className="bg-white border-b px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <div>
+              <Skeleton className="h-5 w-32 mb-1" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+          </div>
+          <Skeleton className="h-8 w-8 rounded-full" />
+        </div>
+        {/* Skeleton activity feed */}
+        <div className="px-4 py-4 space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4 flex gap-3 items-center">
+                <Skeleton className="h-10 w-10 rounded-lg flex-shrink-0" />
+                <div className="flex-1">
+                  <Skeleton className="h-4 w-3/4 mb-2" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        {/* Skeleton bottom tab bar */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-3 safe-bottom">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-6 w-14 rounded" />
+          ))}
+        </div>
+      </div>
+    );
   }
   
   // Fetch active profile - localStorage selection takes priority over server-provided activeProfileId

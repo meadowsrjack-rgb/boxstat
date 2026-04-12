@@ -11,6 +11,7 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import type { User as UserType, Event } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -248,8 +249,38 @@ export default function CoachDashboard() {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen-safe bg-white safe-bottom flex items-center justify-center">
-        <BanterLoader />
+      <div className="min-h-screen-safe bg-gray-50 safe-bottom" data-testid="loading-coach-dashboard">
+        {/* Skeleton header */}
+        <div className="bg-white border-b px-4 py-4 flex items-center justify-between safe-top">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <div>
+              <Skeleton className="h-5 w-28 mb-1" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+          </div>
+          <Skeleton className="h-8 w-8 rounded-full" />
+        </div>
+        {/* Skeleton tab bar */}
+        <div className="bg-white border-b px-4 py-2 flex gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-8 w-20 rounded-md" />
+          ))}
+        </div>
+        {/* Skeleton team cards */}
+        <div className="px-4 py-4 space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4 flex gap-3 items-center">
+                <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
+                <div className="flex-1">
+                  <Skeleton className="h-4 w-1/2 mb-2" />
+                  <Skeleton className="h-3 w-1/3" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }

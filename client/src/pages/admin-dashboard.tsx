@@ -5,6 +5,7 @@ import CrmMessageBanner from "@/components/CrmMessageBanner";
 import StorePurchaseBanner from "@/components/StorePurchaseBanner";
 import EnrollmentAssignmentBanner from "@/components/EnrollmentAssignmentBanner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { BanterLoader } from "@/components/BanterLoader";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -496,9 +497,49 @@ export default function AdminDashboard() {
   if (isLoading) {
     return (
       <>
-        <div className="ios-full-bleed" style={{ backgroundColor: '#ffffff' }} />
-        <div className="ios-fixed-page relative z-10 w-full flex items-center justify-center" style={{ backgroundColor: '#ffffff' }} data-testid="loading-admin-dashboard">
-          <BanterLoader />
+        <div className="ios-full-bleed" style={{ backgroundColor: '#f9fafb' }} />
+        <div className="scrollable-page relative z-10" style={{ backgroundColor: '#f9fafb' }} data-testid="loading-admin-dashboard">
+          {/* Skeleton header */}
+          <div className="bg-white border-b safe-top sticky top-0 z-50">
+            <div className="mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-md" />
+                  <div>
+                    <Skeleton className="h-7 w-44 mb-1" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                </div>
+                <Skeleton className="h-9 w-9 rounded-full" />
+              </div>
+            </div>
+          </div>
+          {/* Skeleton tabs */}
+          <div className="mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-4">
+            <div className="flex gap-2 overflow-hidden mb-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-9 w-20 rounded-md flex-shrink-0" />
+              ))}
+            </div>
+            {/* Skeleton stat cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-4">
+                    <Skeleton className="h-4 w-20 mb-2" />
+                    <Skeleton className="h-8 w-16" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            {/* Skeleton chart */}
+            <Card>
+              <CardContent className="p-4">
+                <Skeleton className="h-5 w-32 mb-4" />
+                <Skeleton className="h-48 w-full" />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </>
     );

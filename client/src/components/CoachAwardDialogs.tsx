@@ -96,13 +96,15 @@ export function AwardsDialog({
       <DialogContent className="max-w-lg [&>button.absolute]:hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => onOpenChange(false)}
-              className="mr-1 rounded-full p-1 hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-800"
+              className="h-12 w-12 -ml-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 shrink-0"
               aria-label="Close"
             >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
+              <ChevronLeft className="h-6 w-6" />
+            </Button>
             <Award className="h-5 w-5 text-red-600" />
             Give Award
             {player && (

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppMode } from "@/hooks/useAppMode";
-import { ArrowLeft, Trophy, ChevronDown, X } from "lucide-react";
+import { ChevronLeft, Trophy, ChevronDown, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isIconIdentifier } from "@/components/awards/awardIcons";
 import { AwardBadge } from "@/components/awards/AwardBadge";
@@ -198,15 +198,17 @@ export default function TrophiesBadgesPage() {
   return (
     <div className="scrollable-page bg-white text-[#1a1a1a] safe-bottom">
       {/* Top Bar */}
-      <div className="sticky top-0 z-50 bg-white border-b border-[#f0f0f0] flex items-center gap-3.5 px-5 py-3">
-        <button
-          onClick={() => setLocation("/player-dashboard")}
-          className="p-2 rounded-lg text-[#888] hover:bg-[#f5f5f5] hover:text-[#333] transition-colors"
-          data-testid="button-back"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <h1 className="text-[17px] font-semibold tracking-tight" data-testid="text-page-title">Awards</h1>
+      <div className="sticky top-0 z-50 bg-white border-b border-[#f0f0f0] safe-top">
+        <div className="flex items-center gap-1 px-3 py-1">
+          <button
+            onClick={() => setLocation("/player-dashboard")}
+            className="h-12 w-12 flex items-center justify-center rounded-full text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors shrink-0"
+            data-testid="button-back"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <h1 className="text-[17px] font-semibold tracking-tight" data-testid="text-page-title">Awards</h1>
+        </div>
       </div>
 
       {/* Overview section label */}

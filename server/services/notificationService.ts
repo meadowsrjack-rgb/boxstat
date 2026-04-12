@@ -917,6 +917,17 @@ export class NotificationService {
     });
   }
 
+  async notifyAwardReceived(userId: string, awardName: string, tier: string): Promise<void> {
+    await this.sendMultiChannelNotification({
+      userId,
+      title: '🏅 You earned an award!',
+      message: `Congratulations! You received the "${awardName}" (${tier}) award.`,
+      type: 'award_received',
+      data: { awardName, tier },
+      channels: ['in_app', 'push']
+    });
+  }
+
 }
 
 export const notificationService = new NotificationService();

@@ -14838,6 +14838,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Trigger award evaluation to update user's cached awards array
       await evaluateAwardsForUser(userId, storage);
+
+      // Send in-app + push notification to the recipient (fire-and-forget)
+      try {
+        const notifAwardId = typeof dbAwardId !== 'undefined' ? dbAwardId : awardId;
+        const def = await storage.getAwardDefinition(notifAwardId);
+        if (def) {
+          await notificationService.notifyAwardReceived(userId, def.name, def.tier);
+        }
+      } catch (notifErr) {
+        console.error('[Award] Failed to send award notification:', notifErr);
+      }
       
       res.status(201).json(userAward);
     } catch (error: any) {
@@ -14899,6 +14910,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Trigger award evaluation to update user's cached awards array
       await evaluateAwardsForUser(userId, storage);
+
+      // Send in-app + push notification to the recipient (fire-and-forget)
+      try {
+        const notifAwardId = typeof dbAwardId !== 'undefined' ? dbAwardId : awardId;
+        const def = await storage.getAwardDefinition(notifAwardId);
+        if (def) {
+          await notificationService.notifyAwardReceived(userId, def.name, def.tier);
+        }
+      } catch (notifErr) {
+        console.error('[Award] Failed to send award notification:', notifErr);
+      }
       
       res.status(201).json(userAward);
     } catch (error: any) {

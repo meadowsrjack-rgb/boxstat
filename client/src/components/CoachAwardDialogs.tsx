@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trophy, Award } from "lucide-react";
+import { Trophy, Award, ChevronLeft } from "lucide-react";
 import { AwardBadge } from "./awards/AwardBadge";
 import { isIconIdentifier } from "./awards/awardIcons";
 
@@ -93,9 +93,16 @@ export function AwardsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg [&>button.absolute]:hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
+            <button
+              onClick={() => onOpenChange(false)}
+              className="mr-1 rounded-full p-1 hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-800"
+              aria-label="Close"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
             <Award className="h-5 w-5 text-red-600" />
             Give Award
             {player && (

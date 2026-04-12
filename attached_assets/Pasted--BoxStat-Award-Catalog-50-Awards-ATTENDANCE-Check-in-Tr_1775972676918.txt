@@ -1,0 +1,163 @@
+# BoxStat — Award Catalog (50 Awards)
+
+---
+
+## ATTENDANCE (Check-in Trigger) — 9 Awards
+
+| # | Award Name | Tier | XP | Icon | Trigger | Requirement | Prereq |
+|---|-----------|------|-----|------|---------|-------------|--------|
+| 1 | Checked-In | Bronze | 25 | `CircleCheck` | Check-in | 1 check-in (any event) | — |
+| 2 | Showing Up | Bronze | 30 | `Footprints` | Check-in | 5 check-ins (any event) | Checked-In |
+| 3 | Regular | Silver | 60 | `CalendarCheck` | Check-in | 15 check-ins (any event) | Showing Up |
+| 4 | Dedicated | Silver | 80 | `HeartHandshake` | Check-in | 30 check-ins (any event) | Regular |
+| 5 | Committed | Gold | 120 | `Lock` | Check-in | 50 check-ins (any event) | Dedicated |
+| 6 | Iron Will | Gold | 150 | `Anvil` | Check-in | 75 check-ins (any event) | Committed |
+| 7 | The Grinder | Platinum | 250 | `Cog` | Check-in | 100 check-ins (any event) | Iron Will |
+| 8 | Centurion | Diamond | 350 | `Shield` | Check-in | 150 check-ins (any event) | The Grinder |
+| 9 | Franchise Player | Legend | 500 | `Crown` | Check-in | 200 check-ins (any event) | Centurion |
+
+---
+
+## RSVP (RSVP Trigger) — 4 Awards
+
+| # | Award Name | Tier | XP | Icon | Trigger | Requirement | Prereq |
+|---|-----------|------|-----|------|---------|-------------|--------|
+| 10 | RSVP'd | Bronze | 15 | `Mail` | RSVP | 1 RSVP (any event) | — |
+| 11 | Reliable | Bronze | 25 | `ThumbsUp` | RSVP | 5 RSVPs | RSVP'd |
+| 12 | Always Ready | Silver | 50 | `BellRing` | RSVP | 15 RSVPs | Reliable |
+| 13 | The Planner | Gold | 100 | `ClipboardCheck` | RSVP | 30 RSVPs | Always Ready |
+
+---
+
+## CONSISTENCY (Streak Trigger) — 5 Awards
+
+| # | Award Name | Tier | XP | Icon | Trigger | Requirement | Prereq |
+|---|-----------|------|-----|------|---------|-------------|--------|
+| 14 | Warming Up | Bronze | 20 | `Flame` | Streak | 3 consecutive check-ins | — |
+| 15 | On Fire | Gold | 100 | `Flame` | Streak | 5 consecutive check-ins | Warming Up |
+| 16 | Unstoppable | Platinum | 200 | `Rocket` | Streak | 10 consecutive check-ins | On Fire |
+| 17 | Machine | Diamond | 400 | `Cpu` | Streak | 20 consecutive check-ins | Unstoppable |
+| 18 | Legendary Run | Legend | 600 | `Bird` | Streak | 30 consecutive check-ins | Machine |
+
+---
+
+## DEVELOPMENT (Evaluation Trigger) — 5 Awards
+
+| # | Award Name | Tier | XP | Icon | Trigger | Requirement | Prereq |
+|---|-----------|------|-----|------|---------|-------------|--------|
+| 19 | First Look | Bronze | 20 | `Eye` | Evaluation | 1 skill evaluation received | — |
+| 20 | Skill Sharpener | Silver | 50 | `Wrench` | Evaluation | 5 skill evaluations received | First Look |
+| 21 | Rising Star | Gold | 120 | `StarHalf` | Evaluation | Avg rating 70+ across any 3 skills | Skill Sharpener |
+| 22 | Elite Performer | Platinum | 250 | `Gem` | Evaluation | Avg rating 85+ across any 3 skills | Rising Star |
+| 23 | Maxed Out | Diamond | 400 | `Gauge` | Evaluation | Rating 95+ on any single skill | Elite Performer |
+
+---
+
+## LOYALTY (Time Trigger) — 6 Awards
+
+| # | Award Name | Tier | XP | Icon | Trigger | Requirement | Prereq |
+|---|-----------|------|-----|------|---------|-------------|--------|
+| 24 | New Kid | Bronze | 15 | `Sprout` | Time | 1 month active | — |
+| 25 | Settling In | Silver | 50 | `House` | Time | 3 months active | New Kid |
+| 26 | Half Year | Silver | 75 | `Clock` | Time | 6 months active | Settling In |
+| 27 | First Birthday | Platinum | 200 | `Cake` | Time | 1 year active | Half Year |
+| 28 | Veteran | Diamond | 350 | `Medal` | Time | 2 years active | First Birthday |
+| 29 | OG | Legend | 600 | `Crown` | Time | 3 years active | Veteran |
+
+---
+
+## STATS (Stat Threshold Trigger) — 8 Awards
+
+*Coach configures which stat(s) to track per award — goals, points, tackles, saves, aces, etc.*
+
+| # | Award Name | Tier | XP | Icon | Trigger | Requirement | Prereq |
+|---|-----------|------|-----|------|---------|-------------|--------|
+| 30 | On the Board | Bronze | 20 | `Hash` | Stat | 1 in any tracked stat | — |
+| 31 | Building Up | Bronze | 40 | `BarChart3` | Stat | 10 in any tracked stat (cumulative) | On the Board |
+| 32 | Contributor | Silver | 75 | `TrendingUp` | Stat | 25 in any tracked stat (cumulative) | Building Up |
+| 33 | Impact Player | Gold | 150 | `Zap` | Stat | 50 in any tracked stat (cumulative) | Contributor |
+| 34 | Century Club | Platinum | 250 | `Target` | Stat | 100 in any tracked stat (cumulative) | Impact Player |
+| 35 | Stat Machine | Diamond | 400 | `Activity` | Stat | 200 in any tracked stat (cumulative) | Century Club |
+| 36 | Well Rounded | Gold | 120 | `PieChart` | Stat | 10+ in 3 different tracked stats | — |
+| 37 | All-Round Legend | Legend | 550 | `Globe` | Stat | 50+ in 3 different tracked stats | Well Rounded |
+
+---
+
+## TRAINING (Video Completion Trigger) — 4 Awards
+
+*Triggered when players complete assigned training videos or courses within the app.*
+
+| # | Award Name | Tier | XP | Icon | Trigger | Requirement | Prereq |
+|---|-----------|------|-----|------|---------|-------------|--------|
+| 38 | Student | Silver | 75 | `Play` | Video | Complete 1 training video | — |
+| 39 | Quick Learner | Gold | 150 | `MonitorPlay` | Video | Complete 5 training videos | Student |
+| 40 | Film Junkie | Platinum | 250 | `GraduationCap` | Video | Complete 15 training videos | Quick Learner |
+| 41 | Scholar | Diamond | 400 | `BookOpen` | Video | Complete 30 training videos | Film Junkie |
+
+---
+
+## META (Collection Trigger) — 3 Awards
+
+| # | Award Name | Tier | XP | Icon | Trigger | Requirement | Prereq |
+|---|-----------|------|-----|------|---------|-------------|--------|
+| 42 | Award Opener | Bronze | 20 | `Gift` | Collection | Earn any 2 awards | — |
+| 43 | The Collector | Diamond | 300 | `Archive` | Collection | Earn any 10 awards | Award Opener |
+| 44 | Completionist | Legend | 750 | `Trophy` | Collection | Earn any 25 awards | The Collector |
+
+---
+
+## RECOGNITION (Manual Trigger) — 6 Awards
+
+| # | Award Name | Tier | XP | Icon | Trigger | Requirement | Prereq |
+|---|-----------|------|-----|------|---------|-------------|--------|
+| 45 | Good Sport | Bronze | 25 | `Handshake` | Manual | Sportsmanship recognition | — |
+| 46 | Team Player | Silver | 75 | `Users` | Manual | Teamwork recognition | — |
+| 47 | Captain's Pick | Gold | 150 | `BadgeCheck` | Manual | Leadership nomination | — |
+| 48 | Coach's MVP | Platinum | 300 | `Star` | Manual | MVP selection | — |
+| 49 | Game Changer | Diamond | 400 | `Bolt` | Manual | Outstanding impact | — |
+| 50 | Heart & Hustle | Legend | 500 | `HeartPulse` | Manual | Highest coach honor | — |
+
+---
+
+## Summary
+
+| Tier | Count | XP Range |
+|------|-------|----------|
+| Bronze | 12 | 15–40 |
+| Silver | 8 | 50–80 |
+| Gold | 8 | 100–150 |
+| Platinum | 6 | 200–300 |
+| Diamond | 8 | 300–400 |
+| Legend | 8 | 500–750 |
+| **Total** | **50** | **Total XP pool: 9,835** |
+
+## Trigger Distribution
+
+| Trigger | Count |
+|---------|-------|
+| Check-in | 9 |
+| RSVP | 4 |
+| Streak | 5 |
+| Evaluation | 5 |
+| Time | 6 |
+| Stat Threshold | 8 |
+| Video | 4 |
+| Collection | 3 |
+| Manual | 6 |
+
+## Icon Notes
+
+- All icons are Lucide React component names — import via `import { CircleCheck, Footprints, ... } from 'lucide-react'`
+- `Flame` is used twice (#14 Warming Up, #15 On Fire) — tier background differentiates them
+- `Crown` is used twice (#9 Franchise Player, #29 OG) — different categories make them distinct
+- Icons render as white strokes centered on the tier badge PNG placeholder
+- Recommended `strokeWidth={1.8}` and `size={badgeSize * 0.38}` for consistent appearance
+
+## Progression Notes
+
+- **Attendance chain** (9 deep) is the longest — rewards the behavior coaches care about most
+- **Streak chain** jumps from Bronze straight to Gold — streaks are hard, the reward should reflect that
+- **Stats chain** has a single-stat track (On the Board → Stat Machine) and a parallel multi-stat track (Well Rounded → All-Round Legend) — coaches configure which stats matter for their sport
+- **Manual awards** have no prerequisites — coaches should be free to recognize anyone at any level
+- **Collection awards** create a meta-game: earning awards earns more awards
+- **The Collector** was bumped from "any 5" to "any 10" to keep Diamond feeling earned

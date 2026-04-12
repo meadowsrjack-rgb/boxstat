@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 type TierType = "Bronze" | "Silver" | "Gold" | "Platinum" | "Diamond" | "Legend";
-type TriggerCategory = "checkin" | "system" | "time" | "store" | "manual";
+type TriggerCategory = "checkin" | "system" | "time" | "store" | "manual" | "rsvp" | "streak" | "evaluation" | "stat" | "video";
 
 interface AwardDefinition {
   id: number;
@@ -54,11 +54,16 @@ interface AwardWithDetails extends AwardDefinition {
 }
 
 const TRIGGER_LABELS: Record<TriggerCategory, string> = {
-  checkin: "Check-in",
+  checkin: "Attendance",
   system: "Collection",
-  time: "Time",
+  time: "Loyalty",
   store: "Store",
-  manual: "Manual"
+  manual: "Recognition",
+  rsvp: "RSVP",
+  streak: "Consistency",
+  evaluation: "Development",
+  stat: "Stats",
+  video: "Training",
 };
 
 export default function TrophiesBadgesPage() {

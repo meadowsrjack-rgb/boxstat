@@ -11,10 +11,11 @@ interface NotificationParams {
   message: string;
   channels?: ('in_app' | 'push' | 'email')[];
   url?: string;
+  customData?: Record<string, any>;
 }
 
 async function sendNotification(storage: IStorage, params: NotificationParams) {
-  const { userId, title, message, channels = ['in_app', 'push'], url } = params;
+  const { userId, title, message, channels = ['in_app', 'push'], url, customData } = params;
   
   try {
     // Get user's organization for notification
@@ -34,13 +35,16 @@ async function sendNotification(storage: IStorage, params: NotificationParams) {
     });
 
     if (createdNotification?.id && channels.includes('push')) {
+      const pushCustomData: Record<string, any> = {};
+      if (url) pushCustomData.url = url;
+      if (customData) Object.assign(pushCustomData, customData);
       await notificationService.sendPushNotification(
         createdNotification.id,
         userId,
         title,
         message,
         undefined,
-        url ? { url } : undefined
+        Object.keys(pushCustomData).length > 0 ? pushCustomData : undefined
       );
     }
     
@@ -154,12 +158,17 @@ export const pushNotifications = {
     });
   },
 
-  async playerSkillsEvaluated(storage: IStorage, playerId: string, coachName: string) {
+  async playerSkillsEvaluated(storage: IStorage, playerId: string, coachName: string, oldOvr?: number, newOvr?: number) {
     await sendNotification(storage, {
       userId: playerId,
       title: "📊 Skills Evaluated",
       message: `Coach ${coachName} evaluated your skills - check your progress!`,
-      url: '/player-dashboard?tab=profile',
+      url: '/player-dashboard?tab=profile&popup=eval',
+      customData: {
+        notificationType: 'skill_evaluation',
+        ...(oldOvr !== undefined && { oldOvr }),
+        ...(newOvr !== undefined && { newOvr }),
+      },
     });
   },
 

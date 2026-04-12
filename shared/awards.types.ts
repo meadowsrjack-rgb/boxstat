@@ -20,6 +20,9 @@ export interface Award {
 
   // NEW — which app events should re-check this award
   triggerSources?: Array<"attendance"|"coachAward"|"onlineTraining"|"rsvp"|"trainingCompletion">;
+
+  // XP reward granted when this award is earned
+  xpReward?: number;
 }
 
 export interface UserStats {

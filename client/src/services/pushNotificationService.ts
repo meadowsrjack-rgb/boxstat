@@ -130,8 +130,27 @@ export const initPushNotifications = async () => {
       // to the correct dashboard, which auto-opens the EventDetailModal.
       // NOTE: do NOT use getFullUrl() here — prepending the production domain
       // would change the WebView origin and lose localStorage/session context.
-      console.log('[Push Notification] Navigating to:', data.url);
-      window.location.href = data.url;
+
+      // Build the URL, appending notification-specific popup data as query params
+      // so the player dashboard can read them and show the appropriate popup.
+      let targetUrl = data.url as string;
+      try {
+        const notifType = data.notificationType as string | undefined;
+        if (notifType === 'award' && data.awardName) {
+          const base = targetUrl.includes('?') ? targetUrl : `${targetUrl}`;
+          const sep = base.includes('?') ? '&' : '?';
+          targetUrl = `${base}${sep}awardName=${encodeURIComponent(data.awardName)}&awardTier=${encodeURIComponent(data.awardTier || 'Bronze')}&awardImageUrl=${encodeURIComponent(data.awardImageUrl || '')}&xpReward=${encodeURIComponent(data.xpReward || 50)}`;
+        } else if (notifType === 'skill_evaluation') {
+          const base = targetUrl.includes('?') ? targetUrl : `${targetUrl}`;
+          const sep = base.includes('?') ? '&' : '?';
+          targetUrl = `${base}${sep}oldOvr=${encodeURIComponent(data.oldOvr || 0)}&newOvr=${encodeURIComponent(data.newOvr || 0)}`;
+        }
+      } catch (urlErr) {
+        console.warn('[Push Notification] Failed to append popup params:', urlErr);
+      }
+
+      console.log('[Push Notification] Navigating to:', targetUrl);
+      window.location.href = targetUrl;
     }
   });
 

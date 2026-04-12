@@ -53,6 +53,8 @@ import {
 import NotificationCenter from "@/components/NotificationCenter";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
+import { EvaluationPopup } from "@/components/awards/EvaluationPopup";
+import { AwardUnlockPopup } from "@/components/awards/AwardUnlockPopup";
 
 import PushNotificationSetup from "@/components/PushNotificationSetup";
 import { useEffect, useMemo, useState, useRef } from "react";
@@ -281,6 +283,53 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     };
 
     fetchAndOpenEvent();
+  }, []);
+
+  // Popup state for notification deep links
+  const [evalPopupOpen, setEvalPopupOpen] = useState(false);
+  const [evalPopupData, setEvalPopupData] = useState<{ oldOvr: number; newOvr: number } | null>(null);
+  const [awardPopupOpen, setAwardPopupOpen] = useState(false);
+  const [awardPopupData, setAwardPopupData] = useState<{
+    awardName: string;
+    awardTier: string;
+    awardImageUrl: string;
+    xpReward: number;
+  } | null>(null);
+
+  // Handle popup deep links from push notification taps
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const popup = urlParams.get('popup');
+    if (!popup) return;
+
+    if (popup === 'eval') {
+      const oldOvr = parseInt(urlParams.get('oldOvr') || '0', 10);
+      const newOvr = parseInt(urlParams.get('newOvr') || '0', 10);
+      if (newOvr > 0) {
+        setEvalPopupData({ oldOvr, newOvr });
+        setEvalPopupOpen(true);
+      }
+    } else if (popup === 'award') {
+      const awardName = urlParams.get('awardName') || '';
+      const awardTier = urlParams.get('awardTier') || 'Bronze';
+      const awardImageUrl = urlParams.get('awardImageUrl') || '';
+      const xpReward = parseInt(urlParams.get('xpReward') || '50', 10);
+      if (awardName) {
+        setAwardPopupData({ awardName, awardTier, awardImageUrl, xpReward });
+        setAwardPopupOpen(true);
+      }
+    }
+
+    // Clean up popup params from URL
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.delete('popup');
+    newUrl.searchParams.delete('oldOvr');
+    newUrl.searchParams.delete('newOvr');
+    newUrl.searchParams.delete('awardName');
+    newUrl.searchParams.delete('awardTier');
+    newUrl.searchParams.delete('awardImageUrl');
+    newUrl.searchParams.delete('xpReward');
+    window.history.replaceState({}, '', newUrl.toString());
   }, []);
 
   // Update URL and localStorage when activeTab changes
@@ -960,6 +1009,25 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   /* =================== UI =================== */
   return (
     <>
+      {/* Notification deep-link popups */}
+      {evalPopupData && (
+        <EvaluationPopup
+          isOpen={evalPopupOpen}
+          oldOvr={evalPopupData.oldOvr}
+          newOvr={evalPopupData.newOvr}
+          onClose={() => setEvalPopupOpen(false)}
+        />
+      )}
+      {awardPopupData && (
+        <AwardUnlockPopup
+          isOpen={awardPopupOpen}
+          awardName={awardPopupData.awardName}
+          awardTier={awardPopupData.awardTier}
+          awardImageUrl={awardPopupData.awardImageUrl}
+          xpReward={awardPopupData.xpReward}
+          onClose={() => setAwardPopupOpen(false)}
+        />
+      )}
       <div className="ios-full-bleed" style={{ backgroundColor: '#f9fafb' }} />
       <div className="scrollable-page relative z-10" style={{ backgroundColor: '#f9fafb' }}>
       {/* Top Bar (QR removed) */}

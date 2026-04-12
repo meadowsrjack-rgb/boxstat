@@ -824,7 +824,8 @@ export class NotificationService {
           // Send push notification if channel includes it
           if (channels.includes('push')) {
             const eventCollapseKey = data.eventId ? `event-${type}-${data.eventId}` : undefined;
-            await this.sendPushNotification(notification.id, userId, title, message, eventCollapseKey);
+            const pushCustomData = Object.keys(data).length > 0 ? data : undefined;
+            await this.sendPushNotification(notification.id, userId, title, message, eventCollapseKey, pushCustomData);
           }
         }
       } else if (channels.includes('push')) {
@@ -917,13 +918,28 @@ export class NotificationService {
     });
   }
 
-  async notifyAwardReceived(userId: string, awardName: string, tier: string): Promise<void> {
+  async notifyAwardReceived(userId: string, awardName: string, tier: string, imageUrl?: string, xpReward?: number): Promise<void> {
+    const tierXpMap: Record<string, number> = {
+      Prospect: 50, Starter: 50, Bronze: 50,
+      AllStar: 100, 'All-Star': 100, Silver: 100, Team: 100,
+      Superstar: 200, Gold: 200, Platinum: 200,
+      HallOfFamer: 300, HOF: 300, Diamond: 300,
+      Legacy: 500, Legend: 500,
+    };
+    const xp = xpReward ?? tierXpMap[tier] ?? 50;
     await this.sendMultiChannelNotification({
       userId,
       title: '🏅 You earned an award!',
       message: `Congratulations! You received the "${awardName}" (${tier}) award.`,
       type: 'award_received',
-      data: { awardName, tier },
+      data: {
+        url: '/player-dashboard?popup=award',
+        notificationType: 'award',
+        awardName,
+        awardTier: tier,
+        awardImageUrl: imageUrl || '',
+        xpReward: xp,
+      },
       channels: ['in_app', 'push']
     });
   }

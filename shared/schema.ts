@@ -826,6 +826,9 @@ export const awardDefinitions = pgTable("award_definitions", {
   // Award earning limits
   allowMultiple: boolean("allow_multiple").default(false), // Can this award be earned multiple times?
   
+  // XP reward granted when this award is earned
+  xpReward: integer("xp_reward").default(50),
+  
   // Legacy fields (kept for backwards compatibility during migration)
   class: text(),
   prestige: text().default('Bronze'),

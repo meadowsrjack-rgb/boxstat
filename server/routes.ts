@@ -13536,6 +13536,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const avgScore = totalScore / scoreCount;
             const ovrRating = Math.round(avgScore * 20); // Convert 1-5 to 0-100
             
+            // Capture old OVR before updating
+            const playerBeforeUpdate = await storage.getUser(evaluationData.playerId);
+            const oldOvr = playerBeforeUpdate?.rating ?? undefined;
+            
             // Update player's rating
             await storage.updateUser(evaluationData.playerId, { 
               rating: ovrRating,
@@ -13548,7 +13552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const coach = await storage.getUser(coachId);
               const coachName = `${coach?.firstName || ''} ${coach?.lastName || ''}`.trim() || 'Your coach';
               
-              await pushNotifications.playerSkillsEvaluated(storage, evaluationData.playerId, coachName);
+              await pushNotifications.playerSkillsEvaluated(storage, evaluationData.playerId, coachName, oldOvr, ovrRating);
               
               // Also notify parent
               const player = await storage.getUser(evaluationData.playerId);

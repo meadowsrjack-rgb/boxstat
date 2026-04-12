@@ -25,6 +25,7 @@ interface AwardNotification {
   awardName: string;
   awardTier: string;
   imageUrl: string | null;
+  xpReward?: number;
 }
 
 export async function evaluateAwardsForUser(
@@ -121,6 +122,7 @@ export async function evaluateAwardsForUser(
             awardName: award.name,
             awardTier: award.tier,
             imageUrl: award.imageUrl,
+            xpReward: award.xpReward ?? undefined,
           });
         } catch (error) {
           console.error(`Error awarding ${award.name} to user ${userId}:`, error);
@@ -445,6 +447,7 @@ export async function grantManualAward(
         awardName: award.name,
         awardTier: award.tier,
         imageUrl: award.imageUrl,
+        xpReward: award.xpReward ?? undefined,
       }, storage);
     }
 
@@ -487,6 +490,30 @@ async function updateUserAwardsCache(userId: string): Promise<void> {
     .where(eq(users.id, userId));
 }
 
+const TIER_XP_REWARDS: Record<string, number> = {
+  Prospect: 50,
+  Starter: 50,
+  Bronze: 50,
+  AllStar: 100,
+  "All-Star": 100,
+  Silver: 100,
+  Superstar: 200,
+  Gold: 200,
+  HallOfFamer: 300,
+  HOF: 300,
+  Platinum: 200,
+  Diamond: 300,
+  Legacy: 500,
+  Legend: 500,
+  Team: 100,
+  Badge: 50,
+  Trophy: 200,
+};
+
+function getXpForTier(tier: string): number {
+  return TIER_XP_REWARDS[tier] ?? 50;
+}
+
 async function sendAwardNotification(
   notification: AwardNotification,
   storage: IStorage
@@ -495,6 +522,7 @@ async function sendAwardNotification(
     const user = await storage.getUser(notification.userId);
     if (!user) return;
 
+    const xpReward = notification.xpReward ?? getXpForTier(notification.awardTier);
     const title = `🏆 New Award Earned: ${notification.awardName}`;
     const message = `Congratulations! You've earned the "${notification.awardName}" (${notification.awardTier}) award!`;
 
@@ -526,13 +554,22 @@ async function sendAwardNotification(
         console.error(`Failed to create notification recipient for award:`, recipientError);
       }
 
-      // Send push notification
+      // Send push notification with award metadata for deep link popup
       try {
         await notificationService.sendPushNotification(
           createdNotification.id,
           notification.userId,
           title,
-          message
+          message,
+          undefined,
+          {
+            url: '/player-dashboard?popup=award',
+            notificationType: 'award',
+            awardName: notification.awardName,
+            awardTier: notification.awardTier,
+            awardImageUrl: notification.imageUrl || '',
+            xpReward,
+          }
         );
         console.log(`📱 Push notification sent to user ${notification.userId} for award "${notification.awardName}"`);
       } catch (pushError) {

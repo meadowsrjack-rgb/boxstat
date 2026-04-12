@@ -6140,6 +6140,8 @@ class DatabaseStorage implements IStorage {
       // Schedule request fields
       scheduleRequestEnabled: dbProgram.scheduleRequestEnabled ?? false,
       sessionLengthMinutes: dbProgram.sessionLengthMinutes,
+      // Visibility
+      visibility: dbProgram.visibility ?? 'public',
     };
   }
   

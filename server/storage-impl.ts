@@ -2767,6 +2767,28 @@ class DatabaseStorage implements IStorage {
 
   async initializeAwardDefinitions(): Promise<void> {
     try {
+      const tierRenameMap: Record<string, string> = {
+        'Prospect': 'Bronze',
+        'Starter': 'Silver',
+        'All-Star': 'Gold',
+        'AllStar': 'Gold',
+        'Superstar': 'Platinum',
+        'HOF': 'Diamond',
+        'HallOfFamer': 'Diamond',
+        'Legacy': 'Legend',
+      };
+      for (const [oldTier, newTier] of Object.entries(tierRenameMap)) {
+        await db.update(schema.awardDefinitions)
+          .set({ tier: newTier })
+          .where(eq(schema.awardDefinitions.tier, oldTier));
+        await db.update(schema.awardDefinitions)
+          .set({ prestige: newTier })
+          .where(eq(schema.awardDefinitions.prestige, oldTier));
+        await db.update(schema.awardDefinitions)
+          .set({ targetTier: newTier })
+          .where(eq(schema.awardDefinitions.targetTier, oldTier));
+      }
+
       // Check if award definitions already exist for the default organization
       const existingAwards = await this.getAwardDefinitions(this.defaultOrgId);
       

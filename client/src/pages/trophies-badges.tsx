@@ -234,7 +234,7 @@ export default function TrophiesBadgesPage() {
           </div>
         </div>
         {[
-          { count: stats.diamond, label: "Diamond", color: "text-[#5b21b6]", testId: "card-stat-diamond" },
+          { count: stats.diamond, label: "Diamond", color: "text-[#00e8ff]", testId: "card-stat-diamond" },
           { count: stats.platinum, label: "Platinum", color: "text-[#155e75]", testId: "card-stat-platinum" },
           { count: stats.gold, label: "Gold", color: "text-[#854d0e]", testId: "card-stat-gold" },
           { count: stats.silver, label: "Silver", color: "text-[#475569]", testId: "card-stat-silver" },

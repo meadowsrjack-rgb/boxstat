@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trophy, Award } from "lucide-react";
+import { getAwardIcon, isIconIdentifier } from "@/components/awards/awardIcons";
 
 interface AwardDefinition {
   id: number;
@@ -157,13 +158,14 @@ export function AwardsDialog({
                 data-testid={`button-award-${a.id}`}
               >
                 <div className="flex items-center gap-3">
-                  {a.imageUrl ? (
-                    <img src={a.imageUrl} alt={a.name} className="w-12 h-12 rounded-lg object-cover" />
-                  ) : (
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${getTierColor(a.tier)}`}>
-                      <Award className="h-6 w-6" />
-                    </div>
-                  )}
+                  {(() => {
+                    const AwardLucideIcon = a.imageUrl && isIconIdentifier(a.imageUrl) ? getAwardIcon(a.imageUrl) : null;
+                    return (
+                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${getTierColor(a.tier)}`}>
+                        {AwardLucideIcon ? <AwardLucideIcon className="h-6 w-6" /> : <Award className="h-6 w-6" />}
+                      </div>
+                    );
+                  })()}
                   <div className="flex-1 min-w-0">
                     <div className="font-medium flex items-center gap-2 flex-wrap">
                       <span className="truncate">{a.name}</span>

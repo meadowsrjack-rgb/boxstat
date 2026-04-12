@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, TrendingUp, TrendingDown, Minus } from "lucide-react";
 
@@ -13,6 +13,8 @@ export function EvaluationPopup({ isOpen, oldOvr, newOvr, onClose }: EvaluationP
   const [animatedOvr, setAnimatedOvr] = useState(oldOvr);
   const [barProgress, setBarProgress] = useState((oldOvr / 100) * 100);
   const [hasAnimated, setHasAnimated] = useState(false);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   const diff = newOvr - oldOvr;
   const isIncrease = diff > 0;
@@ -53,14 +55,14 @@ export function EvaluationPopup({ isOpen, oldOvr, newOvr, onClose }: EvaluationP
     }, 600);
 
     const autoDismiss = setTimeout(() => {
-      onClose();
+      onCloseRef.current();
     }, 6000);
 
     return () => {
       clearTimeout(delay);
       clearTimeout(autoDismiss);
     };
-  }, [isOpen, oldOvr, newOvr, onClose]);
+  }, [isOpen, oldOvr, newOvr]);
 
   const TrendIcon = isIncrease ? TrendingUp : isDecrease ? TrendingDown : Minus;
   const trendColor = isIncrease

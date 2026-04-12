@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Sparkles } from "lucide-react";
 import { AwardBadge } from "./AwardBadge";
@@ -39,6 +39,8 @@ export function AwardUnlockPopup({
   onClose,
 }: AwardUnlockPopupProps) {
   const [phase, setPhase] = useState<"locked" | "unlocking" | "unlocked">("locked");
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   const gradient = TIER_GRADIENT[awardTier] || "from-yellow-700 to-yellow-500";
 
@@ -52,14 +54,14 @@ export function AwardUnlockPopup({
 
     const t1 = setTimeout(() => setPhase("unlocking"), 600);
     const t2 = setTimeout(() => setPhase("unlocked"), 1400);
-    const autoDismiss = setTimeout(() => onClose(), 7000);
+    const autoDismiss = setTimeout(() => onCloseRef.current(), 7000);
 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(autoDismiss);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   const iconId =
     awardImageUrl && !awardImageUrl.startsWith("/") && !awardImageUrl.startsWith("http")

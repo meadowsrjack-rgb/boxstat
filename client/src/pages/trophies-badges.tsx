@@ -1,15 +1,17 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppMode } from "@/hooks/useAppMode";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Medal, ArrowLeft, Lock, Trophy, Star } from "lucide-react";
+import { Medal, ArrowLeft, Trophy, ChevronDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getAwardIcon, isIconIdentifier } from "@/components/awards/awardIcons";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type TierType = "Prospect" | "Starter" | "All-Star" | "Superstar" | "HOF" | "Legacy";
 type TriggerCategory = "checkin" | "system" | "time" | "store" | "manual";
@@ -50,40 +52,31 @@ interface AwardWithDetails extends AwardDefinition {
   notes?: string;
 }
 
-const TIER_GRADIENT = {
-  Prospect: "from-gray-500/20 to-gray-600/10 border-gray-500/40",
-  Starter: "from-green-500/20 to-green-600/10 border-green-500/40",
-  "All-Star": "from-blue-500/20 to-blue-600/10 border-blue-500/40",
-  Superstar: "from-purple-500/20 to-purple-600/10 border-purple-500/40",
-  HOF: "from-yellow-500/20 to-yellow-600/10 border-yellow-500/40",
-  Legacy: "from-pink-500/20 via-yellow-500/10 to-purple-500/20 border-purple-500/40",
+const TIER_ICON_BG: Record<TierType, string> = {
+  Prospect: "bg-[#f3f3f3] text-[#999]",
+  Starter: "bg-[#ecfdf5] text-[#16a34a]",
+  "All-Star": "bg-[#eff6ff] text-[#3b82f6]",
+  Superstar: "bg-[#f5f3ff] text-[#a855f7]",
+  HOF: "bg-[#fffbeb] text-[#d97706]",
+  Legacy: "bg-[#fff1f2] text-[#e11d48]",
 };
 
-const TIER_ICON_COLOR = {
-  Prospect: "text-gray-400",
-  Starter: "text-green-400",
-  "All-Star": "text-blue-400",
-  Superstar: "text-purple-400",
-  HOF: "text-yellow-400",
-  Legacy: "text-pink-400",
+const TIER_BADGE: Record<TierType, string> = {
+  Prospect: "bg-[#f3f3f3] text-[#999]",
+  Starter: "bg-[#ecfdf5] text-[#16a34a]",
+  "All-Star": "bg-[#eff6ff] text-[#3b82f6]",
+  Superstar: "bg-[#f5f3ff] text-[#a855f7]",
+  HOF: "bg-[#fffbeb] text-[#d97706]",
+  Legacy: "bg-[#fff1f2] text-[#e11d48]",
 };
 
-const TIER_GLOW = {
-  Prospect: "",
-  Starter: "drop-shadow-[0_0_8px_rgba(34,197,94,0.5)]",
-  "All-Star": "drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]",
-  Superstar: "drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]",
-  HOF: "drop-shadow-[0_0_10px_rgba(234,179,8,0.6)]",
-  Legacy: "drop-shadow-[0_0_12px_rgba(236,72,153,0.5)]",
-};
-
-const TIER_BADGE_COLOR = {
-  Prospect: "bg-gray-500/20 text-gray-300 border-gray-500/50",
-  Starter: "bg-green-500/20 text-green-300 border-green-500/50",
-  "All-Star": "bg-blue-500/20 text-blue-300 border-blue-500/50",
-  Superstar: "bg-purple-500/20 text-purple-300 border-purple-500/50",
-  HOF: "bg-yellow-500/20 text-yellow-300 border-yellow-500/50",
-  Legacy: "bg-pink-500/20 text-pink-300 border-pink-500/50",
+const TIER_PROGRESS_COLOR: Record<TierType, string> = {
+  Prospect: "bg-[#bbb]",
+  Starter: "bg-[#22c55e]",
+  "All-Star": "bg-[#3b82f6]",
+  Superstar: "bg-[#a855f7]",
+  HOF: "bg-[#f59e0b]",
+  Legacy: "bg-[#e11d48]",
 };
 
 const TRIGGER_LABELS: Record<TriggerCategory, string> = {
@@ -121,6 +114,11 @@ export default function TrophiesBadgesPage() {
   const [selectedTrigger, setSelectedTrigger] = useState<"all" | TriggerCategory>("all");
   const [selectedProgram, setSelectedProgram] = useState<"all" | string>("all");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "tier">("newest");
+  const [activeTab, setActiveTab] = useState<"earned" | "available">("earned");
+  const tabBarRef = useRef<HTMLDivElement>(null);
+  const earnedTabRef = useRef<HTMLButtonElement>(null);
+  const availableTabRef = useRef<HTMLButtonElement>(null);
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
 
   const urlParams = new URLSearchParams(searchString);
   const urlPlayerId = urlParams.get("playerId");
@@ -137,7 +135,7 @@ export default function TrophiesBadgesPage() {
     queryKey: ["/api/users", viewingUserId, "awards"],
     enabled: !!user && !!viewingUserId,
   });
-  
+
   const userAwardRecords = userAwardsResponse?.allAwards || [];
 
   const { data: programMemberships = [] } = useQuery<ProgramMembership[]>({
@@ -147,13 +145,11 @@ export default function TrophiesBadgesPage() {
 
   const earnedAwards = useMemo<AwardWithDetails[]>(() => {
     if (!awardDefinitions || userAwardRecords.length === 0) return [];
-    
     return userAwardRecords
       .filter(record => record.visible)
       .map(record => {
         const definition = awardDefinitions.find(def => def.id === record.awardId);
         if (!definition) return null;
-        
         return {
           ...definition,
           earnedDate: record.awardedAt,
@@ -184,7 +180,6 @@ export default function TrophiesBadgesPage() {
     if (selectedTier !== "all") filtered = filtered.filter(award => award.tier === selectedTier);
     if (selectedTrigger !== "all") filtered = filtered.filter(award => (award.triggerCategory || "manual") === selectedTrigger);
     filtered = filtered.filter(matchesProgram);
-
     return filtered.sort((a, b) => {
       if (sortBy === "newest") return new Date(b.earnedDate).getTime() - new Date(a.earnedDate).getTime();
       if (sortBy === "oldest") return new Date(a.earnedDate).getTime() - new Date(b.earnedDate).getTime();
@@ -217,304 +212,326 @@ export default function TrophiesBadgesPage() {
     return date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
   };
 
+  useEffect(() => {
+    const updateIndicator = () => {
+      const bar = tabBarRef.current;
+      const activeRef = activeTab === "earned" ? earnedTabRef.current : availableTabRef.current;
+      if (!bar || !activeRef) return;
+      const barRect = bar.getBoundingClientRect();
+      const tabRect = activeRef.getBoundingClientRect();
+      setIndicatorStyle({ left: tabRect.left - barRect.left, width: tabRect.width });
+    };
+    updateIndicator();
+    window.addEventListener("resize", updateIndicator);
+    return () => window.removeEventListener("resize", updateIndicator);
+  }, [activeTab]);
+
+  const tierFilterLabel = selectedTier === "all" ? "Tier" : selectedTier;
+  const categoryFilterLabel = selectedTrigger === "all" ? "Category" : TRIGGER_LABELS[selectedTrigger];
+  const sortLabel = sortBy === "newest" ? "Newest" : sortBy === "oldest" ? "Oldest" : "By Tier";
+  const programFilterLabel = selectedProgram === "all"
+    ? "Program"
+    : (programMemberships.find(p => p.programId === selectedProgram)?.programName ?? "Program");
+
   return (
-    <div className="scrollable-page bg-gradient-to-b from-slate-900 via-gray-900 to-black text-white safe-bottom">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="scrollable-page bg-white text-[#1a1a1a] safe-bottom">
+      {/* Top Bar */}
+      <div className="sticky top-0 z-50 bg-white border-b border-[#f0f0f0] flex items-center gap-3.5 px-5 py-3">
+        <button
+          onClick={() => setLocation("/player-dashboard")}
+          className="p-2 rounded-lg text-[#888] hover:bg-[#f5f5f5] hover:text-[#333] transition-colors"
+          data-testid="button-back"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <h1 className="text-[17px] font-semibold tracking-tight" data-testid="text-page-title">Awards</h1>
+      </div>
 
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setLocation("/player-dashboard")}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-            data-testid="button-back"
+      {/* Overview section label */}
+      <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#b0b0b0] px-5 pt-5 pb-2.5">
+        Overview
+      </div>
+
+      {/* Tier Summary Chips */}
+      <div
+        className="flex px-5 pb-4 overflow-x-auto gap-0"
+        style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+      >
+        <div className="flex-1 min-w-0 text-center px-1.5 py-2.5" data-testid="card-stat-legacy">
+          <div className="text-[20px] font-bold leading-none text-[#1a1a1a]">{stats.legacy}</div>
+          <div
+            className="text-[10px] font-semibold mt-1 tracking-[0.02em]"
+            style={{
+              background: "linear-gradient(90deg, #e74c4c, #f59e0b, #22c55e, #3b82f6, #a855f7)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}
           >
-            <ArrowLeft className="h-6 w-6" />
-          </button>
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <Trophy className="h-7 w-7 text-yellow-400" />
-              <h1 className="text-3xl font-bold" data-testid="text-page-title">Awards</h1>
-            </div>
-            <p className="text-sm text-gray-400 mt-1" data-testid="text-page-subtitle">
-              Track your achievements and earn rewards for your dedication
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold text-yellow-400">{stats.total}</p>
-            <p className="text-xs text-gray-400">Earned</p>
+            Legacy
           </div>
         </div>
+        {[
+          { count: stats.hof, label: "HOF", color: "text-[#f59e0b]", testId: "card-stat-hof" },
+          { count: stats.superstar, label: "Superstar", color: "text-[#a855f7]", testId: "card-stat-superstar" },
+          { count: stats.allStar, label: "All-Star", color: "text-[#3b82f6]", testId: "card-stat-allstar" },
+          { count: stats.starter, label: "Starter", color: "text-[#22c55e]", testId: "card-stat-starter" },
+          { count: stats.prospect, label: "Prospect", color: "text-[#999]", testId: "card-stat-prospect" },
+        ].map(({ count, label, color, testId }) => (
+          <div key={label} className="flex-1 min-w-0 text-center px-1.5 py-2.5" data-testid={testId}>
+            <div className="text-[20px] font-bold leading-none text-[#1a1a1a]">{count}</div>
+            <div className={`text-[10px] font-semibold mt-1 tracking-[0.02em] ${color}`}>{label}</div>
+          </div>
+        ))}
+      </div>
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-          {[
-            { count: stats.legacy, label: "Legacy", color: "text-pink-400" },
-            { count: stats.hof, label: "HOF", color: "text-yellow-400" },
-            { count: stats.superstar, label: "Superstar", color: "text-purple-400" },
-            { count: stats.allStar, label: "All-Star", color: "text-blue-400" },
-            { count: stats.starter, label: "Starter", color: "text-green-400" },
-            { count: stats.prospect, label: "Prospect", color: "text-gray-400" },
-          ].map(({ count, label, color }) => (
-            <div
-              key={label}
-              className="text-center p-3 bg-white/5 rounded-xl border border-white/10"
-              data-testid={`card-stat-${label.toLowerCase().replace("-", "")}`}
+      {/* Pill Filter Buttons */}
+      <div className="flex flex-wrap gap-2 px-5 pb-4">
+        {/* Tier filter */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="flex items-center gap-1.5 px-3.5 py-[7px] rounded-full border border-[#e8e8e8] bg-white text-xs font-medium text-[#666] hover:border-[#ccc] hover:text-[#333] transition-colors whitespace-nowrap"
+              data-testid="select-tier"
             >
-              <p className={`text-xl font-bold ${color}`}>{count}</p>
-              <p className={`text-xs font-medium ${color} opacity-80`}>{label}</p>
-            </div>
-          ))}
-        </div>
+              {tierFilterLabel}
+              <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => setSelectedTier("all")}>All Tiers</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedTier("Legacy")}>Legacy</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedTier("HOF")}>HOF</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedTier("Superstar")}>Superstar</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedTier("All-Star")}>All-Star</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedTier("Starter")}>Starter</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedTier("Prospect")}>Prospect</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        {/* Filters */}
-        <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <label className="text-xs text-gray-400 mb-1 block">Tier</label>
-              <Select value={selectedTier} onValueChange={(value) => setSelectedTier(value as any)}>
-                <SelectTrigger className="bg-white/10 border-white/20 h-8 text-xs" data-testid="select-tier">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="Legacy">Legacy</SelectItem>
-                  <SelectItem value="HOF">HOF</SelectItem>
-                  <SelectItem value="Superstar">Superstar</SelectItem>
-                  <SelectItem value="All-Star">All-Star</SelectItem>
-                  <SelectItem value="Starter">Starter</SelectItem>
-                  <SelectItem value="Prospect">Prospect</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-xs text-gray-400 mb-1 block">Category</label>
-              <Select value={selectedTrigger} onValueChange={(value) => setSelectedTrigger(value as any)}>
-                <SelectTrigger className="bg-white/10 border-white/20 h-8 text-xs" data-testid="select-trigger">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="checkin">Check-in</SelectItem>
-                  <SelectItem value="system">Collection</SelectItem>
-                  <SelectItem value="time">Time</SelectItem>
-                  <SelectItem value="store">Store</SelectItem>
-                  <SelectItem value="manual">Manual</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-xs text-gray-400 mb-1 block">Sort</label>
-              <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
-                <SelectTrigger className="bg-white/10 border-white/20 h-8 text-xs" data-testid="select-sort">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">Newest</SelectItem>
-                  <SelectItem value="oldest">Oldest</SelectItem>
-                  <SelectItem value="tier">By Tier</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          {programMemberships.length > 0 && (
-            <div className="mt-2">
-              <label className="text-xs text-gray-400 mb-1 block">Program</label>
-              <Select value={selectedProgram} onValueChange={(value) => setSelectedProgram(value)}>
-                <SelectTrigger className="bg-white/10 border-white/20 h-8 text-xs" data-testid="select-program">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Programs</SelectItem>
-                  {programMemberships.map((pm) => (
-                    <SelectItem key={pm.programId} value={pm.programId}>
-                      {pm.programName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </div>
+        {/* Category filter */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="flex items-center gap-1.5 px-3.5 py-[7px] rounded-full border border-[#e8e8e8] bg-white text-xs font-medium text-[#666] hover:border-[#ccc] hover:text-[#333] transition-colors whitespace-nowrap"
+              data-testid="select-trigger"
+            >
+              {categoryFilterLabel}
+              <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => setSelectedTrigger("all")}>All Categories</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedTrigger("checkin")}>Check-in</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedTrigger("system")}>Collection</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedTrigger("time")}>Time</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedTrigger("store")}>Store</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedTrigger("manual")}>Manual</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        {/* Awards Display */}
-        <Tabs defaultValue="earned" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-white/10" data-testid="tabs-awards">
-            <TabsTrigger value="earned" data-testid="tab-earned">
-              Earned ({filteredEarnedAwards.length})
-            </TabsTrigger>
-            <TabsTrigger value="available" data-testid="tab-available">
-              Available ({filteredAvailableAwards.length})
-            </TabsTrigger>
-          </TabsList>
+        {/* Program filter */}
+        {programMemberships.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex items-center gap-1.5 px-3.5 py-[7px] rounded-full border border-[#e8e8e8] bg-white text-xs font-medium text-[#666] hover:border-[#ccc] hover:text-[#333] transition-colors whitespace-nowrap"
+                data-testid="select-program"
+              >
+                {programFilterLabel}
+                <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => setSelectedProgram("all")}>All Programs</DropdownMenuItem>
+              {programMemberships.map((pm) => (
+                <DropdownMenuItem key={pm.programId} onClick={() => setSelectedProgram(pm.programId)}>
+                  {pm.programName}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
-          {/* Earned Awards Tab */}
-          <TabsContent value="earned" className="mt-6">
-            {isLoading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {[...Array(8)].map((_, i) => (
-                  <div key={i} className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
-                    <Skeleton className="h-24 w-full rounded-xl bg-white/10" />
-                    <Skeleton className="h-4 w-3/4 bg-white/10" />
-                    <Skeleton className="h-3 w-full bg-white/10" />
+        {/* Sort filter */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="flex items-center gap-1.5 px-3.5 py-[7px] rounded-full border border-[#e8e8e8] bg-white text-xs font-medium text-[#666] hover:border-[#ccc] hover:text-[#333] transition-colors whitespace-nowrap"
+              data-testid="select-sort"
+            >
+              {sortLabel}
+              <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => setSortBy("newest")}>Newest</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortBy("oldest")}>Oldest</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortBy("tier")}>By Tier</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Tab Bar */}
+      <div className="relative border-b-2 border-[#f0f0f0] flex px-5" ref={tabBarRef} data-testid="tabs-awards">
+        <button
+          ref={earnedTabRef}
+          className={`flex-1 text-center py-3 text-[13px] font-medium transition-colors bg-transparent border-none font-inherit cursor-pointer ${activeTab === "earned" ? "text-[#1a1a1a] font-semibold" : "text-[#aaa]"}`}
+          onClick={() => setActiveTab("earned")}
+          data-testid="tab-earned"
+        >
+          Earned ({filteredEarnedAwards.length})
+        </button>
+        <button
+          ref={availableTabRef}
+          className={`flex-1 text-center py-3 text-[13px] font-medium transition-colors bg-transparent border-none font-inherit cursor-pointer ${activeTab === "available" ? "text-[#1a1a1a] font-semibold" : "text-[#aaa]"}`}
+          onClick={() => setActiveTab("available")}
+          data-testid="tab-available"
+        >
+          Available ({filteredAvailableAwards.length})
+        </button>
+        <div
+          className="absolute bottom-[-2px] h-0.5 bg-[#d82428] rounded-[1px] transition-all duration-300"
+          style={{ left: indicatorStyle.left, width: indicatorStyle.width }}
+        />
+      </div>
+
+      {/* Tab Content */}
+      <div className="p-5">
+        {activeTab === "earned" ? (
+          isLoading ? (
+            <div className="flex flex-col gap-2.5">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3.5 p-3.5 bg-[#fafafa] rounded-xl border border-[#f0f0f0]">
+                  <Skeleton className="w-[60px] h-[60px] rounded-xl flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-full" />
                   </div>
-                ))}
-              </div>
-            ) : filteredEarnedAwards.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-4 border border-white/10">
-                  <Trophy className="h-10 w-10 text-gray-500" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2 text-gray-300" data-testid="text-empty-state">
-                  No Awards Yet
-                </h3>
-                <p className="text-gray-500 max-w-xs" data-testid="text-empty-message">
-                  Start attending practices and games to earn your first trophy!
-                </p>
+              ))}
+            </div>
+          ) : filteredEarnedAwards.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-14 h-14 rounded-full bg-[#f6f6f4] flex items-center justify-center mb-4">
+                <Trophy className="h-6 w-6 text-[#ccc]" />
               </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredEarnedAwards.map((award) => (
-                  <div
-                    key={award.id}
-                    className={`relative rounded-2xl border bg-gradient-to-br ${TIER_GRADIENT[award.tier]} p-4 flex flex-col items-center text-center gap-3 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-black/30`}
-                    data-testid={`card-award-${award.id}`}
-                  >
-                    {/* Tier badge top-right */}
-                    <div className="absolute top-2 right-2">
-                      <Badge
-                        className={`text-[10px] px-1.5 py-0.5 border ${TIER_BADGE_COLOR[award.tier]}`}
-                        data-testid={`badge-tier-${award.id}`}
-                      >
-                        {award.tier}
-                      </Badge>
-                    </div>
-
-                    {/* Icon area */}
-                    <div className={`w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center ${TIER_ICON_COLOR[award.tier]} ${TIER_GLOW[award.tier]}`}>
-                      <AwardIcon award={award} className="w-full h-full" />
-                    </div>
-
-                    {/* Name */}
-                    <p className="text-sm font-semibold leading-tight text-white" data-testid={`text-award-name-${award.id}`}>
+              <h3 className="text-[15px] font-semibold text-[#999] mb-1.5" data-testid="text-empty-state">
+                No Awards Yet
+              </h3>
+              <p className="text-[13px] text-[#bbb] max-w-[260px] leading-relaxed" data-testid="text-empty-message">
+                Start attending practices and games to earn your first award.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {filteredEarnedAwards.map((award) => (
+                <div
+                  key={award.id}
+                  className="flex items-center gap-3.5 px-4 py-3.5 bg-[#fafafa] rounded-xl border border-[#f0f0f0] hover:bg-[#f5f5f5] hover:border-[#e0e0e0] transition-colors cursor-pointer"
+                  data-testid={`card-award-${award.id}`}
+                >
+                  <div className={`w-[60px] h-[60px] flex-shrink-0 rounded-xl flex items-center justify-center ${TIER_ICON_BG[award.tier]}`}>
+                    <AwardIcon award={award} className="w-[26px] h-[26px]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-[14px] font-semibold text-[#1a1a1a] mb-0.5 truncate" data-testid={`text-award-name-${award.id}`}>
                       {award.name}
-                    </p>
-
-                    {/* Description */}
+                    </h4>
                     {award.description && (
-                      <p className="text-xs text-gray-400 leading-snug" data-testid={`text-award-description-${award.id}`}>
+                      <p className="text-[12px] text-[#999] leading-snug" data-testid={`text-award-description-${award.id}`}>
                         {award.description}
                       </p>
                     )}
-
-                    {/* Footer info */}
-                    <div className="mt-auto w-full space-y-1">
-                      {award.triggerCategory && (
-                        <Badge
-                          variant="outline"
-                          className="w-full justify-center text-[10px] border-white/20 text-gray-400"
-                          data-testid={`badge-trigger-${award.id}`}
-                        >
-                          {TRIGGER_LABELS[award.triggerCategory]}
-                        </Badge>
-                      )}
-                      <p className="text-[11px] text-gray-500" data-testid={`text-earned-date-${award.id}`}>
-                        Earned {formatDate(award.earnedDate)}
-                      </p>
-                      {award.year && (
-                        <p className="text-[11px] text-gray-500" data-testid={`text-award-year-${award.id}`}>
-                          {award.year}
-                        </p>
-                      )}
-                    </div>
+                    <p className="text-[11px] text-[#bbb] mt-1" data-testid={`text-earned-date-${award.id}`}>
+                      Earned {formatDate(award.earnedDate)}
+                      {award.year ? ` · ${award.year}` : ""}
+                    </p>
                   </div>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Available Awards Tab */}
-          <TabsContent value="available" className="mt-6">
-            {isLoading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {[...Array(8)].map((_, i) => (
-                  <div key={i} className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
-                    <Skeleton className="h-24 w-full rounded-xl bg-white/10" />
-                    <Skeleton className="h-4 w-3/4 bg-white/10" />
-                    <Skeleton className="h-3 w-full bg-white/10" />
-                  </div>
-                ))}
-              </div>
-            ) : filteredAvailableAwards.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-20 h-20 rounded-full bg-yellow-500/10 flex items-center justify-center mb-4 border border-yellow-500/20">
-                  <Star className="h-10 w-10 text-yellow-400" />
+                  <span
+                    className={`text-[10px] font-semibold tracking-[0.03em] px-2 py-[3px] rounded-[6px] flex-shrink-0 ${TIER_BADGE[award.tier]}`}
+                    data-testid={`badge-tier-${award.id}`}
+                  >
+                    {award.tier}
+                  </span>
                 </div>
-                <h3 className="text-xl font-semibold mb-2 text-gray-300">
-                  All Awards Earned!
-                </h3>
-                <p className="text-gray-500 max-w-xs">
-                  Congratulations! You've earned all available awards.
-                </p>
+              ))}
+            </div>
+          )
+        ) : (
+          isLoading ? (
+            <div className="flex flex-col gap-2.5">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3.5 p-3.5 bg-[#fafafa] rounded-xl border border-[#f0f0f0]">
+                  <Skeleton className="w-[60px] h-[60px] rounded-xl flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-2 w-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredAvailableAwards.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-14 h-14 rounded-full bg-[#f6f6f4] flex items-center justify-center mb-4">
+                <Trophy className="h-6 w-6 text-[#ccc]" />
               </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredAvailableAwards.map((award) => (
+              <h3 className="text-[15px] font-semibold text-[#999] mb-1.5">
+                All Awards Earned!
+              </h3>
+              <p className="text-[13px] text-[#bbb] max-w-[260px] leading-relaxed">
+                Congratulations! You've earned all available awards.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {filteredAvailableAwards.map((award) => {
+                const progressPct = award.threshold ? 0 : null;
+                return (
                   <div
                     key={award.id}
-                    className="relative rounded-2xl border border-white/10 bg-white/5 p-4 flex flex-col items-center text-center gap-3 opacity-60 hover:opacity-75 transition-opacity duration-200"
+                    className="flex items-center gap-3.5 px-4 py-3.5 bg-[#fafafa] rounded-xl border border-[#f0f0f0] hover:bg-[#f5f5f5] hover:border-[#e0e0e0] transition-colors cursor-pointer"
                     data-testid={`card-available-award-${award.id}`}
                   >
-                    {/* Tier badge */}
-                    <div className="absolute top-2 right-2">
-                      <Badge
-                        className="text-[10px] px-1.5 py-0.5 border border-white/20 bg-white/10 text-gray-400"
-                        data-testid={`badge-tier-available-${award.id}`}
-                      >
-                        {award.tier}
-                      </Badge>
+                    <div className={`w-[60px] h-[60px] flex-shrink-0 rounded-xl flex items-center justify-center ${TIER_ICON_BG[award.tier]}`}>
+                      <AwardIcon award={award} className="w-[26px] h-[26px]" />
                     </div>
-
-                    {/* Icon area (greyed out) */}
-                    <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center text-gray-600 grayscale">
-                      <AwardIcon award={award} className="w-full h-full" />
-                      {/* Lock overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="bg-black/50 rounded-full p-1.5">
-                          <Lock className="h-4 w-4 text-white/60" />
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-[14px] font-semibold text-[#1a1a1a] mb-0.5 truncate" data-testid={`text-available-award-name-${award.id}`}>
+                        {award.name}
+                      </h4>
+                      {award.description && (
+                        <p className="text-[12px] text-[#999] leading-snug" data-testid={`text-available-award-description-${award.id}`}>
+                          {award.description}
+                        </p>
+                      )}
+                      {progressPct !== null && (
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <div className="flex-1 h-1 bg-[#e8e8e8] rounded-[2px] overflow-hidden">
+                            <div
+                              className={`h-full rounded-[2px] transition-all duration-400 ${TIER_PROGRESS_COLOR[award.tier]}`}
+                              style={{ width: `${progressPct}%` }}
+                            />
+                          </div>
+                          <span className="text-[11px] font-semibold text-[#aaa] min-w-[30px] text-right">
+                            {progressPct}%
+                          </span>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Name */}
-                    <p className="text-sm font-semibold leading-tight text-gray-400" data-testid={`text-available-award-name-${award.id}`}>
-                      {award.name}
-                    </p>
-
-                    {/* Description */}
-                    {award.description && (
-                      <p className="text-xs text-gray-500 leading-snug" data-testid={`text-available-award-description-${award.id}`}>
-                        {award.description}
-                      </p>
-                    )}
-
-                    {/* Footer */}
-                    <div className="mt-auto w-full">
-                      {award.triggerCategory && (
-                        <Badge
-                          variant="outline"
-                          className="w-full justify-center text-[10px] border-white/10 text-gray-600"
-                          data-testid={`badge-trigger-available-${award.id}`}
-                        >
-                          {TRIGGER_LABELS[award.triggerCategory]}
-                        </Badge>
                       )}
                     </div>
+                    <span
+                      className={`text-[10px] font-semibold tracking-[0.03em] px-2 py-[3px] rounded-[6px] flex-shrink-0 ${TIER_BADGE[award.tier]}`}
+                      data-testid={`badge-tier-available-${award.id}`}
+                    >
+                      {award.tier}
+                    </span>
                   </div>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+                );
+              })}
+            </div>
+          )
+        )}
       </div>
     </div>
   );

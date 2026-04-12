@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient } from "@/lib/queryClient";
@@ -38,6 +39,7 @@ export default function InviteClaim() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [skillLevel, setSkillLevel] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
@@ -110,6 +112,7 @@ export default function InviteClaim() {
           firstName,
           lastName,
           phoneNumber: phoneNumber || undefined,
+          skillLevel: skillLevel || undefined,
           address: address || undefined,
           city: city || undefined,
           state: state || undefined,
@@ -317,6 +320,21 @@ export default function InviteClaim() {
                       type="tel"
                     />
                   </div>
+                  {!isStaff && (
+                    <div>
+                      <Label className="text-gray-300 text-sm">Skill Level *</Label>
+                      <Select value={skillLevel} onValueChange={setSkillLevel}>
+                        <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1">
+                          <SelectValue placeholder="Select skill level" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="beginner">Beginner (0–2 years experience)</SelectItem>
+                          <SelectItem value="intermediate">Intermediate (3–5 years experience)</SelectItem>
+                          <SelectItem value="advanced">Advanced (5+ years experience)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
 
                 {isStaff && (
@@ -360,6 +378,10 @@ export default function InviteClaim() {
                     }
                     if (!phoneNumber.trim()) {
                       toast({ title: "Phone required", description: "Please enter your phone number.", variant: "destructive" });
+                      return;
+                    }
+                    if (!isStaff && !skillLevel) {
+                      toast({ title: "Skill level required", description: "Please select your skill level to continue.", variant: "destructive" });
                       return;
                     }
                     setStep(2);

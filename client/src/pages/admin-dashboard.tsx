@@ -11037,6 +11037,8 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       sessionLengthMinutes: undefined as number | undefined,
       code: "",
       visibility: "public",
+      tryoutEnabled: false,
+      tryoutPrice: 0,
     },
   });
 
@@ -11180,6 +11182,8 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       sessionLengthMinutes: program.sessionLengthMinutes,
       code: program.code || "",
       visibility: program.visibility || "public",
+      tryoutEnabled: program.tryoutEnabled || false,
+      tryoutPrice: program.tryoutPrice || 0,
     });
     setExpandedPricingOptions(new Set());
     setIsDialogOpen(true);
@@ -11230,6 +11234,8 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
         sessionLengthMinutes: undefined,
         code: "",
         visibility: "public",
+        tryoutEnabled: false,
+        tryoutPrice: 0,
       });
     } else if (!editingProgram) {
       // Opening dialog for NEW program - reset to clean defaults
@@ -11270,6 +11276,8 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
         sessionLengthMinutes: undefined,
         code: "",
         visibility: "public",
+        tryoutEnabled: false,
+        tryoutPrice: 0,
       });
     }
   };
@@ -12572,6 +12580,51 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                             </div>
                     </>
                   </Section>
+
+                  {/* ── TRYOUT SETTINGS ── */}
+                  {form.watch("visibility") === "members_only" && (
+                    <Section icon={<Users size={16} className="text-gray-500" />} title="Tryout Settings">
+                      <>
+                        <FormField
+                          control={form.control}
+                          name="tryoutEnabled"
+                          render={({ field }) => (
+                            <TogRow
+                              label="Enable Tryouts"
+                              description="Allow non-members to register for a single tryout session at a discounted price"
+                              value={!!field.value}
+                              onChange={field.onChange}
+                            />
+                          )}
+                        />
+                        {form.watch("tryoutEnabled") && (
+                          <FormField
+                            control={form.control}
+                            name="tryoutPrice"
+                            render={({ field }) => (
+                              <FieldWrap label="Tryout Price ($)">
+                                <div className="relative">
+                                  <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                  <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    placeholder="0.00"
+                                    key={`tryout-price-${editingProgram?.id ?? "new"}`}
+                                    defaultValue={field.value && field.value > 0 ? (field.value / 100).toFixed(2) : ""}
+                                    onBlur={(e) => {
+                                      const val = parseFloat(e.target.value);
+                                      field.onChange(isNaN(val) ? 0 : Math.round(val * 100));
+                                    }}
+                                    className="w-full h-10 pl-8 pr-3 rounded-md border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition"
+                                  />
+                                </div>
+                              </FieldWrap>
+                            )}
+                          />
+                        )}
+                      </>
+                    </Section>
+                  )}
 
                   {/* ── SOCIAL SETTINGS ── */}
                   <Section icon={<Users size={16} className="text-gray-500" />} title="Social Settings">

@@ -96,12 +96,13 @@ export default function AddPlayer() {
     lastName?: string;
     dateOfBirth?: string;
     gender?: string;
+    skillLevel?: string;
     aauMembershipId?: string;
     postalCode?: string;
     concussionWaiverAcknowledged?: boolean;
     clubAgreementAcknowledged?: boolean;
     packageId?: string;
-    selectedPricingOptionId?: string; // For bundle pricing option selection
+    selectedPricingOptionId?: string;
     customWaiverAcknowledgments?: Record<string, boolean>;
   }>({});
 
@@ -199,7 +200,7 @@ export default function AddPlayer() {
   // Simplified step flow: Just basic player info (no package/payment)
   // Payment is handled separately in the Payments section of parent dashboard
   const getStepFlow = () => {
-    return ["name", "dob", "gender"];
+    return ["name", "dob", "gender", "skill_level"];
   };
 
   const stepFlow = getStepFlow();
@@ -268,20 +269,30 @@ export default function AddPlayer() {
             />
           )}
 
-          {/* Gender - Final step, submit player */}
+          {/* Gender */}
           {currentStepName === "gender" && (
             <GenderStep
               defaultValues={{ gender: playerData.gender || "" }}
               onSubmit={(data) => {
-                const finalData = { 
-                  ...playerData, 
-                  ...data 
-                };
+                setPlayerData({ ...playerData, ...data });
+                handleNext();
+              }}
+              onBack={handleBack}
+              isSubmitting={false}
+              isFinalStep={false}
+            />
+          )}
+
+          {/* Skill Level - Final step, submit player */}
+          {currentStepName === "skill_level" && (
+            <SkillLevelStep
+              defaultValues={{ skillLevel: playerData.skillLevel || "" }}
+              onSubmit={(data) => {
+                const finalData = { ...playerData, ...data };
                 addPlayerMutation.mutate(finalData);
               }}
               onBack={handleBack}
               isSubmitting={addPlayerMutation.isPending}
-              isFinalStep={true}
             />
           )}
 
@@ -674,6 +685,79 @@ function GenderStep({
               <ChevronRight className="w-6 h-6" />
             </button>
           )}
+        </div>
+      </form>
+    </Form>
+  );
+}
+
+const skillLevelSchema = z.object({
+  skillLevel: z.enum(["beginner", "intermediate", "advanced"], { required_error: "Please select a skill level" }),
+});
+type SkillLevelData = z.infer<typeof skillLevelSchema>;
+
+function SkillLevelStep({
+  defaultValues,
+  onSubmit,
+  onBack,
+  isSubmitting = false,
+}: {
+  defaultValues: { skillLevel?: string };
+  onSubmit: (data: SkillLevelData) => void;
+  onBack: () => void;
+  isSubmitting?: boolean;
+}) {
+  const form = useForm<SkillLevelData>({
+    resolver: zodResolver(skillLevelSchema),
+    defaultValues: { skillLevel: defaultValues.skillLevel as SkillLevelData["skillLevel"] | undefined },
+  });
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="skillLevel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-gray-400">Skill Level *</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                    <SelectValue placeholder="Select skill level" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="beginner">Beginner (0–2 years experience)</SelectItem>
+                  <SelectItem value="intermediate">Intermediate (3–5 years experience)</SelectItem>
+                  <SelectItem value="advanced">Advanced (5+ years experience)</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage className="text-red-400" />
+            </FormItem>
+          )}
+        />
+        <div className="flex justify-between pt-6">
+          <button type="button" onClick={onBack} className="text-gray-400 hover:text-white transition-colors" disabled={isSubmitting}>
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="bg-red-600 hover:bg-red-700 text-white"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Adding...
+              </>
+            ) : (
+              <>
+                <UserPlus className="w-4 h-4 mr-2" />
+                Add Player
+              </>
+            )}
+          </Button>
         </div>
       </form>
     </Form>

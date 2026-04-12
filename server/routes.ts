@@ -2937,6 +2937,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Tryout checkout - creates a Stripe checkout for tryout price
+  app.post('/api/payments/create-tryout-checkout', requireAuth, async (req: any, res) => {
+    const orgStripe = await getStripeForOrg(req.user.organizationId);
+    if (!orgStripe) {
+      return res.status(500).json({ error: "Stripe is not configured for this organization" });
+    }
+
+    try {
+      const { programId, playerId, recommendedTeamId, successUrl, cancelUrl } = req.body;
+
+      if (!programId || !playerId) {
+        return res.status(400).json({ error: "programId and playerId are required" });
+      }
+
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const program = await storage.getProgram(programId);
+      if (!program) {
+        return res.status(404).json({ error: "Program not found" });
+      }
+
+      if (!program.tryoutEnabled || program.tryoutPrice == null) {
+        return res.status(400).json({ error: "This program does not have tryout enabled" });
+      }
+
+      const tryoutPrice: number = program.tryoutPrice!;
+
+      // Validate player belongs to this user
+      const player = await storage.getUser(playerId);
+      if (!player) {
+        return res.status(400).json({ error: "Invalid player ID" });
+      }
+      const isValidPlayer = playerId === req.user.id ||
+        (player as any).parentId === req.user.id ||
+        (player as any).guardianId === req.user.id;
+      if (!isValidPlayer) {
+        return res.status(403).json({ error: "You can only make payments for yourself or your children" });
+      }
+
+      // Reject tryout purchase if the player already has a qualifying active (non-tryout) enrollment for this program
+      const existingEnrollments = await storage.getActiveEnrollmentsWithCredits(playerId);
+      const hasActiveMemberEnrollment = existingEnrollments.some(
+        (e: any) => e.programId === programId && e.status === 'active' && !e.isTryout
+      );
+      if (hasActiveMemberEnrollment) {
+        return res.status(400).json({ error: "This player is already an active member of this program and is not eligible for a tryout" });
+      }
+
+      const stripeCustomerId = await getOrCreateStripeCustomer(orgStripe, user);
+      const origin = `${req.protocol}://${req.get('host')}`;
+
+      const session = await orgStripe.checkout.sessions.create({
+        customer: stripeCustomerId,
+        payment_method_types: ['card'],
+        mode: 'payment',
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `Tryout: ${program.name}`,
+              description: 'Tryout fee — includes 1 session credit',
+            },
+            unit_amount: tryoutPrice,
+          },
+          quantity: 1,
+        }],
+        success_url: successUrl || `${origin}/payments?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: cancelUrl || `${origin}/payments?canceled=true`,
+        metadata: {
+          userId: req.user.id,
+          accountHolderId: req.user.id,
+          profileId: playerId,
+          programId,
+          isTryout: 'true',
+          recommendedTeamId: recommendedTeamId ? String(recommendedTeamId) : '',
+          organizationId: req.user.organizationId,
+        },
+      });
+
+      res.json({ sessionUrl: session.url });
+    } catch (error: any) {
+      console.error('Error creating tryout checkout:', error);
+      res.status(500).json({ error: error.message || 'Failed to create tryout checkout' });
+    }
+  });
+
   // Payment success callback (for when webhooks don't fire in test mode)
   app.post('/api/payments/verify-session', requireAuth, async (req: any, res) => {
     try {
@@ -3207,6 +3296,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } else {
           console.log(`ℹ️ Payment already processed for user ${userId}`);
+        }
+      }
+
+      // Handle tryout checkout
+      if (session.metadata?.isTryout === 'true') {
+        const accountHolderId = session.metadata.accountHolderId || session.metadata.userId;
+        const profileId = session.metadata.profileId;
+        const programId = session.metadata.programId;
+        const recTeamId = session.metadata.recommendedTeamId ? parseInt(session.metadata.recommendedTeamId) : undefined;
+        const orgId = session.metadata.organizationId;
+
+        if (accountHolderId && profileId && programId) {
+          const existingPayments = await storage.getPaymentsByUser(accountHolderId);
+          const alreadyProcessed = existingPayments.some((p: any) =>
+            p.stripePaymentId === session.payment_intent && p.status === 'completed'
+          );
+
+          if (!alreadyProcessed && session.amount_total) {
+            try {
+              const program = await storage.getProgram(programId);
+              const playerUser = await storage.getUser(profileId);
+              const playerName = playerUser ? `${playerUser.firstName || ''} ${playerUser.lastName || ''}`.trim() : 'Player';
+
+              await storage.createPayment({
+                organizationId: orgId || program?.organizationId || 'default-org',
+                userId: accountHolderId,
+                amount: session.amount_total,
+                currency: 'usd',
+                paymentType: 'stripe_checkout',
+                status: 'completed',
+                description: `Tryout: ${program?.name || programId}`,
+                programId,
+                stripePaymentId: session.payment_intent as string,
+              });
+
+              // Create tryout enrollment with 1 credit
+              await storage.createEnrollment({
+                organizationId: orgId || program?.organizationId || 'default-org',
+                programId,
+                accountHolderId,
+                profileId,
+                status: 'active',
+                source: 'direct',
+                totalCredits: 1,
+                remainingCredits: 1,
+                isTryout: true,
+                recommendedTeamId: recTeamId || null,
+                metadata: { tryout: true, recommendedTeamId: recTeamId },
+              });
+
+              paymentWasProcessed = true;
+              console.log(`✅ Created tryout enrollment for ${profileId} in ${programId}`);
+
+              try {
+                await pushNotifications.parentPaymentSuccessful(storage, accountHolderId, playerName, session.amount_total);
+                await pushNotifications.notifyAllAdmins(
+                  storage,
+                  '🏀 New Tryout',
+                  `${playerName} paid for a tryout in ${program?.name || programId}`,
+                  orgId || program?.organizationId || 'default-org'
+                );
+              } catch (notifError: any) {
+                console.error('⚠️ Tryout notification failed (non-fatal):', notifError.message);
+              }
+            } catch (tryoutError: any) {
+              console.error('Error creating tryout enrollment:', tryoutError);
+            }
+          }
         }
       }
 
@@ -3894,6 +4051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               lastName: player.lastName,
               dateOfBirth: sanitizeDate(player.dateOfBirth),
               gender: player.gender,
+              skillLevel: player.skillLevel || null,
               accountHolderId,
               teamAssignmentStatus: "pending",
               hasRegistered: true,
@@ -3920,6 +4078,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lastName: player.lastName,
             dateOfBirth: sanitizeDate(player.dateOfBirth),
             gender: player.gender,
+            skillLevel: player.skillLevel || null,
             address: addressInfo?.address || null,
             city: addressInfo?.city || null,
             state: addressInfo?.state || null,
@@ -4386,7 +4545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const { firstName, lastName, dateOfBirth, gender, aauMembershipId, postalCode, concussionWaiverAcknowledged, clubAgreementAcknowledged, packageId, addOnIds, selectedPricingOptionId } = req.body;
+      const { firstName, lastName, dateOfBirth, gender, skillLevel, aauMembershipId, postalCode, concussionWaiverAcknowledged, clubAgreementAcknowledged, packageId, addOnIds, selectedPricingOptionId } = req.body;
       
       // Validate required fields
       if (!firstName || !lastName) {
@@ -4411,6 +4570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName,
         dateOfBirth: dateOfBirth || null,
         gender: gender || null,
+        skillLevel: skillLevel || null,
         aauMembershipId: aauMembershipId || null,
         postalCode: postalCode || null,
         concussionWaiverAcknowledged: concussionWaiverAcknowledged || false,
@@ -9246,7 +9406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const attendance = await storage.createAttendance(attendanceData);
       
-      // Credit deduction for pack holders
+      // Credit deduction for pack holders + tryout member upgrade
       try {
         if (attendanceData.userId) {
           // Get player's active enrollments with remaining credits
@@ -9261,6 +9421,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Deduct one credit
             await storage.deductEnrollmentCredit(enrollmentWithCredits.id);
             console.log(`💳 Deducted 1 credit from enrollment ${enrollmentWithCredits.id} for user ${attendanceData.userId}`);
+
+            // Post-check-in tryout upgrade: only upgrade when the deducted credit came from a tryout enrollment
+            if (enrollmentWithCredits.isTryout === true) {
+              try {
+                const tryoutEnrollment = enrollmentWithCredits;
+                // Mark the tryout enrollment as consumed
+                await storage.updateEnrollment(tryoutEnrollment.id, { status: 'completed' });
+
+                // Create a new regular active enrollment so the player gains full member access
+                await storage.createEnrollment({
+                  organizationId: tryoutEnrollment.organizationId,
+                  programId: tryoutEnrollment.programId,
+                  accountHolderId: tryoutEnrollment.accountHolderId,
+                  profileId: attendanceData.userId,
+                  status: 'active',
+                  source: 'tryout_upgrade',
+                  isTryout: false,
+                  metadata: { upgradedFromTryout: true, tryoutEnrollmentId: tryoutEnrollment.id },
+                });
+
+                // Mark the player's payment status as paid / registered member
+                await storage.updateUser(attendanceData.userId, {
+                  paymentStatus: 'paid',
+                  hasRegistered: true,
+                });
+                console.log(`✅ Tryout check-in: upgraded player ${attendanceData.userId} to full member status`);
+              } catch (upgradeError: any) {
+                console.error('⚠️ Tryout member upgrade failed (non-fatal):', upgradeError.message);
+              }
+            }
           }
         }
       } catch (creditError: any) {
@@ -9519,6 +9709,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (enrollmentWithCredits) {
           await storage.deductEnrollmentCredit(enrollmentWithCredits.id);
           console.log(`💳 Proxy check-in: Deducted 1 credit from enrollment ${enrollmentWithCredits.id} for player ${playerId}`);
+
+          // Post-check-in tryout upgrade: if credit came from a tryout enrollment, upgrade to member
+          if (enrollmentWithCredits.isTryout === true) {
+            try {
+              await storage.updateEnrollment(enrollmentWithCredits.id, { status: 'completed' });
+              await storage.createEnrollment({
+                organizationId: enrollmentWithCredits.organizationId,
+                programId: enrollmentWithCredits.programId,
+                accountHolderId: enrollmentWithCredits.accountHolderId,
+                profileId: playerId,
+                status: 'active',
+                source: 'tryout_upgrade',
+                isTryout: false,
+                metadata: { upgradedFromTryout: true, tryoutEnrollmentId: enrollmentWithCredits.id },
+              });
+              await storage.updateUser(playerId, { paymentStatus: 'paid', hasRegistered: true });
+              console.log(`✅ Proxy tryout check-in: upgraded player ${playerId} to full member status`);
+            } catch (upgradeError: any) {
+              console.error('⚠️ Tryout member upgrade failed (non-fatal):', (upgradeError as Error).message);
+            }
+          }
         }
       } catch (creditError: any) {
         console.error('⚠️ Credit deduction failed (non-fatal):', creditError.message);
@@ -9816,6 +10027,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (enrollmentWithCredits) {
                 await storage.deductEnrollmentCredit(enrollmentWithCredits.id);
                 console.log(`💳 Coach check-in: Deducted 1 credit from enrollment ${enrollmentWithCredits.id} for player ${playerId}`);
+
+                // Post-check-in tryout upgrade: if credit came from a tryout enrollment, upgrade to member
+                if (enrollmentWithCredits.isTryout === true) {
+                  try {
+                    await storage.updateEnrollment(enrollmentWithCredits.id, { status: 'completed' });
+                    await storage.createEnrollment({
+                      organizationId: enrollmentWithCredits.organizationId,
+                      programId: enrollmentWithCredits.programId,
+                      accountHolderId: enrollmentWithCredits.accountHolderId,
+                      profileId: playerId,
+                      status: 'active',
+                      source: 'tryout_upgrade',
+                      isTryout: false,
+                      metadata: { upgradedFromTryout: true, tryoutEnrollmentId: enrollmentWithCredits.id },
+                    });
+                    await storage.updateUser(playerId, { paymentStatus: 'paid', hasRegistered: true });
+                    console.log(`✅ Coach tryout check-in: upgraded player ${playerId} to full member status`);
+                  } catch (upgradeError: any) {
+                    console.error('⚠️ Tryout member upgrade failed (non-fatal):', (upgradeError as Error).message);
+                  }
+                }
               }
             } catch (creditError: any) {
               console.error('⚠️ Credit deduction failed (non-fatal):', creditError.message);
@@ -11735,15 +11967,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(productEnrollments.profileId, userId)
           )
         );
-      const hasActiveEnrollment = enrollments.some((e: any) => e.status === 'active');
+      // Only non-tryout active enrollments count as full membership (tryout enrollment does NOT unlock member pricing)
+      const hasActiveEnrollment = enrollments.some((e: any) => e.status === 'active' && !e.isTryout);
 
       if (hasActiveEnrollment) {
         return res.json(programs);
       }
+
+      // Non-member logged-in user: return all programs but hide pricing for members_only ones
+      const programsWithVisibility = programs.map((p: any) => {
+        if (p.visibility === 'members_only') {
+          return { ...p, priceHidden: true, price: null, pricingOptions: [] };
+        }
+        return p;
+      });
+      return res.json(programsWithVisibility);
     }
 
-    const filtered = programs.filter((p: any) => p.visibility !== 'members_only');
-    res.json(filtered);
+    // Unauthenticated user: return all programs but hide pricing for members_only ones
+    const programsWithVisibility = programs.map((p: any) => {
+      if (p.visibility === 'members_only') {
+        return { ...p, priceHidden: true, price: null, pricingOptions: [] };
+      }
+      return p;
+    });
+    res.json(programsWithVisibility);
   });
   
   // Store products endpoint - returns products with productCategory = 'goods'
@@ -12029,27 +12277,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (program.visibility === 'members_only') {
-        if (!req.user) {
-          return res.status(404).json({ message: 'Program not found' });
-        }
-        const userId = req.user.id;
-        const organizationId = req.user.organizationId;
-        const isAdmin = req.user.role === 'admin' || await hasAdminProfile(userId, organizationId);
-        if (!isAdmin) {
-          const currentUser = await storage.getUser(userId);
-          const rootAccountHolderId = currentUser?.accountHolderId || userId;
-          const enrollments = await db.select()
-            .from(productEnrollments)
-            .where(
-              or(
-                eq(productEnrollments.accountHolderId, rootAccountHolderId),
-                eq(productEnrollments.profileId, userId)
-              )
-            );
-          const hasActiveEnrollment = enrollments.some((e: any) => e.status === 'active');
-          if (!hasActiveEnrollment) {
-            return res.status(404).json({ message: 'Program not found' });
+        // Non-member users see the program but with price hidden (same behavior as list endpoint)
+        let isMember = false;
+        if (req.user) {
+          const userId = req.user.id;
+          const organizationId = req.user.organizationId;
+          const isAdmin = req.user.role === 'admin' || await hasAdminProfile(userId, organizationId);
+          if (isAdmin) {
+            isMember = true;
+          } else {
+            const currentUser = await storage.getUser(userId);
+            const rootAccountHolderId = currentUser?.accountHolderId || userId;
+            const enrollments = await db.select()
+              .from(productEnrollments)
+              .where(
+                or(
+                  eq(productEnrollments.accountHolderId, rootAccountHolderId),
+                  eq(productEnrollments.profileId, userId)
+                )
+              );
+            // Tryout-only enrollments do not count as full member access for program visibility
+            isMember = enrollments.some((e: any) => e.status === 'active' && !e.isTryout);
           }
+        }
+        if (!isMember) {
+          // Return program with price hidden — do not 404, consistent with list endpoint behavior
+          return res.json({ ...program, priceHidden: true, price: null, pricingOptions: [] });
         }
       }
 
@@ -12186,7 +12439,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/programs/:id/schedule-availability', requireAuth, async (req: any, res) => {
     try {
       const { id: programId } = req.params;
-      const { date } = req.query; // ISO date string like "2026-02-10"
+      const { date, playerId: queryPlayerId } = req.query; // ISO date string like "2026-02-10"
       
       const program = await storage.getProgram(programId);
       if (!program) {
@@ -12202,6 +12455,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const targetDate = date ? new Date(date as string) : new Date();
       const orgId = program.organizationId;
       
+      // Check if the requesting player has a tryout enrollment with a recommended team
+      let checkPlayerId = req.user.id;
+      if (queryPlayerId && queryPlayerId !== req.user.id) {
+        // Verify the requesting user owns or manages the specified player
+        const queriedPlayer = await storage.getUser(queryPlayerId as string);
+        const isOwned = queriedPlayer &&
+          ((queriedPlayer as any).parentId === req.user.id ||
+           (queriedPlayer as any).guardianId === req.user.id ||
+           (queriedPlayer as any).accountHolderId === req.user.id);
+        if (isOwned) {
+          checkPlayerId = queryPlayerId as string;
+        }
+        // If not owned, silently fall back to the requesting user's own context
+      }
+      const playerEnrollments = await storage.getActiveEnrollmentsWithCredits(checkPlayerId);
+      const tryoutEnrollment = playerEnrollments.find((e: any) => e.programId === programId && e.isTryout === true);
+      const recommendedTeamId = tryoutEnrollment?.recommendedTeamId ?? null;
+
       // Get admin-defined availability windows for this program
       const availabilitySlots = await storage.getAvailabilitySlotsByProgram(programId);
       const dayOfWeek = targetDate.getDay(); // 0=Sunday, 6=Saturday
@@ -12219,7 +12490,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const blockedEvents = allEvents.filter((event: any) => {
         const eventStart = new Date(event.startTime);
         const eventEnd = new Date(event.endTime);
-        return eventStart < dayEnd && eventEnd > dayStart && event.isActive !== false && event.status !== 'cancelled';
+        const inDay = eventStart < dayEnd && eventEnd > dayStart && event.isActive !== false && event.status !== 'cancelled';
+        if (!inDay) return false;
+        // For tryout players, only consider events for their recommended team as blockers
+        if (recommendedTeamId) {
+          return event.teamId === recommendedTeamId;
+        }
+        return true;
       });
       
       // Generate time slots from admin-defined availability windows
@@ -12360,7 +12637,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create recurring weekly sessions for all available credits
       const createdEvents: any[] = [];
       const skippedWeeks: string[] = [];
-      const allEvents = await storage.getEventsByOrganization(orgId);
+      // For tryout enrollments, scope conflict check to the recommended team's events only
+      const tryoutTeamId = enrollment.isTryout ? enrollment.recommendedTeamId : null;
+      const allEvents = tryoutTeamId
+        ? allOrgEvents.filter((e: any) => e.teamId === tryoutTeamId)
+        : allOrgEvents;
       const availabilitySlots = await storage.getAvailabilitySlotsByProgram(programId);
       
       for (let week = 0; week < creditsToBook; week++) {
@@ -12425,6 +12706,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requestedByUserId: userId,
           enrollmentId: enrollment.id,
           programId: programId,
+          // For tryout enrollments, tag event with the recommended team
+          ...(enrollment.isTryout && enrollment.recommendedTeamId ? { teamId: enrollment.recommendedTeamId } : {}),
         } as any);
         
         createdEvents.push(newEvent);
@@ -14421,7 +14704,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/migration/claim/:token', async (req: any, res) => {
     try {
       const { token } = req.params;
-      const { password, firstName, lastName, phoneNumber, address, city, state, postalCode } = req.body;
+      const { password, firstName, lastName, phoneNumber, skillLevel, address, city, state, postalCode } = req.body;
 
       if (!password || password.length < 8) {
         return res.status(400).json({ error: 'Password must be at least 8 characters' });
@@ -14438,6 +14721,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(410).json({ error: 'Invite link has expired. Please contact your organization admin.' });
       }
 
+      // Require skill level for non-staff users
+      const isStaffRole = user.role === 'coach' || user.role === 'admin';
+      if (!isStaffRole && !skillLevel) {
+        return res.status(400).json({ error: 'Skill level is required' });
+      }
+
       const hashedPassword = hashPassword(password);
 
       const updateData: any = {
@@ -14452,6 +14741,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (firstName) updateData.firstName = firstName;
       if (lastName) updateData.lastName = lastName;
       if (phoneNumber) updateData.phoneNumber = phoneNumber;
+      if (skillLevel) updateData.skillLevel = skillLevel;
       if (address) updateData.address = address;
       if (city) updateData.city = city;
       if (state) updateData.state = state;

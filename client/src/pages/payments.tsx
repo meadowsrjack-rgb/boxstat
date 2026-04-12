@@ -36,6 +36,10 @@ type Program = {
   sizeStock?: Record<string, number>;
   pricingOptions?: any[];
   durationDays?: number;
+  visibility?: string;
+  priceHidden?: boolean;
+  tryoutEnabled?: boolean;
+  tryoutPrice?: number;
 };
 
 type Enrollment = {
@@ -141,14 +145,19 @@ function BillingHistorySection({ payments, programs }: { payments: Payment[], pr
 function ProgramCard({ 
   program, 
   onEnroll, 
+  onTryout,
   isEnrolled 
 }: { 
   program: Program; 
   onEnroll: (program: Program) => void;
+  onTryout?: (program: Program) => void;
   isEnrolled: boolean;
 }) {
-  const isTryout = (program.displayCategory || '').toLowerCase() === 'tryout' ||
+  const isTryoutCategory = (program.displayCategory || '').toLowerCase() === 'tryout' ||
     (program.type || '').toLowerCase() === 'tryout';
+  
+  const priceHidden = !!program.priceHidden;
+  const hasTryout = priceHidden && program.tryoutEnabled && program.tryoutPrice != null;
   
   const categoryLabel = program.displayCategory 
     ? program.displayCategory.charAt(0).toUpperCase() + program.displayCategory.slice(1)
@@ -163,20 +172,21 @@ function ProgramCard({
   }, [program]);
 
   const priceDisplay = useMemo(() => {
+    if (priceHidden) return null;
     if (basePrice === undefined || basePrice === null) return null;
     const dollars = (basePrice / 100).toFixed(2);
     return `$${dollars}`;
-  }, [basePrice]);
+  }, [basePrice, priceHidden]);
 
   return (
     <div
       className="bg-white/5 border border-white/10 hover:border-white/20 hover:shadow-lg transition-all rounded-xl p-5 flex flex-col cursor-pointer"
-      onClick={() => onEnroll(program)}
+      onClick={() => !priceHidden && onEnroll(program)}
       data-testid={`program-card-${program.id}`}
     >
       <div className="flex items-center gap-2 mb-3">
         <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded ${
-          isTryout
+          isTryoutCategory
             ? 'bg-purple-500/20 text-purple-400'
             : 'bg-white/10 text-white/60'
         }`}>
@@ -185,29 +195,53 @@ function ProgramCard({
         {priceDisplay && (
           <span className="ml-auto text-sm font-semibold text-red-400">{priceDisplay}</span>
         )}
+        {priceHidden && (
+          <span className="ml-auto text-xs text-white/30 italic">Members only</span>
+        )}
       </div>
       <h3 className="text-base font-semibold text-white mb-1">{program.name}</h3>
       <p className="text-white/50 text-sm line-clamp-2 flex-1">
         {program.description || "Join this program and elevate your game."}
       </p>
-      <button
-        className={`mt-4 w-full py-2 text-sm font-semibold rounded-lg transition-colors ${
-          isEnrolled
-            ? 'bg-green-500/20 text-green-400 cursor-default'
-            : isTryout
-              ? 'bg-purple-600 hover:bg-purple-700 text-white'
-              : 'bg-red-600 hover:bg-red-700 text-white'
-        }`}
-        onClick={(e) => { e.stopPropagation(); if (!isEnrolled) onEnroll(program); }}
-        data-testid={`button-enroll-${program.id}`}
-      >
-        {isEnrolled ? (
+      {isEnrolled ? (
+        <button
+          className="mt-4 w-full py-2 text-sm font-semibold rounded-lg bg-green-500/20 text-green-400 cursor-default"
+          data-testid={`button-enroll-${program.id}`}
+        >
           <span className="flex items-center justify-center gap-1">
             <CheckCircle2 className="h-3.5 w-3.5" />
             Enrolled
           </span>
-        ) : isTryout ? "Register" : "Enroll"}
-      </button>
+        </button>
+      ) : hasTryout ? (
+        <button
+          className="mt-4 w-full py-2 text-sm font-semibold rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-colors"
+          onClick={(e) => { e.stopPropagation(); onTryout && onTryout(program); }}
+          data-testid={`button-tryout-${program.id}`}
+        >
+          Try Out
+        </button>
+      ) : priceHidden ? (
+        <button
+          className="mt-4 w-full py-2 text-sm font-semibold rounded-lg bg-white/10 text-white/40 cursor-default"
+          data-testid={`button-enroll-${program.id}`}
+          disabled
+        >
+          Members Only
+        </button>
+      ) : (
+        <button
+          className={`mt-4 w-full py-2 text-sm font-semibold rounded-lg transition-colors ${
+            isTryoutCategory
+              ? 'bg-purple-600 hover:bg-purple-700 text-white'
+              : 'bg-red-600 hover:bg-red-700 text-white'
+          }`}
+          onClick={(e) => { e.stopPropagation(); onEnroll(program); }}
+          data-testid={`button-enroll-${program.id}`}
+        >
+          {isTryoutCategory ? "Register" : "Enroll"}
+        </button>
+      )}
     </div>
   );
 }
@@ -460,6 +494,213 @@ function StoreItemDialog({
               Buy Now
             </Button>
           </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TryoutEnrollmentDialog({
+  program,
+  children,
+  onClose,
+  onConfirm,
+  isLoading,
+  error,
+  onClearError,
+}: {
+  program: Program | null;
+  children: ChildPlayer[];
+  onClose: () => void;
+  onConfirm: (programId: string, playerId: string, recommendedTeamId?: number) => void;
+  isLoading: boolean;
+  error: string | null;
+  onClearError: () => void;
+}) {
+  const [selectedPlayer, setSelectedPlayer] = useState<string>("");
+  const [recommendedTeam, setRecommendedTeam] = useState<any | null>(null);
+  const [loadingTeam, setLoadingTeam] = useState(false);
+
+  const { data: programTeams = [] } = useQuery<any[]>({
+    queryKey: ['/api/teams', { programId: program?.id }],
+    queryFn: async () => {
+      if (!program?.id) return [];
+      const res = await fetch(`/api/teams?programId=${program.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!program?.id,
+  });
+
+  const { data: playerProfiles = [] } = useQuery<any[]>({
+    queryKey: ['/api/account/players'],
+    enabled: !!program,
+  });
+
+  useEffect(() => {
+    if (!selectedPlayer || !program) {
+      setRecommendedTeam(null);
+      return;
+    }
+    setLoadingTeam(true);
+    const player = playerProfiles.find((p: any) => p.id === selectedPlayer);
+    if (!player || programTeams.length === 0) {
+      setRecommendedTeam(null);
+      setLoadingTeam(false);
+      return;
+    }
+
+    // Calculate player age
+    let playerAge: number | null = null;
+    if (player.dateOfBirth) {
+      const dob = new Date(player.dateOfBirth);
+      const today = new Date();
+      playerAge = today.getFullYear() - dob.getFullYear();
+      const m = today.getMonth() - dob.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) playerAge--;
+    }
+
+    const skillLevel = player.skillLevel;
+
+    // Score teams by matching age and skill level
+    const currentYear = new Date().getFullYear();
+    const scored = programTeams.map((team: any) => {
+      let score = 0;
+      // Match skill level (highest weight)
+      if (skillLevel && team.level && team.level.toLowerCase() === skillLevel.toLowerCase()) {
+        score += 2;
+      }
+      // Match age from division/name strings — support multiple formats
+      if (playerAge !== null) {
+        const divisionStr = (team.division || team.name || '');
+        // Format 1: U-prefix (e.g. "U12", "U14")
+        const uMatch = divisionStr.match(/U(\d+)/i);
+        if (uMatch) {
+          const maxAge = parseInt(uMatch[1]);
+          if (playerAge <= maxAge && playerAge >= maxAge - 3) score += 2; // strong match
+          else if (playerAge <= maxAge) score += 1; // within cap
+        }
+        // Format 2: age range "12-15" or "14-17"
+        const rangeMatch = divisionStr.match(/^(\d{1,2})[^\d]+(\d{1,2})$/);
+        if (rangeMatch) {
+          const minAge = parseInt(rangeMatch[1]);
+          const maxAge = parseInt(rangeMatch[2]);
+          if (playerAge >= minAge && playerAge <= maxAge) score += 2;
+        }
+        // Format 3: birth year range "2012-2014" (years within 4 digits)
+        const birthYearMatch = divisionStr.match(/(\d{4})[^\d]+(\d{4})/);
+        if (birthYearMatch) {
+          const playerBirthYear = currentYear - playerAge;
+          const minYear = parseInt(birthYearMatch[1]);
+          const maxYear = parseInt(birthYearMatch[2]);
+          const [lo, hi] = minYear < maxYear ? [minYear, maxYear] : [maxYear, minYear];
+          if (playerBirthYear >= lo && playerBirthYear <= hi) score += 2;
+        }
+      }
+      return { team, score };
+    });
+
+    scored.sort((a: any, b: any) => b.score - a.score);
+    setRecommendedTeam(scored[0]?.score > 0 ? scored[0].team : (programTeams[0] || null));
+    setLoadingTeam(false);
+  }, [selectedPlayer, playerProfiles, programTeams, program]);
+
+  useEffect(() => {
+    if (program) {
+      setSelectedPlayer("");
+      setRecommendedTeam(null);
+      onClearError();
+    }
+  }, [program]);
+
+  if (!program) return null;
+
+  const tryoutPriceDisplay = program.tryoutPrice != null
+    ? `$${(program.tryoutPrice / 100).toFixed(2)}`
+    : 'Free';
+
+  return (
+    <Dialog open={!!program} onOpenChange={() => onClose()}>
+      <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-xl">Try Out for {program.name}</DialogTitle>
+          <DialogDesc className="text-white/60">
+            Try out fee: {tryoutPriceDisplay} · 1 credit included
+          </DialogDesc>
+        </DialogHeader>
+
+        <div className="py-4 space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm text-white/70">Select Player</label>
+            <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white" data-testid="select-tryout-player">
+                <SelectValue placeholder="Choose a player" />
+              </SelectTrigger>
+              <SelectContent>
+                {children.map(child => (
+                  <SelectItem key={child.id} value={child.id}>
+                    {child.firstName} {child.lastName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedPlayer && (
+            <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/30">
+              <div className="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">
+                Recommended Team
+              </div>
+              {loadingTeam ? (
+                <div className="flex items-center gap-2 text-white/50">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Finding best team...</span>
+                </div>
+              ) : recommendedTeam ? (
+                <div>
+                  <div className="font-semibold text-white">{recommendedTeam.name}</div>
+                  {recommendedTeam.division && (
+                    <div className="text-xs text-white/50 mt-0.5">Division: {recommendedTeam.division}</div>
+                  )}
+                  {recommendedTeam.level && (
+                    <div className="text-xs text-white/50">Level: {recommendedTeam.level.charAt(0).toUpperCase() + recommendedTeam.level.slice(1)}</div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-sm text-white/50">No specific team recommended. A coach will contact you.</div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {error && (
+          <Alert className="bg-red-500/10 border-red-500/20" data-testid="alert-tryout-error">
+            <AlertCircle className="h-5 w-5 text-red-400" />
+            <AlertDescription className="text-white/90">{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <DialogFooter className="gap-2">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="border-white/20 text-white hover:bg-white/10"
+          >
+            Cancel
+          </Button>
+          <Button
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+            onClick={() => {
+              if (selectedPlayer) {
+                onConfirm(program.id, selectedPlayer, recommendedTeam?.id);
+              }
+            }}
+            disabled={isLoading || !selectedPlayer}
+            data-testid="button-confirm-tryout"
+          >
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            Pay {tryoutPriceDisplay} to Try Out
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -858,6 +1099,7 @@ function EnrollmentDialog({
 export default function PaymentsPage() {
   const { user } = useAuth();
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
+  const [selectedTryoutProgram, setSelectedTryoutProgram] = useState<Program | null>(null);
   const [selectedStoreItem, setSelectedStoreItem] = useState<Program | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1036,6 +1278,33 @@ export default function PaymentsPage() {
     }
   };
 
+  const handleTryoutCheckout = async (programId: string, playerId: string, recommendedTeamId?: number) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch('/api/payments/create-tryout-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          programId,
+          playerId,
+          recommendedTeamId,
+          successUrl: `${window.location.origin}/payments?success=true&session_id={CHECKOUT_SESSION_ID}`,
+          cancelUrl: `${window.location.origin}/payments?canceled=true`,
+        }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create tryout checkout');
+      }
+      const data = await response.json();
+      if (data.sessionUrl) window.location.href = data.sessionUrl;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      setLoading(false);
+    }
+  };
+
   const isLoading = productsLoading || enrollmentsLoading || paymentsLoading;
 
   if (isLoading) {
@@ -1168,6 +1437,7 @@ export default function PaymentsPage() {
                     key={program.id}
                     program={program}
                     onEnroll={(p) => setSelectedProgram(p)}
+                    onTryout={(p) => setSelectedTryoutProgram(p)}
                     isEnrolled={enrolledProgramIds.has(program.id)}
                   />
                 ))}
@@ -1254,6 +1524,17 @@ export default function PaymentsPage() {
         item={selectedStoreItem}
         onClose={() => setSelectedStoreItem(null)}
         onPurchase={handlePurchaseItem}
+      />
+
+      {/* Tryout Enrollment Dialog */}
+      <TryoutEnrollmentDialog
+        program={selectedTryoutProgram}
+        children={children}
+        onClose={() => { setSelectedTryoutProgram(null); setError(null); }}
+        onConfirm={handleTryoutCheckout}
+        isLoading={loading}
+        error={error}
+        onClearError={() => setError(null)}
       />
 
       {/* Enrollment Dialog */}

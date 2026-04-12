@@ -2287,9 +2287,11 @@ class MemStorage implements IStorage {
       stripeSubscriptionId: data.stripeSubscriptionId ?? null,
       startDate: data.startDate ?? now,
       endDate: data.endDate ?? null,
-      autoRenew: data.autoRenew ?? false, // Default to false, subscriptions will explicitly pass true
+      autoRenew: data.autoRenew ?? false,
       totalCredits: data.totalCredits ?? null,
       remainingCredits: data.remainingCredits ?? null,
+      isTryout: data.isTryout ?? false,
+      recommendedTeamId: data.recommendedTeamId ?? null,
       metadata: data.metadata ?? {},
       createdAt: now,
       updatedAt: now,
@@ -3440,6 +3442,7 @@ class DatabaseStorage implements IStorage {
       consecutiveCheckins: user.consecutiveCheckins || 0,
       videosCompleted: user.videosCompleted || 0,
       yearsActive: user.yearsActive || 0,
+      skillLevel: user.skillLevel ?? null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -3511,6 +3514,7 @@ class DatabaseStorage implements IStorage {
       activatedAt: updates.activatedAt,
       subscriptionEndDate: updates.subscriptionEndDate,
       parentEmail: updates.parentEmail,
+      skillLevel: updates.skillLevel,
       updatedAt: new Date().toISOString(),
     };
 
@@ -4639,6 +4643,10 @@ class DatabaseStorage implements IStorage {
       pricingOptions: program.pricingOptions ?? [],
       scheduleRequestEnabled: program.scheduleRequestEnabled ?? false,
       sessionLengthMinutes: program.sessionLengthMinutes,
+      // Visibility and tryout settings
+      visibility: program.visibility ?? 'public',
+      tryoutEnabled: program.tryoutEnabled ?? false,
+      tryoutPrice: program.tryoutPrice ?? null,
       createdAt: now,
     };
 
@@ -4710,6 +4718,9 @@ class DatabaseStorage implements IStorage {
       visibility: updates.visibility,
       allowInstallments: updates.allowInstallments,
       payInFullDiscount: updates.payInFullDiscount,
+      // Tryout settings
+      tryoutEnabled: updates.tryoutEnabled,
+      tryoutPrice: updates.tryoutPrice,
     };
 
     // Remove undefined values
@@ -5427,9 +5438,11 @@ class DatabaseStorage implements IStorage {
         stripeSubscriptionId: data.stripeSubscriptionId ?? null,
         startDate: data.startDate ?? now,
         endDate: data.endDate ?? null,
-        autoRenew: data.autoRenew ?? false, // Default to false, subscriptions will explicitly pass true
+        autoRenew: data.autoRenew ?? false,
         totalCredits: data.totalCredits ?? null,
         remainingCredits: data.remainingCredits ?? null,
+        isTryout: data.isTryout ?? false,
+        recommendedTeamId: data.recommendedTeamId ?? null,
         metadata: data.metadata ?? {},
         createdAt: now,
         updatedAt: now,
@@ -5795,6 +5808,7 @@ class DatabaseStorage implements IStorage {
       coachingStyle: dbUser.coachingStyle,
       medicalCertifications: dbUser.medicalCertifications || [],
       languages: dbUser.languages || [],
+      skillLevel: dbUser.skillLevel ?? undefined,
       createdAt: new Date(dbUser.createdAt),
       updatedAt: new Date(dbUser.updatedAt),
     };
@@ -6147,6 +6161,9 @@ class DatabaseStorage implements IStorage {
       sessionLengthMinutes: dbProgram.sessionLengthMinutes,
       // Visibility
       visibility: dbProgram.visibility ?? 'public',
+      // Tryout settings
+      tryoutEnabled: dbProgram.tryoutEnabled ?? false,
+      tryoutPrice: dbProgram.tryoutPrice ?? null,
     };
   }
   

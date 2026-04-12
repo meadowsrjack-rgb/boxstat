@@ -39,6 +39,9 @@ const playerInfoSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   dateOfBirth: z.string().optional(),
   gender: z.string().optional(),
+  skillLevel: z.enum(["beginner", "intermediate", "advanced"], {
+    required_error: "Please select a skill level",
+  }),
 });
 
 const addressInfoSchema = z.object({
@@ -1024,6 +1027,7 @@ function PlayerInfoStep({
       lastName: defaultValues?.lastName || prefillData.lastName || "",
       dateOfBirth: defaultValues?.dateOfBirth || "",
       gender: defaultValues?.gender || "",
+      skillLevel: defaultValues?.skillLevel,
     },
   });
 
@@ -1198,6 +1202,29 @@ function PlayerInfoStep({
                   <SelectItem value="female">Female</SelectItem>
                 </SelectContent>
               </Select>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="skillLevel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-gray-300 text-sm font-medium">Skill Level *</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger className="h-12 bg-white/5 border-white/10 text-white focus:border-red-500">
+                    <SelectValue placeholder="Select skill level" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="beginner">Beginner (0–2 years experience)</SelectItem>
+                  <SelectItem value="intermediate">Intermediate (3–5 years experience)</SelectItem>
+                  <SelectItem value="advanced">Advanced (5+ years experience)</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage className="text-red-400 text-xs" />
             </FormItem>
           )}
         />

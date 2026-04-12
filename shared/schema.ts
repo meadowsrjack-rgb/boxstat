@@ -303,6 +303,7 @@ export const users = pgTable("users", {
   activatedAt: timestamp("activated_at", { mode: 'string' }),
   subscriptionEndDate: date("subscription_end_date"),
   parentEmail: varchar("parent_email", { length: 255 }),
+  skillLevel: varchar("skill_level"), // 'beginner', 'intermediate', 'advanced'
 });
 // NOTE: Email uniqueness is enforced via a partial unique index in the database
 // Only parent/account holder accounts (account_holder_id IS NULL) require unique emails
@@ -480,6 +481,9 @@ export const products = pgTable("products", {
   scheduleRequestEnabled: boolean("schedule_request_enabled").default(false),
   sessionLengthMinutes: integer("session_length_minutes"), // Duration of scheduled sessions in minutes
   visibility: varchar().default('public'), // 'public' (everyone sees it) or 'members_only' (only users with active enrollment)
+  // Tryout fields
+  tryoutEnabled: boolean("tryout_enabled").default(false), // Can non-members try out?
+  tryoutPrice: integer("tryout_price"), // Tryout fee in cents
 });
 
 // Program Categories table (org-specific categories for programs)
@@ -548,6 +552,8 @@ export const productEnrollments = pgTable("product_enrollments", {
   originalMigrationDate: timestamp("original_migration_date", { mode: 'string' }), // Date of original migration/grandfather
   customPriceAmount: integer("custom_price_amount"), // Custom/legacy price in cents (if different from standard)
   selectedPricingOptionId: varchar("selected_pricing_option_id"), // Which pricing tier was selected
+  isTryout: boolean("is_tryout").default(false), // True if this is a tryout enrollment (not regular)
+  recommendedTeamId: integer("recommended_team_id"), // Team recommended for tryout
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 }, (table) => [

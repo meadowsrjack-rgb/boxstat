@@ -1441,9 +1441,11 @@ function InlineSchedulePanel({
   today.setHours(0, 0, 0, 0);
 
   const { data: availability, isLoading } = useQuery<any>({
-    queryKey: ["/api/programs", programId, "schedule-availability", dateStr],
+    queryKey: ["/api/programs", programId, "schedule-availability", dateStr, playerId],
     queryFn: async () => {
-      const res = await fetch(`/api/programs/${programId}/schedule-availability?date=${dateStr}`, {
+      const params = new URLSearchParams({ date: dateStr });
+      if (playerId) params.set("playerId", playerId);
+      const res = await fetch(`/api/programs/${programId}/schedule-availability?${params.toString()}`, {
         credentials: "include",
         headers: { Authorization: `Bearer ${localStorage.getItem("authToken") || ""}` },
       });

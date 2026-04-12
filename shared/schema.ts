@@ -799,7 +799,7 @@ export const userBadges = pgTable("user_badges", {
 export const awardDefinitions = pgTable("award_definitions", {
   id: serial().primaryKey().notNull(),
   name: text().notNull(),
-  tier: text().notNull(), // Gold, Purple, Blue, Green, Grey, Special
+  tier: text().notNull(), // Bronze, Silver, Gold, Platinum, Diamond, Legend
   description: text(),
   imageUrl: text("image_url"),
   
@@ -809,7 +809,7 @@ export const awardDefinitions = pgTable("award_definitions", {
   countMode: text("count_mode"), // total, streak (for checkin)
   threshold: integer(), // number required (e.g., 50 checkins, 5 years)
   referenceId: text("reference_id"), // for system (award ID to count) or store (product SKU)
-  targetTier: text("target_tier"), // for system: tier name to count (Legacy, HOF, Superstar, etc.) - alternative to referenceId
+  targetTier: text("target_tier"), // for system: tier name to count (Legend, Diamond, Platinum, etc.) - alternative to referenceId
   timeUnit: text("time_unit"), // years, months, days (for time triggers)
   
   // Program/Team scope filtering (for checkin awards)
@@ -821,7 +821,7 @@ export const awardDefinitions = pgTable("award_definitions", {
   
   // Legacy fields (kept for backwards compatibility during migration)
   class: text(),
-  prestige: text().default('Prospect'),
+  prestige: text().default('Bronze'),
   triggerField: text("trigger_field"),
   triggerOperator: text("trigger_operator").default('>='),
   triggerValue: numeric("trigger_value"),
@@ -1648,7 +1648,7 @@ export interface AwardDefinition {
   countMode?: CountMode;
   threshold?: number;
   referenceId?: string;
-  targetTier?: string; // For collection meta badges: tier to count (Legacy, HOF, Superstar, etc.)
+  targetTier?: string; // For collection meta badges: tier to count (Legend, Diamond, Platinum, etc.)
   timeUnit?: TimeUnit;
   
   // Legacy fields

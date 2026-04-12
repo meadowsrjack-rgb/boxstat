@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type TierType = "Prospect" | "Starter" | "All-Star" | "Superstar" | "HOF" | "Legacy";
+type TierType = "Bronze" | "Silver" | "Gold" | "Platinum" | "Diamond" | "Legend";
 type TriggerCategory = "checkin" | "system" | "time" | "store" | "manual";
 
 interface AwardDefinition {
@@ -53,30 +53,30 @@ interface AwardWithDetails extends AwardDefinition {
 }
 
 const TIER_ICON_BG: Record<TierType, string> = {
-  Prospect: "bg-[#fdf2e6] text-[#92400e]",
-  Starter: "bg-[#f1f5f9] text-[#475569]",
-  "All-Star": "bg-[#fefce8] text-[#854d0e]",
-  Superstar: "bg-[#ecfeff] text-[#155e75]",
-  HOF: "bg-[#f5f3ff] text-[#5b21b6]",
-  Legacy: "bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6]",
+  Bronze: "bg-[#fdf2e6] text-[#92400e]",
+  Silver: "bg-[#f1f5f9] text-[#475569]",
+  Gold: "bg-[#fefce8] text-[#854d0e]",
+  Platinum: "bg-[#ecfeff] text-[#155e75]",
+  Diamond: "bg-[#f5f3ff] text-[#5b21b6]",
+  Legend: "bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6]",
 };
 
 const TIER_BADGE: Record<TierType, string> = {
-  Prospect: "bg-[#fdf2e6] text-[#92400e] border border-[#f5d0a9]",
-  Starter: "bg-[#f1f5f9] text-[#475569] border border-[#cbd5e1]",
-  "All-Star": "bg-[#fefce8] text-[#854d0e] border border-[#fde047]",
-  Superstar: "bg-[#ecfeff] text-[#155e75] border border-[#67e8f9]",
-  HOF: "bg-[#f5f3ff] text-[#5b21b6] border border-[#c4b5fd]",
-  Legacy: "bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6] border border-[#c4b5fd]",
+  Bronze: "bg-[#fdf2e6] text-[#92400e] border border-[#f5d0a9]",
+  Silver: "bg-[#f1f5f9] text-[#475569] border border-[#cbd5e1]",
+  Gold: "bg-[#fefce8] text-[#854d0e] border border-[#fde047]",
+  Platinum: "bg-[#ecfeff] text-[#155e75] border border-[#67e8f9]",
+  Diamond: "bg-[#f5f3ff] text-[#5b21b6] border border-[#c4b5fd]",
+  Legend: "bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6] border border-[#c4b5fd]",
 };
 
 const TIER_PROGRESS_COLOR: Record<TierType, string> = {
-  Prospect: "bg-[#f5d0a9]",
-  Starter: "bg-[#cbd5e1]",
-  "All-Star": "bg-[#fde047]",
-  Superstar: "bg-[#67e8f9]",
-  HOF: "bg-[#c4b5fd]",
-  Legacy: "bg-[#c4b5fd]",
+  Bronze: "bg-[#f5d0a9]",
+  Silver: "bg-[#cbd5e1]",
+  Gold: "bg-[#fde047]",
+  Platinum: "bg-[#67e8f9]",
+  Diamond: "bg-[#c4b5fd]",
+  Legend: "bg-[#c4b5fd]",
 };
 
 const TRIGGER_LABELS: Record<TriggerCategory, string> = {
@@ -167,7 +167,7 @@ export default function TrophiesBadgesPage() {
     return awardDefinitions.filter(def => def.active && !earnedIds.has(def.id));
   }, [awardDefinitions, earnedAwards]);
 
-  const tierOrder = ["Legacy", "HOF", "Superstar", "All-Star", "Starter", "Prospect"];
+  const tierOrder = ["Legend", "Diamond", "Platinum", "Gold", "Silver", "Bronze"];
 
   const matchesProgram = (award: AwardDefinition) => {
     if (selectedProgram === "all") return true;
@@ -197,12 +197,12 @@ export default function TrophiesBadgesPage() {
 
   const stats = useMemo(() => ({
     total: earnedAwards.length,
-    legacy: earnedAwards.filter(a => a.tier === "Legacy").length,
-    hof: earnedAwards.filter(a => a.tier === "HOF").length,
-    superstar: earnedAwards.filter(a => a.tier === "Superstar").length,
-    allStar: earnedAwards.filter(a => a.tier === "All-Star").length,
-    starter: earnedAwards.filter(a => a.tier === "Starter").length,
-    prospect: earnedAwards.filter(a => a.tier === "Prospect").length,
+    legend: earnedAwards.filter(a => a.tier === "Legend").length,
+    diamond: earnedAwards.filter(a => a.tier === "Diamond").length,
+    platinum: earnedAwards.filter(a => a.tier === "Platinum").length,
+    gold: earnedAwards.filter(a => a.tier === "Gold").length,
+    silver: earnedAwards.filter(a => a.tier === "Silver").length,
+    bronze: earnedAwards.filter(a => a.tier === "Bronze").length,
   }), [earnedAwards]);
 
   const isLoading = loadingDefinitions || loadingUserAwards;
@@ -257,8 +257,8 @@ export default function TrophiesBadgesPage() {
         className="flex px-5 pb-4 overflow-x-auto gap-0"
         style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
       >
-        <div className="flex-1 min-w-0 text-center px-1.5 py-2.5" data-testid="card-stat-legacy">
-          <div className="text-[20px] font-bold leading-none text-[#1a1a1a]">{stats.legacy}</div>
+        <div className="flex-1 min-w-0 text-center px-1.5 py-2.5" data-testid="card-stat-legend">
+          <div className="text-[20px] font-bold leading-none text-[#1a1a1a]">{stats.legend}</div>
           <div
             className="text-[10px] font-semibold mt-1 tracking-[0.02em]"
             style={{
@@ -268,15 +268,15 @@ export default function TrophiesBadgesPage() {
               backgroundClip: "text",
             }}
           >
-            Legacy
+            Legend
           </div>
         </div>
         {[
-          { count: stats.hof, label: "HOF", color: "text-[#5b21b6]", testId: "card-stat-hof" },
-          { count: stats.superstar, label: "Superstar", color: "text-[#155e75]", testId: "card-stat-superstar" },
-          { count: stats.allStar, label: "All-Star", color: "text-[#854d0e]", testId: "card-stat-allstar" },
-          { count: stats.starter, label: "Starter", color: "text-[#475569]", testId: "card-stat-starter" },
-          { count: stats.prospect, label: "Prospect", color: "text-[#92400e]", testId: "card-stat-prospect" },
+          { count: stats.diamond, label: "Diamond", color: "text-[#5b21b6]", testId: "card-stat-diamond" },
+          { count: stats.platinum, label: "Platinum", color: "text-[#155e75]", testId: "card-stat-platinum" },
+          { count: stats.gold, label: "Gold", color: "text-[#854d0e]", testId: "card-stat-gold" },
+          { count: stats.silver, label: "Silver", color: "text-[#475569]", testId: "card-stat-silver" },
+          { count: stats.bronze, label: "Bronze", color: "text-[#92400e]", testId: "card-stat-bronze" },
         ].map(({ count, label, color, testId }) => (
           <div key={label} className="flex-1 min-w-0 text-center px-1.5 py-2.5" data-testid={testId}>
             <div className="text-[20px] font-bold leading-none text-[#1a1a1a]">{count}</div>
@@ -300,12 +300,12 @@ export default function TrophiesBadgesPage() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuItem onClick={() => setSelectedTier("all")}>All Tiers</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSelectedTier("Legacy")}>Legacy</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSelectedTier("HOF")}>HOF</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSelectedTier("Superstar")}>Superstar</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSelectedTier("All-Star")}>All-Star</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSelectedTier("Starter")}>Starter</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSelectedTier("Prospect")}>Prospect</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedTier("Legend")}>Legend</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedTier("Diamond")}>Diamond</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedTier("Platinum")}>Platinum</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedTier("Gold")}>Gold</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedTier("Silver")}>Silver</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedTier("Bronze")}>Bronze</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 

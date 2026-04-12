@@ -13,13 +13,12 @@ export const defaultAwardsFilters: AwardsFilterState = {
 export const FILTER_OPTIONS = {
   tiers: [
     { value: "", label: "All Tiers" },
-    { value: "Prospect", label: "Prospect (Bronze)" },
-    { value: "Starter", label: "Starter (Silver)" },
-    { value: "AllStar", label: "All-Star (Gold)" },
-    { value: "Superstar", label: "Superstar (Platinum)" },
-    { value: "HallOfFamer", label: "Hall of Famer (Diamond)" },
-    { value: "Team", label: "Team Trophies" },
-    { value: "Legacy", label: "Legacy" }
+    { value: "Bronze", label: "Bronze" },
+    { value: "Silver", label: "Silver" },
+    { value: "Gold", label: "Gold" },
+    { value: "Platinum", label: "Platinum" },
+    { value: "Diamond", label: "Diamond" },
+    { value: "Legend", label: "Legend" }
   ],
   categories: [
     { value: "", label: "All Categories" },

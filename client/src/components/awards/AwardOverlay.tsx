@@ -12,6 +12,12 @@ interface AwardOverlayProps {
 }
 
 const TIER_COLORS: Record<string, string> = {
+  Bronze: "border-[#f5d0a9] bg-[#fdf2e6] text-[#92400e]",
+  Silver: "border-[#cbd5e1] bg-[#f1f5f9] text-[#475569]",
+  Gold: "border-[#fde047] bg-[#fefce8] text-[#854d0e]",
+  Platinum: "border-[#67e8f9] bg-[#ecfeff] text-[#155e75]",
+  Diamond: "border-[#c4b5fd] bg-[#f5f3ff] text-[#5b21b6]",
+  Legend: "border-[#c4b5fd] bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6]",
   HallOfFamer: "border-[#c4b5fd] bg-[#f5f3ff] text-[#5b21b6]",
   HOF: "border-[#c4b5fd] bg-[#f5f3ff] text-[#5b21b6]",
   Superstar: "border-[#67e8f9] bg-[#ecfeff] text-[#155e75]",
@@ -19,11 +25,16 @@ const TIER_COLORS: Record<string, string> = {
   "All-Star": "border-[#fde047] bg-[#fefce8] text-[#854d0e]",
   Starter: "border-[#cbd5e1] bg-[#f1f5f9] text-[#475569]",
   Prospect: "border-[#f5d0a9] bg-[#fdf2e6] text-[#92400e]",
-  Legacy: "border-[#c4b5fd] bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6]",
-  Team: "border-[#f5d0a9] bg-[#fdf2e6] text-[#92400e]"
+  Team: "border-[#f5d0a9] bg-[#fdf2e6] text-[#92400e]",
 };
 
 const TIER_GRADIENTS: Record<string, string> = {
+  Bronze: "from-[#f5d0a9] to-[#92400e]",
+  Silver: "from-[#cbd5e1] to-[#475569]",
+  Gold: "from-[#fde047] to-[#854d0e]",
+  Platinum: "from-[#67e8f9] to-[#155e75]",
+  Diamond: "from-[#c4b5fd] to-[#5b21b6]",
+  Legend: "from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff]",
   HallOfFamer: "from-[#c4b5fd] to-[#5b21b6]",
   HOF: "from-[#c4b5fd] to-[#5b21b6]",
   Superstar: "from-[#67e8f9] to-[#155e75]",
@@ -31,8 +42,7 @@ const TIER_GRADIENTS: Record<string, string> = {
   "All-Star": "from-[#fde047] to-[#854d0e]",
   Starter: "from-[#cbd5e1] to-[#475569]",
   Prospect: "from-[#f5d0a9] to-[#92400e]",
-  Legacy: "from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff]",
-  Team: "from-[#f5d0a9] to-[#92400e]"
+  Team: "from-[#f5d0a9] to-[#92400e]",
 };
 
 export function AwardOverlay({ award, progress, isOpen, onClose }: AwardOverlayProps) {

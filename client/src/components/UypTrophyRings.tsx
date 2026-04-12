@@ -171,12 +171,12 @@ export default function UypTrophyRings({
         padding: '4px',
       }}
     >
-      <CircularRingMeter label="Legacy"     earned={safeData.legacy.earned}     total={safeData.legacy.total}     scheme={schemes.legacy}     size={size} stroke={stroke} />
-      <CircularRingMeter label="HOF"        earned={safeData.hof.earned}        total={safeData.hof.total}        scheme={schemes.hof}        size={size} stroke={stroke} />
-      <CircularRingMeter label="Superstar"  earned={safeData.superstar.earned}  total={safeData.superstar.total}  scheme={schemes.superstar}  size={size} stroke={stroke} />
-      <CircularRingMeter label="All-Star"   earned={safeData.allStar.earned}    total={safeData.allStar.total}    scheme={schemes.allStar}    size={size} stroke={stroke} />
-      <CircularRingMeter label="Starter"    earned={safeData.starter.earned}    total={safeData.starter.total}    scheme={schemes.starter}    size={size} stroke={stroke} />
-      <CircularRingMeter label="Prospect"   earned={safeData.prospect.earned}   total={safeData.prospect.total}   scheme={schemes.prospect}   size={size} stroke={stroke} />
+      <CircularRingMeter label="Legend"     earned={safeData.legacy.earned}     total={safeData.legacy.total}     scheme={schemes.legacy}     size={size} stroke={stroke} />
+      <CircularRingMeter label="Diamond"    earned={safeData.hof.earned}        total={safeData.hof.total}        scheme={schemes.hof}        size={size} stroke={stroke} />
+      <CircularRingMeter label="Platinum"   earned={safeData.superstar.earned}  total={safeData.superstar.total}  scheme={schemes.superstar}  size={size} stroke={stroke} />
+      <CircularRingMeter label="Gold"       earned={safeData.allStar.earned}    total={safeData.allStar.total}    scheme={schemes.allStar}    size={size} stroke={stroke} />
+      <CircularRingMeter label="Silver"     earned={safeData.starter.earned}    total={safeData.starter.total}    scheme={schemes.starter}    size={size} stroke={stroke} />
+      <CircularRingMeter label="Bronze"     earned={safeData.prospect.earned}   total={safeData.prospect.total}   scheme={schemes.prospect}   size={size} stroke={stroke} />
     </div>
   );
 }

@@ -8038,7 +8038,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
 
   const awardFormSchema = z.object({
     name: z.string().min(1, "Name is required"),
-    tier: z.enum(["Prospect", "Starter", "All-Star", "Superstar", "HOF", "Legacy"]),
+    tier: z.enum(["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Legend"]),
     description: z.string().optional(),
     imageUrl: z.string().optional(),
     active: z.boolean().default(true),
@@ -8196,14 +8196,14 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
 
   const getTierBadgeColor = (tier: string) => {
     const colors: Record<string, string> = {
-      "Prospect": "bg-[#fdf2e6] text-[#92400e] border border-[#f5d0a9]",
-      "Starter": "bg-[#f1f5f9] text-[#475569] border border-[#cbd5e1]",
-      "All-Star": "bg-[#fefce8] text-[#854d0e] border border-[#fde047]",
-      "Superstar": "bg-[#ecfeff] text-[#155e75] border border-[#67e8f9]",
-      "HOF": "bg-[#f5f3ff] text-[#5b21b6] border border-[#c4b5fd]",
-      "Legacy": "bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6] border border-[#c4b5fd]",
+      "Bronze": "bg-[#fdf2e6] text-[#92400e] border border-[#f5d0a9]",
+      "Silver": "bg-[#f1f5f9] text-[#475569] border border-[#cbd5e1]",
+      "Gold": "bg-[#fefce8] text-[#854d0e] border border-[#fde047]",
+      "Platinum": "bg-[#ecfeff] text-[#155e75] border border-[#67e8f9]",
+      "Diamond": "bg-[#f5f3ff] text-[#5b21b6] border border-[#c4b5fd]",
+      "Legend": "bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6] border border-[#c4b5fd]",
     };
-    return colors[tier] || colors["Prospect"];
+    return colors[tier] || colors["Bronze"];
   };
 
   const getTriggerCategoryLabel = (category: string) => {
@@ -8232,12 +8232,12 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
 
   // Tier hierarchy for sorting
   const tierOrder: Record<string, number> = {
-    "Legacy": 6,
-    "HOF": 5,
-    "Superstar": 4,
-    "All-Star": 3,
-    "Starter": 2,
-    "Prospect": 1,
+    "Legend": 6,
+    "Diamond": 5,
+    "Platinum": 4,
+    "Gold": 3,
+    "Silver": 2,
+    "Bronze": 1,
   };
 
   // Filter and sort awards
@@ -8312,7 +8312,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
 
   const downloadAwardTemplate = () => {
-    const csvContent = "Name,Category,Points,Description,Image URL\nHeart & Hustle Award,Gold,100,For players who show exceptional effort,\nMVP Badge,Purple,250,Most Valuable Player award,";
+    const csvContent = "Name,Tier,XP,Description,Image URL\nHeart & Hustle Award,Gold,100,For players who show exceptional effort,\nMVP Badge,Diamond,250,Most Valuable Player award,";
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -8480,12 +8480,12 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Legacy">Legacy</SelectItem>
-                            <SelectItem value="HOF">HOF</SelectItem>
-                            <SelectItem value="Superstar">Superstar</SelectItem>
-                            <SelectItem value="All-Star">All-Star</SelectItem>
-                            <SelectItem value="Starter">Starter</SelectItem>
-                            <SelectItem value="Prospect">Prospect</SelectItem>
+                            <SelectItem value="Legend">Legend</SelectItem>
+                            <SelectItem value="Diamond">Diamond</SelectItem>
+                            <SelectItem value="Platinum">Platinum</SelectItem>
+                            <SelectItem value="Gold">Gold</SelectItem>
+                            <SelectItem value="Silver">Silver</SelectItem>
+                            <SelectItem value="Bronze">Bronze</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -8882,12 +8882,12 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                               </FormControl>
                               <SelectContent>
                                 <SelectItem value="none">-- Select a specific award instead --</SelectItem>
-                                <SelectItem value="Legacy">Legacy</SelectItem>
-                                <SelectItem value="HOF">HOF</SelectItem>
-                                <SelectItem value="Superstar">Superstar</SelectItem>
-                                <SelectItem value="All-Star">All-Star</SelectItem>
-                                <SelectItem value="Starter">Starter</SelectItem>
-                                <SelectItem value="Prospect">Prospect</SelectItem>
+                                <SelectItem value="Legend">Legend</SelectItem>
+                                <SelectItem value="Diamond">Diamond</SelectItem>
+                                <SelectItem value="Platinum">Platinum</SelectItem>
+                                <SelectItem value="Gold">Gold</SelectItem>
+                                <SelectItem value="Silver">Silver</SelectItem>
+                                <SelectItem value="Bronze">Bronze</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormDescription>Award this when user collects X distinct awards of this tier</FormDescription>
@@ -9112,12 +9112,12 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
           data-testid="filter-tier"
         >
           <option value="all">All Tiers</option>
-          <option value="Prospect">Prospect</option>
-          <option value="Starter">Starter</option>
-          <option value="All-Star">All-Star</option>
-          <option value="Superstar">Superstar</option>
-          <option value="HOF">HOF</option>
-          <option value="Legacy">Legacy</option>
+          <option value="Bronze">Bronze</option>
+          <option value="Silver">Silver</option>
+          <option value="Gold">Gold</option>
+          <option value="Platinum">Platinum</option>
+          <option value="Diamond">Diamond</option>
+          <option value="Legend">Legend</option>
         </select>
         <select
           value={filterClass}

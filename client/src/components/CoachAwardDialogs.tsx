@@ -44,7 +44,13 @@ export interface PlayerLite {
 }
 
 // Tier configuration with colors
-const TIER_CONFIG = {
+const TIER_CONFIG: Record<string, { order: number; color: string }> = {
+  "Bronze": { order: 1, color: "bg-[#fdf2e6] text-[#92400e] border-[#f5d0a9]" },
+  "Silver": { order: 2, color: "bg-[#f1f5f9] text-[#475569] border-[#cbd5e1]" },
+  "Gold": { order: 3, color: "bg-[#fefce8] text-[#854d0e] border-[#fde047]" },
+  "Platinum": { order: 4, color: "bg-[#ecfeff] text-[#155e75] border-[#67e8f9]" },
+  "Diamond": { order: 5, color: "bg-[#f5f3ff] text-[#5b21b6] border-[#c4b5fd]" },
+  "Legend": { order: 6, color: "bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6] border-[#c4b5fd]" },
   "Prospect": { order: 1, color: "bg-[#fdf2e6] text-[#92400e] border-[#f5d0a9]" },
   "Starter": { order: 2, color: "bg-[#f1f5f9] text-[#475569] border-[#cbd5e1]" },
   "All-Star": { order: 3, color: "bg-[#fefce8] text-[#854d0e] border-[#fde047]" },
@@ -53,9 +59,9 @@ const TIER_CONFIG = {
   "HOF": { order: 5, color: "bg-[#f5f3ff] text-[#5b21b6] border-[#c4b5fd]" },
   "HallOfFamer": { order: 5, color: "bg-[#f5f3ff] text-[#5b21b6] border-[#c4b5fd]" },
   "Legacy": { order: 6, color: "bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6] border-[#c4b5fd]" },
-} as const;
+};
 
-const TIER_ORDER = ["Prospect", "Starter", "All-Star", "Superstar", "HOF", "Legacy"];
+const TIER_ORDER = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Legend"];
 
 const getTierColor = (tier: string) => {
   return TIER_CONFIG[tier as keyof typeof TIER_CONFIG]?.color || "bg-gray-100 text-gray-700 border-gray-300";

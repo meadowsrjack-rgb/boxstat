@@ -8,7 +8,13 @@ interface AwardCardProps {
   onClick: () => void;
 }
 
-const TIER_COLORS = {
+const TIER_COLORS: Record<string, string> = {
+  Bronze: "from-[#f5d0a9] to-[#92400e]",
+  Silver: "from-[#cbd5e1] to-[#475569]",
+  Gold: "from-[#fde047] to-[#854d0e]",
+  Platinum: "from-[#67e8f9] to-[#155e75]",
+  Diamond: "from-[#c4b5fd] to-[#5b21b6]",
+  Legend: "from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff]",
   HallOfFamer: "from-[#c4b5fd] to-[#5b21b6]",
   HOF: "from-[#c4b5fd] to-[#5b21b6]",
   Superstar: "from-[#67e8f9] to-[#155e75]",
@@ -17,12 +23,12 @@ const TIER_COLORS = {
   Starter: "from-[#cbd5e1] to-[#475569]",
   Prospect: "from-[#f5d0a9] to-[#92400e]",
   Legacy: "from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff]",
-  Team: "from-[#f5d0a9] to-[#92400e]"
+  Team: "from-[#f5d0a9] to-[#92400e]",
 };
 
 export function AwardCard({ award, progress, onClick }: AwardCardProps) {
   const locked = !progress.earned;
-  const tierColor = TIER_COLORS[award.tier as keyof typeof TIER_COLORS] || TIER_COLORS.Prospect;
+  const tierColor = TIER_COLORS[award.tier as keyof typeof TIER_COLORS] || TIER_COLORS.Bronze;
 
   const imageUrl = award.imageUrl;
 

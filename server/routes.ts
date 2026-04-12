@@ -10326,42 +10326,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
-      // Count earned awards by tier
-      const legacyCount = enrichedAwards.filter((a: any) => a.tier === 'Legacy').length;
-      const hofCount = enrichedAwards.filter((a: any) => a.tier === 'HOF').length;
-      const superstarCount = enrichedAwards.filter((a: any) => a.tier === 'Superstar').length;
-      const allStarCount = enrichedAwards.filter((a: any) => a.tier === 'All-Star').length;
-      const starterCount = enrichedAwards.filter((a: any) => a.tier === 'Starter').length;
-      const prospectCount = enrichedAwards.filter((a: any) => a.tier === 'Prospect').length;
+      const legendCount = enrichedAwards.filter((a: any) => a.tier === 'Legend').length;
+      const diamondCount = enrichedAwards.filter((a: any) => a.tier === 'Diamond').length;
+      const platinumCount = enrichedAwards.filter((a: any) => a.tier === 'Platinum').length;
+      const goldCount = enrichedAwards.filter((a: any) => a.tier === 'Gold').length;
+      const silverCount = enrichedAwards.filter((a: any) => a.tier === 'Silver').length;
+      const bronzeCount = enrichedAwards.filter((a: any) => a.tier === 'Bronze').length;
       
-      // Count total available awards per tier from all award definitions
-      const legacyTotal = allAwardDefinitions.filter((a: any) => a.tier === 'Legacy' && a.active).length;
-      const hofTotal = allAwardDefinitions.filter((a: any) => a.tier === 'HOF' && a.active).length;
-      const superstarTotal = allAwardDefinitions.filter((a: any) => a.tier === 'Superstar' && a.active).length;
-      const allStarTotal = allAwardDefinitions.filter((a: any) => a.tier === 'All-Star' && a.active).length;
-      const starterTotal = allAwardDefinitions.filter((a: any) => a.tier === 'Starter' && a.active).length;
-      const prospectTotal = allAwardDefinitions.filter((a: any) => a.tier === 'Prospect' && a.active).length;
+      const legendTotal = allAwardDefinitions.filter((a: any) => a.tier === 'Legend' && a.active).length;
+      const diamondTotal = allAwardDefinitions.filter((a: any) => a.tier === 'Diamond' && a.active).length;
+      const platinumTotal = allAwardDefinitions.filter((a: any) => a.tier === 'Platinum' && a.active).length;
+      const goldTotal = allAwardDefinitions.filter((a: any) => a.tier === 'Gold' && a.active).length;
+      const silverTotal = allAwardDefinitions.filter((a: any) => a.tier === 'Silver' && a.active).length;
+      const bronzeTotal = allAwardDefinitions.filter((a: any) => a.tier === 'Bronze' && a.active).length;
       
-      console.log(`[Awards API] Earned - Legacy:${legacyCount}, HOF:${hofCount}, Superstar:${superstarCount}, All-Star:${allStarCount}, Starter:${starterCount}, Prospect:${prospectCount}`);
-      console.log(`[Awards API] Totals - Legacy:${legacyTotal}, HOF:${hofTotal}, Superstar:${superstarTotal}, All-Star:${allStarTotal}, Starter:${starterTotal}, Prospect:${prospectTotal}`);
+      console.log(`[Awards API] Earned - Legend:${legendCount}, Diamond:${diamondCount}, Platinum:${platinumCount}, Gold:${goldCount}, Silver:${silverCount}, Bronze:${bronzeCount}`);
+      console.log(`[Awards API] Totals - Legend:${legendTotal}, Diamond:${diamondTotal}, Platinum:${platinumTotal}, Gold:${goldTotal}, Silver:${silverTotal}, Bronze:${bronzeTotal}`);
       
       res.json({
-        // New tier-based summary with earned and total
         tierSummary: {
-          legacy: { earned: legacyCount, total: legacyTotal || 1 },
-          hof: { earned: hofCount, total: hofTotal || 1 },
-          superstar: { earned: superstarCount, total: superstarTotal || 1 },
-          allStar: { earned: allStarCount, total: allStarTotal || 1 },
-          starter: { earned: starterCount, total: starterTotal || 1 },
-          prospect: { earned: prospectCount, total: prospectTotal || 1 },
+          legacy: { earned: legendCount, total: legendTotal || 1 },
+          hof: { earned: diamondCount, total: diamondTotal || 1 },
+          superstar: { earned: platinumCount, total: platinumTotal || 1 },
+          allStar: { earned: goldCount, total: goldTotal || 1 },
+          starter: { earned: silverCount, total: silverTotal || 1 },
+          prospect: { earned: bronzeCount, total: bronzeTotal || 1 },
         },
-        // Legacy fields for backwards compatibility
-        trophiesCount: legacyCount,
-        hallOfFameBadgesCount: hofCount,
-        superstarBadgesCount: superstarCount,
-        allStarBadgesCount: allStarCount,
-        starterBadgesCount: starterCount,
-        prospectBadgesCount: prospectCount,
+        trophiesCount: legendCount,
+        hallOfFameBadgesCount: diamondCount,
+        superstarBadgesCount: platinumCount,
+        allStarBadgesCount: goldCount,
+        starterBadgesCount: silverCount,
+        prospectBadgesCount: bronzeCount,
         rookieBadgesCount: 0,
         allAwards: enrichedAwards,
       });

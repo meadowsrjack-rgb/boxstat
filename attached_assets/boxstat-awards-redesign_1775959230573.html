@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoxStat — Awards Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #c0392b;
+    --red-light: #fef2f2;
+    --red-hover: #a93226;
+    --bg: #f6f6f4;
+    --card: #ffffff;
+    --border: #e5e5e3;
+    --text: #1a1a1a;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+    --radius: 10px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Sans',system-ui,sans-serif; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; }
+
+  .header { background:var(--card); border-bottom:1px solid var(--border); padding:24px 40px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; }
+  .header-left { display:flex; align-items:center; gap:12px; }
+  .header-left .back-btn { width:36px; height:36px; border:none; background:transparent; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text-secondary); transition:background .15s; }
+  .header-left .back-btn:hover { background:var(--bg); }
+  .header h1 { font-size:24px; font-weight:700; }
+  .header p { font-size:13px; color:var(--text-secondary); margin-top:2px; }
+
+  .main { max-width:1200px; margin:0 auto; padding:32px 40px; }
+
+  .card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+  .card-header { padding:24px 24px 0; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; }
+  .card-header h2 { font-size:20px; font-weight:700; }
+  .card-header .subtitle { font-size:13px; color:var(--text-secondary); margin-top:2px; }
+
+  .toolbar { padding:16px 24px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; border-bottom:1px solid var(--border); }
+  .toolbar input[type="text"] { height:36px; padding:0 12px 0 34px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; width:220px; outline:none; transition:border .15s; background-image:url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:10px center; }
+  .toolbar input[type="text"]:focus { border-color:var(--red); }
+  .toolbar select { height:36px; padding:0 28px 0 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; background:var(--card); appearance:none; cursor:pointer; outline:none; background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; }
+  .toolbar select:focus { border-color:var(--red); }
+
+  .actions { display:flex; gap:8px; margin-left:auto; }
+  .btn { height:36px; padding:0 14px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:6px; background:var(--card); color:var(--text); transition:all .15s; }
+  .btn:hover { background:var(--bg); }
+  .btn-primary { background:var(--red); color:#fff; border-color:var(--red); }
+  .btn-primary:hover { background:var(--red-hover); border-color:var(--red-hover); }
+  .btn svg { width:15px; height:15px; }
+
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  thead th { text-align:left; padding:10px 16px; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); border-bottom:1px solid var(--border); white-space:nowrap; user-select:none; }
+  thead th.sortable { cursor:pointer; }
+  thead th.sortable:hover { color:var(--text-secondary); }
+  tbody tr { border-bottom:1px solid #f0f0ee; transition:background .1s; }
+  tbody tr:last-child { border-bottom:none; }
+  tbody tr:hover { background:#fafaf8; }
+  tbody td { padding:12px 16px; vertical-align:middle; }
+
+  .award-cell { display:flex; align-items:center; gap:14px; min-width:260px; }
+  .award-img { width:44px; height:44px; border-radius:10px; flex-shrink:0; overflow:hidden; background:var(--bg); display:flex; align-items:center; justify-content:center; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .award-img svg { width:44px; height:44px; }
+  .award-name { font-weight:600; font-size:14px; line-height:1.3; }
+  .award-desc { font-size:12px; color:var(--text-secondary); margin-top:1px; line-height:1.3; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap; }
+  .badge-bronze { background:#fdf2e6; color:#92400e; border:1px solid #f5d0a9; }
+  .badge-silver { background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; }
+  .badge-gold { background:#fefce8; color:#854d0e; border:1px solid #fde047; }
+  .badge-platinum { background:#ecfeff; color:#155e75; border:1px solid #67e8f9; }
+  .badge-diamond { background:#f5f3ff; color:#5b21b6; border:1px solid #c4b5fd; }
+  .badge-legend { background:linear-gradient(135deg,#fef2f2,#f5f3ff,#eff6ff); color:#5b21b6; border:1px solid #c4b5fd; }
+  .badge-auto { background:#ecfdf5; color:#065f46; border:1px solid #6ee7b7; }
+  .badge-manual { background:#f3f4f6; color:#374151; border:1px solid #d1d5db; }
+  .badge-meta { background:#f5f3ff; color:#5b21b6; border:1px solid #c4b5fd; }
+  .badge-time { background:#fffbeb; color:#92400e; border:1px solid #fcd34d; }
+  .badge-streak { background:#fff1f2; color:#9f1239; border:1px solid #fda4af; }
+
+  .xp-pill { display:inline-flex; align-items:center; gap:3px; font-weight:700; font-size:13px; color:var(--text); }
+  .xp-pill .xp-label { font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; }
+  .requirement { font-size:12px; color:var(--text-secondary); max-width:160px; }
+  .recipients-link { font-size:13px; font-weight:600; color:var(--text-secondary); text-decoration:none; display:inline-flex; align-items:center; gap:4px; transition:color .15s; }
+  .recipients-link:hover { color:var(--red); }
+  .recipients-link svg { width:13px; height:13px; }
+
+  .toggle { width:36px; height:20px; border-radius:20px; border:none; cursor:pointer; position:relative; transition:background .2s; background:#d1d5db; }
+  .toggle.active { background:var(--red); }
+  .toggle::after { content:''; position:absolute; width:16px; height:16px; border-radius:50%; background:#fff; top:2px; left:2px; transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.15); }
+  .toggle.active::after { transform:translateX(16px); }
+
+  .edit-btn { width:32px; height:32px; border:none; background:transparent; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text-muted); transition:all .15s; }
+  .edit-btn:hover { background:var(--bg); color:var(--text); }
+  .edit-btn svg { width:15px; height:15px; }
+
+  .checkbox { width:16px; height:16px; border:1.5px solid #cbd5e1; border-radius:4px; cursor:pointer; appearance:none; background:#fff; transition:all .15s; }
+  .checkbox:checked { background:var(--red); border-color:var(--red); background-image:url("data:image/svg+xml,%3Csvg width='10' height='8' viewBox='0 0 10 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 4L3.5 6.5L9 1' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:center; }
+
+  .table-footer { padding:14px 24px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; font-size:13px; color:var(--text-secondary); }
+
+  /* ── Modal ── */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .2s; backdrop-filter:blur(2px); }
+  .modal-overlay.open { opacity:1; pointer-events:auto; }
+  .modal { background:var(--card); border-radius:14px; width:540px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 25px 60px rgba(0,0,0,.2); transform:translateY(10px) scale(.98); transition:transform .25s cubic-bezier(.16,1,.3,1); }
+  .modal-overlay.open .modal { transform:translateY(0) scale(1); }
+  .modal-header { padding:24px 24px 0; display:flex; align-items:center; justify-content:space-between; }
+  .modal-header h2 { font-size:18px; font-weight:700; }
+  .modal-close { width:32px; height:32px; border:none; background:transparent; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text-muted); transition:all .15s; }
+  .modal-close:hover { background:var(--bg); color:var(--text); }
+  .modal-body { padding:20px 24px 24px; }
+
+  .form-group { margin-bottom:18px; }
+  .form-group:last-child { margin-bottom:0; }
+  .form-label { display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--text); }
+  .form-label .optional { font-weight:400; color:var(--text-muted); }
+  .form-input { width:100%; height:40px; padding:0 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit; outline:none; transition:border .15s; }
+  .form-input:focus { border-color:var(--red); }
+  .form-textarea { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit; outline:none; resize:vertical; min-height:72px; transition:border .15s; }
+  .form-textarea:focus { border-color:var(--red); }
+  .form-select { width:100%; height:40px; padding:0 32px 0 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit; background:#fff; appearance:none; cursor:pointer; outline:none; background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; transition:border .15s; }
+  .form-select:focus { border-color:var(--red); }
+  .form-row { display:flex; gap:12px; }
+  .form-row > * { flex:1; }
+  .form-hint { font-size:12px; color:var(--text-muted); margin-top:4px; }
+  .form-divider { height:1px; background:var(--border); margin:20px 0; }
+
+  /* ── Upload zone ── */
+  .upload-zone { border:2px dashed var(--border); border-radius:12px; padding:24px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; transition:all .2s; text-align:center; }
+  .upload-zone:hover { border-color:var(--red); background:var(--red-light); }
+  .upload-zone svg { color:var(--text-muted); }
+  .upload-zone .upload-text { font-size:13px; font-weight:600; color:var(--text-secondary); }
+  .upload-zone .upload-hint { font-size:12px; color:var(--text-muted); }
+  .upload-zone .upload-link { color:var(--red); font-weight:600; }
+
+  /* ── Library ── */
+  .library-toggle { font-size:13px; font-weight:600; color:var(--text-secondary); background:none; border:none; cursor:pointer; padding:0; display:flex; align-items:center; gap:6px; margin-top:12px; transition:color .15s; }
+  .library-toggle:hover { color:var(--text); }
+  .library-toggle svg { width:14px; height:14px; transition:transform .2s; }
+  .library-toggle.open svg { transform:rotate(90deg); }
+  .library-grid { display:none; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:12px; }
+  .library-grid.open { display:grid; }
+  .library-item { aspect-ratio:1; border:2px solid var(--border); border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; background:#fff; transition:all .15s; overflow:hidden; padding:4px; }
+  .library-item:hover { border-color:var(--text-muted); transform:scale(1.04); }
+  .library-item.selected { border-color:var(--red); background:var(--red-light); box-shadow:0 0 0 3px rgba(192,57,43,.15); }
+  .library-item svg { width:100%; height:100%; }
+
+  .toggle-row { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border:1px solid var(--border); border-radius:10px; margin-bottom:10px; }
+  .toggle-row:last-child { margin-bottom:0; }
+  .toggle-row-text h4 { font-size:14px; font-weight:600; }
+  .toggle-row-text p { font-size:12px; color:var(--text-secondary); margin-top:2px; }
+
+  .trigger-config { background:#fafaf8; border:1px solid var(--border); border-radius:10px; padding:16px; margin-top:10px; }
+  .trigger-config .form-group { margin-bottom:12px; }
+  .trigger-config .form-group:last-child { margin-bottom:0; }
+
+  .category-tags { display:flex; flex-wrap:wrap; gap:6px; }
+  .category-tag { padding:4px 12px; border:1px solid var(--border); border-radius:20px; font-size:12px; font-weight:500; cursor:pointer; background:#fff; transition:all .15s; }
+  .category-tag:hover { border-color:var(--text-muted); }
+  .category-tag.selected { background:var(--red); color:#fff; border-color:var(--red); }
+
+  .prereq-select { display:flex; flex-wrap:wrap; gap:6px; padding:10px; border:1px solid var(--border); border-radius:10px; min-height:44px; }
+  .prereq-placeholder { font-size:13px; color:var(--text-muted); padding:4px; }
+
+  .btn-submit { width:100%; height:44px; border:none; border-radius:10px; background:var(--red); color:#fff; font-size:15px; font-weight:600; font-family:inherit; cursor:pointer; transition:background .15s; }
+  .btn-submit:hover { background:var(--red-hover); }
+
+  ::-webkit-scrollbar { width:6px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:#d1d5db; border-radius:3px; }
+  ::-webkit-scrollbar-thumb:hover { background:#9ca3af; }
+</style>
+</head>
+<body>
+
+<!-- SVG defs for badge gradients -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g-bronze" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e8a654"/><stop offset="100%" stop-color="#b87333"/></linearGradient>
+    <linearGradient id="g-bronze-shine" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff" stop-opacity="0.35"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="g-silver" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#c0c7d0"/><stop offset="100%" stop-color="#8a95a3"/></linearGradient>
+    <linearGradient id="g-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#fcd34d"/><stop offset="100%" stop-color="#d97706"/></linearGradient>
+    <linearGradient id="g-platinum" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#67e8f9"/><stop offset="100%" stop-color="#0891b2"/></linearGradient>
+    <linearGradient id="g-diamond" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#c4b5fd"/><stop offset="100%" stop-color="#7c3aed"/></linearGradient>
+    <linearGradient id="g-legend" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f87171"/><stop offset="40%" stop-color="#a78bfa"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient>
+  </defs>
+</svg>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <button class="back-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="m15 18-6-6 6-6"/></svg></button>
+    <div><h1>Admin Dashboard</h1><p>UYP Basketball</p></div>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <button class="btn" style="width:36px;padding:0;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></button>
+    <button class="btn" style="width:36px;padding:0;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="card">
+    <div class="card-header">
+      <div><h2>Award Definitions</h2><p class="subtitle">Configure awards, XP values, and unlock conditions</p></div>
+      <div class="actions">
+        <button class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>Export</button>
+        <button class="btn btn-primary" onclick="openModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>New Award</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <input type="text" placeholder="Search awards...">
+      <select><option>All Tiers</option><option>Bronze</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Diamond</option><option>Legend</option></select>
+      <select><option>All Triggers</option><option>Check-in</option><option>RSVP</option><option>Streak</option><option>Evaluation</option><option>Time</option><option>Collection</option><option>Manual</option></select>
+      <select><option>All Status</option><option>Active</option><option>Inactive</option></select>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th style="width:40px"><input type="checkbox" class="checkbox"></th>
+          <th class="sortable">Award</th>
+          <th class="sortable">Tier</th>
+          <th>XP</th>
+          <th class="sortable">Trigger</th>
+          <th>Requirement</th>
+          <th>Earned</th>
+          <th class="sortable">Active</th>
+          <th style="width:40px"></th>
+        </tr></thead>
+        <tbody>
+
+          <!-- 1 Checked-In · Bronze · Shield+Check -->
+          <tr><td><input type="checkbox" class="checkbox"></td><td><div class="award-cell"><div class="award-img"><svg viewBox="0 0 80 80"><rect rx="12" width="80" height="80" fill="#fdf2e6"/><path d="M40 14L56 24V44C56 56 40 66 40 66S24 56 24 44V24L40 14Z" fill="url(#g-bronze)" stroke="#92400e" stroke-width="1.5"/><path d="M40 14L56 24V34C48 30 32 30 24 34V24L40 14Z" fill="url(#g-bronze-shine)"/><path d="M33 40L38 45L48 34" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div><div><div class="award-name">Checked-In</div><div class="award-desc">First event check-in</div></div></div></td><td><span class="badge badge-bronze">Bronze</span></td><td><div class="xp-pill">25 <span class="xp-label">XP</span></div></td><td><span class="badge badge-auto">Check-in</span></td><td><div class="requirement">1 check-in (any event)</div></td><td><a href="#" class="recipients-link">12 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></a></td><td><button class="toggle active" onclick="this.classList.toggle('active')"></button></td><td><button class="edit-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg></button></td></tr>
+
+          <!-- 2 RSVP'd · Bronze · Clipboard -->
+          <tr><td><input type="checkbox" class="checkbox"></td><td><div class="award-cell"><div class="award-img"><svg viewBox="0 0 80 80"><rect rx="12" width="80" height="80" fill="#fdf2e6"/><rect x="26" y="18" width="28" height="46" rx="4" fill="url(#g-bronze)" stroke="#92400e" stroke-width="1.5"/><rect x="34" y="14" width="12" height="8" rx="3" fill="#92400e"/><rect x="32" y="32" width="16" height="2.5" rx="1" fill="#fff" opacity=".8"/><rect x="32" y="38" width="12" height="2.5" rx="1" fill="#fff" opacity=".6"/><rect x="32" y="44" width="14" height="2.5" rx="1" fill="#fff" opacity=".5"/><circle cx="34" cy="53" r="3" fill="#fff" opacity=".8"/><path d="M32.5 53L33.5 54L35.5 52" stroke="#92400e" stroke-width="1" stroke-linecap="round" fill="none"/></svg></div><div><div class="award-name">RSVP'd</div><div class="award-desc">First RSVP response</div></div></div></td><td><span class="badge badge-bronze">Bronze</span></td><td><div class="xp-pill">15 <span class="xp-label">XP</span></div></td><td><span class="badge badge-auto">RSVP</span></td><td><div class="requirement">1 RSVP (any event)</div></td><td><a href="#" class="recipients-link">8 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></a></td><td><button class="toggle active" onclick="this.classList.toggle('active')"></button></td><td><button class="edit-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg></button></td></tr>
+
+          <!-- 3 Skill Sharpener · Silver · Gear -->
+          <tr><td><input type="checkbox" class="checkbox"></td><td><div class="award-cell"><div class="award-img"><svg viewBox="0 0 80 80"><rect rx="12" width="80" height="80" fill="#f1f5f9"/><circle cx="40" cy="40" r="22" fill="url(#g-silver)" stroke="#64748b" stroke-width="1.5"/><circle cx="40" cy="40" r="16" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/><path d="M40 28V32M40 48V52M28 40H32M48 40H52M31.5 31.5L34 34M46 46L48.5 48.5M48.5 31.5L46 34M34 46L31.5 48.5" stroke="#64748b" stroke-width="2" stroke-linecap="round"/><circle cx="40" cy="40" r="5" fill="url(#g-silver)"/></svg></div><div><div class="award-name">Skill Sharpener</div><div class="award-desc">Evaluated on 5 skills</div></div></div></td><td><span class="badge badge-silver">Silver</span></td><td><div class="xp-pill">50 <span class="xp-label">XP</span></div></td><td><span class="badge badge-auto">Evaluation</span></td><td><div class="requirement">5 skill evaluations</div></td><td><a href="#" class="recipients-link">3 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></a></td><td><button class="toggle active" onclick="this.classList.toggle('active')"></button></td><td><button class="edit-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg></button></td></tr>
+
+          <!-- 4 On Fire · Gold · Flame -->
+          <tr><td><input type="checkbox" class="checkbox"></td><td><div class="award-cell"><div class="award-img"><svg viewBox="0 0 80 80"><rect rx="12" width="80" height="80" fill="#fefce8"/><path d="M40 12C40 12 52 28 52 42C52 52 47 60 40 64C33 60 28 52 28 42C28 28 40 12 40 12Z" fill="url(#g-gold)" stroke="#b45309" stroke-width="1.5"/><path d="M40 26C40 26 47 34 47 42C47 48 44 52 40 54C36 52 33 48 33 42C33 34 40 26 40 26Z" fill="#fefce8" opacity=".5"/><path d="M40 38C40 38 44 42 44 46C44 49 42 51 40 52C38 51 36 49 36 46C36 42 40 38 40 38Z" fill="#f59e0b"/></svg></div><div><div class="award-name">On Fire</div><div class="award-desc">5 sessions in a row</div></div></div></td><td><span class="badge badge-gold">Gold</span></td><td><div class="xp-pill">100 <span class="xp-label">XP</span></div></td><td><span class="badge badge-streak">Streak</span></td><td><div class="requirement">5 consecutive check-ins</div></td><td><a href="#" class="recipients-link">1 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></a></td><td><button class="toggle active" onclick="this.classList.toggle('active')"></button></td><td><button class="edit-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg></button></td></tr>
+
+          <!-- 5 First Birthday · Platinum · Cake -->
+          <tr><td><input type="checkbox" class="checkbox"></td><td><div class="award-cell"><div class="award-img"><svg viewBox="0 0 80 80"><rect rx="12" width="80" height="80" fill="#ecfeff"/><rect x="24" y="38" width="32" height="24" rx="4" fill="url(#g-platinum)" stroke="#0e7490" stroke-width="1.5"/><rect x="22" y="44" width="36" height="6" rx="2" fill="#67e8f9" opacity=".4"/><rect x="37" y="24" width="6" height="16" rx="2" fill="url(#g-platinum)"/><ellipse cx="40" cy="22" rx="4" ry="5" fill="#fcd34d"/><circle cx="40" cy="19" r="2" fill="#f97316"/><text x="40" y="56" text-anchor="middle" font-family="DM Sans" font-size="11" font-weight="700" fill="#fff">1YR</text></svg></div><div><div class="award-name">First Birthday</div><div class="award-desc">1 year with the org</div></div></div></td><td><span class="badge badge-platinum">Platinum</span></td><td><div class="xp-pill">200 <span class="xp-label">XP</span></div></td><td><span class="badge badge-time">Time</span></td><td><div class="requirement">1 year active</div></td><td><a href="#" class="recipients-link">0 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></a></td><td><button class="toggle active" onclick="this.classList.toggle('active')"></button></td><td><button class="edit-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg></button></td></tr>
+
+          <!-- 6 The Collector · Diamond · Gem -->
+          <tr><td><input type="checkbox" class="checkbox"></td><td><div class="award-cell"><div class="award-img"><svg viewBox="0 0 80 80"><rect rx="12" width="80" height="80" fill="#f5f3ff"/><polygon points="40,16 54,32 48,62 32,62 26,32" fill="url(#g-diamond)" stroke="#6d28d9" stroke-width="1.5"/><polygon points="40,16 46,32 34,32" fill="#e9d5ff" opacity=".6"/><polygon points="34,32 46,32 48,62 32,62" fill="#8b5cf6" opacity=".2"/><line x1="34" y1="32" x2="32" y2="62" stroke="#7c3aed" stroke-width=".5" opacity=".4"/><line x1="46" y1="32" x2="48" y2="62" stroke="#7c3aed" stroke-width=".5" opacity=".4"/><line x1="26" y1="32" x2="54" y2="32" stroke="#7c3aed" stroke-width=".5" opacity=".4"/></svg></div><div><div class="award-name">The Collector</div><div class="award-desc">Earn 5 other awards</div></div></div></td><td><span class="badge badge-diamond">Diamond</span></td><td><div class="xp-pill">300 <span class="xp-label">XP</span></div></td><td><span class="badge badge-meta">Collection</span></td><td><div class="requirement">Collect any 5 awards</div></td><td><a href="#" class="recipients-link">0 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></a></td><td><button class="toggle active" onclick="this.classList.toggle('active')"></button></td><td><button class="edit-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg></button></td></tr>
+
+          <!-- 7 Heart & Hustle · Legend · Heart+Star -->
+          <tr><td><input type="checkbox" class="checkbox"></td><td><div class="award-cell"><div class="award-img"><svg viewBox="0 0 80 80"><rect rx="12" width="80" height="80" fill="#fef2f2"/><circle cx="40" cy="40" r="24" fill="url(#g-legend)" opacity=".15"/><circle cx="40" cy="40" r="18" fill="url(#g-legend)" opacity=".2"/><path d="M40 24C44 20 52 20 52 30C52 38 40 50 40 50S28 38 28 30C28 20 36 20 40 24Z" fill="url(#g-legend)" stroke="#7c3aed" stroke-width="1.5"/><polygon points="40,30 42,36 48,36 43,40 45,46 40,42 35,46 37,40 32,36 38,36" fill="#fff" opacity=".9"/></svg></div><div><div class="award-name">Heart &amp; Hustle</div><div class="award-desc">Coach-selected recognition</div></div></div></td><td><span class="badge badge-legend">Legend</span></td><td><div class="xp-pill">500 <span class="xp-label">XP</span></div></td><td><span class="badge badge-manual">Manual</span></td><td><div class="requirement">Coach assigned</div></td><td><a href="#" class="recipients-link">2 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></a></td><td><button class="toggle active" onclick="this.classList.toggle('active')"></button></td><td><button class="edit-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg></button></td></tr>
+
+        </tbody>
+      </table>
+    </div>
+    <div class="table-footer"><span>7 awards</span><span style="font-size:12px;color:var(--text-muted)">Total XP pool: 1,190</span></div>
+  </div>
+</div>
+
+<!-- CREATE MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Create Award</h2>
+      <button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Award Name *</label><input type="text" class="form-input" placeholder="e.g. Iron Will"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Tier *</label><select class="form-select"><option value="">Select tier...</option><option>Bronze</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Diamond</option><option>Legend</option></select></div>
+        <div class="form-group"><label class="form-label">XP Value *</label><input type="number" class="form-input" placeholder="100" min="0" step="5"><div class="form-hint">Points earned when awarded</div></div>
+      </div>
+      <div class="form-group"><label class="form-label">Category</label><div class="category-tags"><button class="category-tag" onclick="toggleTag(this)">Attendance</button><button class="category-tag" onclick="toggleTag(this)">Offense</button><button class="category-tag" onclick="toggleTag(this)">Defense</button><button class="category-tag" onclick="toggleTag(this)">Leadership</button><button class="category-tag" onclick="toggleTag(this)">Social</button><button class="category-tag" onclick="toggleTag(this)">Milestone</button><button class="category-tag" onclick="toggleTag(this)">Seasonal</button></div></div>
+
+      <!-- IMAGE: Upload + Library -->
+      <div class="form-group">
+        <label class="form-label">Award Image *</label>
+        <div class="upload-zone" id="uploadZone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="32" height="32"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+          <div class="upload-text">Drop image here or <span class="upload-link">browse</span></div>
+          <div class="upload-hint">PNG, JPG, SVG — 512×512px recommended</div>
+        </div>
+        <button class="library-toggle" id="libToggle" onclick="toggleLibrary()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          Or choose from badge library
+        </button>
+        <div class="library-grid" id="libraryGrid">
+          <div class="library-item" onclick="selectLib(this)"><svg viewBox="0 0 80 80"><rect rx="12" width="80" height="80" fill="#fef2f2"/><path d="M40 14L56 24V44C56 56 40 66 40 66S24 56 24 44V24L40 14Z" fill="url(#g-legend)"/><path d="M33 40L38 45L48 34" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
+          <div class="library-item" onclick="selectLib(this)"><svg viewBox="0 0 80 80"><rect rx="12" width="80" height="80" fill="#fefce8"/><circle cx="40" cy="38" r="18" fill="url(#g-gold)" stroke="#b45309" stroke-width="1.5"/><polygon points="40,26 43,34 51,34 45,39 47,47 40,43 33,47 35,39 29,34 37,34" fill="#fff" opacity=".9"/><rect x="30" y="56" width="20" height="6" rx="2" fill="#d97706"/></svg></div>
+          <div class="library-item" onclick="selectLib(this)"><svg viewBox="0 0 80 80"><rect rx="12" width="80" height="80" fill="#ecfeff"/><path d="M40 16L48 28H62L52 38L56 52L40 44L24 52L28 38L18 28H32L40 16Z" fill="url(#g-platinum)" stroke="#0e7490" stroke-width="1.5"/></svg></div>
+          <div class="library-item" onclick="selectLib(this)"><svg viewBox="0 0 80 80"><rect rx="12" width="80" height="80" fill="#f5f3ff"/><polygon points="40,16 54,32 48,62 32,62 26,32" fill="url(#g-diamond)" stroke="#6d28d9" stroke-width="1.5"/><polygon points="40,16 46,32 34,32" fill="#e9d5ff" opacity=".6"/></svg></div>
+          <div class="library-item" onclick="selectLib(this)"><svg viewBox="0 0 80 80"><rect rx="12" width="80" height="80" fill="#fefce8"/><path d="M40 12C40 12 52 28 52 42C52 52 47 60 40 64C33 60 28 52 28 42C28 28 40 12 40 12Z" fill="url(#g-gold)" stroke="#b45309" stroke-width="1.5"/><path d="M40 28C40 28 47 36 47 44C47 49 44 53 40 55C36 53 33 49 33 44C33 36 40 28 40 28Z" fill="#fefce8" opacity=".5"/></svg></div>
+          <div class="library-item" onclick="selectLib(this)"><svg viewBox="0 0 80 80"><rect rx="12" width="80" height="80" fill="#f1f5f9"/><circle cx="40" cy="40" r="22" fill="url(#g-silver)" stroke="#64748b" stroke-width="1.5"/><circle cx="40" cy="40" r="14" fill="#f1f5f9"/><circle cx="40" cy="40" r="6" fill="url(#g-silver)"/></svg></div>
+          <div class="library-item" onclick="selectLib(this)"><svg viewBox="0 0 80 80"><rect rx="12" width="80" height="80" fill="#fdf2e6"/><rect x="26" y="18" width="28" height="46" rx="4" fill="url(#g-bronze)" stroke="#92400e" stroke-width="1.5"/><rect x="34" y="14" width="12" height="8" rx="3" fill="#92400e"/><rect x="32" y="32" width="16" height="2.5" rx="1" fill="#fff" opacity=".8"/><rect x="32" y="38" width="12" height="2.5" rx="1" fill="#fff" opacity=".6"/></svg></div>
+          <div class="library-item" onclick="selectLib(this)"><svg viewBox="0 0 80 80"><rect rx="12" width="80" height="80" fill="#fef2f2"/><path d="M40 24C44 20 52 20 52 30C52 38 40 50 40 50S28 38 28 30C28 20 36 20 40 24Z" fill="url(#g-legend)" stroke="#7c3aed" stroke-width="1.5"/><polygon points="40,30 42,36 48,36 43,40 45,46 40,42 35,46 37,40 32,36 38,36" fill="#fff" opacity=".9"/></svg></div>
+          <div class="library-item" onclick="selectLib(this)"><svg viewBox="0 0 80 80"><rect rx="12" width="80" height="80" fill="#ecfeff"/><circle cx="40" cy="36" r="16" fill="url(#g-platinum)" stroke="#0e7490" stroke-width="1.5"/><path d="M30 52L40 46L50 52V62H30V52Z" fill="#0891b2"/><path d="M36 32L38 36H42L39 39L40 43L37 40L34 43L35 39L32 36H36Z" fill="#fff"/></svg></div>
+          <div class="library-item" onclick="selectLib(this)"><svg viewBox="0 0 80 80"><rect rx="12" width="80" height="80" fill="#fefce8"/><path d="M24 30H56V58C56 60 54 62 52 62H28C26 62 24 60 24 58V30Z" fill="url(#g-gold)" stroke="#b45309" stroke-width="1.5"/><path d="M24 30L32 18H48L56 30" fill="url(#g-gold)" stroke="#b45309" stroke-width="1.5"/><text x="40" y="50" text-anchor="middle" font-family="DM Sans" font-size="14" font-weight="700" fill="#fff">#1</text></svg></div>
+        </div>
+      </div>
+
+      <div class="form-divider"></div>
+
+      <div class="form-group"><label class="form-label">How is this earned? *</label><select class="form-select" id="triggerSelect" onchange="updateTriggerConfig()"><option value="manual">Manual — Coach assigns</option><option value="checkin">Check-in — Event attendance</option><option value="rsvp">RSVP — Response count</option><option value="streak">Streak — Consecutive sessions</option><option value="evaluation">Evaluation — Skill rating milestone</option><option value="stat">Stat Threshold — Custom stat target</option><option value="time">Time — Duration active</option><option value="collection">Collection — Earn other awards</option><option value="season">Season — Complete a program</option></select></div>
+      <div id="triggerConfig"><div class="trigger-config" style="display:flex;align-items:center;gap:8px;padding:14px 16px;"><svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg><span style="font-size:13px;color:var(--text-secondary)">No automatic trigger. Coaches or admins assign this award manually.</span></div></div>
+
+      <div class="form-divider"></div>
+
+      <div class="form-group"><label class="form-label">Prerequisites <span class="optional">(optional)</span></label><div class="prereq-select"><span class="prereq-placeholder">Click to add required awards...</span></div><div class="form-hint">Player must have these awards before this one can be earned</div></div>
+
+      <div class="toggle-row"><div class="toggle-row-text"><h4>Repeatable</h4><p>Can be earned multiple times</p></div><button class="toggle" onclick="this.classList.toggle('active')"></button></div>
+      <div class="toggle-row"><div class="toggle-row-text"><h4>Hidden until earned</h4><p>Surprise — players don't see it coming</p></div><button class="toggle" onclick="this.classList.toggle('active')"></button></div>
+      <div class="toggle-row"><div class="toggle-row-text"><h4>Seasonal reset</h4><p>Progress resets each season</p></div><button class="toggle" onclick="this.classList.toggle('active')"></button></div>
+
+      <div class="form-group" style="margin-top:18px"><label class="form-label">Description <span class="optional">(optional)</span></label><textarea class="form-textarea" placeholder="Describe what this award is for..."></textarea></div>
+
+      <div class="form-divider"></div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px"><div><div style="font-size:14px;font-weight:600">Active</div><div style="font-size:12px;color:var(--text-secondary)">Award can be earned by players</div></div><button class="toggle active" onclick="this.classList.toggle('active')"></button></div>
+      <button class="btn-submit">Create Award</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openModal(){document.getElementById('modal').classList.add('open')}
+function closeModal(){document.getElementById('modal').classList.remove('open')}
+document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal()});
+function toggleTag(b){b.classList.toggle('selected')}
+function toggleLibrary(){document.getElementById('libToggle').classList.toggle('open');document.getElementById('libraryGrid').classList.toggle('open')}
+function selectLib(el){document.querySelectorAll('.library-item').forEach(i=>i.classList.remove('selected'));el.classList.add('selected')}
+function updateTriggerConfig(){
+  const v=document.getElementById('triggerSelect').value,c=document.getElementById('triggerConfig');
+  const m={
+    manual:'<div class="trigger-config" style="display:flex;align-items:center;gap:8px;padding:14px 16px"><svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg><span style="font-size:13px;color:var(--text-secondary)">No automatic trigger. Coaches or admins assign this award manually.</span></div>',
+    checkin:'<div class="trigger-config"><div class="form-row"><div class="form-group"><label class="form-label">Check-ins required</label><input type="number" class="form-input" value="10" min="1"></div><div class="form-group"><label class="form-label">Event type</label><select class="form-select"><option>Any event</option><option>Practice only</option><option>Games only</option><option>Specific program</option></select></div></div><div class="form-group"><label class="form-label">Time window</label><select class="form-select"><option>All time (cumulative)</option><option>Within 30 days</option><option>Within 60 days</option><option>Within current season</option></select></div></div>',
+    rsvp:'<div class="trigger-config"><div class="form-group"><label class="form-label">RSVPs required</label><input type="number" class="form-input" value="5" min="1"></div></div>',
+    streak:'<div class="trigger-config"><div class="form-row"><div class="form-group"><label class="form-label">Consecutive sessions</label><input type="number" class="form-input" value="5" min="2"></div><div class="form-group"><label class="form-label">Session type</label><select class="form-select"><option>Any event</option><option>Practice only</option><option>Games only</option></select></div></div><div class="form-hint">Player must attend without missing any scheduled session</div></div>',
+    evaluation:'<div class="trigger-config"><div class="form-row"><div class="form-group"><label class="form-label">Skill</label><select class="form-select"><option>Any skill</option><option>Shooting</option><option>Dribbling</option><option>Defense</option><option>Passing</option></select></div><div class="form-group"><label class="form-label">Min. rating</label><input type="number" class="form-input" value="80" min="1" max="100"></div></div><div class="form-hint">Triggered when coach evaluation reaches this threshold</div></div>',
+    stat:'<div class="trigger-config"><div class="form-row"><div class="form-group"><label class="form-label">Stat name</label><select class="form-select"><option>Points scored</option><option>Assists</option><option>Rebounds</option><option>Steals</option><option>Goals</option><option>Custom...</option></select></div><div class="form-group"><label class="form-label">Target value</label><input type="number" class="form-input" value="100" min="1"></div></div><div class="form-hint">Cumulative stat across all games</div></div>',
+    time:'<div class="trigger-config"><div class="form-row"><div class="form-group"><label class="form-label">Duration</label><input type="number" class="form-input" value="1" min="1"></div><div class="form-group"><label class="form-label">Unit</label><select class="form-select"><option>Years</option><option>Months</option><option>Weeks</option></select></div></div></div>',
+    collection:'<div class="trigger-config"><div class="form-group"><label class="form-label">Awards to collect</label><input type="number" class="form-input" value="5" min="2"></div><div class="form-group"><label class="form-label">From which awards?</label><select class="form-select"><option>Any awards</option><option>Specific set (select below)</option></select></div></div>',
+    season:'<div class="trigger-config"><div class="form-group"><label class="form-label">Program</label><select class="form-select"><option>Any program</option><option>Spring League 2026</option><option>Summer Camp 2026</option></select></div><div class="form-hint">Awarded when player completes the full program</div></div>'
+  };
+  c.innerHTML=m[v]||m.manual;
+}
+</script>
+</body>
+</html>

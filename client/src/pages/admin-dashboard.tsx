@@ -8121,6 +8121,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       toast({ title: "Award created successfully" });
       setIsDialogOpen(false);
       form.reset();
+      setSelectedIconId("");
     },
     onError: () => {
       toast({ title: "Failed to create award", variant: "destructive" });
@@ -8135,6 +8136,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       queryClient.invalidateQueries({ queryKey: ["/api/award-definitions"] });
       toast({ title: "Award updated successfully" });
       setEditingAward(null);
+      setSelectedIconId("");
     },
     onError: () => {
       toast({ title: "Failed to update award", variant: "destructive" });
@@ -8192,20 +8194,18 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     }
   };
 
-  // Get tier badge color
   const getTierBadgeColor = (tier: string) => {
     const colors: Record<string, string> = {
-      "Prospect": "bg-gray-100 text-gray-700 border-gray-300",
-      "Starter": "bg-green-100 text-green-700 border-green-300",
-      "All-Star": "bg-blue-100 text-blue-700 border-blue-300",
-      "Superstar": "bg-purple-100 text-purple-700 border-purple-300",
-      "HOF": "bg-yellow-100 text-yellow-700 border-yellow-300",
-      "Legacy": "bg-gradient-to-r from-red-100 via-yellow-100 via-green-100 via-blue-100 to-purple-100 text-purple-700 border-purple-300",
+      "Prospect": "bg-[#fdf2e6] text-[#92400e] border border-[#f5d0a9]",
+      "Starter": "bg-[#f1f5f9] text-[#475569] border border-[#cbd5e1]",
+      "All-Star": "bg-[#fefce8] text-[#854d0e] border border-[#fde047]",
+      "Superstar": "bg-[#ecfeff] text-[#155e75] border border-[#67e8f9]",
+      "HOF": "bg-[#f5f3ff] text-[#5b21b6] border border-[#c4b5fd]",
+      "Legacy": "bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6] border border-[#c4b5fd]",
     };
     return colors[tier] || colors["Prospect"];
   };
 
-  // Get trigger category label
   const getTriggerCategoryLabel = (category: string) => {
     const labels: Record<string, string> = {
       "checkin": "Check-in",
@@ -8216,6 +8216,18 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       "manual": "Manual",
     };
     return labels[category] || "Manual";
+  };
+
+  const getTriggerBadgeColor = (category: string) => {
+    const colors: Record<string, string> = {
+      "checkin": "bg-[#ecfdf5] text-[#065f46] border border-[#6ee7b7]",
+      "rsvp": "bg-[#ecfdf5] text-[#065f46] border border-[#6ee7b7]",
+      "system": "bg-[#f5f3ff] text-[#5b21b6] border border-[#c4b5fd]",
+      "time": "bg-[#fffbeb] text-[#92400e] border border-[#fcd34d]",
+      "store": "bg-[#f3f4f6] text-[#374151] border border-[#d1d5db]",
+      "manual": "bg-[#f3f4f6] text-[#374151] border border-[#d1d5db]",
+    };
+    return colors[category] || colors["manual"];
   };
 
   // Tier hierarchy for sorting
@@ -8368,18 +8380,18 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+    <div className="bg-white border border-[#e5e5e3] rounded-[10px] overflow-hidden">
+      <div className="px-6 pt-6 pb-0 flex items-center justify-between flex-wrap gap-4">
         <div>
-          <CardTitle>Award Definitions</CardTitle>
-          <CardDescription>Manage awards for your organization</CardDescription>
+          <h2 className="text-xl font-bold text-[#1a1a1a]">Award Definitions</h2>
+          <p className="text-[13px] text-[#6b7280] mt-0.5">Configure awards, XP values, and unlock conditions</p>
         </div>
         <div className="flex gap-2">
           <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="icon" title="Bulk Upload" data-testid="button-bulk-upload-awards">
-                <Upload className="w-4 h-4" />
-              </Button>
+              <button className="h-9 px-3.5 border border-[#e5e5e3] rounded-lg text-[13px] font-medium inline-flex items-center gap-1.5 bg-white text-[#1a1a1a] hover:bg-[#f6f6f4] transition-colors" title="Bulk Upload" data-testid="button-bulk-upload-awards">
+                <Upload className="w-[15px] h-[15px]" />
+              </button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -8401,9 +8413,10 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
             </DialogContent>
           </Dialog>
           
-          <Button variant="outline" size="icon" title="Download Data" onClick={downloadAwardsData} data-testid="button-download-awards">
-            <Download className="w-4 h-4" />
-          </Button>
+          <button className="h-9 px-3.5 border border-[#e5e5e3] rounded-lg text-[13px] font-medium inline-flex items-center gap-1.5 bg-white text-[#1a1a1a] hover:bg-[#f6f6f4] transition-colors" title="Export" onClick={downloadAwardsData} data-testid="button-download-awards">
+            <Download className="w-[15px] h-[15px]" />
+            Export
+          </button>
           
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
@@ -8414,9 +8427,10 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
             }
           }}>
             <DialogTrigger asChild>
-              <Button size="icon" title="Create Award" data-testid="button-create-award">
-                <Plus className="w-4 h-4" />
-              </Button>
+              <button className="h-9 px-3.5 border border-[#c0392b] rounded-lg text-[13px] font-medium inline-flex items-center gap-1.5 bg-[#c0392b] text-white hover:bg-[#a93226] transition-colors" data-testid="button-create-award">
+                <Plus className="w-[15px] h-[15px]" />
+                New Award
+              </button>
             </DialogTrigger>
             <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
               <DialogHeader>
@@ -9077,233 +9091,257 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
             </DialogContent>
           </Dialog>
         </div>
-      </CardHeader>
-      <CardContent>
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3 mb-6">
-          <Input
-            placeholder="Search by name..."
+      </div>
+
+      <div className="px-4 py-4 flex flex-wrap gap-2.5 items-center border-b border-[#e5e5e3]">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+          <input
+            type="text"
+            placeholder="Search awards..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs"
+            className="h-9 pl-8 pr-3 border border-[#e5e5e3] rounded-lg text-[13px] w-[220px] outline-none focus:border-[#c0392b] transition-colors"
             data-testid="input-search-awards"
           />
-          <Select value={filterTier} onValueChange={setFilterTier}>
-            <SelectTrigger className="w-40" data-testid="filter-tier">
-              <SelectValue placeholder="Tier" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Tiers</SelectItem>
-              <SelectItem value="Prospect">Prospect</SelectItem>
-              <SelectItem value="Starter">Starter</SelectItem>
-              <SelectItem value="All-Star">All-Star</SelectItem>
-              <SelectItem value="Superstar">Superstar</SelectItem>
-              <SelectItem value="HOF">HOF</SelectItem>
-              <SelectItem value="Legacy">Legacy</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filterClass} onValueChange={setFilterClass}>
-            <SelectTrigger className="w-40" data-testid="filter-trigger">
-              <SelectValue placeholder="Trigger" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Triggers</SelectItem>
-              <SelectItem value="checkin">Check-in</SelectItem>
-              <SelectItem value="system">Collection</SelectItem>
-              <SelectItem value="time">Time</SelectItem>
-              <SelectItem value="store">Store</SelectItem>
-              <SelectItem value="manual">Manual</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filterActive} onValueChange={setFilterActive}>
-            <SelectTrigger className="w-40" data-testid="filter-active">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
+        <select
+          value={filterTier}
+          onChange={(e) => setFilterTier(e.target.value)}
+          className="h-9 px-3 pr-7 border border-[#e5e5e3] rounded-lg text-[13px] bg-white appearance-none cursor-pointer outline-none focus:border-[#c0392b]"
+          data-testid="filter-tier"
+        >
+          <option value="all">All Tiers</option>
+          <option value="Prospect">Prospect</option>
+          <option value="Starter">Starter</option>
+          <option value="All-Star">All-Star</option>
+          <option value="Superstar">Superstar</option>
+          <option value="HOF">HOF</option>
+          <option value="Legacy">Legacy</option>
+        </select>
+        <select
+          value={filterClass}
+          onChange={(e) => setFilterClass(e.target.value)}
+          className="h-9 px-3 pr-7 border border-[#e5e5e3] rounded-lg text-[13px] bg-white appearance-none cursor-pointer outline-none focus:border-[#c0392b]"
+          data-testid="filter-trigger"
+        >
+          <option value="all">All Triggers</option>
+          <option value="checkin">Check-in</option>
+          <option value="rsvp">RSVP</option>
+          <option value="system">Collection</option>
+          <option value="time">Time</option>
+          <option value="store">Store</option>
+          <option value="manual">Manual</option>
+        </select>
+        <select
+          value={filterActive}
+          onChange={(e) => setFilterActive(e.target.value)}
+          className="h-9 px-3 pr-7 border border-[#e5e5e3] rounded-lg text-[13px] bg-white appearance-none cursor-pointer outline-none focus:border-[#c0392b]"
+          data-testid="filter-active"
+        >
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
 
-        {/* Bulk Action Bar */}
-        {selectedAwardIds.size > 0 && (
-          <div className="flex items-center gap-4 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg">
-            <span className="text-sm font-medium text-red-800">
-              {selectedAwardIds.size} award{selectedAwardIds.size > 1 ? 's' : ''} selected
-            </span>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => {
-                if (confirm(`Are you sure you want to delete ${selectedAwardIds.size} award(s)?`)) {
-                  bulkDeleteAwards.mutate(Array.from(selectedAwardIds));
-                }
-              }}
-              disabled={bulkDeleteAwards.isPending}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              {bulkDeleteAwards.isPending ? "Deleting..." : "Delete Selected"}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedAwardIds(new Set())}
-            >
-              Clear Selection
-            </Button>
-          </div>
-        )}
+      {selectedAwardIds.size > 0 && (
+        <div className="flex items-center gap-4 px-6 py-3 bg-red-50 border-b border-red-200">
+          <span className="text-[13px] font-medium text-red-800">
+            {selectedAwardIds.size} award{selectedAwardIds.size > 1 ? 's' : ''} selected
+          </span>
+          <button
+            className="h-8 px-3 rounded-lg text-[13px] font-medium bg-red-600 text-white hover:bg-red-700 transition-colors inline-flex items-center gap-1.5"
+            onClick={() => {
+              if (confirm(`Are you sure you want to delete ${selectedAwardIds.size} award(s)?`)) {
+                bulkDeleteAwards.mutate(Array.from(selectedAwardIds));
+              }
+            }}
+            disabled={bulkDeleteAwards.isPending}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            {bulkDeleteAwards.isPending ? "Deleting..." : "Delete Selected"}
+          </button>
+          <button
+            className="h-8 px-3 rounded-lg text-[13px] font-medium text-[#6b7280] hover:bg-gray-100 transition-colors"
+            onClick={() => setSelectedAwardIds(new Set())}
+          >
+            Clear
+          </button>
+        </div>
+      )}
 
-        {/* Awards Table */}
-        <div ref={tableRef} className="overflow-x-auto hide-scrollbar drag-scroll">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">
-                  <Checkbox 
-                    checked={filteredAwards.length > 0 && selectedAwardIds.size === filteredAwards.length}
-                    onCheckedChange={() => toggleAllAwards(filteredAwards.map((a: any) => a.id))}
-                    aria-label="Select all awards"
-                  />
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100" 
-                  onClick={() => handleSort('name')}
-                  data-testid="header-name"
-                >
-                  Name
-                </TableHead>
-                <TableHead>Image</TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100" 
-                  onClick={() => handleSort('tier')}
-                  data-testid="header-tier"
-                >
-                  Tier
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100" 
-                  onClick={() => handleSort('triggerCategory')}
-                  data-testid="header-trigger"
-                >
-                  Trigger
-                </TableHead>
-                <TableHead>Details</TableHead>
-                <TableHead>Recipients</TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100" 
-                  onClick={() => handleSort('active')}
-                  data-testid="header-active"
-                >
-                  Active
-                </TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAwards.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center text-gray-500 py-8">
-                    No awards found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredAwards.map((award: any) => (
-                  <TableRow
+      <div ref={tableRef} className="overflow-x-auto">
+        <table className="w-full border-collapse text-[13px]">
+          <thead>
+            <tr>
+              <th className="text-left py-2.5 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#9ca3af] border-b border-[#e5e5e3] w-10">
+                <Checkbox 
+                  checked={filteredAwards.length > 0 && selectedAwardIds.size === filteredAwards.length}
+                  onCheckedChange={() => toggleAllAwards(filteredAwards.map((a: any) => a.id))}
+                  aria-label="Select all awards"
+                />
+              </th>
+              <th 
+                className="text-left py-2.5 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#9ca3af] border-b border-[#e5e5e3] cursor-pointer select-none hover:text-[#6b7280]" 
+                onClick={() => handleSort('name')}
+                data-testid="header-name"
+              >
+                Award
+              </th>
+              <th 
+                className="text-left py-2.5 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#9ca3af] border-b border-[#e5e5e3] cursor-pointer select-none hover:text-[#6b7280]" 
+                onClick={() => handleSort('tier')}
+                data-testid="header-tier"
+              >
+                Tier
+              </th>
+              <th className="text-left py-2.5 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#9ca3af] border-b border-[#e5e5e3]">
+                XP
+              </th>
+              <th 
+                className="text-left py-2.5 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#9ca3af] border-b border-[#e5e5e3] cursor-pointer select-none hover:text-[#6b7280]" 
+                onClick={() => handleSort('triggerCategory')}
+                data-testid="header-trigger"
+              >
+                Trigger
+              </th>
+              <th className="text-left py-2.5 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#9ca3af] border-b border-[#e5e5e3]">
+                Requirement
+              </th>
+              <th className="text-left py-2.5 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#9ca3af] border-b border-[#e5e5e3]">
+                Earned
+              </th>
+              <th 
+                className="text-left py-2.5 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#9ca3af] border-b border-[#e5e5e3] cursor-pointer select-none hover:text-[#6b7280]" 
+                onClick={() => handleSort('active')}
+                data-testid="header-active"
+              >
+                Active
+              </th>
+              <th className="text-left py-2.5 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#9ca3af] border-b border-[#e5e5e3] w-10"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredAwards.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="text-center text-[#9ca3af] py-12 text-sm">
+                  No awards found
+                </td>
+              </tr>
+            ) : (
+              filteredAwards.map((award: any) => {
+                const AwardIconComponent = award.imageUrl && isIconIdentifier(award.imageUrl) ? getAwardIcon(award.imageUrl) : null;
+                const recipientCount = getRecipientCount(award.id);
+                return (
+                  <tr
                     key={award.id}
-                    className="cursor-pointer hover:bg-gray-50"
+                    className="border-b border-[#f0f0ee] last:border-b-0 hover:bg-[#fafaf8] transition-colors"
                     data-testid={`row-award-${award.id}`}
                   >
-                    <TableCell>
+                    <td className="py-3 px-4 align-middle">
                       <Checkbox 
                         checked={selectedAwardIds.has(award.id)}
                         onCheckedChange={() => toggleAwardSelection(award.id)}
                         aria-label={`Select ${award.name}`}
                       />
-                    </TableCell>
-                    <TableCell className="font-medium">{award.name}</TableCell>
-                    <TableCell>
-                      {award.imageUrl ? (
-                        <img 
-                          src={award.imageUrl} 
-                          alt={award.name} 
-                          className="w-12 h-12 object-contain"
-                          data-testid={`img-award-${award.id}`}
-                        />
-                      ) : (
-                        <Award className="w-12 h-12 text-gray-300" data-testid={`icon-badge-${award.id}`} />
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={getTierBadgeColor(award.tier)}>
+                    </td>
+                    <td className="py-3 px-4 align-middle">
+                      <div className="flex items-center gap-3.5 min-w-[260px]">
+                        <div className="w-11 h-11 rounded-[10px] flex-shrink-0 overflow-hidden bg-[#f6f6f4] flex items-center justify-center shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+                          {AwardIconComponent ? (
+                            <AwardIconComponent className="w-6 h-6 text-[#6b7280]" />
+                          ) : award.imageUrl ? (
+                            <img src={award.imageUrl} alt={award.name} className="w-full h-full object-contain" data-testid={`img-award-${award.id}`} />
+                          ) : (
+                            <Award className="w-6 h-6 text-[#9ca3af]" data-testid={`icon-badge-${award.id}`} />
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-sm leading-tight text-[#1a1a1a]">{award.name}</div>
+                          {award.description && (
+                            <div className="text-xs text-[#6b7280] mt-0.5 leading-tight max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">{award.description}</div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 align-middle">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${getTierBadgeColor(award.tier)}`}>
                         {award.tier}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 align-middle">
+                      <div className="inline-flex items-center gap-1">
+                        <span className="font-bold text-[13px] text-[#1a1a1a]">{award.threshold || 0}</span>
+                        <span className="text-[10px] font-semibold text-[#9ca3af] uppercase tracking-wide">XP</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 align-middle">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${getTriggerBadgeColor(award.triggerCategory || 'manual')}`}>
                         {getTriggerCategoryLabel(award.triggerCategory || 'manual')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {award.triggerCategory === 'checkin' && (
-                        <span>{award.countMode === 'streak' ? 'Streak' : 'Total'}: {award.threshold || 0} {award.eventFilter || 'any'}</span>
-                      )}
-                      {award.triggerCategory === 'rsvp' && (
-                        <span>{award.countMode === 'streak' ? 'Streak' : 'Total'}: {award.threshold || 0} RSVPs</span>
-                      )}
-                      {award.triggerCategory === 'time' && (
-                        <span>{award.threshold || 0} {award.timeUnit || 'years'}</span>
-                      )}
-                      {award.triggerCategory === 'store' && (
-                        <span>SKU: {award.referenceId || '-'}</span>
-                      )}
-                      {award.triggerCategory === 'system' && (
-                        <span>Collect {award.threshold || 0} of #{award.referenceId || '-'}</span>
-                      )}
-                      {(award.triggerCategory === 'manual' || !award.triggerCategory) && (
-                        <span>-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 align-middle">
+                      <div className="text-xs text-[#6b7280] max-w-[160px]">
+                        {award.triggerCategory === 'checkin' && (
+                          <span>{award.threshold || 0} {award.countMode === 'streak' ? 'consecutive' : ''} check-in{(award.threshold || 0) !== 1 ? 's' : ''} ({award.eventFilter || 'any'})</span>
+                        )}
+                        {award.triggerCategory === 'rsvp' && (
+                          <span>{award.threshold || 0} {award.countMode === 'streak' ? 'consecutive' : ''} RSVP{(award.threshold || 0) !== 1 ? 's' : ''}</span>
+                        )}
+                        {award.triggerCategory === 'time' && (
+                          <span>{award.threshold || 0} {award.timeUnit || 'years'} active</span>
+                        )}
+                        {award.triggerCategory === 'store' && (
+                          <span>Purchase required{award.referenceId ? ` (${award.referenceId})` : ''}</span>
+                        )}
+                        {award.triggerCategory === 'system' && (
+                          <span>Collect {award.threshold || 0}{award.targetTier ? ` ${award.targetTier} tier` : ''} awards{award.referenceId ? (() => { const target = awardDefinitions.find((a: any) => String(a.id) === String(award.referenceId)); return target ? ` (${target.name})` : ` (#${award.referenceId})`; })() : ''}</span>
+                        )}
+                        {(award.triggerCategory === 'manual' || !award.triggerCategory) && (
+                          <span className="text-[#9ca3af]">Manual assign</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 align-middle">
+                      <button
+                        className="text-[13px] font-semibold text-[#6b7280] hover:text-[#c0392b] transition-colors inline-flex items-center gap-1"
                         onClick={() => setRecipientsAward(award)}
                         data-testid={`button-view-recipients-${award.id}`}
                       >
-                        <Badge variant="secondary">
-                          {getRecipientCount(award.id)} <Eye className="w-3 h-3 ml-1" />
-                        </Badge>
-                      </Button>
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={award.active ?? true}
-                        onCheckedChange={(checked) => toggleActive.mutate({ id: award.id, active: checked })}
+                        {recipientCount}
+                        <Users className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                    <td className="py-3 px-4 align-middle">
+                      <button
+                        className={`w-9 h-5 rounded-full relative transition-colors cursor-pointer ${award.active !== false ? 'bg-[#c0392b]' : 'bg-[#d1d5db]'}`}
+                        onClick={() => toggleActive.mutate({ id: award.id, active: !(award.active ?? true) })}
                         data-testid={`switch-active-${award.id}`}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(award)}
-                          data-testid={`button-edit-award-${award.id}`}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
+                      >
+                        <span className={`absolute w-4 h-4 rounded-full bg-white top-0.5 transition-transform shadow-[0_1px_3px_rgba(0,0,0,0.15)] ${award.active !== false ? 'left-[18px]' : 'left-0.5'}`} />
+                      </button>
+                    </td>
+                    <td className="py-3 px-4 align-middle">
+                      <button
+                        className="w-8 h-8 rounded-md flex items-center justify-center text-[#9ca3af] hover:bg-[#f6f6f4] hover:text-[#1a1a1a] transition-colors"
+                        onClick={() => openEditDialog(award)}
+                        data-testid={`button-edit-award-${award.id}`}
+                      >
+                        <Edit className="w-[15px] h-[15px]" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="px-6 py-3.5 border-t border-[#e5e5e3] flex items-center justify-between text-[13px] text-[#6b7280]">
+        <span>Showing {filteredAwards.length} of {awardDefinitions.length} awards</span>
+      </div>
 
       {/* Recipients Dialog */}
       <Dialog open={!!recipientsAward} onOpenChange={(open) => !open && setRecipientsAward(null)}>
@@ -9388,7 +9426,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
           </div>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 }
 

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppMode } from "@/hooks/useAppMode";
-import { ArrowLeft, Trophy, ChevronDown } from "lucide-react";
+import { ArrowLeft, Trophy, ChevronDown, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isIconIdentifier } from "@/components/awards/awardIcons";
 import { AwardBadge } from "@/components/awards/AwardBadge";
@@ -75,6 +75,7 @@ export default function TrophiesBadgesPage() {
   const earnedTabRef = useRef<HTMLButtonElement>(null);
   const availableTabRef = useRef<HTMLButtonElement>(null);
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+  const [selectedAward, setSelectedAward] = useState<EarnedAward | null>(null);
 
   const urlParams = new URLSearchParams(searchString);
   const urlPlayerId = urlParams.get("playerId");
@@ -386,6 +387,7 @@ export default function TrophiesBadgesPage() {
                   key={award.id}
                   className="flex items-center gap-3.5 px-4 py-3.5 bg-[#fafafa] rounded-xl border border-[#f0f0f0] hover:bg-[#f5f5f5] hover:border-[#e0e0e0] transition-colors cursor-pointer"
                   data-testid={`card-award-${award.id}`}
+                  onClick={() => setSelectedAward(award)}
                 >
                   <AwardBadge
                     tier={award.tier}
@@ -403,7 +405,6 @@ export default function TrophiesBadgesPage() {
                     )}
                     <p className="text-[11px] text-[#bbb] mt-1" data-testid={`text-earned-date-${award.id}`}>
                       Earned {formatDate(award.earnedDate)}
-                      {award.year ? ` · ${award.year}` : ""}
                     </p>
                   </div>
                   <span
@@ -494,6 +495,39 @@ export default function TrophiesBadgesPage() {
           )
         )}
       </div>
+
+      {selectedAward && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setSelectedAward(null)}
+        >
+          <div
+            className="relative bg-white rounded-2xl shadow-xl max-w-sm w-[90%] p-6 flex flex-col items-center gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="absolute top-3 right-3 text-[#999] hover:text-[#333] transition-colors"
+              onClick={() => setSelectedAward(null)}
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <AwardBadge
+              tier={selectedAward.tier}
+              icon={selectedAward.imageUrl && isIconIdentifier(selectedAward.imageUrl) ? selectedAward.imageUrl : null}
+              size={160}
+            />
+            <h3 className="text-lg font-bold text-[#1a1a1a] text-center">{selectedAward.name}</h3>
+            {selectedAward.description && (
+              <p className="text-sm text-[#666] text-center leading-relaxed">{selectedAward.description}</p>
+            )}
+            <div className="flex items-center gap-2 text-xs text-[#999]">
+              <span className="font-semibold">{selectedAward.tier}</span>
+              <span>·</span>
+              <span>Earned {formatDate(selectedAward.earnedDate)}</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

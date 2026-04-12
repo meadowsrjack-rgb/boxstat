@@ -503,6 +503,8 @@ export default function CoachDashboard() {
         queryClient.invalidateQueries({ queryKey: ["/api/users"] });
         // Award definitions list
         queryClient.invalidateQueries({ queryKey: ["/api/award-definitions"] });
+        // Organization awards (admin dashboard earned counts)
+        queryClient.invalidateQueries({ queryKey: ["/api/user-awards/organization"] });
       }
       setAwardsOpen(false);
       setSelectedPlayer(null);

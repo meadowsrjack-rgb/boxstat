@@ -82,6 +82,7 @@ export default function PlayerDetailPage() {
         queryClient.invalidateQueries({ queryKey: [`/api/users/${player.id}/trophies`] });
         queryClient.invalidateQueries({ queryKey: [`/api/users/${player.id}/awards`] });
         queryClient.invalidateQueries({ queryKey: [`/api/players/${player.id}`] });
+        queryClient.invalidateQueries({ queryKey: ["/api/user-awards/organization"] });
       }
     },
     onError: (error: any) => {

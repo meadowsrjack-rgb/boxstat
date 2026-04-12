@@ -9391,11 +9391,59 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       </div>
 
       {/* Recipients Dialog */}
-      <Dialog open={!!recipientsAward} onOpenChange={(open) => !open && setRecipientsAward(null)}>
+      <Dialog open={!!recipientsAward} onOpenChange={(open) => { if (!open) { setRecipientsAward(null); setGivingFromRecipients(false); setGivePlayerSearch(""); } }}>
         <DialogContent className="max-w-[95vw] w-full max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>Recipients: {recipientsAward?.name}</DialogTitle>
+            <DialogTitle className="flex items-center justify-between gap-2 flex-wrap">
+              <span>Recipients: {recipientsAward?.name}</span>
+              <Button
+                size="sm"
+                className="bg-[#c0392b] hover:bg-[#a93226] text-white"
+                onClick={() => setGivingFromRecipients(!givingFromRecipients)}
+              >
+                <Award className="w-4 h-4 mr-1" />
+                {givingFromRecipients ? "Cancel" : "Give Award"}
+              </Button>
+            </DialogTitle>
           </DialogHeader>
+
+          {givingFromRecipients && (
+            <div className="border rounded-lg p-3 bg-gray-50 mb-2">
+              <p className="text-xs text-gray-500 mb-2">Select a player to give this award to:</p>
+              <input
+                type="text"
+                placeholder="Search players..."
+                value={givePlayerSearch}
+                onChange={(e) => setGivePlayerSearch(e.target.value)}
+                className="w-full px-3 py-2 text-sm border rounded-md mb-2"
+              />
+              <div className="max-h-40 overflow-y-auto space-y-1">
+                {(() => {
+                  const playerUsers = users.filter((u: any) => u.role === 'player');
+                  const term = givePlayerSearch.toLowerCase();
+                  const filtered = term
+                    ? playerUsers.filter((u: any) => `${u.firstName} ${u.lastName}`.toLowerCase().includes(term))
+                    : playerUsers;
+                  const recipientAwards = allOrgAwards.filter((ua: any) => ua.awardId === recipientsAward?.id);
+                  return filtered.slice(0, 20).map((u: any) => {
+                    const alreadyHas = recipientAwards.some((ua: any) => ua.userId === u.id);
+                    return (
+                      <button
+                        key={u.id}
+                        className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${alreadyHas ? 'bg-green-50 text-green-700 cursor-default' : 'hover:bg-white'}`}
+                        disabled={alreadyHas || giveAwardFromRecipients.isPending}
+                        onClick={() => recipientsAward && giveAwardFromRecipients.mutate({ userId: u.id, awardId: recipientsAward.id })}
+                      >
+                        <span className="font-medium">{u.firstName} {u.lastName}</span>
+                        {alreadyHas && <span className="ml-2 text-xs text-green-600">Already earned</span>}
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          )}
+
           <div className="overflow-y-auto">
             <Table>
               <TableHeader>
@@ -9409,7 +9457,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {userAwards
+                {allOrgAwards
                   .filter((ua: any) => ua.awardId === recipientsAward?.id)
                   .map((ua: any) => {
                     const user = users.find((u: any) => u.id === ua.userId);
@@ -9428,6 +9476,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                             variant="ghost"
                             size="sm"
                             onClick={() => deleteUserAward.mutate(ua.id)}
+                            disabled={deleteUserAward.isPending}
                             data-testid={`button-remove-recipient-${ua.id}`}
                           >
                             <Trash2 className="w-4 h-4 text-red-600" />
@@ -9436,7 +9485,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                       </TableRow>
                     );
                   })}
-                {userAwards.filter((ua: any) => ua.awardId === recipientsAward?.id).length === 0 && (
+                {allOrgAwards.filter((ua: any) => ua.awardId === recipientsAward?.id).length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-gray-500 py-8">
                       No recipients yet

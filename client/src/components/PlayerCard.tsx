@@ -223,6 +223,7 @@ export default function PlayerCard({
       });
       // Invalidate player dashboard queries
       queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-awards/organization"] });
     },
     onError: () => {
       toast({ title: "Failed to give award", variant: "destructive" });

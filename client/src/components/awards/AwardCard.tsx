@@ -9,13 +9,15 @@ interface AwardCardProps {
 }
 
 const TIER_COLORS = {
-  HallOfFamer: "from-yellow-400 to-yellow-600",
-  Superstar: "from-purple-400 to-purple-600", 
-  AllStar: "from-blue-400 to-blue-600",
-  Starter: "from-green-400 to-green-600",
-  Prospect: "from-gray-400 to-gray-600",
-  Legacy: "from-amber-400 to-amber-600",
-  Team: "from-orange-400 to-orange-600"
+  HallOfFamer: "from-[#c4b5fd] to-[#5b21b6]",
+  HOF: "from-[#c4b5fd] to-[#5b21b6]",
+  Superstar: "from-[#67e8f9] to-[#155e75]",
+  AllStar: "from-[#fde047] to-[#854d0e]",
+  "All-Star": "from-[#fde047] to-[#854d0e]",
+  Starter: "from-[#cbd5e1] to-[#475569]",
+  Prospect: "from-[#f5d0a9] to-[#92400e]",
+  Legacy: "from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff]",
+  Team: "from-[#f5d0a9] to-[#92400e]"
 };
 
 export function AwardCard({ award, progress, onClick }: AwardCardProps) {

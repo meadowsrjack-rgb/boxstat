@@ -53,30 +53,30 @@ interface AwardWithDetails extends AwardDefinition {
 }
 
 const TIER_ICON_BG: Record<TierType, string> = {
-  Prospect: "bg-[#f3f3f3] text-[#999]",
-  Starter: "bg-[#ecfdf5] text-[#16a34a]",
-  "All-Star": "bg-[#eff6ff] text-[#3b82f6]",
-  Superstar: "bg-[#f5f3ff] text-[#a855f7]",
-  HOF: "bg-[#fffbeb] text-[#d97706]",
-  Legacy: "bg-[#fff1f2] text-[#e11d48]",
+  Prospect: "bg-[#fdf2e6] text-[#92400e]",
+  Starter: "bg-[#f1f5f9] text-[#475569]",
+  "All-Star": "bg-[#fefce8] text-[#854d0e]",
+  Superstar: "bg-[#ecfeff] text-[#155e75]",
+  HOF: "bg-[#f5f3ff] text-[#5b21b6]",
+  Legacy: "bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6]",
 };
 
 const TIER_BADGE: Record<TierType, string> = {
-  Prospect: "bg-[#f3f3f3] text-[#999]",
-  Starter: "bg-[#ecfdf5] text-[#16a34a]",
-  "All-Star": "bg-[#eff6ff] text-[#3b82f6]",
-  Superstar: "bg-[#f5f3ff] text-[#a855f7]",
-  HOF: "bg-[#fffbeb] text-[#d97706]",
-  Legacy: "bg-[#fff1f2] text-[#e11d48]",
+  Prospect: "bg-[#fdf2e6] text-[#92400e] border border-[#f5d0a9]",
+  Starter: "bg-[#f1f5f9] text-[#475569] border border-[#cbd5e1]",
+  "All-Star": "bg-[#fefce8] text-[#854d0e] border border-[#fde047]",
+  Superstar: "bg-[#ecfeff] text-[#155e75] border border-[#67e8f9]",
+  HOF: "bg-[#f5f3ff] text-[#5b21b6] border border-[#c4b5fd]",
+  Legacy: "bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6] border border-[#c4b5fd]",
 };
 
 const TIER_PROGRESS_COLOR: Record<TierType, string> = {
-  Prospect: "bg-[#bbb]",
-  Starter: "bg-[#22c55e]",
-  "All-Star": "bg-[#3b82f6]",
-  Superstar: "bg-[#a855f7]",
-  HOF: "bg-[#f59e0b]",
-  Legacy: "bg-[#e11d48]",
+  Prospect: "bg-[#f5d0a9]",
+  Starter: "bg-[#cbd5e1]",
+  "All-Star": "bg-[#fde047]",
+  Superstar: "bg-[#67e8f9]",
+  HOF: "bg-[#c4b5fd]",
+  Legacy: "bg-[#c4b5fd]",
 };
 
 const TRIGGER_LABELS: Record<TriggerCategory, string> = {
@@ -262,7 +262,7 @@ export default function TrophiesBadgesPage() {
           <div
             className="text-[10px] font-semibold mt-1 tracking-[0.02em]"
             style={{
-              background: "linear-gradient(90deg, #e74c4c, #f59e0b, #22c55e, #3b82f6, #a855f7)",
+              background: "linear-gradient(90deg, #fef2f2, #f5f3ff, #eff6ff)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
@@ -272,11 +272,11 @@ export default function TrophiesBadgesPage() {
           </div>
         </div>
         {[
-          { count: stats.hof, label: "HOF", color: "text-[#f59e0b]", testId: "card-stat-hof" },
-          { count: stats.superstar, label: "Superstar", color: "text-[#a855f7]", testId: "card-stat-superstar" },
-          { count: stats.allStar, label: "All-Star", color: "text-[#3b82f6]", testId: "card-stat-allstar" },
-          { count: stats.starter, label: "Starter", color: "text-[#22c55e]", testId: "card-stat-starter" },
-          { count: stats.prospect, label: "Prospect", color: "text-[#999]", testId: "card-stat-prospect" },
+          { count: stats.hof, label: "HOF", color: "text-[#5b21b6]", testId: "card-stat-hof" },
+          { count: stats.superstar, label: "Superstar", color: "text-[#155e75]", testId: "card-stat-superstar" },
+          { count: stats.allStar, label: "All-Star", color: "text-[#854d0e]", testId: "card-stat-allstar" },
+          { count: stats.starter, label: "Starter", color: "text-[#475569]", testId: "card-stat-starter" },
+          { count: stats.prospect, label: "Prospect", color: "text-[#92400e]", testId: "card-stat-prospect" },
         ].map(({ count, label, color, testId }) => (
           <div key={label} className="flex-1 min-w-0 text-center px-1.5 py-2.5" data-testid={testId}>
             <div className="text-[20px] font-bold leading-none text-[#1a1a1a]">{count}</div>

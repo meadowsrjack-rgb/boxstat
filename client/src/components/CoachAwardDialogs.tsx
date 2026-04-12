@@ -45,12 +45,14 @@ export interface PlayerLite {
 
 // Tier configuration with colors
 const TIER_CONFIG = {
-  "Prospect": { order: 1, color: "bg-gray-100 text-gray-700 border-gray-300" },
-  "Starter": { order: 2, color: "bg-green-100 text-green-700 border-green-300" },
-  "All-Star": { order: 3, color: "bg-blue-100 text-blue-700 border-blue-300" },
-  "Superstar": { order: 4, color: "bg-purple-100 text-purple-700 border-purple-300" },
-  "HOF": { order: 5, color: "bg-yellow-100 text-yellow-700 border-yellow-300" },
-  "Legacy": { order: 6, color: "bg-gradient-to-r from-red-100 via-yellow-100 via-green-100 via-blue-100 to-purple-100 text-purple-700 border-purple-300" },
+  "Prospect": { order: 1, color: "bg-[#fdf2e6] text-[#92400e] border-[#f5d0a9]" },
+  "Starter": { order: 2, color: "bg-[#f1f5f9] text-[#475569] border-[#cbd5e1]" },
+  "All-Star": { order: 3, color: "bg-[#fefce8] text-[#854d0e] border-[#fde047]" },
+  "AllStar": { order: 3, color: "bg-[#fefce8] text-[#854d0e] border-[#fde047]" },
+  "Superstar": { order: 4, color: "bg-[#ecfeff] text-[#155e75] border-[#67e8f9]" },
+  "HOF": { order: 5, color: "bg-[#f5f3ff] text-[#5b21b6] border-[#c4b5fd]" },
+  "HallOfFamer": { order: 5, color: "bg-[#f5f3ff] text-[#5b21b6] border-[#c4b5fd]" },
+  "Legacy": { order: 6, color: "bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6] border-[#c4b5fd]" },
 } as const;
 
 const TIER_ORDER = ["Prospect", "Starter", "All-Star", "Superstar", "HOF", "Legacy"];

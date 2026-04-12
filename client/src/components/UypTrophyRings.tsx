@@ -11,12 +11,12 @@ type UypRingsData = {
 };
 
 const schemes = {
-  legacy:     { ring: ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#9b59b6'] },
-  hof:        { ring: ['#FFD700', '#FFB347'] },
-  superstar:  { ring: ['#8e44ad', '#9b59b6'] },
-  allStar:    { ring: ['#3498db', '#2980b9'] },
-  starter:    { ring: ['#27ae60', '#2ecc71'] },
-  prospect:   { ring: ['#b9bfc3', '#8f989c'] },
+  legacy:     { ring: ['#fef2f2', '#f5f3ff', '#eff6ff'] },
+  hof:        { ring: ['#c4b5fd', '#5b21b6'] },
+  superstar:  { ring: ['#67e8f9', '#155e75'] },
+  allStar:    { ring: ['#fde047', '#854d0e'] },
+  starter:    { ring: ['#cbd5e1', '#475569'] },
+  prospect:   { ring: ['#f5d0a9', '#92400e'] },
 } as const;
 
 function gradientStops(stops: readonly string[]) {

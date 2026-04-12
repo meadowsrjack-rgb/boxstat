@@ -11,24 +11,28 @@ interface AwardOverlayProps {
   onClose: () => void;
 }
 
-const TIER_COLORS = {
-  HallOfFamer: "border-yellow-400 bg-yellow-50 text-yellow-800",
-  Superstar: "border-purple-400 bg-purple-50 text-purple-800", 
-  AllStar: "border-blue-400 bg-blue-50 text-blue-800",
-  Starter: "border-green-400 bg-green-50 text-green-800",
-  Prospect: "border-gray-400 bg-gray-50 text-gray-800",
-  Legacy: "border-amber-400 bg-amber-50 text-amber-800",
-  Team: "border-orange-400 bg-orange-50 text-orange-800"
+const TIER_COLORS: Record<string, string> = {
+  HallOfFamer: "border-[#c4b5fd] bg-[#f5f3ff] text-[#5b21b6]",
+  HOF: "border-[#c4b5fd] bg-[#f5f3ff] text-[#5b21b6]",
+  Superstar: "border-[#67e8f9] bg-[#ecfeff] text-[#155e75]",
+  AllStar: "border-[#fde047] bg-[#fefce8] text-[#854d0e]",
+  "All-Star": "border-[#fde047] bg-[#fefce8] text-[#854d0e]",
+  Starter: "border-[#cbd5e1] bg-[#f1f5f9] text-[#475569]",
+  Prospect: "border-[#f5d0a9] bg-[#fdf2e6] text-[#92400e]",
+  Legacy: "border-[#c4b5fd] bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6]",
+  Team: "border-[#f5d0a9] bg-[#fdf2e6] text-[#92400e]"
 };
 
-const TIER_GRADIENTS = {
-  HallOfFamer: "from-yellow-400 to-yellow-600",
-  Superstar: "from-purple-400 to-purple-600", 
-  AllStar: "from-blue-400 to-blue-600",
-  Starter: "from-green-400 to-green-600",
-  Prospect: "from-gray-400 to-gray-600",
-  Legacy: "from-amber-400 to-amber-600",
-  Team: "from-orange-400 to-orange-600"
+const TIER_GRADIENTS: Record<string, string> = {
+  HallOfFamer: "from-[#c4b5fd] to-[#5b21b6]",
+  HOF: "from-[#c4b5fd] to-[#5b21b6]",
+  Superstar: "from-[#67e8f9] to-[#155e75]",
+  AllStar: "from-[#fde047] to-[#854d0e]",
+  "All-Star": "from-[#fde047] to-[#854d0e]",
+  Starter: "from-[#cbd5e1] to-[#475569]",
+  Prospect: "from-[#f5d0a9] to-[#92400e]",
+  Legacy: "from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff]",
+  Team: "from-[#f5d0a9] to-[#92400e]"
 };
 
 export function AwardOverlay({ award, progress, isOpen, onClose }: AwardOverlayProps) {

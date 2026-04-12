@@ -117,6 +117,8 @@ import PlayerDashboard from "./player-dashboard";
 import { insertDivisionSchema, insertNotificationSchema, insertTeamSchema } from "@shared/schema";
 import { LocationSearch } from "@/components/LocationSearch";
 import AttendanceList from "@/components/AttendanceList";
+import { IconPicker } from "@/components/awards/IconPicker";
+import { getAwardIcon, isIconIdentifier } from "@/components/awards/awardIcons";
 import { format } from "date-fns";
 import RevenueTrendChart from "@/components/RevenueTrendChart";
 import { TIMEZONE_OPTIONS, getBrowserTimezone, localDatetimeToUTC, utcToLocalDatetime, getTimezoneAbbreviation, ensureUtcString } from "@/lib/time";
@@ -7982,12 +7984,10 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
   const [filterClass, setFilterClass] = useState<string>("all"); // Now used for trigger category
   const [filterActive, setFilterActive] = useState<string>("all");
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string>("");
+  const [selectedIconId, setSelectedIconId] = useState<string>("");
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [selectedAwardIds, setSelectedAwardIds] = useState<Set<string>>(new Set());
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const tableRef = useDragScroll();
 
   const bulkDeleteAwards = useMutation({
@@ -8272,79 +8272,10 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     return allOrgAwards.filter((ua: any) => ua.awardId === awardId).length;
   };
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setUploadingImage(true);
-    
-    try {
-      // Validate image dimensions (500x500px)
-      const img = new Image();
-      const imageUrl = URL.createObjectURL(file);
-      
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => {
-          URL.revokeObjectURL(imageUrl);
-          if (img.width !== 500 || img.height !== 500) {
-            reject(new Error(`Image must be exactly 500x500 pixels. Your image is ${img.width}x${img.height}px.`));
-          } else {
-            resolve();
-          }
-        };
-        img.onerror = () => {
-          URL.revokeObjectURL(imageUrl);
-          reject(new Error('Failed to load image'));
-        };
-        img.src = imageUrl;
-      });
-
-      const formData = new FormData();
-      formData.append('image', file);
-
-      // Get auth token from localStorage for file upload
-      const token = localStorage.getItem('authToken');
-      const headers: HeadersInit = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const response = await fetch('/api/upload/award-image', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-        headers,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to upload image');
-      }
-
-      const data = await response.json();
-      
-      // Update the imageUrl field with the uploaded path
-      form.setValue('imageUrl', data.imageUrl);
-      setImagePreview(data.imageUrl);
-      
-      toast({
-        title: "Image uploaded successfully",
-        description: "The award image has been uploaded and will be saved when you submit the form.",
-      });
-    } catch (error: any) {
-      console.error('Image upload error:', error);
-      toast({
-        title: "Failed to upload image",
-        description: error.message || "An error occurred while uploading the image",
-        variant: "destructive",
-      });
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
   const openEditDialog = (award: any) => {
     setEditingAward(award);
-    setImagePreview(award.imageUrl || "");
+    const iconVal = award.imageUrl && isIconIdentifier(award.imageUrl) ? award.imageUrl : "";
+    setSelectedIconId(iconVal);
     
     form.reset({
       name: award.name || "",
@@ -8478,6 +8409,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
             setIsDialogOpen(open);
             if (!open) {
               setEditingAward(null);
+              setSelectedIconId("");
               form.reset();
             }
           }}>
@@ -8569,56 +8501,57 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                     )}
                   />
                   
-                  {/* Award Image Upload */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Award Image (500x500px)</label>
-                    <div className="flex items-center gap-4">
-                      <div className="relative w-24 h-24 border-2 border-dashed rounded-lg flex items-center justify-center overflow-hidden bg-muted">
-                        {imagePreview ? (
-                          <img src={imagePreview} alt="Award preview" className="w-full h-full object-cover" />
-                        ) : (
-                          <Upload className="w-8 h-8 text-muted-foreground" />
-                        )}
-                      </div>
-                      <div className="flex-1 space-y-2">
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          onChange={handleImageUpload}
-                          accept="image/png,image/jpeg,image/webp"
-                          className="hidden"
-                          data-testid="input-award-image"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={uploadingImage}
-                          data-testid="button-upload-image"
-                        >
-                          {uploadingImage ? "Uploading..." : "Upload Image"}
-                        </Button>
-                        <p className="text-xs text-muted-foreground">
-                          Must be exactly 500x500 pixels. PNG, JPG, or WebP.
-                        </p>
-                        {imagePreview && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setImagePreview("");
-                              form.setValue("imageUrl", "");
-                            }}
-                            className="text-destructive"
-                          >
-                            Remove
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  {/* Award Icon Picker */}
+                  <FormField
+                    control={form.control}
+                    name="imageUrl"
+                    render={({ field }) => {
+                      const IconPreview = selectedIconId ? getAwardIcon(selectedIconId) : null;
+                      const legacyImageUrl = !selectedIconId && field.value && !isIconIdentifier(field.value) ? field.value : null;
+                      return (
+                        <FormItem>
+                          <FormLabel>Award Icon</FormLabel>
+                          <div className="space-y-2">
+                            {IconPreview && (
+                              <div className="flex items-center gap-3 p-2 border rounded-lg bg-muted/50">
+                                <div className="w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center">
+                                  <IconPreview className="h-6 w-6 text-primary" />
+                                </div>
+                                <span className="text-sm font-medium">{selectedIconId}</span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="ml-auto text-destructive hover:text-destructive"
+                                  onClick={() => {
+                                    setSelectedIconId("");
+                                    field.onChange("");
+                                  }}
+                                  data-testid="button-clear-icon"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                            {legacyImageUrl && (
+                              <div className="flex items-center gap-3 p-2 border rounded-lg bg-muted/50">
+                                <img src={legacyImageUrl} alt="Current award image" className="w-10 h-10 rounded-md object-contain bg-white/10" />
+                                <span className="text-xs text-muted-foreground flex-1 truncate">Legacy image (select an icon below to replace)</span>
+                              </div>
+                            )}
+                            <IconPicker
+                              value={selectedIconId}
+                              onChange={(iconId) => {
+                                setSelectedIconId(iconId);
+                                field.onChange(iconId);
+                              }}
+                            />
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
+                  />
                   
                   {/* Trigger Category - The Master Switch */}
                   <FormField

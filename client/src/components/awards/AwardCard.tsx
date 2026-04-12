@@ -1,7 +1,9 @@
+import { Lock } from "lucide-react";
 import { Award } from "@shared/awards.types";
+import { getAwardIcon, isIconIdentifier } from "./awardIcons";
 
 interface AwardCardProps {
-  award: Award;
+  award: Award & { imageUrl?: string | null };
   progress: { earned: boolean; current?: number; target?: number; label?: string };
   onClick: () => void;
 }
@@ -18,32 +20,65 @@ const TIER_COLORS = {
 
 export function AwardCard({ award, progress, onClick }: AwardCardProps) {
   const locked = !progress.earned;
-  const tierColor = TIER_COLORS[award.tier];
-  
+  const tierColor = TIER_COLORS[award.tier as keyof typeof TIER_COLORS] || TIER_COLORS.Prospect;
+
+  const imageUrl = award.imageUrl;
+
+  let iconContent: React.ReactNode;
+
+  if (imageUrl && isIconIdentifier(imageUrl)) {
+    const LucideIcon = getAwardIcon(imageUrl)!;
+    iconContent = (
+      <LucideIcon
+        className={`w-4/5 h-4/5 transition-all duration-200 ${
+          locked ? "opacity-40 grayscale" : "text-primary group-hover:scale-105"
+        }`}
+      />
+    );
+  } else if (imageUrl) {
+    iconContent = (
+      <img
+        src={imageUrl}
+        alt={award.name}
+        className={`w-4/5 h-4/5 object-contain transition-all duration-200 ${
+          locked ? "grayscale opacity-50" : "group-hover:scale-105"
+        }`}
+        loading="lazy"
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = award.kind === 'Trophy' ? 
+            '/assets/awards/default-trophy.png' : 
+            '/assets/awards/default-badge.png';
+        }}
+      />
+    );
+  } else {
+    iconContent = (
+      <img
+        src={`/assets/awards/${award.iconName}.png`}
+        alt={award.name}
+        className={`w-4/5 h-4/5 object-contain transition-all duration-200 ${
+          locked ? "grayscale opacity-50" : "group-hover:scale-105"
+        }`}
+        loading="lazy"
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = award.kind === 'Trophy' ? 
+            '/assets/awards/default-trophy.png' : 
+            '/assets/awards/default-badge.png';
+        }}
+      />
+    );
+  }
+
   return (
     <button 
       onClick={onClick} 
       className="group rounded-lg border bg-card hover:shadow-md transition-all duration-200 p-3 text-left relative overflow-hidden"
       data-testid={`card-award-${award.id}`}
     >
-      {/* Tier indicator */}
       <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${tierColor} ${locked ? 'opacity-40' : ''}`} />
       
-      <div className={`aspect-square rounded flex items-center justify-center overflow-hidden bg-muted mb-2`}>
-        <img
-          src={`/assets/awards/${award.iconName}.png`}
-          alt={award.name}
-          className={`w-4/5 h-4/5 object-contain transition-all duration-200 ${
-            locked ? "grayscale opacity-50" : "group-hover:scale-105"
-          }`}
-          loading="lazy"
-          onError={(e) => {
-            // Fallback to a default trophy/badge icon
-            (e.target as HTMLImageElement).src = award.kind === 'Trophy' ? 
-              '/assets/awards/default-trophy.png' : 
-              '/assets/awards/default-badge.png';
-          }}
-        />
+      <div className="aspect-square rounded flex items-center justify-center overflow-hidden bg-muted mb-2">
+        {iconContent}
       </div>
       
       <div className={`text-sm font-medium leading-tight mb-1 ${locked ? 'text-muted-foreground' : ''}`}>
@@ -71,7 +106,9 @@ export function AwardCard({ award, progress, onClick }: AwardCardProps) {
       
       {locked && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-lg">
-          <div className="text-white/80 text-xl">🔒</div>
+          <div className="bg-black/40 rounded-full p-2">
+            <Lock className="h-5 w-5 text-white/80" />
+          </div>
         </div>
       )}
     </button>

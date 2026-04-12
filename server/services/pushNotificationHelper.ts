@@ -745,5 +745,11 @@ export async function resolveEventParticipants(event: Event, storage: IStorage):
     }
   }
 
+  // Include guest users
+  const guestIds = (event as any).guestUserIds;
+  if (guestIds && Array.isArray(guestIds)) {
+    guestIds.forEach((id: string) => participantIds.add(id));
+  }
+
   return Array.from(participantIds);
 }

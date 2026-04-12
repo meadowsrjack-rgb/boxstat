@@ -711,6 +711,7 @@ export const events = pgTable("events", {
   scheduleRequestNote: text("schedule_request_note"), // Optional note from parent
   facilityId: integer("facility_id"), // Links to facilities table for location/court info
   courtName: varchar("court_name"), // Specific court/field within the facility (e.g. "Court 3")
+  guestUserIds: text("guest_user_ids").array(), // Users invited as guests (can't see attendee list/RSVPs/check-ins)
 });
 
 // Event Targets table (normalized targeting for events)

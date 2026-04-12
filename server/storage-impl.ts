@@ -3871,6 +3871,7 @@ class DatabaseStorage implements IStorage {
       programId: (event as any).programId ?? undefined,
       facilityId: (event as any).facilityId ?? null,
       courtName: (event as any).courtName ?? null,
+      guestUserIds: (event as any).guestUserIds ?? null,
     };
 
     const results = await db.insert(schema.events).values(dbEvent).returning();
@@ -3899,6 +3900,7 @@ class DatabaseStorage implements IStorage {
       status: updates.status,
       facilityId: (updates as any).facilityId,
       courtName: (updates as any).courtName,
+      guestUserIds: (updates as any).guestUserIds,
     };
 
     if ('scheduleRequestSource' in updates) {
@@ -5859,6 +5861,7 @@ class DatabaseStorage implements IStorage {
       scheduleRequestNote: dbEvent.scheduleRequestNote ?? undefined,
       facilityId: dbEvent.facilityId ?? null,
       courtName: dbEvent.courtName ?? null,
+      guestUserIds: dbEvent.guestUserIds ?? [],
     };
   }
 

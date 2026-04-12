@@ -1,4 +1,4 @@
-import { Lock, Trophy, Medal } from "lucide-react";
+import { Lock } from "lucide-react";
 import { Award } from "@shared/awards.types";
 import { getAwardIcon, isIconIdentifier } from "./awardIcons";
 
@@ -26,16 +26,48 @@ export function AwardCard({ award, progress, onClick }: AwardCardProps) {
 
   let iconContent: React.ReactNode;
 
-  const LucideIcon = imageUrl && isIconIdentifier(imageUrl) ? getAwardIcon(imageUrl) : null;
-  const FallbackIcon = award.kind === 'Trophy' ? Trophy : Medal;
-  const IconComponent = LucideIcon || FallbackIcon;
-  iconContent = (
-    <IconComponent
-      className={`w-4/5 h-4/5 transition-all duration-200 ${
-        locked ? "opacity-40 grayscale" : "text-primary group-hover:scale-105"
-      }`}
-    />
-  );
+  if (imageUrl && isIconIdentifier(imageUrl)) {
+    const LucideIcon = getAwardIcon(imageUrl)!;
+    iconContent = (
+      <LucideIcon
+        className={`w-4/5 h-4/5 transition-all duration-200 ${
+          locked ? "opacity-40 grayscale" : "text-primary group-hover:scale-105"
+        }`}
+      />
+    );
+  } else if (imageUrl) {
+    iconContent = (
+      <img
+        src={imageUrl}
+        alt={award.name}
+        className={`w-4/5 h-4/5 object-contain transition-all duration-200 ${
+          locked ? "grayscale opacity-50" : "group-hover:scale-105"
+        }`}
+        loading="lazy"
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = award.kind === 'Trophy' ? 
+            '/assets/awards/default-trophy.png' : 
+            '/assets/awards/default-badge.png';
+        }}
+      />
+    );
+  } else {
+    iconContent = (
+      <img
+        src={`/assets/awards/${award.iconName}.png`}
+        alt={award.name}
+        className={`w-4/5 h-4/5 object-contain transition-all duration-200 ${
+          locked ? "grayscale opacity-50" : "group-hover:scale-105"
+        }`}
+        loading="lazy"
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = award.kind === 'Trophy' ? 
+            '/assets/awards/default-trophy.png' : 
+            '/assets/awards/default-badge.png';
+        }}
+      />
+    );
+  }
 
   return (
     <button 

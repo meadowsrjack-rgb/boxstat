@@ -93,6 +93,15 @@ function AwardIcon({ award, className }: { award: AwardDefinition; className?: s
     const LucideIcon = getAwardIcon(iconId)!;
     return <LucideIcon className={className} />;
   }
+  if (iconId) {
+    return (
+      <img
+        src={iconId}
+        alt={award.name}
+        className="w-full h-full object-contain"
+      />
+    );
+  }
   return <Medal className={className} />;
 }
 

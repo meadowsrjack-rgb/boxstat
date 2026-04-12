@@ -106,7 +106,6 @@ import {
   Dumbbell,
   Heart,
   Zap,
-  Medal,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -4997,7 +4996,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                           <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
                             {userAwards.badges.map((badge: any) => (
                               <div key={badge.id} className="text-center p-3 bg-gray-50 rounded-lg" data-testid={`award-${badge.id}`}>
-                                {(() => { const Icon = badge.imageUrl && isIconIdentifier(badge.imageUrl) ? getAwardIcon(badge.imageUrl) : Medal; return Icon ? <Icon className="w-10 h-10 mx-auto text-blue-500" /> : <Medal className="w-10 h-10 mx-auto text-blue-500" />; })()}
+                                {badge.imageUrl && <img src={badge.imageUrl} alt={badge.name} className="w-10 h-10 mx-auto object-contain" />}
                                 <p className="text-xs font-medium mt-2 truncate">{badge.name}</p>
                               </div>
                             ))}
@@ -5007,7 +5006,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                           <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
                             {userAwards.trophies.map((trophy: any) => (
                               <div key={trophy.id} className="text-center p-3 bg-amber-50 rounded-lg" data-testid={`award-${trophy.id}`}>
-                                {(() => { const Icon = trophy.imageUrl && isIconIdentifier(trophy.imageUrl) ? getAwardIcon(trophy.imageUrl) : Trophy; return Icon ? <Icon className="w-10 h-10 mx-auto text-amber-500" /> : <Trophy className="w-10 h-10 mx-auto text-amber-500" />; })()}
+                                {trophy.imageUrl && <img src={trophy.imageUrl} alt={trophy.name} className="w-10 h-10 mx-auto object-contain" />}
                                 <p className="text-xs font-medium mt-2 truncate">{trophy.name}</p>
                               </div>
                             ))}
@@ -8508,6 +8507,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                     name="imageUrl"
                     render={({ field }) => {
                       const IconPreview = selectedIconId ? getAwardIcon(selectedIconId) : null;
+                      const legacyImageUrl = !selectedIconId && field.value && !isIconIdentifier(field.value) ? field.value : null;
                       return (
                         <FormItem>
                           <FormLabel>Award Icon</FormLabel>
@@ -8531,6 +8531,12 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
+                              </div>
+                            )}
+                            {legacyImageUrl && (
+                              <div className="flex items-center gap-3 p-2 border rounded-lg bg-muted/50">
+                                <img src={legacyImageUrl} alt="Current award image" className="w-10 h-10 rounded-md object-contain bg-white/10" />
+                                <span className="text-xs text-muted-foreground flex-1 truncate">Legacy image (select an icon below to replace)</span>
                               </div>
                             )}
                             <IconPicker
@@ -9219,12 +9225,16 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                     </TableCell>
                     <TableCell className="font-medium">{award.name}</TableCell>
                     <TableCell>
-                      {(() => {
-                        const AwardLucideIcon = award.imageUrl && isIconIdentifier(award.imageUrl) ? getAwardIcon(award.imageUrl) : null;
-                        return AwardLucideIcon 
-                          ? <AwardLucideIcon className="w-12 h-12 text-primary" data-testid={`icon-award-${award.id}`} />
-                          : <Award className="w-12 h-12 text-gray-300" data-testid={`icon-badge-${award.id}`} />;
-                      })()}
+                      {award.imageUrl ? (
+                        <img 
+                          src={award.imageUrl} 
+                          alt={award.name} 
+                          className="w-12 h-12 object-contain"
+                          data-testid={`img-award-${award.id}`}
+                        />
+                      ) : (
+                        <Award className="w-12 h-12 text-gray-300" data-testid={`icon-badge-${award.id}`} />
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={getTierBadgeColor(award.tier)}>

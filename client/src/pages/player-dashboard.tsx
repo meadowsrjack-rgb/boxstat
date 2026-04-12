@@ -497,6 +497,56 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
   const overallSkillScore = calculateOverallSkillAverage(latestEvaluation);
 
+  // Detect unseen awards on dashboard load (no push notification needed)
+  useEffect(() => {
+    if (!awardsSummary?.allAwards || !userIdForData || awardPopupOpen) return;
+    const allAwards: any[] = awardsSummary.allAwards;
+    if (allAwards.length === 0) return;
+
+    const storageKey = `seenAwardIds_${userIdForData}`;
+    const seenRaw = localStorage.getItem(storageKey);
+
+    if (seenRaw === null) {
+      localStorage.setItem(storageKey, JSON.stringify(allAwards.map((a: any) => a.id)));
+      return;
+    }
+
+    const seenIds: number[] = JSON.parse(seenRaw);
+    const unseen = allAwards.filter((a: any) => !seenIds.includes(a.id));
+    if (unseen.length > 0) {
+      const newest = unseen.reduce((latest: any, a: any) =>
+        new Date(a.awardedAt) > new Date(latest.awardedAt) ? a : latest,
+        unseen[0]
+      );
+      setAwardPopupData({
+        awardName: newest.name || 'Award',
+        awardTier: newest.tier || 'Bronze',
+        awardImageUrl: newest.imageUrl || '',
+        xpReward: newest.xpReward ?? 50,
+      });
+      setAwardPopupOpen(true);
+      localStorage.setItem(storageKey, JSON.stringify(allAwards.map((a: any) => a.id)));
+    }
+  }, [awardsSummary, userIdForData, awardPopupOpen]);
+
+  // Detect OVR change on dashboard load (no push notification needed)
+  useEffect(() => {
+    if (!latestEvaluation || !userIdForData || evalPopupOpen || overallSkillScore === 0) return;
+
+    const storageKey = `lastSeenOvr_${userIdForData}`;
+    const lastSeen = localStorage.getItem(storageKey);
+
+    if (lastSeen !== null) {
+      const oldOvr = parseInt(lastSeen, 10);
+      if (oldOvr !== overallSkillScore && !isNaN(oldOvr)) {
+        setEvalPopupData({ oldOvr, newOvr: overallSkillScore });
+        setEvalPopupOpen(true);
+      }
+    }
+
+    localStorage.setItem(storageKey, String(overallSkillScore));
+  }, [latestEvaluation, userIdForData, overallSkillScore, evalPopupOpen]);
+
   // Check-ins (client derives tasks from events; server stores submissions)
   const { data: checkins = [] as CheckIn[] } = useQuery<CheckIn[]>({
     queryKey: ["/api/attendances?userId=" + currentUser.id],

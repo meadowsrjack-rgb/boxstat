@@ -10561,6 +10561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: def?.description,
           imageUrl: def?.imageUrl,
           prestige: def?.prestige,
+          xpReward: def?.xpReward ?? 50,
         };
       });
       

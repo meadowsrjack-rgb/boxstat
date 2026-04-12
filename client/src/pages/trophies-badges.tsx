@@ -262,7 +262,7 @@ export default function TrophiesBadgesPage() {
           <div
             className="text-[10px] font-semibold mt-1 tracking-[0.02em]"
             style={{
-              background: "linear-gradient(90deg, #fef2f2, #f5f3ff, #eff6ff)",
+              background: "linear-gradient(90deg, #e74c4c, #f59e0b, #22c55e, #3b82f6, #a855f7)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
@@ -449,7 +449,8 @@ export default function TrophiesBadgesPage() {
                     </p>
                   </div>
                   <span
-                    className={`text-[10px] font-semibold tracking-[0.03em] px-2 py-[3px] rounded-[6px] flex-shrink-0 ${TIER_BADGE[award.tier]}`}
+                    className={`text-[10px] font-semibold tracking-[0.03em] px-2 py-[3px] rounded-[6px] flex-shrink-0 ${award.tier === 'Legend' ? 'border border-[#c4b5fd]' : TIER_BADGE[award.tier]}`}
+                    style={award.tier === 'Legend' ? { background: 'linear-gradient(90deg, #e74c4c, #f59e0b, #22c55e, #3b82f6, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' } : undefined}
                     data-testid={`badge-tier-${award.id}`}
                   >
                     {award.tier}
@@ -521,7 +522,8 @@ export default function TrophiesBadgesPage() {
                       )}
                     </div>
                     <span
-                      className={`text-[10px] font-semibold tracking-[0.03em] px-2 py-[3px] rounded-[6px] flex-shrink-0 ${TIER_BADGE[award.tier]}`}
+                      className={`text-[10px] font-semibold tracking-[0.03em] px-2 py-[3px] rounded-[6px] flex-shrink-0 ${award.tier === 'Legend' ? 'border border-[#c4b5fd]' : TIER_BADGE[award.tier]}`}
+                      style={award.tier === 'Legend' ? { background: 'linear-gradient(90deg, #e74c4c, #f59e0b, #22c55e, #3b82f6, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' } : undefined}
                       data-testid={`badge-tier-available-${award.id}`}
                     >
                       {award.tier}

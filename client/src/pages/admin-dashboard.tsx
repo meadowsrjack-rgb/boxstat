@@ -9266,7 +9266,10 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                       </div>
                     </td>
                     <td className="py-3 px-4 align-middle">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${getTierBadgeColor(award.tier)}`}>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${award.tier === 'Legend' ? 'border border-[#c4b5fd]' : getTierBadgeColor(award.tier)}`}
+                        style={award.tier === 'Legend' ? { background: 'linear-gradient(90deg, #e74c4c, #f59e0b, #22c55e, #3b82f6, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' } : undefined}
+                      >
                         {award.tier}
                       </span>
                     </td>

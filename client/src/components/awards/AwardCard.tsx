@@ -14,7 +14,7 @@ const TIER_COLORS: Record<string, string> = {
   Gold: "from-[#fde047] to-[#854d0e]",
   Platinum: "from-[#67e8f9] to-[#155e75]",
   Diamond: "from-[#c4b5fd] to-[#5b21b6]",
-  Legend: "from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff]",
+  Legend: "",
   HallOfFamer: "from-[#c4b5fd] to-[#5b21b6]",
   HOF: "from-[#c4b5fd] to-[#5b21b6]",
   Superstar: "from-[#67e8f9] to-[#155e75]",
@@ -22,7 +22,7 @@ const TIER_COLORS: Record<string, string> = {
   "All-Star": "from-[#fde047] to-[#854d0e]",
   Starter: "from-[#cbd5e1] to-[#475569]",
   Prospect: "from-[#f5d0a9] to-[#92400e]",
-  Legacy: "from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff]",
+  Legacy: "",
   Team: "from-[#f5d0a9] to-[#92400e]",
 };
 
@@ -83,7 +83,10 @@ export function AwardCard({ award, progress, onClick }: AwardCardProps) {
       className="group rounded-lg border bg-card hover:shadow-md transition-all duration-200 p-3 text-left relative overflow-hidden"
       data-testid={`card-award-${award.id}`}
     >
-      <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${tierColor} ${locked ? 'opacity-40' : ''}`} />
+      <div
+        className={`absolute top-0 left-0 right-0 h-1 ${tierColor ? `bg-gradient-to-r ${tierColor}` : ''} ${locked ? 'opacity-40' : ''}`}
+        style={!tierColor ? { background: 'linear-gradient(90deg, #e74c4c, #f59e0b, #22c55e, #3b82f6, #a855f7)' } : undefined}
+      />
       
       <div className="aspect-square rounded flex items-center justify-center overflow-hidden bg-muted mb-2">
         {iconContent}

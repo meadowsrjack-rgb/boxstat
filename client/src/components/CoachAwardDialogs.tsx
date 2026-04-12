@@ -44,13 +44,13 @@ export interface PlayerLite {
 }
 
 // Tier configuration with colors
-const TIER_CONFIG: Record<string, { order: number; color: string }> = {
+const TIER_CONFIG: Record<string, { order: number; color: string; rainbow?: boolean }> = {
   "Bronze": { order: 1, color: "bg-[#fdf2e6] text-[#92400e] border-[#f5d0a9]" },
   "Silver": { order: 2, color: "bg-[#f1f5f9] text-[#475569] border-[#cbd5e1]" },
   "Gold": { order: 3, color: "bg-[#fefce8] text-[#854d0e] border-[#fde047]" },
   "Platinum": { order: 4, color: "bg-[#ecfeff] text-[#155e75] border-[#67e8f9]" },
   "Diamond": { order: 5, color: "bg-[#f5f3ff] text-[#5b21b6] border-[#c4b5fd]" },
-  "Legend": { order: 6, color: "bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6] border-[#c4b5fd]" },
+  "Legend": { order: 6, color: "text-white border-[#c4b5fd]", rainbow: true },
   "Prospect": { order: 1, color: "bg-[#fdf2e6] text-[#92400e] border-[#f5d0a9]" },
   "Starter": { order: 2, color: "bg-[#f1f5f9] text-[#475569] border-[#cbd5e1]" },
   "All-Star": { order: 3, color: "bg-[#fefce8] text-[#854d0e] border-[#fde047]" },
@@ -58,7 +58,7 @@ const TIER_CONFIG: Record<string, { order: number; color: string }> = {
   "Superstar": { order: 4, color: "bg-[#ecfeff] text-[#155e75] border-[#67e8f9]" },
   "HOF": { order: 5, color: "bg-[#f5f3ff] text-[#5b21b6] border-[#c4b5fd]" },
   "HallOfFamer": { order: 5, color: "bg-[#f5f3ff] text-[#5b21b6] border-[#c4b5fd]" },
-  "Legacy": { order: 6, color: "bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6] border-[#c4b5fd]" },
+  "Legacy": { order: 6, color: "text-white border-[#c4b5fd]", rainbow: true },
 };
 
 const TIER_ORDER = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Legend"];
@@ -66,6 +66,12 @@ const TIER_ORDER = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Legend"]
 const getTierColor = (tier: string) => {
   return TIER_CONFIG[tier as keyof typeof TIER_CONFIG]?.color || "bg-gray-100 text-gray-700 border-gray-300";
 };
+
+const isRainbowTier = (tier: string) => {
+  return TIER_CONFIG[tier as keyof typeof TIER_CONFIG]?.rainbow === true;
+};
+
+const RAINBOW_GRADIENT = 'linear-gradient(90deg, #e74c4c, #f59e0b, #22c55e, #3b82f6, #a855f7)';
 
 /* ---------- Awards Dialog (All Manual Awards with Tier Filter) ---------- */
 export function AwardsDialog({
@@ -134,7 +140,10 @@ export function AwardsDialog({
                 return (
                   <SelectItem key={tier} value={tier}>
                     <span className="flex items-center gap-2">
-                      <span className={`inline-block w-3 h-3 rounded-full ${getTierColor(tier).split(' ')[0]}`}></span>
+                      <span
+                        className={`inline-block w-3 h-3 rounded-full ${isRainbowTier(tier) ? '' : getTierColor(tier).split(' ')[0]}`}
+                        style={isRainbowTier(tier) ? { background: RAINBOW_GRADIENT } : undefined}
+                      ></span>
                       {tier} ({count})
                     </span>
                   </SelectItem>
@@ -168,14 +177,21 @@ export function AwardsDialog({
                   {a.imageUrl ? (
                     <img src={a.imageUrl} alt={a.name} className="w-12 h-12 rounded-lg object-cover" />
                   ) : (
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${getTierColor(a.tier)}`}>
+                    <div
+                      className={`w-12 h-12 rounded-lg flex items-center justify-center ${getTierColor(a.tier)}`}
+                      style={isRainbowTier(a.tier) ? { background: RAINBOW_GRADIENT } : undefined}
+                    >
                       <Award className="h-6 w-6" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="font-medium flex items-center gap-2 flex-wrap">
                       <span className="truncate">{a.name}</span>
-                      <Badge variant="outline" className={`text-xs ${getTierColor(a.tier)}`}>
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${getTierColor(a.tier)}`}
+                        style={isRainbowTier(a.tier) ? { background: RAINBOW_GRADIENT } : undefined}
+                      >
                         {a.tier}
                       </Badge>
                     </div>

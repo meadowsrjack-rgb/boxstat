@@ -11,7 +11,7 @@ type UypRingsData = {
 };
 
 const schemes = {
-  legacy:     { ring: ['#fef2f2', '#f5f3ff', '#eff6ff'] },
+  legacy:     { ring: ['#e74c4c', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7'] },
   hof:        { ring: ['#c4b5fd', '#5b21b6'] },
   superstar:  { ring: ['#67e8f9', '#155e75'] },
   allStar:    { ring: ['#fde047', '#854d0e'] },
@@ -122,14 +122,25 @@ function CircularRingMeter({
         </text>
 
         {/* Label close under number */}
+        {label === 'Legend' && (
+          <defs>
+            <linearGradient id="legend-text-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#e74c4c" />
+              <stop offset="25%" stopColor="#f59e0b" />
+              <stop offset="50%" stopColor="#22c55e" />
+              <stop offset="75%" stopColor="#3b82f6" />
+              <stop offset="100%" stopColor="#a855f7" />
+            </linearGradient>
+          </defs>
+        )}
         <text
           x={center}
           y={center + 20}
           textAnchor="middle"
           fontFamily="ui-sans-serif, system-ui"
-          fontWeight={400}
+          fontWeight={label === 'Legend' ? 700 : 400}
           fontSize={9}
-          fill="#334155"
+          fill={label === 'Legend' ? 'url(#legend-text-gradient)' : '#334155'}
         >
           {label}
         </text>

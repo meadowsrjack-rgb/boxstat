@@ -17,7 +17,7 @@ const TIER_COLORS: Record<string, string> = {
   Gold: "border-[#fde047] bg-[#fefce8] text-[#854d0e]",
   Platinum: "border-[#67e8f9] bg-[#ecfeff] text-[#155e75]",
   Diamond: "border-[#c4b5fd] bg-[#f5f3ff] text-[#5b21b6]",
-  Legend: "border-[#c4b5fd] bg-gradient-to-br from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff] text-[#5b21b6]",
+  Legend: "border-[#c4b5fd] text-white",
   HallOfFamer: "border-[#c4b5fd] bg-[#f5f3ff] text-[#5b21b6]",
   HOF: "border-[#c4b5fd] bg-[#f5f3ff] text-[#5b21b6]",
   Superstar: "border-[#67e8f9] bg-[#ecfeff] text-[#155e75]",
@@ -34,7 +34,7 @@ const TIER_GRADIENTS: Record<string, string> = {
   Gold: "from-[#fde047] to-[#854d0e]",
   Platinum: "from-[#67e8f9] to-[#155e75]",
   Diamond: "from-[#c4b5fd] to-[#5b21b6]",
-  Legend: "from-[#fef2f2] via-[#f5f3ff] to-[#eff6ff]",
+  Legend: "",
   HallOfFamer: "from-[#c4b5fd] to-[#5b21b6]",
   HOF: "from-[#c4b5fd] to-[#5b21b6]",
   Superstar: "from-[#67e8f9] to-[#155e75]",
@@ -61,7 +61,10 @@ export function AwardOverlay({ award, progress, isOpen, onClose }: AwardOverlayP
           {/* Award Icon & Status */}
           <div className="flex items-center gap-4">
             <div className="relative">
-              <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${tierGradient} p-1`}>
+              <div
+                className={`w-20 h-20 rounded-full p-1 ${tierGradient ? `bg-gradient-to-br ${tierGradient}` : ''}`}
+                style={!tierGradient ? { background: 'linear-gradient(135deg, #e74c4c, #f59e0b, #22c55e, #3b82f6, #a855f7)' } : undefined}
+              >
                 <div className="w-full h-full bg-white rounded-full flex items-center justify-center">
                   <img 
                     src={`/assets/awards/${award.iconName}.png`} 
@@ -83,7 +86,11 @@ export function AwardOverlay({ award, progress, isOpen, onClose }: AwardOverlayP
             </div>
             
             <div className="flex-1">
-              <Badge variant="outline" className={tierColor}>
+              <Badge
+                variant="outline"
+                className={tierColor}
+                style={(award.tier === 'Legend' || award.tier === 'Legacy') ? { background: 'linear-gradient(90deg, #e74c4c, #f59e0b, #22c55e, #3b82f6, #a855f7)' } : undefined}
+              >
                 {award.tier} {award.kind}
               </Badge>
               <div className="text-sm text-muted-foreground mt-1">

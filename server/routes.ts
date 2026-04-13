@@ -8263,19 +8263,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orgPlayerIdsSet = new Set(orgPlayerIds);
 
       // Use SQL COUNT for awards instead of loading all rows
-      const playerIdsArrayLiteral = `{${orgPlayerIds.map((id: string) => `"${id}"`).join(',')}}`;
-      const awardsCountResult = await db.execute(
-        orgPlayerIds.length > 0
-          ? sql`SELECT
-                  COUNT(*) as total,
-                  COUNT(*) FILTER (WHERE awarded_at >= ${startOfMonth.toISOString()}) as this_month
-                FROM user_awards
-                WHERE user_id = ANY(${playerIdsArrayLiteral}::text[])`
-          : sql`SELECT 0 as total, 0 as this_month`
-      );
+      let awardsCountResult;
+      if (orgPlayerIds.length > 0) {
+        awardsCountResult = await db.select({
+          total: sql<number>`COUNT(*)`,
+          thisMonth: sql<number>`COUNT(*) FILTER (WHERE ${userAwards.awardedAt} >= ${startOfMonth.toISOString()})`,
+        }).from(userAwards).where(inArray(userAwards.userId, orgPlayerIds));
+      } else {
+        awardsCountResult = [{ total: 0, thisMonth: 0 }];
+      }
       const awardsCountRows = (awardsCountResult.rows || awardsCountResult) as any[];
       const awardsAllTime = parseInt(awardsCountRows[0]?.total) || 0;
-      const awardsThisMonth = parseInt(awardsCountRows[0]?.this_month) || 0;
+      const awardsThisMonth = parseInt(awardsCountRows[0]?.thisMonth ?? awardsCountRows[0]?.this_month) || 0;
 
       const storeProducts = await db.select().from(products)
         .where(and(

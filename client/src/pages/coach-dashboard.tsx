@@ -415,7 +415,14 @@ export default function CoachDashboard() {
   const saveEvaluation = useMutation({
     mutationFn: async () => {
       if (!selectedPlayer) throw new Error("No player selected");
-      const payload = { playerId: selectedPlayer.id, quarter, year, scores };
+      const fullScores: EvalScores = {};
+      for (const cat of SKILL_CATEGORIES) {
+        fullScores[cat.name] = {};
+        for (const skill of cat.skills) {
+          fullScores[cat.name]![skill] = scores[cat.name]?.[skill] ?? 3;
+        }
+      }
+      const payload = { playerId: selectedPlayer.id, quarter, year, scores: fullScores };
       console.log("Evaluation payload:", payload);
       const token = localStorage.getItem('authToken');
       const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -454,6 +461,8 @@ export default function CoachDashboard() {
         queryClient.invalidateQueries({ queryKey: [`/api/profile/${selectedPlayer.id}`] });
         // Admin users list to refresh skill data globally
         queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+        // Auth user cache so skills page picks up updated skillsAssessments
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       }
       setEvalOpen(false);
       setScores({});

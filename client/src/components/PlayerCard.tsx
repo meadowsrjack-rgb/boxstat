@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { motion } from "framer-motion";
-import { AwardsDialog, EvaluationDialog, type PlayerLite, type EvalScores, type Quarter } from "@/components/CoachAwardDialogs";
+import { AwardsDialog, EvaluationDialog, SKILL_CATEGORIES, type PlayerLite, type EvalScores, type Quarter } from "@/components/CoachAwardDialogs";
 import UypTrophyRings from "@/components/UypTrophyRings";
 import {
   X,
@@ -233,7 +233,7 @@ export default function PlayerCard({
   // Skills evaluation mutation
   const skillsMutation = useMutation({
     mutationFn: async (data: { playerId: string; scores: EvalScores; quarter: string; year: number }) => {
-      return await apiRequest('/api/coach/evaluate', {
+      return await apiRequest('/api/coach/evaluations', {
         method: 'POST',
         data,
       });
@@ -258,6 +258,7 @@ export default function PlayerCard({
       });
       // Invalidate player dashboard queries
       queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
     onError: () => {
       toast({ title: "Failed to save evaluation", variant: "destructive" });
@@ -555,9 +556,16 @@ export default function PlayerCard({
           year={year}
           setYear={setYear}
           onSave={() => {
+            const fullScores: EvalScores = {};
+            for (const cat of SKILL_CATEGORIES) {
+              fullScores[cat.name] = {};
+              for (const skill of cat.skills) {
+                fullScores[cat.name]![skill] = scores[cat.name]?.[skill] ?? 3;
+              }
+            }
             skillsMutation.mutate({
               playerId: selectedPlayer.id,
-              scores,
+              scores: fullScores,
               quarter,
               year,
             });

@@ -355,26 +355,26 @@ export default function InviteClaim() {
                               value={playerSkillLevels[p.id] || ""}
                               onValueChange={(val) => setPlayerSkillLevels((prev) => ({ ...prev, [p.id]: val }))}
                             >
-                              <SelectTrigger className="bg-white/5 border-white/10 text-white ml-11">
+                              <SelectTrigger className="bg-white/5 border-white/10 text-white ml-11 w-[calc(100%-2.75rem)]">
                                 <SelectValue placeholder="Select skill level *" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="max-w-[min(320px,90vw)]">
                                 <SelectItem value="beginner">
                                   <div className="flex flex-col items-start py-1">
                                     <span className="font-semibold">Beginner</span>
-                                    <span className="text-xs text-muted-foreground">0–2 years experience. Learning fundamentals, developing coordination and basic skills.</span>
+                                    <span className="text-xs text-muted-foreground whitespace-normal leading-tight">0–2 years experience. Learning fundamentals, developing coordination and basic skills.</span>
                                   </div>
                                 </SelectItem>
                                 <SelectItem value="intermediate">
                                   <div className="flex flex-col items-start py-1">
                                     <span className="font-semibold">Intermediate</span>
-                                    <span className="text-xs text-muted-foreground">3–5 years experience. Solid fundamentals, good court awareness and consistent play.</span>
+                                    <span className="text-xs text-muted-foreground whitespace-normal leading-tight">3–5 years experience. Solid fundamentals, good court awareness and consistent play.</span>
                                   </div>
                                 </SelectItem>
                                 <SelectItem value="advanced">
                                   <div className="flex flex-col items-start py-1">
                                     <span className="font-semibold">Advanced</span>
-                                    <span className="text-xs text-muted-foreground">5+ years experience. Strong skills, competitive game sense and athletic ability.</span>
+                                    <span className="text-xs text-muted-foreground whitespace-normal leading-tight">5+ years experience. Strong skills, competitive game sense and athletic ability.</span>
                                   </div>
                                 </SelectItem>
                               </SelectContent>

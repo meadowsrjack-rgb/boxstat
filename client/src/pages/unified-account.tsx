@@ -2550,11 +2550,10 @@ export default function UnifiedAccount() {
                               <p className="text-sm text-gray-500 mb-2 line-clamp-2">{item.description}</p>
                             )}
                             {itemHasTryout ? (
-                              <div className="mt-auto space-y-1">
+                              <div className="mt-auto">
                                 <Button size="sm" className="bg-purple-600 hover:bg-purple-700 w-full">
                                   Try Out
                                 </Button>
-                                <p className="text-xs text-center text-gray-500">${(item.tryoutPrice / 100).toFixed(2)} tryout fee</p>
                               </div>
                             ) : (
                               <Button size="sm" className="bg-red-600 hover:bg-red-700 w-full mt-auto">

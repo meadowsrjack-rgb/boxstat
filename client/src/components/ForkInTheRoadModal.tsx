@@ -31,12 +31,12 @@ export default function ForkInTheRoadModal({ open, onOpenChange }: ForkInTheRoad
             <span className="text-sm text-gray-400">Sign up for a free trial and manage your organization</span>
           </button>
           <button
-            onClick={() => { onOpenChange(false); setLocation('/login'); }}
+            onClick={() => { onOpenChange(false); setLocation('/register'); }}
             className="group flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 p-6 text-left transition-all duration-200"
           >
             <span className="text-3xl">⚽</span>
             <span className="text-lg font-semibold text-white transition-colors">I'm a player, parent, or coach</span>
-            <span className="text-sm text-gray-400">Log in to view your team, schedule, and more</span>
+            <span className="text-sm text-gray-400">Create an account to view your team, schedule, and more</span>
           </button>
         </div>
       </DialogContent>

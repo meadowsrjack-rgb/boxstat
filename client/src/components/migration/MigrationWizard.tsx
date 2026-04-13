@@ -581,13 +581,20 @@ function PlayersStep({
                   {allPrograms.length > 0 && (
                     <td className="px-1 py-1">
                       <Select
-                        value={k.programId?.toString() ?? allPrograms[0]?.id ?? ""}
-                        onValueChange={(v) => upd(k.id, "programId", v)}
+                        value={k.programId?.toString() ?? "__none__"}
+                        onValueChange={(v) => {
+                          const newProgramId = v === "__none__" ? null : v;
+                          const currentTeam = allAvailableTeams.find((t) => t.id === k.teamId);
+                          const teamStillValid = currentTeam && newProgramId && String(currentTeam.programId) === String(newProgramId);
+                          upd(k.id, "programId", newProgramId);
+                          if (!teamStillValid) upd(k.id, "teamId", null);
+                        }}
                       >
                         <SelectTrigger className="border-0 shadow-none h-8 text-sm px-2">
-                          <SelectValue placeholder="Program" />
+                          <SelectValue placeholder="None" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="__none__">None</SelectItem>
                           {allPrograms.map((p) => (
                             <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                           ))}
@@ -650,14 +657,82 @@ function PlayersStep({
   );
 }
 
+// ── Email combobox for staff ───────────────────────────────────────────────────
+
+function EmailCombobox({
+  value,
+  onChange,
+  parentEmails,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  parentEmails: string[];
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [inputValue, setInputValue] = useState(value);
+
+  const filtered = parentEmails.filter((e) =>
+    e.toLowerCase().includes(inputValue.toLowerCase())
+  );
+
+  const handleSelect = (email: string) => {
+    onChange(email);
+    setInputValue(email);
+    setOpen(false);
+  };
+
+  const handleBlur = () => {
+    onChange(inputValue);
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <Input
+        value={inputValue}
+        onChange={(e) => {
+          setInputValue(e.target.value);
+          onChange(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(parentEmails.length > 0)}
+        onBlur={() => setTimeout(handleBlur, 150)}
+        placeholder={placeholder ?? "email@example.com"}
+        type="email"
+        className="border-0 shadow-none h-8 text-sm px-2"
+      />
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 bg-white border border-border rounded-md shadow-md mt-0.5 max-h-40 overflow-y-auto">
+          {filtered.map((email) => (
+            <button
+              key={email}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); handleSelect(email); }}
+              className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted/50 truncate"
+            >
+              {email}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Staff step ────────────────────────────────────────────────────────────────
 
 function StaffStep({
-  staff, setStaff, selectedTeams,
+  staff, setStaff, selectedTeams, parents, orgPrograms, orgTeams, createdPrograms,
 }: {
   staff: MigrationStaff[];
   setStaff: React.Dispatch<React.SetStateAction<MigrationStaff[]>>;
   selectedTeams: MigrationTeam[];
+  parents: MigrationParent[];
+  orgPrograms: any[];
+  orgTeams: any[];
+  createdPrograms: MigrationProgram[];
 }) {
   const [pasteRaw, setPasteRaw] = useState("");
   const [activeRole, setActiveRole] = useState<"coach" | "admin">("coach");
@@ -665,29 +740,35 @@ function StaffStep({
   const coaches = staff.filter((s) => s.role === "coach");
   const admins = staff.filter((s) => s.role === "admin");
 
+  const allPrograms: MigrationProgram[] = [
+    ...orgPrograms.map((p: any) => ({ id: String(p.id), name: p.name, code: p.code || "", isNew: false })),
+    ...createdPrograms,
+  ];
+
+  const getTeamsForProgram = (programId: string | null): MigrationTeam[] => {
+    if (!programId) return [];
+    const existingForProg = orgTeams
+      .filter((t: any) => String(t.programId) === String(programId))
+      .map((t: any) => ({ id: t.id, name: t.name, programId: String(t.programId), isNew: false } as MigrationTeam));
+    const newTeams = selectedTeams.filter((t) => String(t.programId) === String(programId) && t.isNew);
+    return [...existingForProg, ...newTeams];
+  };
+
+  const parentEmails = parents.map((p) => p.email).filter(Boolean);
+
   const add = (role: "coach" | "admin") =>
-    setStaff((prev) => [...prev, { id: uid(), firstName: "", lastName: "", email: "", role, teamIds: [] }]);
+    setStaff((prev) => [...prev, { id: uid(), firstName: "", lastName: "", email: "", role, teamIds: [], programId: null, teamId: null }]);
 
   const remove = (id: number) => setStaff((prev) => prev.filter((s) => s.id !== id));
 
-  const upd = (id: number, key: keyof MigrationStaff, value: string | number[] | "coach" | "admin") =>
+  const upd = (id: number, key: keyof MigrationStaff, value: string | number | number[] | boolean | null | undefined) =>
     setStaff((prev) => prev.map((s) => (s.id === id ? { ...s, [key]: value } : s)));
-
-  const toggleTeam = (staffId: number, teamId: number) => {
-    setStaff((prev) => prev.map((s) => {
-      if (s.id !== staffId) return s;
-      const teamIds = s.teamIds.includes(teamId)
-        ? s.teamIds.filter((tid) => tid !== teamId)
-        : [...s.teamIds, teamId];
-      return { ...s, teamIds };
-    }));
-  };
 
   const importPaste = (role: "coach" | "admin") => {
     const rows = parsePaste(pasteRaw);
     const imported = rows
       .filter((r) => r.first || r.email)
-      .map((r) => ({ id: uid(), firstName: r.first, lastName: r.last, email: r.email, role, teamIds: [] }));
+      .map((r) => ({ id: uid(), firstName: r.first, lastName: r.last, email: r.email, role, teamIds: [], programId: null, teamId: null }));
     if (!imported.length) return;
     setStaff((prev) => [...prev, ...imported]);
     setPasteRaw("");
@@ -695,6 +776,8 @@ function StaffStep({
 
   const renderTable = (role: "coach" | "admin") => {
     const rows = role === "coach" ? coaches : admins;
+    const showProgramTeam = role === "coach" && allPrograms.length > 0;
+    const colCount = 3 + (showProgramTeam ? 2 : 0) + 1;
     return (
       <div className="space-y-4">
         <Tabs defaultValue="manual">
@@ -725,11 +808,14 @@ function StaffStep({
           <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
             <thead>
               <tr className="bg-muted/50">
-                <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[20%]">First name</th>
-                <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[20%]">Last name</th>
-                <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[28%]">Email *</th>
-                {role === "coach" && selectedTeams.length > 0 && (
-                  <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[28%]">Teams</th>
+                <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[16%]">First name</th>
+                <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[16%]">Last name</th>
+                <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[24%]">Email *</th>
+                {showProgramTeam && (
+                  <>
+                    <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[18%]">Program</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[18%]">Team</th>
+                  </>
                 )}
                 <th className="w-[6%]" />
               </tr>
@@ -737,7 +823,7 @@ function StaffStep({
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={role === "coach" && selectedTeams.length > 0 ? 4 : 3} className="px-3 py-8 text-center text-sm text-muted-foreground">
+                  <td colSpan={colCount} className="px-3 py-8 text-center text-sm text-muted-foreground">
                     No {role === "coach" ? "coaches" : "admins"} yet — add one below or paste from a spreadsheet
                   </td>
                 </tr>
@@ -746,26 +832,54 @@ function StaffStep({
                   <tr key={s.id} className="border-t border-border hover:bg-muted/30 transition-colors">
                     <td className="px-1 py-1"><Input value={s.firstName} onChange={(e) => upd(s.id, "firstName", e.target.value)} placeholder="First" className="border-0 shadow-none h-8 text-sm px-2" /></td>
                     <td className="px-1 py-1"><Input value={s.lastName}  onChange={(e) => upd(s.id, "lastName",  e.target.value)} placeholder="Last"  className="border-0 shadow-none h-8 text-sm px-2" /></td>
-                    <td className="px-1 py-1"><Input value={s.email}     onChange={(e) => upd(s.id, "email",     e.target.value)} placeholder="email@example.com" type="email" className="border-0 shadow-none h-8 text-sm px-2" /></td>
-                    {role === "coach" && selectedTeams.length > 0 && (
-                      <td className="px-1 py-1">
-                        <div className="flex flex-wrap gap-1 px-2 py-1">
-                          {selectedTeams.map((t) => (
-                            <button
-                              key={t.id}
-                              type="button"
-                              onClick={() => toggleTeam(s.id, t.id)}
-                              className={`text-xs px-2 py-0.5 rounded border transition-colors ${
-                                s.teamIds.includes(t.id)
-                                  ? "bg-slate-900 text-white border-slate-900"
-                                  : "bg-background text-muted-foreground border-border hover:border-foreground"
-                              }`}
-                            >
-                              {t.name}
-                            </button>
-                          ))}
-                        </div>
-                      </td>
+                    <td className="px-1 py-1">
+                      <EmailCombobox
+                        value={s.email}
+                        onChange={(v) => upd(s.id, "email", v)}
+                        parentEmails={parentEmails}
+                        placeholder="email@example.com"
+                      />
+                    </td>
+                    {showProgramTeam && (
+                      <>
+                        <td className="px-1 py-1">
+                          <Select
+                            value={s.programId?.toString() ?? "__none__"}
+                            onValueChange={(v) => {
+                              const newProgramId = v === "__none__" ? null : v;
+                              upd(s.id, "programId", newProgramId);
+                              upd(s.id, "teamId", null);
+                            }}
+                          >
+                            <SelectTrigger className="border-0 shadow-none h-8 text-sm px-2">
+                              <SelectValue placeholder="None" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">None</SelectItem>
+                              {allPrograms.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-1 py-1">
+                          <Select
+                            value={s.teamId?.toString() ?? "__none__"}
+                            onValueChange={(v) => upd(s.id, "teamId", v === "__none__" ? null : parseInt(v))}
+                            disabled={!s.programId}
+                          >
+                            <SelectTrigger className="border-0 shadow-none h-8 text-sm px-2">
+                              <SelectValue placeholder="None" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">None</SelectItem>
+                              {getTeamsForProgram(s.programId ?? null).map((t) => (
+                                <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                      </>
                     )}
                     <td className="px-1 py-1 text-center">
                       <button onClick={() => remove(s.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded">
@@ -791,7 +905,7 @@ function StaffStep({
   return (
     <div className="space-y-4">
       <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-lg p-3 text-sm text-blue-800">
-        Add coaches and admin staff. Coaches can be assigned to teams. Staff members do not require subscription dates.
+        Add coaches and admin staff. Coaches can be assigned to a program and team. Staff members do not require subscription dates.
       </div>
 
       <div className="flex gap-2 border-b border-border">
@@ -950,13 +1064,15 @@ function ReviewStep({
                       </div>
                       <span className="flex-1">{s.firstName} {s.lastName}</span>
                       <span className="text-xs text-muted-foreground">{s.email}</span>
-                      {s.teamIds.length > 0 && (
+                      {(s.teamId != null && teamMap[s.teamId]) ? (
+                        <Badge variant="outline" className="text-xs font-normal">{teamMap[s.teamId]}</Badge>
+                      ) : s.teamIds.length > 0 ? (
                         <div className="flex gap-1">
                           {s.teamIds.map((tid) => teamMap[tid] && (
                             <Badge key={tid} variant="outline" className="text-xs font-normal">{teamMap[tid]}</Badge>
                           ))}
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -1177,26 +1293,33 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
   const send = async () => {
     setIsSending(true);
     try {
-      const firstPlayerProgramId = players.find((k) => k.programId)?.programId ?? null;
-      const payloadProgram = firstPlayerProgramId
-        ? allMigrationPrograms.find((p) => String(p.id) === String(firstPlayerProgramId)) ?? null
-        : null;
+      // Collect all programs referenced by players or coaches
+      const referencedProgramIds = new Set<string>([
+        ...players.filter((k) => k.programId).map((k) => String(k.programId)),
+        ...staff.filter((s) => s.programId).map((s) => String(s.programId)),
+      ]);
+      const payloadPrograms = allMigrationPrograms.filter((p) => referencedProgramIds.has(String(p.id)));
 
-      const referencedTeamIds = new Set(players.filter((k) => k.teamId != null).map((k) => k.teamId as number));
+      // Collect all referenced team IDs (from players and coaches)
+      const referencedTeamIds = new Set([
+        ...players.filter((k) => k.teamId != null).map((k) => k.teamId as number),
+        ...staff.filter((s) => s.teamId != null).map((s) => s.teamId as number),
+      ]);
       const referencedExistingTeams = allMigrationTeams.filter((t) => !t.isNew && referencedTeamIds.has(t.id));
-      const newTeamsForProgram = selectedTeams.filter((t) => t.isNew && (
-        !payloadProgram || String(t.programId) === String(payloadProgram.id)
+      // Include new teams whose program is in the referenced set
+      const newTeamsReferenced = selectedTeams.filter((t) => t.isNew && (
+        referencedProgramIds.size === 0 || referencedProgramIds.has(String(t.programId))
       ));
       const allPayloadTeams: MigrationTeam[] = [
         ...referencedExistingTeams,
-        ...newTeamsForProgram,
+        ...newTeamsReferenced,
       ];
 
       const payload = {
         parents,
         players,
         staff,
-        program: payloadProgram,
+        programs: payloadPrograms,
         teams: allPayloadTeams,
       };
       const data: MigrationResult = await apiRequest("POST", "/api/migration/send-invites", payload);
@@ -1281,6 +1404,10 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
             staff={staff}
             setStaff={setStaff}
             selectedTeams={selectedTeams}
+            parents={parents}
+            orgPrograms={orgPrograms}
+            orgTeams={orgTeams}
+            createdPrograms={createdPrograms}
           />
         )}
         {step === "review" && (() => {

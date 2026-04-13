@@ -23,6 +23,8 @@ export interface MigrationStaff {
   email: string;
   role: "coach" | "admin";
   teamIds: number[]; // for coaches: IDs of teams (migration temp IDs) they're assigned to
+  programId?: string | null; // for coaches: optional program assignment
+  teamId?: number | null; // for coaches: single team selection (replaces toggle badges)
 }
 
 export interface MigrationProgram {
@@ -44,6 +46,7 @@ export interface MigrationPayload {
   players: MigrationPlayer[];
   staff?: MigrationStaff[];
   program?: MigrationProgram | null;
+  programs?: MigrationProgram[];
   teams?: MigrationTeam[];
 }
 

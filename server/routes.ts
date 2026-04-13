@@ -14562,13 +14562,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     email: z.string().email('Invalid staff email'),
     role: z.enum(['coach', 'admin']),
     teamIds: z.array(z.number()).optional().default([]),
+    programId: z.string().nullable().optional(),
+    teamId: z.number().nullable().optional(),
   });
 
   const sendInvitesSchema = z.object({
     parents: z.array(migrationParentSchema).min(1, 'At least one parent is required'),
     players: z.array(migrationPlayerSchema).optional().default([]),
     staff: z.array(migrationStaffSchema).optional().default([]),
-    program: migrationProgramSchema,
+    program: migrationProgramSchema.nullable().optional(),
+    programs: z.array(migrationProgramSchema).optional().default([]),
     teams: z.array(migrationTeamSchema).optional().default([]),
   });
 
@@ -14585,39 +14588,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!parseResult.success) {
         return res.status(400).json({ error: 'Invalid payload', details: parseResult.error.flatten() });
       }
-      const { parents, players, staff: migrationStaff, program: migrationProgram, teams: migrationTeams } = parseResult.data;
+      const { parents, players, staff: migrationStaff, program: migrationProgramLegacy, programs: migrationPrograms, teams: migrationTeams } = parseResult.data;
+      // Normalize: support both legacy single-program and new multi-program payloads
+      const allMigrationPrograms = migrationPrograms.length > 0
+        ? migrationPrograms
+        : migrationProgramLegacy
+          ? [migrationProgramLegacy]
+          : [];
 
       const org = await storage.getOrganization(organizationId);
       const orgName = org?.name || 'Your organization';
 
       const { sendMigrationInvite, sendPlayerAddedNotification } = await import('./emails/inviteEmail');
 
-      // ── Step 1: Resolve or create program ────────────────────────────────────
+      // ── Step 1: Resolve or create programs ───────────────────────────────────
+      // Maps migration-payload program IDs (temp or existing) to real DB program IDs
+      const programIdMap: Record<string, string> = {};
+      // resolvedProgramId/Name: primary program for backwards-compat (first player's program)
       let resolvedProgramId: string | null = null;
       let resolvedProgramName: string | null = null;
 
-      if (migrationProgram) {
+      for (const migrationProgram of allMigrationPrograms) {
         if (migrationProgram.isNew) {
-          // Create new draft program
           const newProgram = await storage.createProgram({
             organizationId,
             name: migrationProgram.name,
             code: migrationProgram.code || undefined,
-            isActive: false, // marked incomplete — admin fills in later
+            isActive: false,
             productCategory: 'service',
           });
-          resolvedProgramId = newProgram.id;
-          resolvedProgramName = newProgram.name;
+          programIdMap[migrationProgram.id] = newProgram.id;
           console.log(`[Migration] Created new program: ${newProgram.id} (${newProgram.name})`);
         } else {
-          // Verify the existing program belongs to this org
           const existingProg = await storage.getProgram(migrationProgram.id);
           if (!existingProg || existingProg.organizationId !== organizationId) {
-            return res.status(403).json({ error: 'Program does not belong to your organization' });
+            return res.status(403).json({ error: `Program ${migrationProgram.id} does not belong to your organization` });
           }
-          resolvedProgramId = migrationProgram.id;
-          resolvedProgramName = migrationProgram.name;
+          programIdMap[migrationProgram.id] = migrationProgram.id;
         }
+      }
+
+      // Derive the primary resolved program for player enrollment (first program in payload)
+      if (allMigrationPrograms.length > 0) {
+        const primaryProg = allMigrationPrograms[0];
+        resolvedProgramId = programIdMap[primaryProg.id] ?? null;
+        resolvedProgramName = primaryProg.name;
       }
 
       // ── Step 2: Resolve or create teams ──────────────────────────────────────
@@ -14633,26 +14648,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         for (const mt of migrationTeams) {
           if (mt.isNew) {
+            // Resolve the team's program from the programIdMap using the team's own programId
+            const teamProgramId = mt.programId ? (programIdMap[mt.programId] ?? null) : (resolvedProgramId || null);
             const newTeam = await storage.createTeam({
               organizationId,
               name: mt.name,
-              programId: resolvedProgramId || undefined,
+              programId: teamProgramId || undefined,
               active: false, // marked incomplete — admin fills in later
             });
             teamIdMap[mt.id] = newTeam.id;
             teamNameMap[newTeam.id] = newTeam.name;
-            console.log(`[Migration] Created new team: ${newTeam.id} (${newTeam.name})`);
+            console.log(`[Migration] Created new team: ${newTeam.id} (${newTeam.name}) under program ${teamProgramId}`);
           } else {
             // Verify the existing team belongs to this org
             if (!orgTeamIdSet.has(mt.id)) {
               return res.status(403).json({ error: `Team ${mt.id} does not belong to your organization` });
-            }
-            // Verify existing team is associated with the migration program (if program is resolved)
-            if (resolvedProgramId) {
-              const existingTeam = orgTeams.find((t: any) => t.id === mt.id);
-              if (existingTeam && existingTeam.programId && existingTeam.programId !== resolvedProgramId) {
-                return res.status(400).json({ error: `Team "${mt.name}" belongs to a different program` });
-              }
             }
             teamIdMap[mt.id] = mt.id;
             teamNameMap[mt.id] = mt.name;
@@ -14693,13 +14703,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`[Migration] Created shadow staff user: ${staffUserId} (${staffMember.email}) role=${staffMember.role}`);
             }
 
-            // Insert team memberships for coaches — only for teams that passed through
-            // the validated teamIdMap (teams explicitly included in the migration payload)
-            if (staffMember.role === 'coach' && staffMember.teamIds && staffMember.teamIds.length > 0) {
-              for (const tempTeamId of staffMember.teamIds) {
+            // Resolve and store coach program assignment when programId is provided.
+            // All valid programs should be in programIdMap (resolved in Step 1).
+            if (staffMember.role === 'coach' && staffMember.programId) {
+              const coachProgramId = programIdMap[staffMember.programId] ?? null;
+              if (coachProgramId) {
+                await storage.updateUser(staffUserId, { packageSelected: coachProgramId });
+                console.log(`[Migration] Assigned coach ${staffMember.email} to program ${coachProgramId}`);
+              } else {
+                console.warn(`[Migration] Coach program ${staffMember.programId} not in resolved programs — skipping program assignment`);
+              }
+            }
+
+            // Insert team memberships for coaches — supports both legacy teamIds array
+            // and the newer single teamId field from the program/team dropdowns.
+            // Only assigns teams that are present in the validated teamIdMap (org-boundary enforced).
+            if (staffMember.role === 'coach') {
+              const teamIdsToAssign: number[] = [];
+              if (staffMember.teamId != null) {
+                teamIdsToAssign.push(staffMember.teamId);
+              } else if (staffMember.teamIds && staffMember.teamIds.length > 0) {
+                teamIdsToAssign.push(...staffMember.teamIds);
+              }
+              for (const tempTeamId of teamIdsToAssign) {
                 const realTeamId = teamIdMap[tempTeamId];
                 if (!realTeamId) {
-                  console.warn(`[Migration] Staff team assignment skipped: team ID ${tempTeamId} not in validated migration teams`);
+                  console.warn(`[Migration] Coach team assignment skipped: team ID ${tempTeamId} not in validated migration teams`);
                   continue;
                 }
                 await db.insert(teamMemberships).values({
@@ -14767,6 +14796,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   }
                 }
                 const resolvedTeamId = player.teamId != null ? (teamIdMap[player.teamId] ?? null) : null;
+                // Resolve this player's own programId (null if player has no program selected)
+                const playerProgramId = player.programId ? (programIdMap[String(player.programId)] ?? null) : null;
                 await db.insert(users).values({
                   id: playerUserId,
                   firstName: player.firstName || null,
@@ -14780,17 +14811,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   parentEmail: parent.email.toLowerCase(),
                   subscriptionEndDate: subEndDate,
                   teamId: resolvedTeamId,
-                  packageSelected: resolvedProgramId || null,
+                  packageSelected: playerProgramId,
                   status: isAlreadyActive ? 'active' : 'invited',
                   isActive: true,
                   hasRegistered: isAlreadyActive,
                 });
 
-                if (resolvedProgramId && subEndDate) {
+                if (playerProgramId && subEndDate) {
                   const endDateIso = new Date(subEndDate + 'T23:59:59Z').toISOString();
                   await storage.createEnrollment({
                     organizationId,
-                    programId: resolvedProgramId,
+                    programId: playerProgramId,
                     accountHolderId: parentUserId,
                     profileId: playerUserId,
                     status: 'active',
@@ -14877,6 +14908,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
               }
               const resolvedTeamId = player.teamId != null ? (teamIdMap[player.teamId] ?? null) : null;
+              // Resolve this player's own programId (null if player has no program selected)
+              const playerProgramId = player.programId ? (programIdMap[String(player.programId)] ?? null) : null;
               await db.insert(users).values({
                 id: playerUserId,
                 firstName: player.firstName || null,
@@ -14890,18 +14923,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 parentEmail: parent.email.toLowerCase(),
                 subscriptionEndDate: subEndDate,
                 teamId: resolvedTeamId,
-                packageSelected: resolvedProgramId || null,
+                packageSelected: playerProgramId,
                 status: 'invited',
                 isActive: true,
                 hasRegistered: false,
               });
 
-              // Create enrollment record if program assigned
-              if (resolvedProgramId && subEndDate) {
+              // Create enrollment record if this player has a program and a subscription end date
+              if (playerProgramId && subEndDate) {
                 const endDateIso = new Date(subEndDate + 'T23:59:59Z').toISOString();
                 await storage.createEnrollment({
                   organizationId,
-                  programId: resolvedProgramId,
+                  programId: playerProgramId,
                   accountHolderId: parentUserId,
                   profileId: playerUserId,
                   status: 'active',

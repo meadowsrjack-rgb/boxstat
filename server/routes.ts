@@ -9425,6 +9425,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.post('/api/events/batch', requireAuth, async (req: any, res) => {
+    try {
+      const { role, id: userId, organizationId } = req.user;
+      const isAdminUser = role === 'admin' || role === 'coach' || await hasAdminProfile(userId, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ message: 'Only admins and coaches can create events' });
+      }
+
+      const { events: eventPayloads, eventWindows: windowTemplates } = req.body;
+      if (!Array.isArray(eventPayloads) || eventPayloads.length === 0) {
+        return res.status(400).json({ message: 'events array is required' });
+      }
+      if (eventPayloads.length > 1000) {
+        return res.status(400).json({ message: 'Maximum 1000 events per batch' });
+      }
+
+      const parsedEvents = eventPayloads.map((payload: any) => {
+        const { targetType, targetId, assignTo: rawAssignTo, visibility: rawVisibility, ...restData } = payload;
+        let visibility: any = rawVisibility || {};
+        let assignTo: any = rawAssignTo || {};
+        if (targetType && !rawAssignTo) {
+          if (targetType === 'all') {
+            visibility = { roles: ['player', 'coach', 'parent', 'admin'] };
+            assignTo = { roles: ['player', 'coach', 'parent', 'admin'] };
+          } else if (targetType === 'team' && targetId) {
+            visibility = { teams: [targetId] };
+            assignTo = { teams: [targetId] };
+          } else if (targetType === 'program' && targetId) {
+            visibility = { programs: [targetId] };
+            assignTo = { programs: [targetId] };
+          } else if (targetType === 'role' && targetId) {
+            visibility = { roles: [targetId] };
+            assignTo = { roles: [targetId] };
+          }
+        }
+        const { assignTo: _a, visibility: _v, ...cleanData } = restData;
+        return insertEventSchema.parse({
+          ...cleanData,
+          organizationId,
+          visibility,
+          assignTo,
+          createdBy: userId,
+        });
+      });
+
+      const createdEvents = await storage.createEventsBatch(parsedEvents);
+
+      if (Array.isArray(windowTemplates) && windowTemplates.length > 0 && createdEvents.length > 0) {
+        const windowRows = createdEvents.flatMap((event: any) =>
+          windowTemplates.map((w: any) => ({
+            ...w,
+            eventId: typeof event.id === 'string' ? parseInt(event.id) : event.id,
+          }))
+        );
+        const WINDOW_CHUNK = 200;
+        for (let i = 0; i < windowRows.length; i += WINDOW_CHUNK) {
+          const chunk = windowRows.slice(i, i + WINDOW_CHUNK);
+          for (const wd of chunk) {
+            try {
+              const parsed = insertEventWindowSchema.parse(wd);
+              await storage.createEventWindow(parsed);
+            } catch (e) {}
+          }
+        }
+      }
+
+      res.json({ events: createdEvents, count: createdEvents.length });
+    } catch (error: any) {
+      console.error('Error creating batch events:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: 'Invalid event data', errors: error.errors });
+      }
+      return res.status(500).json({ message: 'Failed to create events', error: error.message });
+    }
+  });
+
   app.patch('/api/events/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;

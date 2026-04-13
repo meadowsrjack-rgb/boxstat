@@ -317,15 +317,19 @@ export function EditEventDialog({ event, teams, programs, facilities, organizati
         }
       }
 
-      for (const evt of eventsToCreate) {
+      if (eventsToCreate.length > 0) {
         try {
-          await apiRequest("POST", "/api/events", evt);
+          const batchResult = await apiRequest("POST", "/api/events/batch", { events: eventsToCreate });
+          const createdCount = batchResult?.count || 0;
+          queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+          toast({ title: `Created ${createdCount} additional recurring event(s)` });
         } catch (e) {
-          console.error("Failed to create recurring event:", e);
+          console.error("Failed to create recurring events:", e);
+          toast({ title: "Failed to create recurring events", variant: "destructive" });
         }
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       }
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      toast({ title: `Created ${eventsToCreate.length} additional recurring event(s)` });
     }
   };
 

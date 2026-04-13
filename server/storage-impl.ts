@@ -144,6 +144,7 @@ export interface IStorage {
   getUpcomingEvents(organizationId: string): Promise<Event[]>;
   getUpcomingEventsWithinHours(hours: number): Promise<Event[]>;
   createEvent(event: InsertEvent): Promise<Event>;
+  createEventsBatch(events: InsertEvent[]): Promise<Event[]>;
   updateEvent(id: string, updates: Partial<Event>): Promise<Event | undefined>;
   deleteEvent(id: string): Promise<void>;
   
@@ -1274,6 +1275,14 @@ class MemStorage implements IStorage {
     };
     this.events.set(newEvent.id, newEvent);
     return newEvent;
+  }
+
+  async createEventsBatch(events: InsertEvent[]): Promise<Event[]> {
+    const created: Event[] = [];
+    for (const event of events) {
+      created.push(await this.createEvent(event));
+    }
+    return created;
   }
   
   async updateEvent(id: string, updates: Partial<Event>): Promise<Event | undefined> {
@@ -3890,6 +3899,55 @@ class DatabaseStorage implements IStorage {
 
     const results = await db.insert(schema.events).values(dbEvent).returning();
     return this.mapDbEventToEvent(results[0]);
+  }
+
+  private buildDbEvent(event: InsertEvent) {
+    return {
+      organizationId: event.organizationId || this.defaultOrgId,
+      title: event.title,
+      description: event.description,
+      eventType: event.eventType || 'practice',
+      startTime: event.startTime,
+      endTime: event.endTime,
+      location: event.location,
+      latitude: event.latitude ?? undefined,
+      longitude: event.longitude ?? undefined,
+      teamId: event.teamId ? parseInt(event.teamId) : null,
+      opponentTeam: event.opponentTeam,
+      visibility: event.visibility as any,
+      assignTo: event.assignTo as any,
+      rsvpRequired: event.rsvpRequired ?? false,
+      capacity: event.capacity ?? undefined,
+      allowCheckIn: event.allowCheckIn ?? false,
+      checkInRadius: event.checkInRadius ?? undefined,
+      sendNotifications: event.sendNotifications ?? false,
+      createdBy: event.createdBy ?? undefined,
+      status: event.status || 'active',
+      isActive: event.isActive ?? true,
+      playerRsvpEnabled: event.playerRsvpEnabled ?? true,
+      timezone: (event as any).timezone ?? 'America/Los_Angeles',
+      createdAt: new Date().toISOString(),
+      meetingLink: (event as any).meetingLink ?? undefined,
+      scheduleRequestSource: (event as any).scheduleRequestSource ?? undefined,
+      requestedByUserId: (event as any).requestedByUserId ?? undefined,
+      enrollmentId: (event as any).enrollmentId ?? undefined,
+      programId: (event as any).programId ?? undefined,
+      facilityId: (event as any).facilityId ?? null,
+      courtName: (event as any).courtName ?? null,
+    };
+  }
+
+  async createEventsBatch(events: InsertEvent[]): Promise<Event[]> {
+    if (events.length === 0) return [];
+    const CHUNK_SIZE = 100;
+    const allCreated: Event[] = [];
+    for (let i = 0; i < events.length; i += CHUNK_SIZE) {
+      const chunk = events.slice(i, i + CHUNK_SIZE);
+      const dbEvents = chunk.map(e => this.buildDbEvent(e));
+      const results = await db.insert(schema.events).values(dbEvents).returning();
+      allCreated.push(...results.map(r => this.mapDbEventToEvent(r)));
+    }
+    return allCreated;
   }
 
   async updateEvent(id: string, updates: Partial<Event>): Promise<Event | undefined> {

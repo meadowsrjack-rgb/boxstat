@@ -378,7 +378,7 @@ export function CreateEventDialog({
           maxEndDate = new Date(year, month - 1, day, 23, 59, 59, 999);
         }
         const maxAdditional =
-          recurrenceEndType === "count" ? Math.max(recurrenceCount - 1, 0) : 1000;
+          recurrenceEndType === "count" ? Math.max(recurrenceCount - 1, 0) : 999;
 
         const pad = (n: number) => String(n).padStart(2, "0");
         const makeOccurrence = (y: number, m: number, d: number) => {
@@ -440,35 +440,34 @@ export function CreateEventDialog({
       const wasTruncated =
         isRecurring && recurrenceEndType === "date" && eventsToCreate.length >= 1000;
 
-      const createdEvents: any[] = [];
-      const errors: string[] = [];
-      for (const eventPayload of eventsToCreate) {
-        try {
-          const newEvent = await apiRequest("POST", "/api/events", eventPayload);
-          createdEvents.push(newEvent);
-          if (eventWindows.length > 0) {
-            for (const window of eventWindows) {
-              try {
-                await apiRequest("POST", "/api/event-windows", {
-                  ...window,
-                  eventId: parseInt(newEvent.id),
-                });
-              } catch (windowErr) {
-                console.error("Failed to create event window:", windowErr);
-              }
+      if (eventsToCreate.length === 1) {
+        const newEvent = await apiRequest("POST", "/api/events", eventsToCreate[0]);
+        if (eventWindows.length > 0) {
+          for (const window of eventWindows) {
+            try {
+              await apiRequest("POST", "/api/event-windows", {
+                ...window,
+                eventId: parseInt(newEvent.id),
+              });
+            } catch (windowErr) {
+              console.error("Failed to create event window:", windowErr);
             }
           }
-        } catch (err: any) {
-          console.error("Failed to create event:", err);
-          errors.push(err.message || "Unknown error");
         }
+        return { events: [newEvent], wasTruncated: false, count: 1, totalAttempted: 1, errors: [] };
       }
 
-      if (createdEvents.length === 0 && errors.length > 0) {
-        throw new Error(`Failed to create events: ${errors[0]}`);
+      const batchResult = await apiRequest("POST", "/api/events/batch", {
+        events: eventsToCreate,
+        eventWindows: eventWindows.length > 0 ? eventWindows : undefined,
+      });
+
+      const createdEvents = batchResult.events || [];
+      if (createdEvents.length === 0) {
+        throw new Error("Failed to create events");
       }
 
-      return { events: createdEvents, wasTruncated, count: createdEvents.length, totalAttempted: eventsToCreate.length, errors };
+      return { events: createdEvents, wasTruncated, count: createdEvents.length, totalAttempted: eventsToCreate.length, errors: [] };
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });

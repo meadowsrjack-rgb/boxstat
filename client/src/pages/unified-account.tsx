@@ -1635,6 +1635,7 @@ export default function UnifiedAccount() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [pendingCheckoutSessionId, setPendingCheckoutSessionId] = useState<string | null>(null);
   const [isStoreItemPurchase, setIsStoreItemPurchase] = useState(false);
+  const [isTryoutPurchase, setIsTryoutPurchase] = useState(false);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [signedWaivers, setSignedWaivers] = useState<Record<string, boolean>>({});
   const [waiverScrollStatus, setWaiverScrollStatus] = useState<Record<string, boolean>>({});
@@ -2473,7 +2474,8 @@ export default function UnifiedAccount() {
               const filteredProducts = programs?.filter((p: any) => {
                 const isActive = p.isActive !== false;
                 const hasPrice = p.price && p.price > 0;
-                if (!isActive || !hasPrice || p.productCategory !== gridTabCategory) return false;
+                const hasTryout = p.tryoutEnabled && p.tryoutPrice != null;
+                if (!isActive || (!hasPrice && !hasTryout) || p.productCategory !== gridTabCategory) return false;
                 
                 if (!selectedStoreCategory) return true; // Show all when no filter
                 
@@ -2516,6 +2518,7 @@ export default function UnifiedAccount() {
                       const isSubscription = item.type === "Subscription";
                       const isPack = item.type === "Pack";
                       const isStore = item.productCategory === "goods";
+                      const itemHasTryout = item.priceHidden && item.tryoutEnabled && item.tryoutPrice != null;
                       
                       return (
                         <Card 
@@ -2524,6 +2527,7 @@ export default function UnifiedAccount() {
                           onClick={() => {
                             setSelectedPackage(item.id);
                             setIsStoreItemPurchase(isStore);
+                            setIsTryoutPurchase(itemHasTryout);
                             setPaymentDialogOpen(true);
                           }}
                           data-testid={`product-card-${item.id}`}
@@ -2545,9 +2549,18 @@ export default function UnifiedAccount() {
                             {item.description && (
                               <p className="text-sm text-gray-500 mb-2 line-clamp-2">{item.description}</p>
                             )}
-                            <Button size="sm" className="bg-red-600 hover:bg-red-700 w-full mt-auto">
-                              {isStore ? "Buy" : "Enroll"}
-                            </Button>
+                            {itemHasTryout ? (
+                              <div className="mt-auto space-y-1">
+                                <Button size="sm" className="bg-purple-600 hover:bg-purple-700 w-full">
+                                  Try Out
+                                </Button>
+                                <p className="text-xs text-center text-gray-500">${(item.tryoutPrice / 100).toFixed(2)} tryout fee</p>
+                              </div>
+                            ) : (
+                              <Button size="sm" className="bg-red-600 hover:bg-red-700 w-full mt-auto">
+                                {isStore ? "Buy" : "Enroll"}
+                              </Button>
+                            )}
                           </CardContent>
                         </Card>
                       );
@@ -2562,6 +2575,7 @@ export default function UnifiedAccount() {
               setPaymentDialogOpen(open);
               if (!open) {
                 setIsStoreItemPurchase(false);
+                setIsTryoutPurchase(false);
                 setSelectedPackage("");
                 setSelectedPlayer("");
                 setSelectedPricingOptionId("");
@@ -2576,14 +2590,14 @@ export default function UnifiedAccount() {
             }}>
               <DrawerContent className="max-h-[85vh] overflow-hidden" data-testid="dialog-make-payment">
                       <DrawerHeader>
-                        <DrawerTitle>{isStoreItemPurchase ? "Purchase Item" : "Make a Payment"}</DrawerTitle>
+                        <DrawerTitle>{isStoreItemPurchase ? "Purchase Item" : isTryoutPurchase ? "Try Out" : "Make a Payment"}</DrawerTitle>
                         <DrawerDescription>
-                          {isStoreItemPurchase ? "Complete your store purchase" : "Select a program and player to enroll"}
+                          {isStoreItemPurchase ? "Complete your store purchase" : isTryoutPurchase ? "Pay the tryout fee to try this program" : "Select a program and player to enroll"}
                         </DrawerDescription>
                       </DrawerHeader>
                       <div className="space-y-4 px-4 pb-8 overflow-y-auto flex-1 min-h-0">
-                        {/* Program Selection - only show for program purchases */}
-                        {!isStoreItemPurchase && (
+                        {/* Program Selection - only show for regular program purchases */}
+                        {!isStoreItemPurchase && !isTryoutPurchase && (
                           <div className="space-y-2">
                             <label className="text-sm font-medium">Program</label>
                             <Select value={selectedPackage} onValueChange={(val) => {
@@ -2609,7 +2623,7 @@ export default function UnifiedAccount() {
                         )}
                         
                         {/* Payment Options - show subscription, bundle, and installment options */}
-                        {selectedPackage && !isStoreItemPurchase && (() => {
+                        {selectedPackage && !isStoreItemPurchase && !isTryoutPurchase && (() => {
                           const pkg = (programs as any[])?.find((p: any) => p.id === selectedPackage);
                           if (!pkg) return null;
                           
@@ -2818,7 +2832,7 @@ export default function UnifiedAccount() {
                         })()}
 
                         {/* Schedule Request Notice - shown prominently after pricing options */}
-                        {selectedPackage && !isStoreItemPurchase && (() => {
+                        {selectedPackage && !isStoreItemPurchase && !isTryoutPurchase && (() => {
                           const pkg = (programs as any[])?.find((p: any) => p.id === selectedPackage);
                           if (!pkg?.scheduleRequestEnabled) return null;
                           return (
@@ -2838,7 +2852,7 @@ export default function UnifiedAccount() {
                         {selectedPackage && !isStoreItemPurchase && (() => {
                           const pkg = (programs as any[])?.find((p: any) => p.id === selectedPackage);
                           const billingModel = (pkg?.billingModel || 'Per Player').toLowerCase().replace(/[^a-z]/g, '');
-                          const requiresPlayerSelection = billingModel.includes('player') && !billingModel.includes('family') && !billingModel.includes('organization');
+                          const requiresPlayerSelection = isTryoutPurchase || (billingModel.includes('player') && !billingModel.includes('family') && !billingModel.includes('organization'));
                           
                           if (!requiresPlayerSelection) {
                             return null;
@@ -2936,7 +2950,7 @@ export default function UnifiedAccount() {
                         })()}
 
                         {/* Required Waivers Section */}
-                        {selectedPackage && !isStoreItemPurchase && requiredWaivers.length > 0 && (
+                        {selectedPackage && !isStoreItemPurchase && !isTryoutPurchase && requiredWaivers.length > 0 && (
                           <div className="space-y-3">
                             <label className="text-sm font-medium flex items-center gap-2">
                               <FileText className="w-4 h-4" />
@@ -3016,7 +3030,7 @@ export default function UnifiedAccount() {
                         )}
 
                         {/* Add-ons Section */}
-                        {selectedPackage && !isStoreItemPurchase && hasSuggestedAddOns && (
+                        {selectedPackage && !isStoreItemPurchase && !isTryoutPurchase && hasSuggestedAddOns && (
                           <div className="space-y-2">
                             <label className="text-sm font-medium flex items-center gap-2">
                               <Package className="w-4 h-4" />
@@ -3082,8 +3096,9 @@ export default function UnifiedAccount() {
                           const selectedInstallment = installmentPlans.find((p: any) => p.id === selectedInstallmentId);
                           
                           // Use selected pricing option price if available, otherwise use base price
-                          let basePrice = pkg.price || 0;
-                          let displayName = pkg.name;
+                          // For tryout purchases, use the tryout price
+                          let basePrice = isTryoutPurchase ? (pkg.tryoutPrice || 0) : (pkg.price || 0);
+                          let displayName = isTryoutPurchase ? `${pkg.name} (Try Out)` : pkg.name;
                           
                           if (bundleInstallmentOption) {
                             basePrice = bundleInstallmentOption.installmentPrice || 0;
@@ -3205,7 +3220,7 @@ export default function UnifiedAccount() {
                         })()}
 
                         {/* Coupon Code Input */}
-                        {selectedPackage && !isStoreItemPurchase && (
+                        {selectedPackage && !isStoreItemPurchase && !isTryoutPurchase && (
                           <div className="border-t pt-3">
                             <label className="text-xs text-muted-foreground">Have a coupon code?</label>
                             <div className="flex gap-2 mt-1">
@@ -3316,20 +3331,20 @@ export default function UnifiedAccount() {
                               // Store items don't require player selection
                               if (!isStoreProduct) {
                                 const billingModel = (pkg?.billingModel || 'Per Player').toLowerCase().replace(/[^a-z]/g, '');
-                                const requiresPlayerSelection = billingModel.includes('player') && !billingModel.includes('family') && !billingModel.includes('organization');
+                                const requiresPlayerSelection = isTryoutPurchase || (billingModel.includes('player') && !billingModel.includes('family') && !billingModel.includes('organization'));
 
                                 if (requiresPlayerSelection && !selectedPlayer) {
                                   toast({
                                     title: "Error",
-                                    description: "Please select a player for this per-player program",
+                                    description: isTryoutPurchase ? "Please select a player for the tryout" : "Please select a player for this per-player program",
                                     variant: "destructive",
                                   });
                                   return;
                                 }
                               }
                               
-                              // Validate waivers are signed
-                              if (!isStoreProduct && requiredWaivers.length > 0) {
+                              // Validate waivers are signed (skip for tryout)
+                              if (!isStoreProduct && !isTryoutPurchase && requiredWaivers.length > 0) {
                                 const unsignedWaivers = requiredWaivers.filter((w: any) => !signedWaivers[w.id]);
                                 if (unsignedWaivers.length > 0) {
                                   toast({
@@ -3345,21 +3360,42 @@ export default function UnifiedAccount() {
                               try {
                                 console.log('[Payment] Starting checkout for package:', selectedPackage);
                                 
-                                // Create checkout session - backend handles both program and store purchases
-                                // Pass platform so server can use deep links for iOS
-                                const response = await apiRequest("/api/payments/create-checkout", {
-                                  method: "POST",
-                                  data: {
-                                    packageId: selectedPackage,
-                                    playerId: isStoreProduct ? null : (selectedPlayer || null),
-                                    isStoreItem: isStoreProduct,
-                                    selectedPricingOptionId: selectedPricingOptionId || undefined,
-                                    addOnIds: selectedAddOns.length > 0 ? selectedAddOns : undefined,
-                                    signedWaiverIds: Object.keys(signedWaivers).filter(id => signedWaivers[id]),
-                                    platform: Capacitor.getPlatform() === 'ios' ? 'ios' : 'web',
-                                    couponCode: appliedCoupon?.code || undefined,
-                                  },
-                                }) as { url: string; sessionId?: string };
+                                let checkoutUrl: string;
+                                let checkoutSessionId: string | undefined;
+
+                                if (isTryoutPurchase) {
+                                  // Tryout checkout flow
+                                  const tryoutData = await apiRequest("/api/payments/create-tryout-checkout", {
+                                    method: "POST",
+                                    data: {
+                                      programId: selectedPackage,
+                                      playerId: selectedPlayer || null,
+                                      successUrl: `${window.location.origin}/account?success=true&session_id={CHECKOUT_SESSION_ID}`,
+                                      cancelUrl: `${window.location.origin}/account?canceled=true`,
+                                    },
+                                  }) as { sessionUrl?: string; url?: string };
+                                  checkoutUrl = tryoutData.sessionUrl || tryoutData.url || '';
+                                } else {
+                                  // Regular checkout session - backend handles both program and store purchases
+                                  // Pass platform so server can use deep links for iOS
+                                  const response = await apiRequest("/api/payments/create-checkout", {
+                                    method: "POST",
+                                    data: {
+                                      packageId: selectedPackage,
+                                      playerId: isStoreProduct ? null : (selectedPlayer || null),
+                                      isStoreItem: isStoreProduct,
+                                      selectedPricingOptionId: selectedPricingOptionId || undefined,
+                                      addOnIds: selectedAddOns.length > 0 ? selectedAddOns : undefined,
+                                      signedWaiverIds: Object.keys(signedWaivers).filter(id => signedWaivers[id]),
+                                      platform: Capacitor.getPlatform() === 'ios' ? 'ios' : 'web',
+                                      couponCode: appliedCoupon?.code || undefined,
+                                    },
+                                  }) as { url: string; sessionId?: string };
+                                  checkoutUrl = response.url;
+                                  checkoutSessionId = response.sessionId;
+                                }
+                                
+                                const response = { url: checkoutUrl, sessionId: checkoutSessionId };
 
                                 console.log('[Payment] Got checkout URL:', response.url);
 

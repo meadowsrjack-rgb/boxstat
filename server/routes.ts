@@ -12189,10 +12189,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(productEnrollments.profileId, userId)
           )
         );
-      // Only non-tryout active enrollments count as full membership (tryout enrollment does NOT unlock member pricing)
-      const hasActiveEnrollment = enrollments.some((e: any) => e.status === 'active' && !e.isTryout);
+      const hasNonTryoutEnrollment = enrollments.some((e: any) => !e.isTryout);
 
-      if (hasActiveEnrollment) {
+      if (hasNonTryoutEnrollment) {
         return res.json(programs);
       }
 
@@ -12518,8 +12517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   eq(productEnrollments.profileId, userId)
                 )
               );
-            // Tryout-only enrollments do not count as full member access for program visibility
-            isMember = enrollments.some((e: any) => e.status === 'active' && !e.isTryout);
+            isMember = enrollments.some((e: any) => !e.isTryout);
           }
         }
         if (!isMember) {

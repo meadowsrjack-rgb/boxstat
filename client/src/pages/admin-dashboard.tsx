@@ -673,8 +673,8 @@ export default function AdminDashboard() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="lg:flex lg:items-stretch lg:gap-6">
-          <div ref={tabsRef} className="overflow-x-auto hide-scrollbar mb-6 lg:mb-0 -mx-4 px-4 sm:mx-0 sm:px-0 cursor-grab lg:cursor-default lg:overflow-visible lg:shrink-0 lg:w-40 lg:border-r lg:border-gray-200 lg:pr-4 lg:min-h-[calc(100vh-7rem)]">
-            <TabsList className="inline-flex w-auto min-w-full sm:w-auto bg-transparent border-b border-gray-200 rounded-none p-0 h-auto gap-0 lg:flex-col lg:w-full lg:border-b-0 lg:gap-0.5 lg:sticky lg:top-4 lg:min-h-[calc(100vh-7rem)] lg:justify-start">
+          <div ref={tabsRef} className="overflow-x-auto hide-scrollbar mb-6 lg:mb-0 -mx-4 px-4 sm:mx-0 sm:px-0 cursor-grab lg:cursor-default lg:overflow-y-auto lg:shrink-0 lg:w-40 lg:border-r lg:border-gray-200 lg:pr-4 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-6rem)]">
+            <TabsList className="inline-flex w-auto min-w-full sm:w-auto bg-transparent border-b border-gray-200 rounded-none p-0 h-auto gap-0 lg:flex-col lg:w-full lg:border-b-0 lg:gap-0.5 lg:justify-start">
               <TabsTrigger value="overview" data-testid="tab-overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 lg:border-b-0 lg:border-l-2 lg:data-[state=active]:border-l-red-600 lg:data-[state=active]:bg-red-50 lg:justify-start lg:w-full lg:px-3 lg:py-2 lg:text-xs lg:rounded-r-md">
                 <TrendingUp className="w-4 h-4 mr-2 lg:w-3.5 lg:h-3.5" />
                 Overview

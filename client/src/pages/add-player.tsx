@@ -728,9 +728,24 @@ function SkillLevelStep({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="beginner">Beginner (0–2 years experience)</SelectItem>
-                  <SelectItem value="intermediate">Intermediate (3–5 years experience)</SelectItem>
-                  <SelectItem value="advanced">Advanced (5+ years experience)</SelectItem>
+                  <SelectItem value="beginner">
+                    <div className="flex flex-col items-start py-1">
+                      <span className="font-semibold">Beginner</span>
+                      <span className="text-xs text-muted-foreground">0–2 years experience. Learning fundamentals, developing coordination and basic skills.</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="intermediate">
+                    <div className="flex flex-col items-start py-1">
+                      <span className="font-semibold">Intermediate</span>
+                      <span className="text-xs text-muted-foreground">3–5 years experience. Solid fundamentals, good court awareness and consistent play.</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="advanced">
+                    <div className="flex flex-col items-start py-1">
+                      <span className="font-semibold">Advanced</span>
+                      <span className="text-xs text-muted-foreground">5+ years experience. Strong skills, competitive game sense and athletic ability.</span>
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage className="text-red-400" />

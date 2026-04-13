@@ -167,8 +167,10 @@ export default function ProfileGateway() {
       const data = await apiRequest("/api/auth/switch-profile", { method: "POST", data: { role } });
       if (data.token) {
         await authPersistence.setToken(data.token);
-        // Only invalidate auth-related queries — preserve all cached dashboard data
-        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        queryClient.setQueryData(["/api/auth/user"], (old: any) => ({
+          ...old,
+          ...data.user,
+        }));
         queryClient.invalidateQueries({ queryKey: ["/api/account/profiles"] });
         queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
         setSwitching(false);

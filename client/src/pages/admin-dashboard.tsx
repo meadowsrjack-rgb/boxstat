@@ -15585,10 +15585,21 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
     toast({ title: `Duplicated "${team.name}"` });
   };
 
+  const isEnrolledPlayer = (p: any) => p.status !== 'invited' && p.hasRegistered !== false;
+
   const getTeamPlayers = (team: any) => {
     return players.filter((p: any) => {
       const ids = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
-      return ids.includes(team.id) || p.teamId === team.id;
+      const onTeam = ids.includes(team.id) || p.teamId === team.id;
+      return onTeam && isEnrolledPlayer(p);
+    });
+  };
+
+  const getPendingInvitePlayers = (team: any) => {
+    return players.filter((p: any) => {
+      const ids = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
+      const onTeam = ids.includes(team.id) || p.teamId === team.id;
+      return onTeam && !isEnrolledPlayer(p);
     });
   };
 
@@ -15613,6 +15624,7 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
 
   const isEditorNew = editingTeam?._new === true;
   const editingTeamPlayers = editingTeam && !isEditorNew ? getTeamPlayers(editingTeam) : [];
+  const editingTeamPendingPlayers = editingTeam && !isEditorNew ? getPendingInvitePlayers(editingTeam) : [];
   const editingTeamHeadIds: string[] = editorForm.headCoachIds || [];
   const editingTeamAssistantIds: string[] = (editorForm.assistantCoachIds || []).filter((id: string) => !editingTeamHeadIds.includes(id));
   const editingTeamManagerIds: string[] = (editorForm.managerIds || []).filter((id: string) => !editingTeamHeadIds.includes(id) && !editingTeamAssistantIds.includes(id));
@@ -16343,6 +16355,21 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
                                 {p.firstName} {p.lastName}
                                 <X className="w-2.5 h-2.5 group-hover:text-red-600" />
                               </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {editingTeamPendingPlayers.length > 0 && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                          <p className="text-xs font-semibold text-amber-700 mb-2">Pending Invites — {editingTeamPendingPlayers.length} player{editingTeamPendingPlayers.length !== 1 ? 's' : ''} awaiting enrollment</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {editingTeamPendingPlayers.map((p: any) => (
+                              <span
+                                key={p.id}
+                                className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full font-medium"
+                              >
+                                {p.firstName} {p.lastName}
+                              </span>
                             ))}
                           </div>
                         </div>

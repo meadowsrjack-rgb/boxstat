@@ -91,7 +91,7 @@ export default function AdminProgramDetail() {
     select: (data: any[]) => data.filter(u => u.role === 'coach'),
   });
 
-  const { data: allPlayers = [] } = useQuery<{ id: string; firstName: string; lastName: string }[]>({
+  const { data: allPlayers = [] } = useQuery<{ id: string; firstName: string; lastName: string; status?: string; hasRegistered?: boolean }[]>({
     queryKey: ["/api/users"],
     select: (data: any[]) => data.filter(u => u.role === 'player'),
   });
@@ -1022,8 +1022,20 @@ export default function AdminProgramDetail() {
 
                     {/* Roster Management Section */}
                     <div className="space-y-2 border-t pt-4">
+                      {(() => {
+                        const isEnrolled = (p: any) => p.status !== 'invited' && p.hasRegistered !== false;
+                        const enrolledRosterIds = teamRoster.filter(id => {
+                          const player = allPlayers.find((p: any) => p.id === id);
+                          return player ? isEnrolled(player) : false;
+                        });
+                        const pendingRosterIds = teamRoster.filter(id => {
+                          const player = allPlayers.find((p: any) => p.id === id);
+                          return player ? !isEnrolled(player) : false;
+                        });
+                        return (
+                          <>
                       <div className="flex items-center justify-between">
-                        <Label>Roster ({teamRoster.length} players)</Label>
+                        <Label>Roster ({enrolledRosterIds.length} player{enrolledRosterIds.length !== 1 ? 's' : ''})</Label>
                         {updateRoster.isPending && (
                           <span className="text-xs text-blue-600">Saving roster...</span>
                         )}
@@ -1034,12 +1046,12 @@ export default function AdminProgramDetail() {
                         </div>
                       ) : (
                         <div className="border rounded-md max-h-64 overflow-y-auto" data-testid="edit-team-roster">
-                          {/* Current Roster */}
-                          {teamRoster.length > 0 && (
+                          {/* Current Roster — enrolled players only */}
+                          {enrolledRosterIds.length > 0 && (
                             <div className="p-2 border-b bg-blue-50">
                               <p className="text-xs font-semibold text-blue-700 mb-2">Currently Assigned:</p>
                               <div className="flex flex-wrap gap-1">
-                                {teamRoster.map(playerId => {
+                                {enrolledRosterIds.map(playerId => {
                                   const player = allPlayers.find((p: any) => p.id === playerId);
                                   return player ? (
                                     <div key={playerId} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
@@ -1052,6 +1064,22 @@ export default function AdminProgramDetail() {
                                       >
                                         ×
                                       </button>
+                                    </div>
+                                  ) : null;
+                                })}
+                              </div>
+                            </div>
+                          )}
+                          {/* Pending Invites — invited/unregistered players */}
+                          {pendingRosterIds.length > 0 && (
+                            <div className="p-2 border-b bg-amber-50">
+                              <p className="text-xs font-semibold text-amber-700 mb-2">Pending Invites ({pendingRosterIds.length} awaiting enrollment):</p>
+                              <div className="flex flex-wrap gap-1">
+                                {pendingRosterIds.map(playerId => {
+                                  const player = allPlayers.find((p: any) => p.id === playerId);
+                                  return player ? (
+                                    <div key={playerId} className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full">
+                                      <span>{player.firstName} {player.lastName}</span>
                                     </div>
                                   ) : null;
                                 })}
@@ -1090,6 +1118,9 @@ export default function AdminProgramDetail() {
                           </div>
                         </div>
                       )}
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}

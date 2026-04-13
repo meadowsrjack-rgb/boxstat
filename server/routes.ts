@@ -12512,15 +12512,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tryoutEnrollment = playerEnrollments.find((e: any) => e.programId === programId && e.isTryout === true);
       const recommendedTeamId = tryoutEnrollment?.recommendedTeamId ?? null;
 
-      // Get admin-defined availability windows for this program
+      // Get all events for this organization
+      const allEvents = await storage.getEventsByOrganization(orgId);
+
+      // For tryout players with a recommended team: return team's upcoming practice/skills events
+      // as selectable slots within the next 30 days (not game events, not past events)
+      if (recommendedTeamId && tryoutEnrollment) {
+        const now = new Date();
+        const thirtyDaysOut = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const NON_GAME_TYPES = ['practice', 'skills', 'training', 'skill', 'clinic', 'workout'];
+        
+        const teamEvents = allEvents.filter((event: any) => {
+          if (event.teamId !== recommendedTeamId) return false;
+          if (event.isActive === false || event.status === 'cancelled') return false;
+          const eventStart = new Date(event.startTime);
+          if (eventStart <= now || eventStart > thirtyDaysOut) return false;
+          // Exclude game events
+          const type = (event.eventType || event.type || '').toLowerCase();
+          if (type === 'game') return false;
+          // Only include practice/skills events (if type is set), otherwise include non-game events
+          if (type && !NON_GAME_TYPES.some(t => type.includes(t))) return false;
+          return true;
+        });
+
+        // Sort by start time
+        teamEvents.sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+        // Convert team events to selectable slots (all available by default for tryout)
+        const slots: Array<{ startTime: string; endTime: string; available: boolean; eventTitle?: string; eventId?: number; eventType?: string }> = 
+          teamEvents.map((event: any) => ({
+            startTime: event.startTime,
+            endTime: event.endTime,
+            available: true,
+            eventTitle: event.title,
+            eventId: event.id,
+            eventType: event.eventType || event.type || 'practice',
+          }));
+
+        return res.json({
+          programId,
+          programName: program.name,
+          sessionLengthMinutes: sessionLength,
+          date: targetDate.toISOString().split('T')[0],
+          slots,
+          blockedEvents: [],
+          isTryoutMode: true,
+          recommendedTeamId,
+        });
+      }
+
+      // Non-tryout path: use admin-defined availability windows
       const availabilitySlots = await storage.getAvailabilitySlotsByProgram(programId);
       const dayOfWeek = targetDate.getDay(); // 0=Sunday, 6=Saturday
       
       // Filter windows matching this day of week
       const dayWindows = availabilitySlots.filter((s: any) => s.dayOfWeek === dayOfWeek);
       
-      // Get all events for conflict checking
-      const allEvents = await storage.getEventsByOrganization(orgId);
       const dayStart = new Date(targetDate);
       dayStart.setHours(0, 0, 0, 0);
       const dayEnd = new Date(targetDate);
@@ -12529,13 +12576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const blockedEvents = allEvents.filter((event: any) => {
         const eventStart = new Date(event.startTime);
         const eventEnd = new Date(event.endTime);
-        const inDay = eventStart < dayEnd && eventEnd > dayStart && event.isActive !== false && event.status !== 'cancelled';
-        if (!inDay) return false;
-        // For tryout players, only consider events for their recommended team as blockers
-        if (recommendedTeamId) {
-          return event.teamId === recommendedTeamId;
-        }
-        return true;
+        return eventStart < dayEnd && eventEnd > dayStart && event.isActive !== false && event.status !== 'cancelled';
       });
       
       // Generate time slots from admin-defined availability windows
@@ -12676,51 +12717,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create recurring weekly sessions for all available credits
       const createdEvents: any[] = [];
       const skippedWeeks: string[] = [];
-      // For tryout enrollments, scope conflict check to the recommended team's events only
-      const tryoutTeamId = enrollment.isTryout ? enrollment.recommendedTeamId : null;
-      const allEvents = tryoutTeamId
-        ? allOrgEvents.filter((e: any) => e.teamId === tryoutTeamId)
-        : allOrgEvents;
+      // Tryout enrollments book into existing team events — no generic conflict checking
+      const isTryoutEnrollment = !!(enrollment.isTryout && enrollment.recommendedTeamId);
       const availabilitySlots = await storage.getAvailabilitySlotsByProgram(programId);
+
+      // For tryout enrollments: validate the submitted startTime matches an eligible
+      // practice/skills/training team event (non-game, within 30 days) for the recommended team
+      if (isTryoutEnrollment) {
+        const now = new Date();
+        const thirtyDaysOut = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const NON_GAME_TYPES = ['practice', 'skills', 'training', 'skill', 'clinic', 'workout'];
+        const submittedStart = new Date(startTime);
+        const recommendedTeamId = enrollment.recommendedTeamId;
+        const eligibleEvent = allOrgEvents.find((event: any) => {
+          if (event.teamId !== recommendedTeamId) return false;
+          if (event.isActive === false || event.status === 'cancelled') return false;
+          const eventStart = new Date(event.startTime);
+          if (eventStart <= now || eventStart > thirtyDaysOut) return false;
+          const type = (event.eventType || event.type || '').toLowerCase();
+          if (type === 'game') return false;
+          if (type && !NON_GAME_TYPES.some(t => type.includes(t))) return false;
+          // Match by startTime (within 1 minute tolerance)
+          return Math.abs(eventStart.getTime() - submittedStart.getTime()) < 60000;
+        });
+        if (!eligibleEvent) {
+          return res.status(400).json({ error: 'Selected time does not match an eligible upcoming team practice or skills session.' });
+        }
+      }
       
       for (let week = 0; week < creditsToBook; week++) {
         const sessionStart = new Date(new Date(startTime).getTime() + week * 7 * 24 * 60 * 60 * 1000);
         const sessionEnd = new Date(sessionStart.getTime() + sessionLength * 60 * 1000);
         
-        // Validate this week falls within admin-defined availability windows
-        const dayOfWeek = sessionStart.getDay();
-        const sessionHour = sessionStart.getHours();
-        const sessionMinute = sessionStart.getMinutes();
-        const sessionTimeStr = `${String(sessionHour).padStart(2, '0')}:${String(sessionMinute).padStart(2, '0')}`;
-        const endHour = sessionEnd.getHours();
-        const endMinute = sessionEnd.getMinutes();
-        const endTimeStr = `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`;
-        
-        if (availabilitySlots.length > 0) {
-          const dayWindows = availabilitySlots.filter((s: any) => s.dayOfWeek === dayOfWeek);
-          const fitsWindow = dayWindows.some((w: any) => sessionTimeStr >= w.startTime && endTimeStr <= w.endTime);
-          if (!fitsWindow) {
+        // For tryout enrollments: skip availability window and conflict checks — the selected
+        // slot is an existing team practice/skills event so there's no window constraint and
+        // the "conflict" would be the event itself. Just book one session (no recurring).
+        if (!isTryoutEnrollment) {
+          // Validate this week falls within admin-defined availability windows (non-tryout only)
+          const dayOfWeek = sessionStart.getDay();
+          const sessionHour = sessionStart.getHours();
+          const sessionMinute = sessionStart.getMinutes();
+          const sessionTimeStr = `${String(sessionHour).padStart(2, '0')}:${String(sessionMinute).padStart(2, '0')}`;
+          const endHour = sessionEnd.getHours();
+          const endMinute = sessionEnd.getMinutes();
+          const endTimeStr = `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`;
+          
+          if (availabilitySlots.length > 0) {
+            const dayWindows = availabilitySlots.filter((s: any) => s.dayOfWeek === dayOfWeek);
+            const fitsWindow = dayWindows.some((w: any) => sessionTimeStr >= w.startTime && endTimeStr <= w.endTime);
+            if (!fitsWindow) {
+              skippedWeeks.push(sessionStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+              continue;
+            }
+          }
+          
+          // Check for conflicts with existing events AND already-created events in this batch
+          const hasConflict = allOrgEvents.some((event: any) => {
+            const eventStart = new Date(event.startTime);
+            const eventEnd = new Date(event.endTime);
+            return sessionStart < eventEnd && sessionEnd > eventStart && event.isActive !== false && event.status !== 'cancelled';
+          }) || createdEvents.some((event: any) => {
+            const eventStart = new Date(event.startTime);
+            const eventEnd = new Date(event.endTime);
+            return sessionStart < eventEnd && sessionEnd > eventStart;
+          });
+          
+          if (hasConflict) {
             skippedWeeks.push(sessionStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
             continue;
           }
         }
-        
-        // Check for conflicts with existing events AND already-created events in this batch
-        const hasConflict = allEvents.some((event: any) => {
-          const eventStart = new Date(event.startTime);
-          const eventEnd = new Date(event.endTime);
-          return sessionStart < eventEnd && sessionEnd > eventStart && event.isActive !== false && event.status !== 'cancelled';
-        }) || createdEvents.some((event: any) => {
-          const eventStart = new Date(event.startTime);
-          const eventEnd = new Date(event.endTime);
-          return sessionStart < eventEnd && sessionEnd > eventStart;
-        });
-        
-        if (hasConflict) {
-          skippedWeeks.push(sessionStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-          continue;
-        }
-        
+
         const newEvent = await storage.createEvent({
           organizationId: orgId,
           title: `${program.name} - ${playerName}`,

@@ -615,6 +615,8 @@ export const teams = pgTable("teams", {
   scheduleLink: varchar("schedule_link"),
   code: varchar(), // Short import code (e.g. "THU12") for CSV/XLSX bulk import matching
   color: varchar("color"), // Team color hex code (e.g. "#DC2626")
+  minAge: integer("min_age"), // Minimum player age for this team
+  maxAge: integer("max_age"), // Maximum player age for this team
   rosterSize: integer("roster_size").default(0),
   active: boolean().default(true),
   notes: text(),
@@ -1398,6 +1400,8 @@ export interface Team {
   organization?: string;
   location?: string;
   scheduleLink?: string;
+  minAge?: number;
+  maxAge?: number;
   rosterSize?: number;
   active?: boolean;
   notes?: string;
@@ -1424,6 +1428,8 @@ export const insertTeamSchema = z.object({
   organization: z.string().optional(),
   location: z.string().optional(),
   scheduleLink: z.string().optional(),
+  minAge: z.number().int().nullable().optional(),
+  maxAge: z.number().int().nullable().optional(),
   rosterSize: z.number().optional(),
   active: z.boolean().default(true),
   notes: z.string().optional(),

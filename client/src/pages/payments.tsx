@@ -519,6 +519,9 @@ function TryoutEnrollmentDialog({
 }) {
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [recommendedTeam, setRecommendedTeam] = useState<any | null>(null);
+  const [matchingTeams, setMatchingTeams] = useState<any[]>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
+  const [isFallbackMatch, setIsFallbackMatch] = useState(false);
   const [loadingTeam, setLoadingTeam] = useState(false);
 
   const { data: programTeams = [] } = useQuery<any[]>({
@@ -540,12 +543,18 @@ function TryoutEnrollmentDialog({
   useEffect(() => {
     if (!selectedPlayer || !program) {
       setRecommendedTeam(null);
+      setMatchingTeams([]);
+      setSelectedTeamId("");
+      setIsFallbackMatch(false);
       return;
     }
     setLoadingTeam(true);
     const player = playerProfiles.find((p: any) => p.id === selectedPlayer);
     if (!player || programTeams.length === 0) {
       setRecommendedTeam(null);
+      setMatchingTeams([]);
+      setSelectedTeamId("");
+      setIsFallbackMatch(false);
       setLoadingTeam(false);
       return;
     }
@@ -562,46 +571,70 @@ function TryoutEnrollmentDialog({
 
     const skillLevel = player.skillLevel;
 
-    // Score teams by matching age and skill level
+    // Per-team: use explicit minAge/maxAge if set, otherwise fall back to division-string parsing
     const currentYear = new Date().getFullYear();
-    const scored = programTeams.map((team: any) => {
-      let score = 0;
-      // Match skill level (highest weight)
-      if (skillLevel && team.level && team.level.toLowerCase() === skillLevel.toLowerCase()) {
-        score += 2;
+
+    const getAgeInRangeFromString = (team: any): boolean => {
+      if (playerAge === null) return true;
+      const divisionStr = (team.division || team.name || '');
+      const uMatch = divisionStr.match(/U(\d+)/i);
+      if (uMatch) {
+        const maxAge = parseInt(uMatch[1]);
+        return playerAge <= maxAge;
       }
-      // Match age from division/name strings — support multiple formats
-      if (playerAge !== null) {
-        const divisionStr = (team.division || team.name || '');
-        // Format 1: U-prefix (e.g. "U12", "U14")
-        const uMatch = divisionStr.match(/U(\d+)/i);
-        if (uMatch) {
-          const maxAge = parseInt(uMatch[1]);
-          if (playerAge <= maxAge && playerAge >= maxAge - 3) score += 2; // strong match
-          else if (playerAge <= maxAge) score += 1; // within cap
-        }
-        // Format 2: age range "12-15" or "14-17"
-        const rangeMatch = divisionStr.match(/^(\d{1,2})[^\d]+(\d{1,2})$/);
-        if (rangeMatch) {
-          const minAge = parseInt(rangeMatch[1]);
-          const maxAge = parseInt(rangeMatch[2]);
-          if (playerAge >= minAge && playerAge <= maxAge) score += 2;
-        }
-        // Format 3: birth year range "2012-2014" (years within 4 digits)
-        const birthYearMatch = divisionStr.match(/(\d{4})[^\d]+(\d{4})/);
-        if (birthYearMatch) {
-          const playerBirthYear = currentYear - playerAge;
-          const minYear = parseInt(birthYearMatch[1]);
-          const maxYear = parseInt(birthYearMatch[2]);
-          const [lo, hi] = minYear < maxYear ? [minYear, maxYear] : [maxYear, minYear];
-          if (playerBirthYear >= lo && playerBirthYear <= hi) score += 2;
-        }
+      const rangeMatch = divisionStr.match(/^(\d{1,2})[^\d]+(\d{1,2})$/);
+      if (rangeMatch) {
+        return playerAge >= parseInt(rangeMatch[1]) && playerAge <= parseInt(rangeMatch[2]);
       }
-      return { team, score };
+      const birthYearMatch = divisionStr.match(/(\d{4})[^\d]+(\d{4})/);
+      if (birthYearMatch) {
+        const playerBirthYear = currentYear - playerAge;
+        const minYear = Math.min(parseInt(birthYearMatch[1]), parseInt(birthYearMatch[2]));
+        const maxYear = Math.max(parseInt(birthYearMatch[1]), parseInt(birthYearMatch[2]));
+        return playerBirthYear >= minYear && playerBirthYear <= maxYear;
+      }
+      return true; // No parseable range — treat as in-range (no constraint)
+    };
+
+    const getAgeInRange = (team: any): boolean => {
+      const hasExplicitRange = team.minAge != null || team.maxAge != null;
+      if (hasExplicitRange) {
+        if (playerAge === null) return true;
+        return (team.minAge == null || playerAge >= team.minAge) &&
+               (team.maxAge == null || playerAge <= team.maxAge);
+      }
+      return getAgeInRangeFromString(team);
+    };
+
+    const getLevelMatch = (team: any): boolean => {
+      return !skillLevel || !team.level || team.level.toLowerCase() === skillLevel.toLowerCase();
+    };
+
+    const ageAndLevelMatches: any[] = [];
+    const ageOnlyMatches: any[] = [];
+
+    programTeams.forEach((team: any) => {
+      const ageOk = getAgeInRange(team);
+      const levelOk = getLevelMatch(team);
+      if (ageOk && levelOk) ageAndLevelMatches.push(team);
+      else if (ageOk) ageOnlyMatches.push(team);
     });
 
-    scored.sort((a: any, b: any) => b.score - a.score);
-    setRecommendedTeam(scored[0]?.score > 0 ? scored[0].team : (programTeams[0] || null));
+    // Determine result: age+level > age-only > all teams (fallback)
+    let finalMatches = ageAndLevelMatches.length > 0 ? ageAndLevelMatches : ageOnlyMatches;
+    const usedFallback = finalMatches.length === 0;
+    if (usedFallback) finalMatches = programTeams;
+
+    const effectiveMatches = finalMatches.length > 0 ? finalMatches : programTeams;
+    setMatchingTeams(effectiveMatches);
+    setIsFallbackMatch(usedFallback);
+    if (effectiveMatches.length === 1) {
+      setRecommendedTeam(effectiveMatches[0]);
+      setSelectedTeamId(String(effectiveMatches[0].id));
+    } else {
+      setRecommendedTeam(null);
+      setSelectedTeamId("");
+    }
     setLoadingTeam(false);
   }, [selectedPlayer, playerProfiles, programTeams, program]);
 
@@ -649,12 +682,41 @@ function TryoutEnrollmentDialog({
           {selectedPlayer && (
             <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/30">
               <div className="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">
-                Recommended Team
+                {matchingTeams.length > 1 ? 'Select Team' : 'Recommended Team'}
               </div>
               {loadingTeam ? (
                 <div className="flex items-center gap-2 text-white/50">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span className="text-sm">Finding best team...</span>
+                </div>
+              ) : matchingTeams.length > 1 ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-white/60">
+                    {isFallbackMatch
+                      ? 'No exact match found — please select a team:'
+                      : 'Multiple teams match your player. Please select one:'}
+                  </p>
+                  {isFallbackMatch && (
+                    <div className="text-xs text-yellow-400/70">No teams matched your player's age or skill level exactly.</div>
+                  )}
+                  <Select
+                    value={selectedTeamId}
+                    onValueChange={val => {
+                      setSelectedTeamId(val);
+                      setRecommendedTeam(matchingTeams.find((t: any) => String(t.id) === val) || null);
+                    }}
+                  >
+                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                      <SelectValue placeholder="Choose a team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {matchingTeams.map((team: any) => (
+                        <SelectItem key={team.id} value={String(team.id)}>
+                          {team.name}{team.division ? ` (${team.division})` : ''}{team.level ? ` · ${team.level.charAt(0).toUpperCase() + team.level.slice(1)}` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               ) : recommendedTeam ? (
                 <div>
@@ -664,6 +726,9 @@ function TryoutEnrollmentDialog({
                   )}
                   {recommendedTeam.level && (
                     <div className="text-xs text-white/50">Level: {recommendedTeam.level.charAt(0).toUpperCase() + recommendedTeam.level.slice(1)}</div>
+                  )}
+                  {isFallbackMatch && (
+                    <div className="text-xs text-yellow-400/70 mt-1">No exact match found — showing all teams.</div>
                   )}
                 </div>
               ) : (
@@ -695,7 +760,7 @@ function TryoutEnrollmentDialog({
                 onConfirm(program.id, selectedPlayer, recommendedTeam?.id);
               }
             }}
-            disabled={isLoading || !selectedPlayer}
+            disabled={isLoading || !selectedPlayer || (matchingTeams.length > 1 && !recommendedTeam)}
             data-testid="button-confirm-tryout"
           >
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}

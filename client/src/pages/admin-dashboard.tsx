@@ -15498,6 +15498,8 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
       location: team.location || '',
       color: team.color || '#DC2626',
       notes: team.notes || '',
+      minAge: team.minAge ?? null,
+      maxAge: team.maxAge ?? null,
       headCoachIds: team.headCoachIds?.length ? team.headCoachIds : (team.coachId ? [team.coachId] : []),
       assistantCoachIds: team.assistantCoachIds || [],
       managerIds: team.managerIds || [],
@@ -15519,6 +15521,8 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
       location: '',
       color: '#DC2626',
       notes: '',
+      minAge: null,
+      maxAge: null,
       headCoachIds: [],
       assistantCoachIds: [],
       managerIds: [],
@@ -15541,6 +15545,8 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
       location: editorForm.location || undefined,
       color: editorForm.color || undefined,
       notes: editorForm.notes || undefined,
+      minAge: editorForm.minAge != null ? Number(editorForm.minAge) : null,
+      maxAge: editorForm.maxAge != null ? Number(editorForm.maxAge) : null,
       headCoachIds: editorForm.headCoachIds || [],
       assistantCoachIds: editorForm.assistantCoachIds || [],
       managerIds: editorForm.managerIds || [],
@@ -15566,6 +15572,8 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
       location: team.location || undefined,
       color: team.color || undefined,
       notes: team.notes || undefined,
+      minAge: team.minAge ?? null,
+      maxAge: team.maxAge ?? null,
       headCoachIds: headIds,
       assistantCoachIds: team.assistantCoachIds || [],
       managerIds: team.managerIds || [],
@@ -16244,6 +16252,26 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
                           <SelectItem value="advanced">Advanced</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-700 mb-1.5 block">Min Age</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={editorForm.minAge ?? ''}
+                        onChange={e => setEditorForm((f: any) => ({ ...f, minAge: e.target.value === '' ? null : parseInt(e.target.value) }))}
+                        placeholder="e.g. 8"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-700 mb-1.5 block">Max Age</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={editorForm.maxAge ?? ''}
+                        onChange={e => setEditorForm((f: any) => ({ ...f, maxAge: e.target.value === '' ? null : parseInt(e.target.value) }))}
+                        placeholder="e.g. 12"
+                      />
                     </div>
                     <div>
                       <Label className="text-xs font-semibold text-gray-700 mb-1.5 block">Season</Label>

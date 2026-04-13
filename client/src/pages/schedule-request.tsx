@@ -4,14 +4,18 @@ import { useParams, useLocation } from "wouter";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Clock, CalendarDays, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, Clock, CalendarDays, Check, Loader2, Users } from "lucide-react";
 
 interface TimeSlot {
   startTime: string;
   endTime: string;
   available: boolean;
+  eventTitle?: string;
+  eventId?: number;
+  eventType?: string;
 }
 
 interface AvailabilityResponse {
@@ -26,6 +30,8 @@ interface AvailabilityResponse {
     startTime: string;
     endTime: string;
   }>;
+  isTryoutMode?: boolean;
+  recommendedTeamId?: number;
 }
 
 export default function ScheduleRequest() {
@@ -57,6 +63,8 @@ export default function ScheduleRequest() {
     },
     enabled: !!programId,
   });
+
+  const isTryoutMode = availability?.isTryoutMode === true;
 
   const bookSession = useMutation({
     mutationFn: async (slot: TimeSlot) => {
@@ -98,6 +106,18 @@ export default function ScheduleRequest() {
   const availableSlots = availability?.slots?.filter((s) => s.available) || [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  // For tryout mode: group all slots by date for display
+  const slotsByDate: Record<string, TimeSlot[]> = {};
+  if (isTryoutMode) {
+    for (const slot of availableSlots) {
+      const d = new Date(slot.startTime).toLocaleDateString("en-US", {
+        weekday: "long", month: "long", day: "numeric",
+      });
+      if (!slotsByDate[d]) slotsByDate[d] = [];
+      slotsByDate[d].push(slot);
+    }
+  }
 
   if (booked) {
     return (
@@ -152,88 +172,160 @@ export default function ScheduleRequest() {
         <div>
           <h1 className="font-bold text-lg">Schedule a Session</h1>
           {availability && (
-            <p className="text-sm text-gray-500">{availability.programName} - {availability.sessionLengthMinutes} min</p>
+            <p className="text-sm text-gray-500">
+              {availability.programName} - {availability.sessionLengthMinutes} min
+              {isTryoutMode && <span className="ml-1 text-purple-600 font-medium">· Tryout</span>}
+            </p>
           )}
         </div>
       </div>
 
       <div className="p-4 max-w-lg mx-auto space-y-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <CalendarDays className="w-4 h-4" />
-              Select a Date
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex justify-center">
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date) => {
-                if (date) {
-                  setSelectedDate(date);
-                  setSelectedSlot(null);
-                }
-              }}
-              disabled={(date) => {
-                const d = new Date(date);
-                d.setHours(0, 0, 0, 0);
-                return d < today;
-              }}
-              className="rounded-md"
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Available Times
-            </CardTitle>
-            <CardDescription>
-              {selectedDate.toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loadingSlots ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-              </div>
-            ) : availableSlots.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <p className="font-medium">No available times</p>
-                <p className="text-sm mt-1">All slots are booked for this date. Try another day.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                {availableSlots.map((slot, idx) => {
-                  const isSelected = selectedSlot?.startTime === slot.startTime;
-                  return (
-                    <Button
-                      key={idx}
-                      variant={isSelected ? "default" : "outline"}
-                      className={`h-auto py-3 ${isSelected ? "ring-2 ring-red-500" : ""}`}
-                      onClick={() => handleBookSlot(slot)}
-                    >
-                      <div className="text-center">
-                        <div className="font-medium">{formatTime(slot.startTime)}</div>
-                        <div className="text-xs opacity-70">to {formatTime(slot.endTime)}</div>
+        {isTryoutMode ? (
+          /* Tryout mode: show team practice/skills events as selectable sessions */
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="w-4 h-4 text-purple-600" />
+                Upcoming Team Sessions
+              </CardTitle>
+              <CardDescription>
+                Select a practice or skills session to attend your tryout
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingSlots ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                </div>
+              ) : availableSlots.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="font-medium">No upcoming sessions</p>
+                  <p className="text-sm mt-1">No practice or skills sessions are scheduled for your team in the next 30 days. Please contact your coach.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(slotsByDate).map(([dateLabel, dateSlots]) => (
+                    <div key={dateLabel}>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{dateLabel}</p>
+                      <div className="space-y-2">
+                        {dateSlots.map((slot, idx) => {
+                          const isSelected = selectedSlot?.startTime === slot.startTime;
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => handleBookSlot(slot)}
+                              className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                                isSelected
+                                  ? "border-purple-500 bg-purple-50 ring-2 ring-purple-300"
+                                  : "border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50/40"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-medium text-gray-900">{slot.eventTitle || "Team Session"}</p>
+                                  <p className="text-sm text-gray-500">
+                                    {formatTime(slot.startTime)} – {formatTime(slot.endTime)}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-xs text-purple-600 border-purple-300">
+                                    {slot.eventType ? slot.eventType.charAt(0).toUpperCase() + slot.eventType.slice(1) : "Session"}
+                                  </Badge>
+                                  {isSelected && <Check className="w-4 h-4 text-purple-600" />}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
-                    </Button>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          /* Normal mode: calendar date picker + time slots */
+          <>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4" />
+                  Select a Date
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex justify-center">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      setSelectedDate(date);
+                      setSelectedSlot(null);
+                    }
+                  }}
+                  disabled={(date) => {
+                    const d = new Date(date);
+                    d.setHours(0, 0, 0, 0);
+                    return d < today;
+                  }}
+                  className="rounded-md"
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Available Times
+                </CardTitle>
+                <CardDescription>
+                  {selectedDate.toLocaleDateString("en-US", {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingSlots ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                  </div>
+                ) : availableSlots.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p className="font-medium">No available times</p>
+                    <p className="text-sm mt-1">All slots are booked for this date. Try another day.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {availableSlots.map((slot, idx) => {
+                      const isSelected = selectedSlot?.startTime === slot.startTime;
+                      return (
+                        <Button
+                          key={idx}
+                          variant={isSelected ? "default" : "outline"}
+                          className={`h-auto py-3 ${isSelected ? "ring-2 ring-red-500" : ""}`}
+                          onClick={() => handleBookSlot(slot)}
+                        >
+                          <div className="text-center">
+                            <div className="font-medium">{formatTime(slot.startTime)}</div>
+                            <div className="text-xs opacity-70">to {formatTime(slot.endTime)}</div>
+                          </div>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
 
         {selectedSlot && (
-          <Card className="border-red-200 bg-red-50">
+          <Card className={`${isTryoutMode ? "border-purple-200 bg-purple-50" : "border-red-200 bg-red-50"}`}>
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -244,6 +336,9 @@ export default function ScheduleRequest() {
                       day: "numeric",
                     })}
                   </p>
+                  {isTryoutMode && selectedSlot.eventTitle && (
+                    <p className="text-sm font-medium text-purple-700">{selectedSlot.eventTitle}</p>
+                  )}
                   <p className="text-sm text-gray-600">
                     {formatTime(selectedSlot.startTime)} - {formatTime(selectedSlot.endTime)}
                   </p>
@@ -251,7 +346,7 @@ export default function ScheduleRequest() {
                 <Button
                   onClick={confirmBooking}
                   disabled={bookSession.isPending}
-                  className="bg-red-600 hover:bg-red-700"
+                  className={isTryoutMode ? "bg-purple-600 hover:bg-purple-700" : "bg-red-600 hover:bg-red-700"}
                 >
                   {bookSession.isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />

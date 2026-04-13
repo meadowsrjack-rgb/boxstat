@@ -2455,6 +2455,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Don't fail the webhook if payment record creation fails
               }
             }
+
+            // Create individual payment records for each store add-on purchased alongside registration
+            if (session.metadata?.addOnIds) {
+              try {
+                const addOnIdsParsed = JSON.parse(session.metadata.addOnIds) as string[];
+                for (const addOnId of addOnIdsParsed) {
+                  const addOn = await storage.getProgram(addOnId);
+                  if (addOn && addOn.productCategory === 'goods' && addOn.price && addOn.price > 0) {
+                    await storage.createPayment({
+                      organizationId: updatedPlayer.organizationId,
+                      userId: playerId,
+                      amount: addOn.price,
+                      currency: 'usd',
+                      paymentType: 'store_addon',
+                      status: 'completed',
+                      description: addOn.name,
+                      programId: addOnId,
+                      stripePaymentId: session.payment_intent as string,
+                    });
+                    console.log(`✅ Created store add-on payment record for ${addOn.name} (player ${playerId})`);
+                  }
+                }
+              } catch (addOnError: any) {
+                console.error('⚠️ Store add-on payment record creation failed (non-fatal):', addOnError.message);
+              }
+            }
             
             // Create program enrollment for the player
             if (packageId) {
@@ -2612,6 +2638,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`✅ Created payment record for user ${userId}${playerId ? ` (player: ${playerId})` : ''}`);
             } catch (paymentError: any) {
               console.error("Error creating payment record:", paymentError);
+            }
+          }
+
+          // Create individual payment records for each store add-on purchased alongside the package
+          if (session.metadata?.addOnIds) {
+            try {
+              const addOnIdsParsed = JSON.parse(session.metadata.addOnIds) as string[];
+              const orgId = await resolveOrgId(session, userId, packageId);
+              for (const addOnId of addOnIdsParsed) {
+                const addOn = await storage.getProgram(addOnId);
+                if (addOn && addOn.productCategory === 'goods' && addOn.price && addOn.price > 0) {
+                  await storage.createPayment({
+                    organizationId: orgId,
+                    userId: userId,
+                    playerId: playerId || undefined,
+                    amount: addOn.price,
+                    currency: 'usd',
+                    paymentType: 'store_addon',
+                    status: 'completed',
+                    description: addOn.name,
+                    programId: addOnId,
+                    stripePaymentId: session.payment_intent as string,
+                  });
+                  console.log(`✅ Created store add-on payment record for ${addOn.name} (user ${userId})`);
+                }
+              }
+            } catch (addOnError: any) {
+              console.error('⚠️ Store add-on payment record creation failed (non-fatal):', addOnError.message);
             }
           }
 
@@ -8070,6 +8124,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error fetching pending orders:', error);
       res.status(500).json({ error: 'Failed to fetch pending orders' });
+    }
+  });
+
+  // One-time backfill: create missing store add-on payment records from historical Stripe checkout sessions
+  app.post('/api/admin/backfill-store-orders', requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role, id: userId } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(userId, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+
+      const orgStripe = await getStripeForOrg(organizationId);
+      if (!orgStripe) {
+        return res.status(400).json({ error: 'Stripe not configured for this organization' });
+      }
+
+      let created = 0;
+      let skipped = 0;
+      let errors = 0;
+
+      // Fetch completed checkout sessions from the past 90 days that have addOnIds in metadata
+      // We paginate through Stripe's list API to cover all sessions
+      const ninetyDaysAgo = Math.floor(Date.now() / 1000) - (90 * 24 * 60 * 60);
+      let hasMore = true;
+      let startingAfter: string | undefined;
+
+      while (hasMore) {
+        const listParams: Stripe.Checkout.SessionListParams = {
+          limit: 100,
+          created: { gte: ninetyDaysAgo },
+          status: 'complete',
+        };
+        if (startingAfter) {
+          listParams.starting_after = startingAfter;
+        }
+
+        const sessions = await orgStripe.checkout.sessions.list(listParams);
+        hasMore = sessions.has_more;
+        if (sessions.data.length > 0) {
+          startingAfter = sessions.data[sessions.data.length - 1].id;
+        }
+
+        for (const session of sessions.data) {
+          const addOnIdsStr = session.metadata?.addOnIds;
+          if (!addOnIdsStr) continue;
+
+          let addOnIds: string[];
+          try {
+            addOnIds = JSON.parse(addOnIdsStr) as string[];
+          } catch {
+            continue;
+          }
+          if (!addOnIds || addOnIds.length === 0) continue;
+
+          const paymentIntentId = typeof session.payment_intent === 'string'
+            ? session.payment_intent
+            : (session.payment_intent as any)?.id;
+
+          const buyerUserId = session.metadata?.userId || session.metadata?.playerId;
+          if (!buyerUserId) continue;
+
+          for (const addOnId of addOnIds) {
+            try {
+              const addOn = await storage.getProgram(addOnId);
+              if (!addOn || addOn.productCategory !== 'goods' || !addOn.price || addOn.price <= 0) {
+                skipped++;
+                continue;
+              }
+
+              // Deduplicate: check for an existing store_addon record for this add-on product
+              // Prefer matching by stripePaymentId when available; fall back to userId+programId+description
+              let existingQuery;
+              if (paymentIntentId) {
+                existingQuery = await db.select({ id: payments.id })
+                  .from(payments)
+                  .where(and(
+                    eq(payments.organizationId, organizationId),
+                    eq(payments.paymentType, 'store_addon'),
+                    eq(payments.programId, addOnId),
+                    eq(payments.stripePaymentId, paymentIntentId)
+                  ))
+                  .limit(1);
+              } else {
+                // No payment intent (e.g. subscription sessions): deduplicate by userId + programId + description
+                existingQuery = await db.select({ id: payments.id })
+                  .from(payments)
+                  .where(and(
+                    eq(payments.organizationId, organizationId),
+                    eq(payments.paymentType, 'store_addon'),
+                    eq(payments.programId, addOnId),
+                    eq(payments.userId, buyerUserId)
+                  ))
+                  .limit(1);
+              }
+
+              if (existingQuery.length > 0) {
+                skipped++;
+                continue;
+              }
+
+              const playerId = session.metadata?.playerId || undefined;
+
+              await storage.createPayment({
+                organizationId,
+                userId: buyerUserId,
+                playerId: playerId !== buyerUserId ? playerId : undefined,
+                amount: addOn.price,
+                currency: 'usd',
+                paymentType: 'store_addon',
+                status: 'completed',
+                description: addOn.name,
+                programId: addOnId,
+                stripePaymentId: paymentIntentId,
+              });
+              created++;
+              console.log(`[Backfill] Created store add-on payment for ${addOn.name} from session ${session.id}`);
+            } catch (err: any) {
+              console.error(`[Backfill] Error creating payment for add-on ${addOnId}:`, err.message);
+              errors++;
+            }
+          }
+        }
+      }
+
+      res.json({ success: true, created, skipped, errors });
+    } catch (error: any) {
+      console.error('Error running store orders backfill:', error);
+      res.status(500).json({ error: 'Backfill failed', message: error.message });
     }
   });
 

@@ -1674,10 +1674,12 @@ export default function UnifiedAccount() {
       try {
         const pending = localStorage.getItem("pendingPayment");
         if (pending) {
-          const { packageId, pricingOptionId, addOns } = JSON.parse(pending);
+          const { packageId, pricingOptionId, addOns, isTryout, isStoreItem } = JSON.parse(pending);
           if (packageId) setSelectedPackage(packageId);
           if (pricingOptionId) setSelectedPricingOptionId(pricingOptionId);
           if (addOns) setSelectedAddOns(addOns);
+          if (isTryout) setIsTryoutPurchase(true);
+          if (isStoreItem) setIsStoreItemPurchase(true);
           localStorage.removeItem("pendingPayment");
         }
       } catch {}
@@ -1961,40 +1963,78 @@ export default function UnifiedAccount() {
     const skillLevel = player.skillLevel;
     const currentYear = new Date().getFullYear();
 
-    const getAgeInRange = (team: any): boolean => {
+    const gradeToAgeRange: Record<string, [number, number]> = {
+      'rookie': [4, 7], '1st': [6, 7], '2nd': [7, 8], '3rd': [8, 9],
+      '4th': [9, 10], '5th': [10, 11], '6th': [11, 12], '7th': [12, 13], '8th': [13, 14],
+      '9th': [14, 15], '10th': [15, 16], '11th': [16, 17], '12th': [17, 18],
+    };
+
+    const getAgeMatch = (team: any): 'explicit' | 'none' | 'no_data' => {
       if (team.minAge != null || team.maxAge != null) {
-        if (playerAge === null) return true;
-        return (team.minAge == null || playerAge >= team.minAge) &&
+        if (playerAge === null) return 'no_data';
+        const inRange = (team.minAge == null || playerAge >= team.minAge) &&
                (team.maxAge == null || playerAge <= team.maxAge);
+        return inRange ? 'explicit' : 'none';
       }
-      if (playerAge === null) return true;
+      if (playerAge === null) return 'no_data';
       const divisionStr = (team.division || team.name || '');
       const uMatch = divisionStr.match(/U(\d+)/i);
-      if (uMatch) return playerAge <= parseInt(uMatch[1]);
+      if (uMatch) return playerAge <= parseInt(uMatch[1]) ? 'explicit' : 'none';
       const birthYearMatch = divisionStr.match(/(\d{4})[^\d]+(\d{4})/);
       if (birthYearMatch) {
         const playerBirthYear = currentYear - playerAge;
         const minYear = Math.min(parseInt(birthYearMatch[1]), parseInt(birthYearMatch[2]));
         const maxYear = Math.max(parseInt(birthYearMatch[1]), parseInt(birthYearMatch[2]));
-        return playerBirthYear >= minYear && playerBirthYear <= maxYear;
+        return (playerBirthYear >= minYear && playerBirthYear <= maxYear) ? 'explicit' : 'none';
       }
-      return true;
+      const gradeRangeMatch = divisionStr.match(/(\d+)(?:st|nd|rd|th)\s*[-–]\s*(\d+)(?:st|nd|rd|th)/i);
+      if (gradeRangeMatch) {
+        const minGrade = parseInt(gradeRangeMatch[1]);
+        const maxGrade = parseInt(gradeRangeMatch[2]);
+        const minAge2 = minGrade + 5;
+        const maxAge2 = maxGrade + 6;
+        return (playerAge >= minAge2 && playerAge <= maxAge2) ? 'explicit' : 'none';
+      }
+      const singleGradeMatch = divisionStr.match(/(\d+)(?:st|nd|rd|th)/i);
+      if (singleGradeMatch) {
+        const grade = parseInt(singleGradeMatch[1]);
+        return (playerAge >= grade + 5 && playerAge <= grade + 6) ? 'explicit' : 'none';
+      }
+      for (const [keyword, [minA, maxA]] of Object.entries(gradeToAgeRange)) {
+        if (divisionStr.toLowerCase().includes(keyword)) {
+          return (playerAge >= minA && playerAge <= maxA) ? 'explicit' : 'none';
+        }
+      }
+      return 'no_data';
     };
 
-    const getLevelMatch = (team: any): boolean => {
-      return !skillLevel || !team.level || team.level.toLowerCase() === skillLevel.toLowerCase();
+    const getLevelMatch = (team: any): 'explicit' | 'none' | 'no_data' => {
+      if (!skillLevel) return 'no_data';
+      const sl = skillLevel.toLowerCase();
+      const teamLevel = team.level?.toLowerCase();
+      if (teamLevel) return teamLevel === sl ? 'explicit' : 'none';
+      const nameStr = (team.name || '').toLowerCase();
+      const levelKeywords = ['beginner', 'intermediate', 'advanced', 'elite', 'rookie', 'varsity', 'jv'];
+      const nameHasLevel = levelKeywords.some(kw => nameStr.includes(kw));
+      if (nameHasLevel) return nameStr.includes(sl) ? 'explicit' : 'none';
+      return 'no_data';
     };
 
-    const ageAndLevelMatches: any[] = [];
-    const ageOnlyMatches: any[] = [];
+    const scored: { team: any; score: number }[] = [];
     tryoutProgramTeams.forEach((team: any) => {
-      const ageOk = getAgeInRange(team);
-      const levelOk = getLevelMatch(team);
-      if (ageOk && levelOk) ageAndLevelMatches.push(team);
-      else if (ageOk) ageOnlyMatches.push(team);
+      const ageResult = getAgeMatch(team);
+      const levelResult = getLevelMatch(team);
+      if (ageResult === 'none' || levelResult === 'none') return;
+      let score = 0;
+      if (ageResult === 'explicit') score += 2;
+      if (levelResult === 'explicit') score += 2;
+      scored.push({ team, score });
     });
 
-    let finalMatches = ageAndLevelMatches.length > 0 ? ageAndLevelMatches : ageOnlyMatches;
+    const maxScore = scored.length > 0 ? Math.max(...scored.map(s => s.score)) : 0;
+    let finalMatches = maxScore > 0
+      ? scored.filter(s => s.score === maxScore).map(s => s.team)
+      : scored.map(s => s.team);
     const usedFallback = finalMatches.length === 0;
     if (usedFallback) finalMatches = tryoutProgramTeams;
 
@@ -2974,6 +3014,8 @@ export default function UnifiedAccount() {
                                       packageId: selectedPackage,
                                       pricingOptionId: selectedPricingOptionId,
                                       addOns: selectedAddOns,
+                                      isTryout: isTryoutPurchase,
+                                      isStoreItem: isStoreItemPurchase,
                                     }));
                                   } catch {}
                                   setPaymentDialogOpen(false);

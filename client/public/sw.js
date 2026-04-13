@@ -1,7 +1,6 @@
-const CACHE_VERSION = '10';
+const CACHE_VERSION = '11';
 const CACHE_NAME = 'boxstat-v' + CACHE_VERSION;
 const STATIC_CACHE = [
-  '/',
   'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
 ];

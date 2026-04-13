@@ -417,18 +417,8 @@ function AppRouter() {
     }
   }, [isLoading]);
 
-  // Register service worker for PWA and initialize deep links
+  // Initialize deep links and error handlers
   useEffect(() => {
-    if ('serviceWorker' in navigator && !import.meta.env.DEV) {
-      navigator.serviceWorker.register('/sw.js')
-        .then((registration) => {
-          console.log('SW registered: ', registration);
-        })
-        .catch((registrationError) => {
-          console.log('SW registration failed: ', registrationError);
-        });
-    }
-
     // Initialize deep links for Universal Links (magic link handling)
     initDeepLinks().then(() => {
       console.log('Deep link listeners initialized');

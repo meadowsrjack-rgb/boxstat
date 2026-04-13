@@ -11299,7 +11299,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       setExpandedPricingOptions(new Set());
       setIconPickerOpen(false);
       setIconPickerQuery("");
-      setNewCategoryInput("");
+      setCategoryInputValue("");
       form.reset({
         organizationId: organization?.id || "",
         name: "",

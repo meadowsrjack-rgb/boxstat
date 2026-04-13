@@ -6939,7 +6939,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/teams', requireAuth, async (req: any, res) => {
     try {
       const { organizationId } = req.user;
-      const teams = await storage.getTeamsByOrganization(organizationId);
+      const { programId } = req.query;
+      let teams = await storage.getTeamsByOrganization(organizationId);
+      if (programId) {
+        teams = teams.filter(t => String(t.programId) === String(programId));
+      }
       const programs = await storage.getProgramsByOrganization(organizationId);
       
       // Create a map of program IDs to program names for quick lookup

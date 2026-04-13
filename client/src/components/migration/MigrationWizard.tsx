@@ -458,7 +458,7 @@ function PlayersStep({
       lastName: "",
       parentId: parents[0]?.id ?? null,
       subscriptionEndDate: "",
-      programId: allPrograms[0]?.id ?? null,
+      programId: null,
       teamId: null,
     }]);
 
@@ -484,7 +484,7 @@ function PlayersStep({
           lastName: r.last,
           parentId: parent?.id ?? null,
           subscriptionEndDate: r.expiry,
-          programId: allPrograms[0]?.id ?? null,
+          programId: null,
           teamId: matchedTeam?.id ?? null,
         };
       });

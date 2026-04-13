@@ -3080,6 +3080,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/tryout/available-sessions/:teamId', requireAuth, async (req: any, res) => {
+    try {
+      const { teamId } = req.params;
+      const events = await storage.getEventsByTeam(teamId);
+      const now = new Date();
+      const upcoming = events.filter((e: any) => {
+        const eventTime = new Date(e.startTime);
+        if (eventTime <= now) return false;
+        const eventType = (e.eventType || '').toLowerCase();
+        if (eventType === 'game') return false;
+        return true;
+      });
+      upcoming.sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+      res.json(upcoming.slice(0, 20));
+    } catch (error: any) {
+      console.error('Error fetching tryout sessions:', error);
+      res.status(500).json({ error: 'Failed to fetch available sessions' });
+    }
+  });
+
+  app.post('/api/tryout/schedule', requireAuth, async (req: any, res) => {
+    try {
+      const { enrollmentId, eventId } = req.body;
+      if (!enrollmentId || !eventId) {
+        return res.status(400).json({ error: 'enrollmentId and eventId are required' });
+      }
+
+      const enrollment = await db.select().from(productEnrollments).where(eq(productEnrollments.id, parseInt(enrollmentId))).then(r => r[0]);
+      if (!enrollment) {
+        return res.status(404).json({ error: 'Enrollment not found' });
+      }
+      if (!enrollment.isTryout) {
+        return res.status(400).json({ error: 'Only tryout enrollments can schedule tryout sessions' });
+      }
+      const userId = req.user.id;
+      const isOwner = enrollment.accountHolderId === userId || enrollment.profileId === userId;
+      if (!isOwner) {
+        return res.status(403).json({ error: 'Not authorized to schedule this tryout' });
+      }
+
+      const event = await storage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ error: 'Event not found' });
+      }
+      if (event.eventType === 'game') {
+        return res.status(400).json({ error: 'Cannot schedule tryout for a game event' });
+      }
+      const eventStart = new Date(event.startTime);
+      if (eventStart < new Date()) {
+        return res.status(400).json({ error: 'Cannot schedule tryout for a past event' });
+      }
+      const recommendedTeamId = (enrollment.metadata as any)?.recommendedTeamId;
+      if (recommendedTeamId && event.teamId && String(event.teamId) !== String(recommendedTeamId)) {
+        return res.status(400).json({ error: 'Event does not belong to the assigned team' });
+      }
+
+      const existingMeta = (enrollment.metadata as any) || {};
+      await db.update(productEnrollments)
+        .set({
+          metadata: { ...existingMeta, scheduledEventId: eventId, scheduledAt: new Date().toISOString() },
+        })
+        .where(eq(productEnrollments.id, parseInt(enrollmentId)));
+
+      res.json({ success: true, scheduledEventId: eventId, eventTitle: event.title, eventStartTime: event.startTime });
+    } catch (error: any) {
+      console.error('Error scheduling tryout:', error);
+      res.status(500).json({ error: 'Failed to schedule tryout session' });
+    }
+  });
+
   // Payment success callback (for when webhooks don't fire in test mode)
   app.post('/api/payments/verify-session', requireAuth, async (req: any, res) => {
     try {
@@ -3485,7 +3555,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (paymentWasProcessed) {
         sendPaymentReceiptEmail(session).catch(() => {});
       }
-      res.json({ success: true, message: 'Payment verified and processed' });
+
+      let tryoutData: any = null;
+      if (session.metadata?.isTryout === 'true') {
+        const profileId = session.metadata.profileId;
+        const programId = session.metadata.programId;
+        const recTeamId = session.metadata.recommendedTeamId;
+        if (profileId && programId) {
+          const enrollments = await db.select().from(productEnrollments).where(
+            and(
+              eq(productEnrollments.profileId, profileId),
+              eq(productEnrollments.programId, programId),
+              eq(productEnrollments.isTryout, true),
+              eq(productEnrollments.status, 'active')
+            )
+          );
+          const enrollment = enrollments[0];
+          if (enrollment) {
+            tryoutData = {
+              enrollmentId: enrollment.id,
+              programId,
+              recommendedTeamId: recTeamId || null,
+            };
+          }
+        }
+      }
+
+      res.json({ success: true, message: 'Payment verified and processed', tryoutData });
     } catch (error: any) {
       console.error('Error verifying session:', error);
       res.status(500).json({ error: 'Failed to verify session', message: error.message });

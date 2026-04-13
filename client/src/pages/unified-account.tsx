@@ -1636,6 +1636,12 @@ export default function UnifiedAccount() {
   const [pendingCheckoutSessionId, setPendingCheckoutSessionId] = useState<string | null>(null);
   const [isStoreItemPurchase, setIsStoreItemPurchase] = useState(false);
   const [isTryoutPurchase, setIsTryoutPurchase] = useState(false);
+  const [tryoutSelectedTeamId, setTryoutSelectedTeamId] = useState<string>("");
+  const [tryoutRecommendedTeam, setTryoutRecommendedTeam] = useState<any | null>(null);
+  const [tryoutMatchingTeams, setTryoutMatchingTeams] = useState<any[]>([]);
+  const [tryoutIsFallback, setTryoutIsFallback] = useState(false);
+  const [tryoutScheduleDialogOpen, setTryoutScheduleDialogOpen] = useState(false);
+  const [tryoutScheduleData, setTryoutScheduleData] = useState<{ enrollmentId: number; programId: string; teamId: string } | null>(null);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [signedWaivers, setSignedWaivers] = useState<Record<string, boolean>>({});
   const [waiverScrollStatus, setWaiverScrollStatus] = useState<Record<string, boolean>>({});
@@ -1829,7 +1835,14 @@ export default function UnifiedAccount() {
           })
             .then(data => {
               console.log('[Payment] verify-session result:', data);
-              // For iOS, only redirect to profile gateway if payment was confirmed on backend
+              if (data?.success && data?.tryoutData) {
+                setTryoutScheduleData({
+                  enrollmentId: data.tryoutData.enrollmentId,
+                  programId: data.tryoutData.programId,
+                  teamId: data.tryoutData.recommendedTeamId || '',
+                });
+                setTryoutScheduleDialogOpen(true);
+              }
               if (data?.success && isIOSRedirect) {
                 console.log('[iOS Payment] Redirecting to profile gateway...');
                 setTimeout(() => {
@@ -1905,6 +1918,96 @@ export default function UnifiedAccount() {
   const { data: parentTeamChatrooms = [] } = useQuery<any[]>({
     queryKey: ["/api/account/team-chatrooms"],
   });
+
+  const { data: tryoutProgramTeams = [] } = useQuery<any[]>({
+    queryKey: ['/api/teams', { programId: selectedPackage }],
+    queryFn: async () => {
+      if (!selectedPackage) return [];
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`/api/teams?programId=${selectedPackage}`, { headers, credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: isTryoutPurchase && !!selectedPackage,
+  });
+
+  useEffect(() => {
+    if (!isTryoutPurchase || !selectedPlayer || !selectedPackage) {
+      setTryoutRecommendedTeam(null);
+      setTryoutMatchingTeams([]);
+      setTryoutSelectedTeamId("");
+      setTryoutIsFallback(false);
+      return;
+    }
+    const player = players?.find((p: any) => p.id === selectedPlayer);
+    if (!player || tryoutProgramTeams.length === 0) {
+      setTryoutRecommendedTeam(null);
+      setTryoutMatchingTeams(tryoutProgramTeams.length > 0 ? tryoutProgramTeams : []);
+      setTryoutSelectedTeamId("");
+      setTryoutIsFallback(tryoutProgramTeams.length > 0);
+      return;
+    }
+
+    let playerAge: number | null = null;
+    if (player.dateOfBirth) {
+      const dob = new Date(player.dateOfBirth);
+      const today = new Date();
+      playerAge = today.getFullYear() - dob.getFullYear();
+      const m = today.getMonth() - dob.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) playerAge--;
+    }
+    const skillLevel = player.skillLevel;
+    const currentYear = new Date().getFullYear();
+
+    const getAgeInRange = (team: any): boolean => {
+      if (team.minAge != null || team.maxAge != null) {
+        if (playerAge === null) return true;
+        return (team.minAge == null || playerAge >= team.minAge) &&
+               (team.maxAge == null || playerAge <= team.maxAge);
+      }
+      if (playerAge === null) return true;
+      const divisionStr = (team.division || team.name || '');
+      const uMatch = divisionStr.match(/U(\d+)/i);
+      if (uMatch) return playerAge <= parseInt(uMatch[1]);
+      const birthYearMatch = divisionStr.match(/(\d{4})[^\d]+(\d{4})/);
+      if (birthYearMatch) {
+        const playerBirthYear = currentYear - playerAge;
+        const minYear = Math.min(parseInt(birthYearMatch[1]), parseInt(birthYearMatch[2]));
+        const maxYear = Math.max(parseInt(birthYearMatch[1]), parseInt(birthYearMatch[2]));
+        return playerBirthYear >= minYear && playerBirthYear <= maxYear;
+      }
+      return true;
+    };
+
+    const getLevelMatch = (team: any): boolean => {
+      return !skillLevel || !team.level || team.level.toLowerCase() === skillLevel.toLowerCase();
+    };
+
+    const ageAndLevelMatches: any[] = [];
+    const ageOnlyMatches: any[] = [];
+    tryoutProgramTeams.forEach((team: any) => {
+      const ageOk = getAgeInRange(team);
+      const levelOk = getLevelMatch(team);
+      if (ageOk && levelOk) ageAndLevelMatches.push(team);
+      else if (ageOk) ageOnlyMatches.push(team);
+    });
+
+    let finalMatches = ageAndLevelMatches.length > 0 ? ageAndLevelMatches : ageOnlyMatches;
+    const usedFallback = finalMatches.length === 0;
+    if (usedFallback) finalMatches = tryoutProgramTeams;
+
+    setTryoutMatchingTeams(finalMatches);
+    setTryoutIsFallback(usedFallback);
+    if (finalMatches.length === 1) {
+      setTryoutRecommendedTeam(finalMatches[0]);
+      setTryoutSelectedTeamId(String(finalMatches[0].id));
+    } else {
+      setTryoutRecommendedTeam(null);
+      setTryoutSelectedTeamId("");
+    }
+  }, [isTryoutPurchase, selectedPlayer, players, tryoutProgramTeams, selectedPackage]);
 
   // Fetch pending quotes for current user
   const { data: pendingQuotes = [] } = useQuery<any[]>({
@@ -2575,6 +2678,10 @@ export default function UnifiedAccount() {
               if (!open) {
                 setIsStoreItemPurchase(false);
                 setIsTryoutPurchase(false);
+                setTryoutSelectedTeamId("");
+                setTryoutRecommendedTeam(null);
+                setTryoutMatchingTeams([]);
+                setTryoutIsFallback(false);
                 setSelectedPackage("");
                 setSelectedPlayer("");
                 setSelectedPricingOptionId("");
@@ -2899,6 +3006,54 @@ export default function UnifiedAccount() {
                           );
                         })()}
 
+                        {/* Tryout Team Recommendation */}
+                        {isTryoutPurchase && selectedPlayer && tryoutMatchingTeams.length > 0 && (
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium flex items-center gap-2">
+                              <Users className="w-4 h-4" />
+                              {tryoutMatchingTeams.length > 1 ? 'Select Team' : 'Recommended Team'}
+                            </label>
+                            {tryoutMatchingTeams.length > 1 ? (
+                              <div className="space-y-2">
+                                <p className="text-xs text-gray-500">
+                                  {tryoutIsFallback
+                                    ? 'No exact match found — please select a team:'
+                                    : 'Multiple teams match your player. Please select one:'}
+                                </p>
+                                <Select value={tryoutSelectedTeamId} onValueChange={(val) => {
+                                  setTryoutSelectedTeamId(val);
+                                  setTryoutRecommendedTeam(tryoutMatchingTeams.find((t: any) => String(t.id) === val) || null);
+                                }}>
+                                  <SelectTrigger data-testid="select-tryout-team">
+                                    <SelectValue placeholder="Choose a team" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {tryoutMatchingTeams.map((team: any) => (
+                                      <SelectItem key={team.id} value={String(team.id)}>
+                                        {team.name}{team.division ? ` (${team.division})` : ''}{team.level ? ` · ${team.level.charAt(0).toUpperCase() + team.level.slice(1)}` : ''}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            ) : tryoutRecommendedTeam ? (
+                              <div className="p-3 rounded-lg bg-purple-50 border border-purple-200">
+                                <p className="font-medium text-sm">{tryoutRecommendedTeam.name}</p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  {tryoutRecommendedTeam.division && `${tryoutRecommendedTeam.division} · `}
+                                  {tryoutRecommendedTeam.level && `${tryoutRecommendedTeam.level.charAt(0).toUpperCase() + tryoutRecommendedTeam.level.slice(1)} · `}
+                                  Best match for your player
+                                </p>
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
+                        {isTryoutPurchase && selectedPlayer && tryoutProgramTeams.length === 0 && (
+                          <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
+                            <p className="text-sm text-amber-800">No teams are set up for this program yet. You can still purchase the tryout.</p>
+                          </div>
+                        )}
+
                         {/* Package/Item Details */}
                         {selectedPackage && (() => {
                           // Look up in the full programs array (contains both service and goods)
@@ -2919,7 +3074,7 @@ export default function UnifiedAccount() {
                                 <p className="text-sm text-gray-600">{pkg.description}</p>
                               )}
                               
-                              {!isStoreProduct && (
+                              {!isStoreProduct && !isTryoutPurchase && (
                                 <div className="flex gap-2 flex-wrap">
                                   {pkg.type && (
                                     <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
@@ -2942,6 +3097,16 @@ export default function UnifiedAccount() {
                                       Book Sessions After Purchase
                                     </span>
                                   )}
+                                </div>
+                              )}
+                              {isTryoutPurchase && (
+                                <div className="flex gap-2 flex-wrap">
+                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                    One-Time Payment
+                                  </span>
+                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                    1 Session Credit
+                                  </span>
                                 </div>
                               )}
                             </div>
@@ -3126,7 +3291,7 @@ export default function UnifiedAccount() {
                           
                           // Determine billing type display
                           const isBundle = !!selectedOption;
-                          const isSubscription = !isBundle && !isInstallmentSelected && !isBundleInstallmentSelected && pkg.type === "Subscription" && pkg.billingCycle && pkg.billingCycle !== "One-Time" && pkg.billingCycle !== "One-time";
+                          const isSubscription = !isTryoutPurchase && !isBundle && !isInstallmentSelected && !isBundleInstallmentSelected && pkg.type === "Subscription" && pkg.billingCycle && pkg.billingCycle !== "One-Time" && pkg.billingCycle !== "One-time";
                           
                           return (
                             <div className="bg-gray-100 p-4 rounded-lg space-y-2">
@@ -3369,8 +3534,9 @@ export default function UnifiedAccount() {
                                     data: {
                                       programId: selectedPackage,
                                       playerId: selectedPlayer || null,
-                                      successUrl: `${window.location.origin}/account?success=true&session_id={CHECKOUT_SESSION_ID}`,
-                                      cancelUrl: `${window.location.origin}/account?canceled=true`,
+                                      recommendedTeamId: tryoutSelectedTeamId ? parseInt(tryoutSelectedTeamId) : undefined,
+                                      successUrl: `${window.location.origin}/account?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+                                      cancelUrl: `${window.location.origin}/account?payment=canceled`,
                                     },
                                   }) as { sessionUrl?: string; url?: string };
                                   checkoutUrl = tryoutData.sessionUrl || tryoutData.url || '';
@@ -3716,8 +3882,137 @@ export default function UnifiedAccount() {
         onOpenChange={(open) => { setCoachProfileOpen(open); if (!open) setCoachProfileId(null); }}
       />
 
+      {tryoutScheduleDialogOpen && tryoutScheduleData && (
+        <TryoutScheduleDialog
+          enrollmentId={tryoutScheduleData.enrollmentId}
+          programId={tryoutScheduleData.programId}
+          teamId={tryoutScheduleData.teamId}
+          onClose={() => { setTryoutScheduleDialogOpen(false); setTryoutScheduleData(null); }}
+        />
+      )}
+
       </div>
     </>
+  );
+}
+
+function TryoutScheduleDialog({ enrollmentId, programId, teamId, onClose }: {
+  enrollmentId: number;
+  programId: string;
+  teamId: string;
+  onClose: () => void;
+}) {
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [isScheduling, setIsScheduling] = useState(false);
+  const { toast } = useToast();
+
+  const { data: availableSessions = [], isLoading } = useQuery<any[]>({
+    queryKey: ['/api/tryout/available-sessions', teamId],
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`/api/tryout/available-sessions/${teamId}`, { headers, credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!teamId,
+  });
+
+  const { data: programData } = useQuery<any>({
+    queryKey: ['/api/programs', programId],
+  });
+
+  const handleSchedule = async () => {
+    if (!selectedEventId) return;
+    setIsScheduling(true);
+    try {
+      await apiRequest('/api/tryout/schedule', {
+        method: 'POST',
+        data: { enrollmentId, eventId: selectedEventId },
+      });
+      toast({ title: "Tryout Scheduled!", description: "Your tryout session has been booked." });
+      onClose();
+    } catch (error: any) {
+      toast({ title: "Scheduling Failed", description: error.message || "Could not schedule tryout.", variant: "destructive" });
+    } finally {
+      setIsScheduling(false);
+    }
+  };
+
+  const formatSessionTime = (startTime: string, endTime: string) => {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const dateStr = start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const startStr = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const endStr = end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    return { dateStr, timeStr: `${startStr} - ${endStr}` };
+  };
+
+  return (
+    <Dialog open={true} onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold">Schedule Your Tryout</DialogTitle>
+          <DialogDescription>
+            Pick a session time for your {programData?.name || 'program'} tryout
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 py-2 max-h-[50vh] overflow-y-auto">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+              <span className="ml-2 text-sm text-gray-500">Loading available sessions...</span>
+            </div>
+          ) : availableSessions.length === 0 ? (
+            <div className="text-center py-6">
+              <CalendarCheck className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">No upcoming sessions available for this team yet.</p>
+              <p className="text-xs text-gray-400 mt-1">Check back later or contact the organization.</p>
+            </div>
+          ) : (
+            availableSessions.map((session: any) => {
+              const { dateStr, timeStr } = formatSessionTime(session.startTime, session.endTime);
+              const isSelected = selectedEventId === String(session.id);
+              return (
+                <div
+                  key={session.id}
+                  onClick={() => setSelectedEventId(String(session.id))}
+                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                    isSelected ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">{session.title}</p>
+                      <p className="text-xs text-gray-500">{dateStr} · {timeStr}</p>
+                      {session.location && <p className="text-xs text-gray-400 mt-0.5">{session.location}</p>}
+                    </div>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                      isSelected ? 'border-red-500 bg-red-500' : 'border-gray-300'
+                    }`}>
+                      {isSelected && <Check className="w-3 h-3 text-white" />}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+        <div className="flex gap-3 pt-2">
+          <Button variant="outline" className="flex-1" onClick={onClose}>
+            Skip for Now
+          </Button>
+          <Button
+            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+            disabled={!selectedEventId || isScheduling}
+            onClick={handleSchedule}
+          >
+            {isScheduling ? "Scheduling..." : "Schedule Tryout"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

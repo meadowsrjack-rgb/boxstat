@@ -12059,20 +12059,64 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                     <FormField
                       control={form.control}
                       name="visibility"
-                      render={({ field }) => (
-                        <FieldWrap label="Visibility">
-                          <ChipSel
-                            options={[
-                              { value: "public", label: "Everyone", Icon: Globe },
-                              { value: "members_only", label: "Members Only", Icon: Lock },
-                            ]}
-                            value={field.value || 'public'}
-                            onChange={field.onChange}
-                            testIdPrefix="chip-visibility"
-                          />
-                          <p className="text-xs text-gray-400 mt-1">Public = visible to all users. Members Only = hidden until user has an active enrollment.</p>
-                        </FieldWrap>
-                      )}
+                      render={({ field }) => {
+                        const tryoutEnabled = form.watch("tryoutEnabled");
+                        const chipValue = tryoutEnabled ? "tryout" : (field.value || "public");
+                        const helperText =
+                          chipValue === "tryout"
+                            ? "Visible to non-members (parents) so they can register for a single tryout session at a discounted price."
+                            : chipValue === "members_only"
+                            ? "Hidden from the catalog until the user has an active enrollment."
+                            : "Public — visible to all users.";
+                        return (
+                          <FieldWrap label="Visibility">
+                            <ChipSel
+                              options={[
+                                { value: "public", label: "Everyone", Icon: Globe },
+                                { value: "members_only", label: "Members Only", Icon: Lock },
+                                { value: "tryout", label: "Tryout", Icon: UserPlus },
+                              ]}
+                              value={chipValue}
+                              onChange={(val) => {
+                                if (val === "tryout") {
+                                  field.onChange("members_only");
+                                  form.setValue("tryoutEnabled", true);
+                                } else {
+                                  field.onChange(val);
+                                  form.setValue("tryoutEnabled", false);
+                                }
+                              }}
+                              testIdPrefix="chip-visibility"
+                            />
+                            <p className="text-xs text-gray-400 mt-1">{helperText}</p>
+                            {chipValue === "tryout" && (
+                              <FormField
+                                control={form.control}
+                                name="tryoutPrice"
+                                render={({ field: priceField }) => (
+                                  <FieldWrap label="Tryout Price ($)">
+                                    <div className="relative">
+                                      <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                      <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        placeholder="0.00"
+                                        key={`tryout-price-${editingProgram?.id ?? "new"}`}
+                                        defaultValue={priceField.value && priceField.value > 0 ? (priceField.value / 100).toFixed(2) : ""}
+                                        onBlur={(e) => {
+                                          const val = parseFloat(e.target.value);
+                                          priceField.onChange(isNaN(val) ? 0 : Math.round(val * 100));
+                                        }}
+                                        className="w-full h-10 pl-8 pr-3 rounded-md border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition"
+                                      />
+                                    </div>
+                                  </FieldWrap>
+                                )}
+                              />
+                            )}
+                          </FieldWrap>
+                        );
+                      }}
                     />
                   </Section>
 
@@ -12688,50 +12732,6 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                     </>
                   </Section>
 
-                  {/* ── TRYOUT SETTINGS ── */}
-                  {form.watch("visibility") === "members_only" && (
-                    <Section icon={<Users size={16} className="text-gray-500" />} title="Tryout Settings">
-                      <>
-                        <FormField
-                          control={form.control}
-                          name="tryoutEnabled"
-                          render={({ field }) => (
-                            <TogRow
-                              label="Enable Tryouts"
-                              description="Allow non-members to register for a single tryout session at a discounted price"
-                              value={!!field.value}
-                              onChange={field.onChange}
-                            />
-                          )}
-                        />
-                        {form.watch("tryoutEnabled") && (
-                          <FormField
-                            control={form.control}
-                            name="tryoutPrice"
-                            render={({ field }) => (
-                              <FieldWrap label="Tryout Price ($)">
-                                <div className="relative">
-                                  <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                  <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    placeholder="0.00"
-                                    key={`tryout-price-${editingProgram?.id ?? "new"}`}
-                                    defaultValue={field.value && field.value > 0 ? (field.value / 100).toFixed(2) : ""}
-                                    onBlur={(e) => {
-                                      const val = parseFloat(e.target.value);
-                                      field.onChange(isNaN(val) ? 0 : Math.round(val * 100));
-                                    }}
-                                    className="w-full h-10 pl-8 pr-3 rounded-md border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition"
-                                  />
-                                </div>
-                              </FieldWrap>
-                            )}
-                          />
-                        )}
-                      </>
-                    </Section>
-                  )}
 
                   {/* ── SOCIAL SETTINGS ── */}
                   <Section icon={<Users size={16} className="text-gray-500" />} title="Social Settings">

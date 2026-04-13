@@ -181,7 +181,7 @@ function ProgramCard({
   return (
     <div
       className="bg-white/5 border border-white/10 hover:border-white/20 hover:shadow-lg transition-all rounded-xl p-5 flex flex-col cursor-pointer"
-      onClick={() => !priceHidden && onEnroll(program)}
+      onClick={() => hasTryout ? (onTryout && onTryout(program)) : (!priceHidden && onEnroll(program))}
       data-testid={`program-card-${program.id}`}
     >
       <div className="flex items-center gap-2 mb-3">
@@ -195,7 +195,10 @@ function ProgramCard({
         {priceDisplay && (
           <span className="ml-auto text-sm font-semibold text-red-400">{priceDisplay}</span>
         )}
-        {priceHidden && (
+        {hasTryout && (
+          <span className="ml-auto text-sm font-semibold text-purple-400">${(program.tryoutPrice! / 100).toFixed(2)} tryout</span>
+        )}
+        {priceHidden && !hasTryout && (
           <span className="ml-auto text-xs text-white/30 italic">Members only</span>
         )}
       </div>

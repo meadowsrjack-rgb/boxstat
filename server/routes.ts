@@ -8263,13 +8263,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orgPlayerIdsSet = new Set(orgPlayerIds);
 
       // Use SQL COUNT for awards instead of loading all rows
+      const playerIdsArrayLiteral = `{${orgPlayerIds.map((id: string) => `"${id}"`).join(',')}}`;
       const awardsCountResult = await db.execute(
         orgPlayerIds.length > 0
           ? sql`SELECT
                   COUNT(*) as total,
                   COUNT(*) FILTER (WHERE awarded_at >= ${startOfMonth.toISOString()}) as this_month
                 FROM user_awards
-                WHERE user_id = ANY(${orgPlayerIds})`
+                WHERE user_id = ANY(${playerIdsArrayLiteral}::text[])`
           : sql`SELECT 0 as total, 0 as this_month`
       );
       const awardsCountRows = (awardsCountResult.rows || awardsCountResult) as any[];

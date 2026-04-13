@@ -15030,7 +15030,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/migration/claim/:token', async (req: any, res) => {
     try {
       const { token } = req.params;
-      const { password, firstName, lastName, phoneNumber, skillLevel, address, city, state, postalCode } = req.body;
+      const { password, firstName, lastName, phoneNumber, playerSkillLevels, address, city, state, postalCode } = req.body;
 
       if (!password || password.length < 8) {
         return res.status(400).json({ error: 'Password must be at least 8 characters' });
@@ -15047,11 +15047,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(410).json({ error: 'Invite link has expired. Please contact your organization admin.' });
       }
 
-      // Require skill level for non-staff users
-      const isStaffRole = user.role === 'coach' || user.role === 'admin';
-      if (!isStaffRole && !skillLevel) {
-        return res.status(400).json({ error: 'Skill level is required' });
-      }
+      const isStaff = user.role === 'coach' || user.role === 'admin';
+      const allowedSkillLevels = ['beginner', 'intermediate', 'advanced'];
 
       const hashedPassword = hashPassword(password);
 
@@ -15067,7 +15064,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (firstName) updateData.firstName = firstName;
       if (lastName) updateData.lastName = lastName;
       if (phoneNumber) updateData.phoneNumber = phoneNumber;
-      if (skillLevel) updateData.skillLevel = skillLevel;
       if (address) updateData.address = address;
       if (city) updateData.city = city;
       if (state) updateData.state = state;
@@ -15075,20 +15071,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.updateUser(user.id, updateData);
 
-      // Also activate all same-email profiles in this org
+      // Also activate all same-email profiles in this org and apply per-player skill levels
       if (user.email && user.organizationId) {
         const allOrgUsers = await storage.getUsersByOrganization(user.organizationId);
         const sameEmailProfiles = allOrgUsers.filter((u: any) =>
           u.id !== user.id && u.email?.toLowerCase() === user.email!.toLowerCase() && u.status === 'invited'
         );
+
+        // For non-staff, validate that every sibling player profile has a valid skill level
+        if (!isStaff && sameEmailProfiles.length > 0) {
+          const skillLevelsMap = playerSkillLevels && typeof playerSkillLevels === 'object' ? playerSkillLevels : {};
+          for (const profile of sameEmailProfiles) {
+            const level = skillLevelsMap[profile.id];
+            if (!level || !allowedSkillLevels.includes(level)) {
+              return res.status(400).json({ error: `Skill level is required for player ${profile.firstName || profile.id}` });
+            }
+          }
+        }
+
         for (const profile of sameEmailProfiles) {
-          await storage.updateUser(profile.id, {
+          const profileUpdate: any = {
             status: 'active',
             hasRegistered: true,
             verified: true,
             inviteToken: null,
             inviteTokenExpiry: null,
-          });
+          };
+          const level = playerSkillLevels && typeof playerSkillLevels === 'object' ? playerSkillLevels[profile.id] : undefined;
+          if (level && allowedSkillLevels.includes(level)) {
+            profileUpdate.skillLevel = level;
+          }
+          await storage.updateUser(profile.id, profileUpdate);
         }
       }
 

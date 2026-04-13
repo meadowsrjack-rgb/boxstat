@@ -39,7 +39,7 @@ export default function InviteClaim() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [skillLevel, setSkillLevel] = useState("");
+  const [playerSkillLevels, setPlayerSkillLevels] = useState<Record<string, string>>({});
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
@@ -112,7 +112,7 @@ export default function InviteClaim() {
           firstName,
           lastName,
           phoneNumber: phoneNumber || undefined,
-          skillLevel: skillLevel || undefined,
+          playerSkillLevels: Object.keys(playerSkillLevels).length > 0 ? playerSkillLevels : undefined,
           address: address || undefined,
           city: city || undefined,
           state: state || undefined,
@@ -320,36 +320,6 @@ export default function InviteClaim() {
                       type="tel"
                     />
                   </div>
-                  {!isStaff && (
-                    <div>
-                      <Label className="text-gray-300 text-sm">Skill Level *</Label>
-                      <Select value={skillLevel} onValueChange={setSkillLevel}>
-                        <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1">
-                          <SelectValue placeholder="Select skill level" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="beginner">
-                            <div className="flex flex-col items-start py-1">
-                              <span className="font-semibold">Beginner</span>
-                              <span className="text-xs text-muted-foreground">0–2 years experience. Learning fundamentals, developing coordination and basic skills.</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="intermediate">
-                            <div className="flex flex-col items-start py-1">
-                              <span className="font-semibold">Intermediate</span>
-                              <span className="text-xs text-muted-foreground">3–5 years experience. Solid fundamentals, good court awareness and consistent play.</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="advanced">
-                            <div className="flex flex-col items-start py-1">
-                              <span className="font-semibold">Advanced</span>
-                              <span className="text-xs text-muted-foreground">5+ years experience. Strong skills, competitive game sense and athletic ability.</span>
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
                 </div>
 
                 {isStaff && (
@@ -366,18 +336,50 @@ export default function InviteClaim() {
                       <Users className="w-4 h-4 text-gray-400" />
                       <span className="text-sm text-gray-300 font-medium">Your Players</span>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {inviteInfo.players.map((p) => (
-                        <div key={p.id} className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-xs font-medium text-blue-400">
-                            {(p.firstName?.[0] || '').toUpperCase()}{(p.lastName?.[0] || '').toUpperCase()}
+                        <div key={p.id} className="flex flex-col gap-2">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-xs font-medium text-blue-400 shrink-0">
+                              {(p.firstName?.[0] || '').toUpperCase()}{(p.lastName?.[0] || '').toUpperCase()}
+                            </div>
+                            <div>
+                              <span className="text-sm text-white">{p.firstName} {p.lastName}</span>
+                              {p.subscriptionEndDate && (
+                                <p className="text-xs text-gray-500">Access until {new Date(p.subscriptionEndDate).toLocaleDateString()}</p>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-sm text-white">{p.firstName} {p.lastName}</span>
-                            {p.subscriptionEndDate && (
-                              <p className="text-xs text-gray-500">Access until {new Date(p.subscriptionEndDate).toLocaleDateString()}</p>
-                            )}
-                          </div>
+                          {!isStaff && (
+                            <Select
+                              value={playerSkillLevels[p.id] || ""}
+                              onValueChange={(val) => setPlayerSkillLevels((prev) => ({ ...prev, [p.id]: val }))}
+                            >
+                              <SelectTrigger className="bg-white/5 border-white/10 text-white ml-11">
+                                <SelectValue placeholder="Select skill level *" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="beginner">
+                                  <div className="flex flex-col items-start py-1">
+                                    <span className="font-semibold">Beginner</span>
+                                    <span className="text-xs text-muted-foreground">0–2 years experience. Learning fundamentals, developing coordination and basic skills.</span>
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="intermediate">
+                                  <div className="flex flex-col items-start py-1">
+                                    <span className="font-semibold">Intermediate</span>
+                                    <span className="text-xs text-muted-foreground">3–5 years experience. Solid fundamentals, good court awareness and consistent play.</span>
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="advanced">
+                                  <div className="flex flex-col items-start py-1">
+                                    <span className="font-semibold">Advanced</span>
+                                    <span className="text-xs text-muted-foreground">5+ years experience. Strong skills, competitive game sense and athletic ability.</span>
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -395,9 +397,12 @@ export default function InviteClaim() {
                       toast({ title: "Phone required", description: "Please enter your phone number.", variant: "destructive" });
                       return;
                     }
-                    if (!isStaff && !skillLevel) {
-                      toast({ title: "Skill level required", description: "Please select your skill level to continue.", variant: "destructive" });
-                      return;
+                    if (!isStaff && inviteInfo?.players && inviteInfo.players.length > 0) {
+                      const missing = inviteInfo.players.some((p) => !playerSkillLevels[p.id]);
+                      if (missing) {
+                        toast({ title: "Skill level required", description: "Please select a skill level for every player.", variant: "destructive" });
+                        return;
+                      }
                     }
                     setStep(2);
                   }}

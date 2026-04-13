@@ -723,7 +723,7 @@ export default function AdminDashboard() {
             </TabsList>
           </div>
 
-          <div className="lg:flex-1 lg:min-w-0">
+          <div className="lg:flex-1 lg:min-w-0 lg:overflow-x-hidden">
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">

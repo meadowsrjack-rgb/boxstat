@@ -34,7 +34,6 @@ import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import SetPassword from "@/pages/set-password";
 import OrgSignup from "@/pages/org-signup";
-console.log('[App] OrgSignup imported as:', typeof OrgSignup, OrgSignup);
 import SubscriptionRequired from "@/pages/subscription-required";
 
 import RosterManagement from "@/pages/roster-management";
@@ -348,7 +347,6 @@ function ProfileCheckWrapper({ children }: { children: React.ReactNode }) {
 function AppRouter() {
   const [currentPath] = useLocation();
   const { user, isLoading, isAuthenticated } = useAuth();
-  console.log('[AppRouter] path:', currentPath, 'isLoading:', isLoading, 'user:', !!user);
   const [, setLocation] = useLocation();
 
   // Check if user needs profile setup

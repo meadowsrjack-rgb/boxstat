@@ -867,19 +867,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     const user = await storage.getUser(req.user.id);
     
+    if (!user) {
+      return res.status(401).json({ error: "User not found" });
+    }
+    
     // Note: activeProfileId is intentionally not set here so the frontend
     // can rely on the selectedPlayerId stored in localStorage for player selection.
     
-    if (user) {
-      (user as any).needsPassword = !user.password;
-      
-      // Include organization's platform subscription status for admin gating
-      if (user.organizationId) {
-        const org = await storage.getOrganization(user.organizationId);
-        if (org) {
-          (user as any).organizationPlatformSubscriptionStatus = (org as any).platformSubscriptionStatus ?? 'inactive';
-          (user as any).organizationPlatformPlan = (org as any).platformPlan ?? null;
-        }
+    (user as any).needsPassword = !user.password;
+    
+    // Include organization's platform subscription status for admin gating
+    if (user.organizationId) {
+      const org = await storage.getOrganization(user.organizationId);
+      if (org) {
+        (user as any).organizationPlatformSubscriptionStatus = (org as any).platformSubscriptionStatus ?? 'inactive';
+        (user as any).organizationPlatformPlan = (org as any).platformPlan ?? null;
       }
     }
     

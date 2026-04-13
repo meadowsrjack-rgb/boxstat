@@ -782,7 +782,7 @@ export default function AdminDashboard() {
                 <CardContent className="py-4 px-4">
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Active Players</p>
                   <p className="text-xl font-bold text-gray-900 mt-1" data-testid="stat-active-players-value">
-                    {overviewStats?.enrolledPlayers ?? 0}
+                    {overviewStats?.totalPlayers ?? 0}
                   </p>
                 </CardContent>
               </Card>
@@ -877,7 +877,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {overviewStats?.store && overviewStats.store.totalProducts > 0 && (
+            {overviewStats?.store && (
               <StoreAtAGlance
                 storeStats={overviewStats.store}
                 onNavigateToStore={() => setActiveTab("store")}
@@ -1163,7 +1163,12 @@ function StoreAtAGlance({ storeStats, onNavigateToStore, programs }: { storeStat
         </div>
 
         <div className="space-y-2 mb-4">
-          {storeStats.products.map((product: any) => (
+          {storeStats.products.length === 0 ? (
+            <div className="text-center py-6 text-gray-400">
+              <Package className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+              <p className="text-sm">No products yet</p>
+            </div>
+          ) : storeStats.products.map((product: any) => (
             <div
               key={product.id}
               className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"

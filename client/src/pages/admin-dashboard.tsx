@@ -1871,6 +1871,8 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   const [filterRoles, setFilterRoles] = useState<Set<string>>(new Set());
   const [filterStatuses, setFilterStatuses] = useState<Set<string>>(new Set());
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
+  const [usersPage, setUsersPage] = useState(1);
+  const USERS_PAGE_SIZE = 50;
   const tableRef = useDragScroll();
   const stickyScrollbarRef = useRef<HTMLDivElement>(null);
   const stickyScrollbarInnerRef = useRef<HTMLDivElement>(null);
@@ -2579,6 +2581,11 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     return true;
   });
 
+  const totalUsersPages = Math.max(1, Math.ceil(filteredUsers.length / USERS_PAGE_SIZE));
+  const safeUsersPage = Math.min(usersPage, totalUsersPages);
+  const paginatedUsers = filteredUsers.slice((safeUsersPage - 1) * USERS_PAGE_SIZE, safeUsersPage * USERS_PAGE_SIZE);
+
+  useEffect(() => { setUsersPage(1); }, [userSearchTerm, filterRoles, filterStatuses, sortField, sortDirection]);
 
   const downloadUsersData = () => {
     const csvHeaders = "First name,Last name,Email,Phone,Role,Status,Team";
@@ -4131,8 +4138,8 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
               <TableRow>
                 <TableHead className="w-10">
                   <Checkbox 
-                    checked={filteredUsers.length > 0 && selectedUserIds.size === filteredUsers.length}
-                    onCheckedChange={() => toggleAllUsers(filteredUsers.map((u: any) => u.id))}
+                    checked={paginatedUsers.length > 0 && paginatedUsers.every((u: any) => selectedUserIds.has(u.id))}
+                    onCheckedChange={() => toggleAllUsers(paginatedUsers.map((u: any) => u.id))}
                     aria-label="Select all users"
                   />
                 </TableHead>
@@ -4198,7 +4205,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((user: any) => {
+              {paginatedUsers.map((user: any) => {
                 const userTeam = teams.find((t: any) => String(t.id) === String(user.teamId));
                 const userProgram = userTeam ? programs.find((p: any) => String(p.id) === String(userTeam.programId)) : null;
                 const linkedPlayers = users.filter((u: any) => (u.accountHolderId === user.id || u.parentId === user.id) && u.role === "player");
@@ -4513,6 +4520,34 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
             }}
           >
             <div ref={stickyScrollbarInnerRef} style={{ width: tableRef.current?.scrollWidth || '100%', height: '12px' }} />
+          </div>
+        )}
+        {filteredUsers.length > USERS_PAGE_SIZE && (
+          <div className="flex items-center justify-between mt-4 px-2">
+            <span className="text-sm text-gray-500">
+              Showing {((safeUsersPage - 1) * USERS_PAGE_SIZE) + 1}–{Math.min(safeUsersPage * USERS_PAGE_SIZE, filteredUsers.length)} of {filteredUsers.length} users
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safeUsersPage <= 1}
+                onClick={() => setUsersPage(p => Math.max(1, p - 1))}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="text-sm font-medium">
+                Page {safeUsersPage} of {totalUsersPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safeUsersPage >= totalUsersPages}
+                onClick={() => setUsersPage(p => p + 1)}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>

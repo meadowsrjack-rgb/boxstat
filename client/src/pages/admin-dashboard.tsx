@@ -4174,7 +4174,6 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                 >
                   Status
                 </TableHead>
-                <TableHead className="px-2">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -4276,8 +4275,8 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                 const summaryStatus = getUserSummaryStatus();
 
                 return (
-                  <TableRow key={user.id} className="cursor-default" data-testid={`row-user-${user.id}`}>
-                    <TableCell className="px-2 py-1.5">
+                  <TableRow key={user.id} className="cursor-pointer hover:bg-gray-50" onClick={() => setEditingUser(user)} data-testid={`row-user-${user.id}`}>
+                    <TableCell className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
                       <Checkbox 
                         checked={selectedUserIds.has(user.id)}
                         onCheckedChange={() => toggleUserSelection(user.id)}
@@ -4366,20 +4365,6 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                     </TableCell>
                     <TableCell className="px-2 py-1.5" data-testid={`text-status-${user.id}`}>
                       <Badge className={`${summaryStatus.cls} whitespace-nowrap text-[10px] px-1.5 py-0.5`}>{summaryStatus.label}</Badge>
-                    </TableCell>
-                    <TableCell className="px-2 py-1.5">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-7 w-7 p-0"
-                          onClick={() => {
-                            setEditingUser(user);
-                          }}
-                          data-testid={`button-edit-user-${user.id}`}
-                          title="Edit User"
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </Button>
                     </TableCell>
                   </TableRow>
                 );

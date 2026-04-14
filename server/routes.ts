@@ -13437,11 +13437,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Resolve pricing option: direct lookup or match via payment amount
         const pricingOptions = Array.isArray(product?.pricingOptions) ? product.pricingOptions as any[] : [];
         let resolvedOption: any = null;
+        const programPayment = userPayments.find(p => p.programId === enrollment.programId);
         if (enrollment.selectedPricingOptionId) {
           resolvedOption = pricingOptions.find((o: any) => o.id === enrollment.selectedPricingOptionId) || null;
         }
         if (!resolvedOption && pricingOptions.length > 0) {
-          const programPayment = userPayments.find(p => p.programId === enrollment.programId);
           if (programPayment) {
             resolvedOption = pricingOptions.find((o: any) => o.price === programPayment.amount) || null;
           }
@@ -13485,9 +13485,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           remainingCredits: enrollment.remainingCredits,
           totalCredits: enrollment.totalCredits,
           selectedPricingOptionId: enrollment.selectedPricingOptionId,
-          pricingAmount: resolvedOption?.price || null,
-          pricingOptionName: resolvedOption?.name || null,
-          pricingOptionType: resolvedOption?.optionType || null,
+          pricingAmount: resolvedOption?.price || programPayment?.amount || null,
+          pricingOptionName: resolvedOption?.name || (programPayment ? programPayment.paymentType || 'Paid' : null),
+          pricingOptionType: resolvedOption?.optionType || (programPayment?.paymentType === 'Subscription' ? 'subscription' : programPayment ? 'one_time' : null),
           // Team/group assignments within this program, with member data
           teams: await Promise.all(programTeams.map(async ({ membership, team }) => {
             // Get members for this team (exclude admins from player-facing roster)

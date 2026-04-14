@@ -593,35 +593,31 @@ export function EditEventDialog({ event, teams, programs, facilities, organizati
                           <div className="border-t pt-3 space-y-2">
                             <p className="text-xs font-medium text-muted-foreground">Add New Facility</p>
                             <Input
-                              placeholder="Facility name"
+                              placeholder="Facility name (e.g. Main Arena)"
                               value={newFacilityName}
                               onChange={(e) => setNewFacilityName(e.target.value)}
                               className="h-8 text-sm"
                             />
-                            <Input
-                              placeholder="Address"
+                            <LocationSearch
                               value={newFacilityAddress}
-                              onChange={(e) => setNewFacilityAddress(e.target.value)}
-                              className="h-8 text-sm"
+                              onLocationSelect={(location) => {
+                                setNewFacilityAddress(location.name);
+                                setNewFacilityLat(String(location.lat ?? ""));
+                                setNewFacilityLng(String(location.lng ?? ""));
+                              }}
+                              placeholder="Search venue or address..."
+                              className="w-full"
                             />
-                            <div className="grid grid-cols-2 gap-2">
-                              <Input
-                                placeholder="Latitude"
-                                value={newFacilityLat}
-                                onChange={(e) => setNewFacilityLat(e.target.value)}
-                                className="h-8 text-sm"
-                                type="number"
-                                step="any"
-                              />
-                              <Input
-                                placeholder="Longitude"
-                                value={newFacilityLng}
-                                onChange={(e) => setNewFacilityLng(e.target.value)}
-                                className="h-8 text-sm"
-                                type="number"
-                                step="any"
-                              />
-                            </div>
+                            {newFacilityAddress && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                {newFacilityAddress}
+                                {newFacilityLat && newFacilityLng && (
+                                  <span className="ml-1 text-muted-foreground/60">
+                                    ({parseFloat(newFacilityLat).toFixed(4)}, {parseFloat(newFacilityLng).toFixed(4)})
+                                  </span>
+                                )}
+                              </p>
+                            )}
                             <Button
                               type="button"
                               size="sm"

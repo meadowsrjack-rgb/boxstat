@@ -16259,47 +16259,30 @@ function FacilitiesTab({ organization }: { organization: any }) {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={addForm.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Address</FormLabel>
-                    <FormControl>
-                      <Input placeholder="123 Main St, City, State" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+              <FormItem>
+                <FormLabel>Address</FormLabel>
+                <LocationSearch
+                  value={addForm.watch("address")}
+                  onLocationSelect={(location) => {
+                    addForm.setValue("address", location.name);
+                    addForm.setValue("latitude", location.lat ?? 0);
+                    addForm.setValue("longitude", location.lng ?? 0);
+                  }}
+                  placeholder="Search venue or address..."
+                  className="w-full"
+                />
+                {addForm.watch("address") && (
+                  <p className="text-xs text-muted-foreground truncate">
+                    {addForm.watch("address")}
+                    {addForm.watch("latitude") !== 0 && (
+                      <span className="ml-1 text-muted-foreground/60">
+                        ({addForm.watch("latitude")?.toFixed(4)}, {addForm.watch("longitude")?.toFixed(4)})
+                      </span>
+                    )}
+                  </p>
                 )}
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <FormField
-                  control={addForm.control}
-                  name="latitude"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Latitude</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="any" placeholder="37.7749" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={addForm.control}
-                  name="longitude"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Longitude</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="any" placeholder="-122.4194" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                <FormMessage />
+              </FormItem>
               <FormField
                 control={addForm.control}
                 name="isActive"
@@ -16345,47 +16328,30 @@ function FacilitiesTab({ organization }: { organization: any }) {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={editForm.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Address</FormLabel>
-                    <FormControl>
-                      <Input placeholder="123 Main St, City, State" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+              <FormItem>
+                <FormLabel>Address</FormLabel>
+                <LocationSearch
+                  value={editForm.watch("address")}
+                  onLocationSelect={(location) => {
+                    editForm.setValue("address", location.name);
+                    editForm.setValue("latitude", location.lat ?? 0);
+                    editForm.setValue("longitude", location.lng ?? 0);
+                  }}
+                  placeholder="Search venue or address..."
+                  className="w-full"
+                />
+                {editForm.watch("address") && (
+                  <p className="text-xs text-muted-foreground truncate">
+                    {editForm.watch("address")}
+                    {editForm.watch("latitude") !== 0 && (
+                      <span className="ml-1 text-muted-foreground/60">
+                        ({editForm.watch("latitude")?.toFixed(4)}, {editForm.watch("longitude")?.toFixed(4)})
+                      </span>
+                    )}
+                  </p>
                 )}
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <FormField
-                  control={editForm.control}
-                  name="latitude"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Latitude</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="any" placeholder="37.7749" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="longitude"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Longitude</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="any" placeholder="-122.4194" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                <FormMessage />
+              </FormItem>
               <FormField
                 control={editForm.control}
                 name="isActive"

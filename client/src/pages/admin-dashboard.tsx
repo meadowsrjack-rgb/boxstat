@@ -3176,7 +3176,10 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   </div>
                   
                   <div className="space-y-3">
-                    <Label data-testid="label-edit-role">Role</Label>
+                    <div className="flex items-center gap-2">
+                      <Label data-testid="label-edit-role">Role</Label>
+                      <span className="text-xs text-gray-500">Changing the role updates this profile's current role.</span>
+                    </div>
                     <div className="flex items-center gap-2">
                       <Select
                         value={editingUser.role || "player"}
@@ -3193,7 +3196,6 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                         </SelectContent>
                       </Select>
                     </div>
-                    <p className="text-xs text-gray-500">Changing the role updates this profile's current role.</p>
 
                     {(() => {
                       const accountHolderId = editingUser.accountHolderId || editingUser.id;
@@ -3206,7 +3208,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
 
                       return (
                         <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
-                          <p className="text-xs font-semibold text-gray-600">Account Profiles</p>
+                          <Label>Account Profiles</Label>
                           <div className="space-y-1">
                             <div className="flex items-center gap-2 bg-white border rounded px-2 py-1.5">
                               <Badge className={`text-[10px] px-1.5 ${
@@ -3288,7 +3290,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="edit-club" data-testid="label-edit-club">Club</Label>
+                    <Label htmlFor="edit-club" data-testid="label-edit-club">Organization</Label>
                     <Input 
                       id="edit-club"
                       value={organization?.name || ""}

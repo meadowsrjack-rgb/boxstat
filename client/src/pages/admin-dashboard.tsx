@@ -14468,7 +14468,7 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
                         {editingTeam?.programId && (
                           <div className="px-4 py-2 bg-blue-50 border-b border-blue-100">
                             <p className="text-[11px] text-blue-700">
-                              Unenrolled players can be added — you'll be asked for their current enrollment expiry date.
+                              Unenrolled players can be added to the roster. You'll be asked for an optional enrollment expiry date — without one, they'll need to enroll through payments for full access.
                             </p>
                           </div>
                         )}
@@ -14650,13 +14650,13 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
       <Dialog open={!!enrollDatePlayer} onOpenChange={(open) => { if (!open) { setEnrollDatePlayer(null); setEnrollEndDate(''); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Set Enrollment Expiry</DialogTitle>
+            <DialogTitle>Add Unenrolled Player</DialogTitle>
             <DialogDescription>
-              {enrollDatePlayer?.firstName} {enrollDatePlayer?.lastName} is not enrolled in this program. Enter their current enrollment expiry date to add them to the roster with time-limited access.
+              {enrollDatePlayer?.firstName} {enrollDatePlayer?.lastName} is not enrolled in this program.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <label className="text-sm font-medium text-gray-700">Enrollment End Date</label>
+            <label className="text-sm font-medium text-gray-700">Enrollment Expiry Date (optional)</label>
             <Input
               type="date"
               value={enrollEndDate}
@@ -14664,16 +14664,17 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
               min={new Date().toISOString().split('T')[0]}
             />
             <p className="text-[11px] text-gray-500">
-              After this date, the player will enter a grace period and then lose access to events and chat, but will remain on the roster.
+              {enrollEndDate
+                ? "The player will have full access until this date and will be prompted to enroll through payments before it expires."
+                : "Without a date, the player will appear on the roster but won't have access to team features until they enroll and pay through the Payments tab."}
             </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setEnrollDatePlayer(null); setEnrollEndDate(''); }}>Cancel</Button>
             <Button
-              disabled={!enrollEndDate}
               onClick={async () => {
                 const player = enrollDatePlayer;
-                const dateVal = enrollEndDate;
+                const dateVal = enrollEndDate || undefined;
                 setEnrollDatePlayer(null);
                 setEnrollEndDate('');
                 await togglePlayer(player, false, dateVal);

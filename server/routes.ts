@@ -6510,6 +6510,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .limit(1);
         
         if (existingEnrollment.length === 0) {
+          const graceEnd = new Date();
+          graceEnd.setDate(graceEnd.getDate() + 60);
+          const graceEndIso = graceEnd.toISOString();
           await db.insert(productEnrollments)
             .values({
               organizationId: organizationId,
@@ -6518,8 +6521,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               profileId: userId,
               status: 'active',
               source: 'admin',
+              endDate: graceEndIso,
+              autoRenew: false,
             });
-          console.log(`[PATCH] Created enrollment for user ${userId} in program ${programId}`);
+          const endDateStr = graceEndIso.split('T')[0];
+          await storage.updateUser(userId, { subscriptionEndDate: endDateStr } as any);
+          console.log(`[PATCH] Created admin enrollment for user ${userId} in program ${programId}, 60-day grace expires ${endDateStr}`);
         }
       }
     }
@@ -7650,36 +7657,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         
         if (!hasActiveEnrollment) {
+          if (role !== 'admin' && !(await hasAdminProfile(req.user.id, req.user.organizationId))) {
+            return res.status(403).json({ message: 'Only admins can create enrollments when assigning unenrolled players' });
+          }
           const { enrollmentEndDate } = req.body;
+          let endDateIso: string;
           if (enrollmentEndDate) {
-            if (role !== 'admin' && !(await hasAdminProfile(req.user.id, req.user.organizationId))) {
-              return res.status(403).json({ message: 'Only admins can create enrollments when assigning unenrolled players' });
-            }
             const parsedDate = new Date(enrollmentEndDate + 'T23:59:59Z');
             if (isNaN(parsedDate.getTime()) || parsedDate <= new Date()) {
               return res.status(400).json({ message: 'Enrollment end date must be a valid future date (YYYY-MM-DD format)' });
             }
-            const endDateIso = parsedDate.toISOString();
-            await storage.createEnrollment({
-              organizationId: team.organizationId,
-              programId: team.programId,
-              accountHolderId,
-              profileId: playerId,
-              status: 'active',
-              source: 'admin',
-              endDate: endDateIso,
-              autoRenew: false,
-            });
-            await storage.updateUser(playerId, { subscriptionEndDate: enrollmentEndDate } as any);
-            console.log(`[assign-player] Created admin enrollment for player ${playerId} in program ${team.programId}, expires ${enrollmentEndDate}`);
+            endDateIso = parsedDate.toISOString();
           } else {
-            const program = await storage.getProduct(team.programId);
-            const programName = program?.name || 'this program';
-            return res.status(400).json({ 
-              message: `Player must be enrolled in "${programName}" before being assigned to this team. They need to complete enrollment and payment first.`,
-              code: 'ENROLLMENT_REQUIRED'
-            });
+            const graceEnd = new Date();
+            graceEnd.setDate(graceEnd.getDate() + 60);
+            endDateIso = graceEnd.toISOString();
           }
+          await storage.createEnrollment({
+            organizationId: team.organizationId,
+            programId: team.programId,
+            accountHolderId,
+            profileId: playerId,
+            status: 'active',
+            source: 'team_assignment',
+            endDate: endDateIso,
+            autoRenew: false,
+          });
+          const endDateStr = endDateIso.split('T')[0];
+          await storage.updateUser(playerId, { subscriptionEndDate: endDateStr } as any);
+          console.log(`[assign-player] Created team_assignment enrollment for player ${playerId} in program ${team.programId}, 60-day grace expires ${endDateStr}`);
         }
       }
 
@@ -15136,8 +15142,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   hasRegistered: isAlreadyActive,
                 });
 
-                if (playerProgramId && subEndDate) {
-                  const endDateIso = new Date(subEndDate + 'T23:59:59Z').toISOString();
+                if (playerProgramId) {
+                  let endDateIso: string;
+                  if (subEndDate) {
+                    endDateIso = new Date(subEndDate + 'T23:59:59Z').toISOString();
+                  } else {
+                    const graceEnd = new Date();
+                    graceEnd.setDate(graceEnd.getDate() + 60);
+                    endDateIso = graceEnd.toISOString();
+                  }
                   await storage.createEnrollment({
                     organizationId,
                     programId: playerProgramId,
@@ -15248,9 +15261,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 hasRegistered: false,
               });
 
-              // Create enrollment record if this player has a program and a subscription end date
-              if (playerProgramId && subEndDate) {
-                const endDateIso = new Date(subEndDate + 'T23:59:59Z').toISOString();
+              if (playerProgramId) {
+                let endDateIso: string;
+                if (subEndDate) {
+                  endDateIso = new Date(subEndDate + 'T23:59:59Z').toISOString();
+                } else {
+                  const graceEnd = new Date();
+                  graceEnd.setDate(graceEnd.getDate() + 60);
+                  endDateIso = graceEnd.toISOString();
+                }
                 await storage.createEnrollment({
                   organizationId,
                   programId: playerProgramId,
@@ -17847,15 +17866,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return null;
           }
         };
+        const parsedEnd = parseDate(userData.endDate);
+        const fallbackGrace = new Date();
+        fallbackGrace.setDate(fallbackGrace.getDate() + 60);
+        const enrollEndDate = parsedEnd || fallbackGrace.toISOString();
         await db.insert(productEnrollments).values({
           organizationId,
           programId,
           profileId: userId,
           accountHolderId,
           status: 'active',
-          source: 'admin',
+          source: 'migration',
           startDate: parseDate(userData.startDate),
-          endDate: parseDate(userData.endDate),
+          endDate: enrollEndDate,
+          autoRenew: false,
         });
       }
     }

@@ -13569,6 +13569,8 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
   const [editorForm, setEditorForm] = useState<any>({});
   const [isTeamUploadOpen, setIsTeamUploadOpen] = useState(false);
   const [isUploadingTeams, setIsUploadingTeams] = useState(false);
+  const [enrollDatePlayer, setEnrollDatePlayer] = useState<any>(null);
+  const [enrollEndDate, setEnrollEndDate] = useState('');
 
   const PRESET_COLORS = ['#DC2626', '#2563EB', '#16A34A', '#7C3AED', '#F59E0B', '#EC4899', '#0891B2', '#1D4ED8', '#4F46E5', '#059669'];
   const COACH_ROLES: Record<string, string> = { HC: 'Head Coach', AC: 'Assistant Coach', TM: 'Team Manager', SC: 'Strength Coach' };
@@ -13852,16 +13854,19 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
     }
   };
 
-  const togglePlayer = async (player: any, isOnTeam: boolean) => {
+  const togglePlayer = async (player: any, isOnTeam: boolean, enrollmentEndDate?: string) => {
     if (!editingTeam || isEditorNew) return;
     try {
       if (isOnTeam) {
         await apiRequest("POST", `/api/teams/${editingTeam.id}/remove-player`, { playerId: player.id });
       } else {
-        await apiRequest("POST", `/api/teams/${editingTeam.id}/assign-player`, { playerId: player.id });
+        const body: any = { playerId: player.id };
+        if (enrollmentEndDate) body.enrollmentEndDate = enrollmentEndDate;
+        await apiRequest("POST", `/api/teams/${editingTeam.id}/assign-player`, body);
       }
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/enrollments"] });
       toast({ title: isOnTeam ? `Removed ${player.firstName} ${player.lastName} from team` : `Added ${player.firstName} ${player.lastName} to team` });
     } catch (err: any) {
       const msg = err?.message || "Failed to update roster";
@@ -14527,7 +14532,7 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
                         {editingTeam?.programId && (
                           <div className="px-4 py-2 bg-blue-50 border-b border-blue-100">
                             <p className="text-[11px] text-blue-700">
-                              Only players enrolled in this team's program can be added to the roster.
+                              Unenrolled players can be added — you'll be asked for their current enrollment expiry date.
                             </p>
                           </div>
                         )}
@@ -14537,27 +14542,34 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
                           const userTeamIds = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
                           const isOnTeam = userTeamIds.includes(editingTeam.id) || p.teamId === editingTeam.id;
                           const isEnrolled = isPlayerEnrolledForTeam(p.id, editingTeam);
-                          const canAssign = isOnTeam || isEnrolled;
                           return (
                             <button
                               key={p.id}
-                              onClick={() => canAssign ? togglePlayer(p, isOnTeam) : null}
-                              disabled={!canAssign}
-                              className={`w-full flex items-center justify-between px-4 py-2.5 text-left border-b last:border-b-0 transition-colors ${isOnTeam ? 'bg-green-50' : canAssign ? 'hover:bg-gray-50' : 'opacity-50 cursor-not-allowed bg-gray-50'}`}
+                              onClick={() => {
+                                if (isOnTeam) {
+                                  togglePlayer(p, true);
+                                } else if (!isEnrolled && editingTeam?.programId) {
+                                  setEnrollDatePlayer(p);
+                                  setEnrollEndDate('');
+                                } else {
+                                  togglePlayer(p, false);
+                                }
+                              }}
+                              className={`w-full flex items-center justify-between px-4 py-2.5 text-left border-b last:border-b-0 transition-colors ${isOnTeam ? 'bg-green-50' : 'hover:bg-gray-50'}`}
                             >
                               <div className="flex items-center gap-3">
-                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${isOnTeam ? 'bg-red-500 border-red-500' : canAssign ? 'border-gray-300' : 'border-gray-200 bg-gray-100'}`}>
+                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${isOnTeam ? 'bg-red-500 border-red-500' : 'border-gray-300'}`}>
                                   {isOnTeam && <Check className="w-2.5 h-2.5 text-white" />}
                                 </div>
                                 <div>
-                                  <p className={`text-sm ${isOnTeam ? 'font-semibold text-green-700' : canAssign ? 'text-gray-900' : 'text-gray-400'}`}>{p.firstName} {p.lastName}</p>
+                                  <p className={`text-sm ${isOnTeam ? 'font-semibold text-green-700' : 'text-gray-900'}`}>{p.firstName} {p.lastName}</p>
                                   {p.email && <p className="text-[11px] text-gray-400">{p.email}</p>}
                                 </div>
                               </div>
                               {isOnTeam ? (
                                 <Badge className="bg-green-100 text-green-700 border-green-200 text-[10px]">On Team</Badge>
-                              ) : !canAssign ? (
-                                <Badge variant="outline" className="text-[10px] text-gray-400 border-gray-200">Not Enrolled</Badge>
+                              ) : !isEnrolled && editingTeam?.programId ? (
+                                <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300 bg-amber-50">Not Enrolled</Badge>
                               ) : null}
                             </button>
                           );
@@ -14698,6 +14710,45 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!enrollDatePlayer} onOpenChange={(open) => { if (!open) { setEnrollDatePlayer(null); setEnrollEndDate(''); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Set Enrollment Expiry</DialogTitle>
+            <DialogDescription>
+              {enrollDatePlayer?.firstName} {enrollDatePlayer?.lastName} is not enrolled in this program. Enter their current enrollment expiry date to add them to the roster with time-limited access.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <label className="text-sm font-medium text-gray-700">Enrollment End Date</label>
+            <Input
+              type="date"
+              value={enrollEndDate}
+              onChange={(e) => setEnrollEndDate(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+            />
+            <p className="text-[11px] text-gray-500">
+              After this date, the player will enter a grace period and then lose access to events and chat, but will remain on the roster.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setEnrollDatePlayer(null); setEnrollEndDate(''); }}>Cancel</Button>
+            <Button
+              disabled={!enrollEndDate}
+              onClick={async () => {
+                const player = enrollDatePlayer;
+                const dateVal = enrollEndDate;
+                setEnrollDatePlayer(null);
+                setEnrollEndDate('');
+                await togglePlayer(player, false, dateVal);
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Add to Roster
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

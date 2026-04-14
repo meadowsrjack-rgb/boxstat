@@ -7609,7 +7609,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Enforce enrollment requirement: if the team belongs to a program,
-      // the player must already have an active enrollment in that program
+      // the player must already have an active enrollment in that program.
+      // Admins may pass enrollmentEndDate to create a time-limited enrollment on the spot.
       if (team.programId) {
         const accountHolderId = player.accountHolderId || player.id;
         const existingEnrollments = await storage.getEnrollmentsByAccountHolder(accountHolderId);
@@ -7618,12 +7619,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         
         if (!hasActiveEnrollment) {
-          const program = await storage.getProduct(team.programId);
-          const programName = program?.name || 'this program';
-          return res.status(400).json({ 
-            message: `Player must be enrolled in "${programName}" before being assigned to this team. They need to complete enrollment and payment first.`,
-            code: 'ENROLLMENT_REQUIRED'
-          });
+          const { enrollmentEndDate } = req.body;
+          if (enrollmentEndDate) {
+            if (role !== 'admin' && !(await hasAdminProfile(req.user.id, req.user.organizationId))) {
+              return res.status(403).json({ message: 'Only admins can create enrollments when assigning unenrolled players' });
+            }
+            const parsedDate = new Date(enrollmentEndDate + 'T23:59:59Z');
+            if (isNaN(parsedDate.getTime()) || parsedDate <= new Date()) {
+              return res.status(400).json({ message: 'Enrollment end date must be a valid future date (YYYY-MM-DD format)' });
+            }
+            const endDateIso = parsedDate.toISOString();
+            await storage.createEnrollment({
+              organizationId: team.organizationId,
+              programId: team.programId,
+              accountHolderId,
+              profileId: playerId,
+              status: 'active',
+              source: 'admin',
+              endDate: endDateIso,
+              autoRenew: false,
+            });
+            await storage.updateUser(playerId, { subscriptionEndDate: enrollmentEndDate } as any);
+            console.log(`[assign-player] Created admin enrollment for player ${playerId} in program ${team.programId}, expires ${enrollmentEndDate}`);
+          } else {
+            const program = await storage.getProduct(team.programId);
+            const programName = program?.name || 'this program';
+            return res.status(400).json({ 
+              message: `Player must be enrolled in "${programName}" before being assigned to this team. They need to complete enrollment and payment first.`,
+              code: 'ENROLLMENT_REQUIRED'
+            });
+          }
         }
       }
 

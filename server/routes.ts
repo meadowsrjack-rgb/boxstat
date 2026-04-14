@@ -7516,7 +7516,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Build roster combining app users and notion players
       const roster: any[] = [];
-      
+
+      // Fetch enrollments for this team's program (if any) to determine enrollment status
+      let enrollmentsByProfileId: Map<string, string> = new Map();
+      if (team.programId) {
+        const programEnrollments = await db
+          .select({ profileId: productEnrollments.profileId, status: productEnrollments.status })
+          .from(productEnrollments)
+          .where(and(
+            eq(productEnrollments.programId, String(team.programId)),
+            inArray(productEnrollments.status, ['active', 'grace_period', 'expired'])
+          ));
+        for (const enrollment of programEnrollments) {
+          if (enrollment.profileId) {
+            // Keep the best status: active > grace_period > expired
+            const existing = enrollmentsByProfileId.get(enrollment.profileId);
+            if (!existing || (enrollment.status === 'active') || (enrollment.status === 'grace_period' && existing === 'expired')) {
+              enrollmentsByProfileId.set(enrollment.profileId, enrollment.status);
+            }
+          }
+        }
+      }
+
+      // Helper to derive enrollment tag for a player
+      const getEnrollmentTag = (userId: string): 'active' | 'grace_period' | 'expired' | 'not_enrolled' | null => {
+        if (!team.programId) return null;
+        const status = enrollmentsByProfileId.get(userId);
+        if (!status) return 'not_enrolled';
+        if (status === 'active') return null;
+        return status as 'grace_period' | 'expired';
+      };
+
       // Add app users
       for (const user of appUsers) {
         roster.push({
@@ -7532,6 +7562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hasAppAccount: true,
           flaggedForRosterChange: user.flaggedForRosterChange || false,
           flagReason: user.flagReason || null,
+          enrollmentTag: getEnrollmentTag(user.id),
         });
       }
       

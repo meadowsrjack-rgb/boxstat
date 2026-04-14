@@ -1393,13 +1393,19 @@ function RosterTab({
                           <AvatarFallback className="text-xs bg-gray-100 text-gray-600">{p.firstName?.[0]}{p.lastName?.[0]}</AvatarFallback>
                         </Avatar>
                         <div className="truncate">
-                          <div className={`font-medium truncate flex items-center gap-2 ${
+                          <div className={`font-medium truncate flex items-center gap-2 flex-wrap ${
                             hasAccount ? "text-gray-900" : "text-gray-500"
                           }`} data-testid={`text-player-name-${playerId}`}>
                             {p.name}
                             <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-normal">
                               {!hasAccount ? "No Account" : "Player"}
                             </span>
+                            {p.enrollmentTag === 'grace_period' && (
+                              <span className="text-[9px] font-semibold bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full">Grace Period</span>
+                            )}
+                            {(p.enrollmentTag === 'expired' || p.enrollmentTag === 'not_enrolled') && (
+                              <span className="text-[9px] font-semibold bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded-full">Expired</span>
+                            )}
                           </div>
                         </div>
                       </div>

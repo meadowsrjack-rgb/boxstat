@@ -13883,6 +13883,18 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
     );
   };
 
+  const getPlayerEnrollmentTag = (playerId: string, team: any): 'grace_period' | 'expired' | 'not_enrolled' | null => {
+    if (!team?.programId) return null;
+    const playerEnrollments = enrollments.filter((e: any) =>
+      String(e.profileId) === String(playerId) &&
+      String(e.programId) === String(team.programId)
+    );
+    if (playerEnrollments.length === 0) return 'not_enrolled';
+    if (playerEnrollments.some((e: any) => e.status === 'active')) return null;
+    if (playerEnrollments.some((e: any) => e.status === 'grace_period')) return 'grace_period';
+    return 'expired';
+  };
+
   const downloadTeamTemplate = () => {
     const csvContent = "Name,Program,Division,Season,Location,Color,Notes\nThunder U12,Youth Club,U12,Fall 2025,Main Gym,#DC2626,\nLightning U10,Skills Academy,U10,Spring 2025,East Court,#2563EB,Practice on Tuesdays";
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -14491,16 +14503,25 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
                         <div className="bg-green-50 border border-green-200 rounded-xl p-3">
                           <p className="text-xs font-semibold text-green-700 mb-2">Current Roster — {editingTeamPlayers.length} player{editingTeamPlayers.length !== 1 ? 's' : ''}</p>
                           <div className="flex flex-wrap gap-1.5">
-                            {editingTeamPlayers.map((p: any) => (
-                              <button
-                                key={p.id}
-                                onClick={() => togglePlayer(p, true)}
-                                className="inline-flex items-center gap-1 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium hover:bg-red-100 hover:text-red-700 transition-colors group"
-                              >
-                                {p.firstName} {p.lastName}
-                                <X className="w-2.5 h-2.5 group-hover:text-red-600" />
-                              </button>
-                            ))}
+                            {editingTeamPlayers.map((p: any) => {
+                              const enrollTag = getPlayerEnrollmentTag(p.id, editingTeam);
+                              return (
+                                <button
+                                  key={p.id}
+                                  onClick={() => togglePlayer(p, true)}
+                                  className="inline-flex items-center gap-1 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium hover:bg-red-100 hover:text-red-700 transition-colors group"
+                                >
+                                  {p.firstName} {p.lastName}
+                                  {enrollTag === 'grace_period' && (
+                                    <span className="ml-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-amber-200 text-amber-800 group-hover:bg-amber-200 group-hover:text-amber-800">Grace Period</span>
+                                  )}
+                                  {(enrollTag === 'expired' || enrollTag === 'not_enrolled') && (
+                                    <span className="ml-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-red-200 text-red-800 group-hover:bg-red-200 group-hover:text-red-800">Expired</span>
+                                  )}
+                                  <X className="w-2.5 h-2.5 group-hover:text-red-600" />
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       )}

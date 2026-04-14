@@ -1895,7 +1895,9 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     syncOverflow();
     const resizeObs = new ResizeObserver(syncOverflow);
     resizeObs.observe(table);
-    return () => resizeObs.disconnect();
+    const mutObs = new MutationObserver(syncOverflow);
+    mutObs.observe(table, { childList: true, subtree: true });
+    return () => { resizeObs.disconnect(); mutObs.disconnect(); };
   }, []);
 
   useEffect(() => {
@@ -1910,8 +1912,14 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     const intersectionObs = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
+        const wasVisible = tableIsVisible;
         setTableIsVisible(entry.isIntersecting);
-        if (entry.isIntersecting) updatePosition();
+        if (entry.isIntersecting) {
+          updatePosition();
+          if (!wasVisible && fixedScrollbarRef.current && tableRef.current) {
+            fixedScrollbarRef.current.scrollLeft = tableRef.current.scrollLeft;
+          }
+        }
       },
       { threshold: 0 }
     );

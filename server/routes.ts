@@ -6304,16 +6304,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             const removedTeam = await storage.getTeam(String(oldTeamId));
             if (removedTeam?.programId) {
-              console.log(`[PATCH] Cancelling enrollment for player ${userId} in program ${removedTeam.programId}`);
-              await db.update(productEnrollments)
-                .set({ status: 'cancelled' })
-                .where(
-                  and(
-                    eq(productEnrollments.profileId, userId),
-                    eq(productEnrollments.programId, removedTeam.programId),
-                    eq(productEnrollments.status, 'active')
-                  )
-                );
+              // Only cancel enrollment if no remaining new team shares the same program
+              const stillInSameProgram = await Promise.all(
+                newTeamIds.map(async (tid: number) => {
+                  const t = await storage.getTeam(String(tid));
+                  return t?.programId === removedTeam.programId;
+                })
+              );
+              if (!stillInSameProgram.some(Boolean)) {
+                console.log(`[PATCH] Cancelling enrollment for player ${userId} in program ${removedTeam.programId}`);
+                await db.update(productEnrollments)
+                  .set({ status: 'cancelled' })
+                  .where(
+                    and(
+                      eq(productEnrollments.profileId, userId),
+                      eq(productEnrollments.programId, removedTeam.programId),
+                      eq(productEnrollments.status, 'active')
+                    )
+                  );
+              } else {
+                console.log(`[PATCH] Player ${userId} still assigned to another team in program ${removedTeam.programId}, keeping enrollment active`);
+              }
             }
           }
         }
@@ -7410,16 +7421,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
               )
             );
 
-          // Cancel enrollment if team has a program
+          // Cancel enrollment only if player has no other active team in the same program
           if (team.programId) {
-            await db.update(productEnrollments)
-              .set({ status: 'cancelled' })
+            const otherTeamsInProgram = await db.select({ id: teamMemberships.id })
+              .from(teamMemberships)
+              .innerJoin(teams, eq(teams.id, teamMemberships.teamId))
               .where(
                 and(
-                  eq(productEnrollments.programId, team.programId),
-                  eq(productEnrollments.profileId, oldPlayerId)
+                  eq(teamMemberships.profileId, oldPlayerId),
+                  eq(teamMemberships.status, 'active'),
+                  eq(teams.programId, team.programId),
+                  sql`${teamMemberships.teamId} != ${teamId}`
                 )
-              );
+              )
+              .limit(1);
+            if (otherTeamsInProgram.length === 0) {
+              await db.update(productEnrollments)
+                .set({ status: 'cancelled' })
+                .where(
+                  and(
+                    eq(productEnrollments.programId, team.programId),
+                    eq(productEnrollments.profileId, oldPlayerId)
+                  )
+                );
+            }
           }
         }
       }
@@ -7753,17 +7778,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Cancel enrollment for this player if team has a programId
+      // Cancel enrollment only if player has no other active team in the same program
       if (team && team.programId) {
-        await db.update(productEnrollments)
-          .set({ status: 'cancelled', autoRenew: false, updatedAt: new Date().toISOString() })
+        const otherTeamsInProgram = await db.select({ id: teamMemberships.id })
+          .from(teamMemberships)
+          .innerJoin(teams, eq(teams.id, teamMemberships.teamId))
           .where(
             and(
-              eq(productEnrollments.programId, team.programId),
-              eq(productEnrollments.profileId, playerId)
+              eq(teamMemberships.profileId, playerId),
+              eq(teamMemberships.status, 'active'),
+              eq(teams.programId, team.programId),
+              sql`${teamMemberships.teamId} != ${teamId}`
             )
-          );
-        console.log(`Cancelled enrollment for player ${playerId} in program ${team.programId}`);
+          )
+          .limit(1);
+        if (otherTeamsInProgram.length === 0) {
+          await db.update(productEnrollments)
+            .set({ status: 'cancelled', autoRenew: false, updatedAt: new Date().toISOString() })
+            .where(
+              and(
+                eq(productEnrollments.programId, team.programId),
+                eq(productEnrollments.profileId, playerId)
+              )
+            );
+          console.log(`Cancelled enrollment for player ${playerId} in program ${team.programId}`);
+        } else {
+          console.log(`Player ${playerId} still on another team in program ${team.programId}, keeping enrollment active`);
+        }
       }
       
       // Also clear legacy teamId field for backwards compatibility

@@ -470,6 +470,12 @@ export function CreateEventDialog({
       return { events: createdEvents, wasTruncated, count: createdEvents.length, totalAttempted: eventsToCreate.length, errors: [] };
     },
     onSuccess: (data: any) => {
+      const newEvents = data?.events || [];
+      if (newEvents.length > 0) {
+        queryClient.setQueryData(["/api/events"], (old: any[] | undefined) => {
+          return old ? [...old, ...newEvents] : newEvents;
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       const count = data?.count || 1;
       const totalAttempted = data?.totalAttempted || count;
@@ -525,7 +531,7 @@ export function CreateEventDialog({
           <Plus className="w-4 h-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="sr-only">
           <DialogTitle>Create New Event</DialogTitle>
         </DialogHeader>
@@ -535,8 +541,9 @@ export function CreateEventDialog({
               console.log("📍 Creating event with data:", data);
               createEvent.mutate(data);
             })}
-            className="space-y-5"
+            className="flex flex-col flex-1 min-h-0"
           >
+          <div className="flex-1 overflow-y-auto space-y-5 pr-1">
             <span className="inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider bg-teal-50 text-teal-700 rounded-full border border-teal-200">
               New Event
             </span>
@@ -1155,7 +1162,9 @@ export function CreateEventDialog({
               </div>
             </div>
 
-            <div className="flex items-center justify-between border-t pt-4">
+            </div>
+
+            <div className="flex items-center justify-between border-t pt-4 shrink-0 bg-background">
               <p className="text-sm text-muted-foreground">
                 {(!watchedTitle || !watchedStartTime || !watchedEndTime || !watchedLocation) &&
                   `Missing: ${[

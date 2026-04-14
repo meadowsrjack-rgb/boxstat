@@ -905,7 +905,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="teams">
-            <TeamsByProgramTab programs={programs} teams={teams} organization={organization} users={users} />
+            <TeamsByProgramTab programs={programs} teams={teams} organization={organization} users={users} enrollments={enrollments} />
           </TabsContent>
 
           <TabsContent value="events">
@@ -13526,7 +13526,7 @@ function CommunicationsTab({ notifications, users, teams, divisions, organizatio
 }
 
 // Teams By Program Tab - shows teams grouped by program (redesigned)
-function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }: any) {
+function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, enrollments = [] }: any) {
   const { toast } = useToast();
   const programs = [...allPrograms.filter((p: any) => p.productCategory === 'service' || !p.productCategory)]
     .sort((a: any, b: any) => {
@@ -13842,9 +13842,19 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
       toast({ title: isOnTeam ? `Removed ${player.firstName} ${player.lastName} from team` : `Added ${player.firstName} ${player.lastName} to team` });
-    } catch {
-      toast({ title: "Failed to update roster", variant: "destructive" });
+    } catch (err: any) {
+      const msg = err?.message || "Failed to update roster";
+      toast({ title: msg, variant: "destructive" });
     }
+  };
+
+  const isPlayerEnrolledForTeam = (playerId: string, team: any) => {
+    if (!team?.programId) return true;
+    return enrollments.some((e: any) => 
+      String(e.profileId) === String(playerId) && 
+      String(e.programId) === String(team.programId) && 
+      e.status === 'active'
+    );
   };
 
   const downloadTeamTemplate = () => {
@@ -14493,27 +14503,41 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users }
                         />
                       </div>
                       <div className="border border-gray-200 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
+                        {editingTeam?.programId && (
+                          <div className="px-4 py-2 bg-blue-50 border-b border-blue-100">
+                            <p className="text-[11px] text-blue-700">
+                              Only players enrolled in this team's program can be added to the roster.
+                            </p>
+                          </div>
+                        )}
                         {filteredPlayerSearch.length === 0 ? (
                           <p className="text-sm text-gray-500 text-center py-8">No players found</p>
                         ) : filteredPlayerSearch.map((p: any) => {
                           const userTeamIds = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
                           const isOnTeam = userTeamIds.includes(editingTeam.id) || p.teamId === editingTeam.id;
+                          const isEnrolled = isPlayerEnrolledForTeam(p.id, editingTeam);
+                          const canAssign = isOnTeam || isEnrolled;
                           return (
                             <button
                               key={p.id}
-                              onClick={() => togglePlayer(p, isOnTeam)}
-                              className={`w-full flex items-center justify-between px-4 py-2.5 text-left border-b last:border-b-0 transition-colors ${isOnTeam ? 'bg-green-50' : 'hover:bg-gray-50'}`}
+                              onClick={() => canAssign ? togglePlayer(p, isOnTeam) : null}
+                              disabled={!canAssign}
+                              className={`w-full flex items-center justify-between px-4 py-2.5 text-left border-b last:border-b-0 transition-colors ${isOnTeam ? 'bg-green-50' : canAssign ? 'hover:bg-gray-50' : 'opacity-50 cursor-not-allowed bg-gray-50'}`}
                             >
                               <div className="flex items-center gap-3">
-                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${isOnTeam ? 'bg-red-500 border-red-500' : 'border-gray-300'}`}>
+                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${isOnTeam ? 'bg-red-500 border-red-500' : canAssign ? 'border-gray-300' : 'border-gray-200 bg-gray-100'}`}>
                                   {isOnTeam && <Check className="w-2.5 h-2.5 text-white" />}
                                 </div>
                                 <div>
-                                  <p className={`text-sm ${isOnTeam ? 'font-semibold text-green-700' : 'text-gray-900'}`}>{p.firstName} {p.lastName}</p>
+                                  <p className={`text-sm ${isOnTeam ? 'font-semibold text-green-700' : canAssign ? 'text-gray-900' : 'text-gray-400'}`}>{p.firstName} {p.lastName}</p>
                                   {p.email && <p className="text-[11px] text-gray-400">{p.email}</p>}
                                 </div>
                               </div>
-                              {isOnTeam && <Badge className="bg-green-100 text-green-700 border-green-200 text-[10px]">On Team</Badge>}
+                              {isOnTeam ? (
+                                <Badge className="bg-green-100 text-green-700 border-green-200 text-[10px]">On Team</Badge>
+                              ) : !canAssign ? (
+                                <Badge variant="outline" className="text-[10px] text-gray-400 border-gray-200">Not Enrolled</Badge>
+                              ) : null}
                             </button>
                           );
                         })}

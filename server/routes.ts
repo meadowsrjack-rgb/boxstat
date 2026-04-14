@@ -6289,10 +6289,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Add to new teams and auto-enroll in programs
+        // Add to new teams (enrollment must already exist for program-linked teams)
+        const unenrolledTeams: string[] = [];
         for (const newTeamId of newTeamIds) {
           const team = await storage.getTeam(String(newTeamId));
           if (team) {
+            // Enforce enrollment requirement for program-linked teams
+            if (team.programId) {
+              const accountHolderId = user.accountHolderId || userId;
+              const existingEnrollment = await db.select({ id: productEnrollments.id })
+                .from(productEnrollments)
+                .where(
+                  and(
+                    eq(productEnrollments.profileId, userId),
+                    eq(productEnrollments.programId, team.programId),
+                    eq(productEnrollments.status, 'active')
+                  )
+                )
+                .limit(1);
+              
+              if (existingEnrollment.length === 0) {
+                const program = await storage.getProduct(team.programId);
+                unenrolledTeams.push(program?.name || team.name);
+                console.log(`[PATCH] Player ${userId} not enrolled in program ${team.programId} for team ${team.name}, skipping assignment`);
+                continue;
+              }
+            }
+
             console.log(`[PATCH] Adding player ${userId} to team ${newTeamId} (${team.name})`);
             try {
               await db.insert(teamMemberships)
@@ -6307,8 +6330,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   set: { status: 'active', role: 'player' },
                 });
               
-              // Also add parent to team_memberships so they receive team notifications
-              // Use parentId (schema field) - the linked parent account for child players
               const parentId = user.parentId;
               if (parentId && parentId !== userId) {
                 await db.insert(teamMemberships)
@@ -6324,43 +6345,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   });
                 console.log(`[PATCH] Added parent ${parentId} to team ${newTeamId} memberships`);
               }
-              
-              // Auto-create product enrollment if team has a programId
-              if (team.programId) {
-                const accountHolderId = user.accountHolderId || userId;
-                
-                // Check if enrollment already exists to avoid duplicates
-                const existingEnrollment = await db.select({ id: productEnrollments.id })
-                  .from(productEnrollments)
-                  .where(
-                    and(
-                      eq(productEnrollments.profileId, userId),
-                      eq(productEnrollments.programId, team.programId),
-                      eq(productEnrollments.status, 'active')
-                    )
-                  )
-                  .limit(1);
-                
-                if (existingEnrollment.length === 0) {
-                  console.log(`[PATCH] Team ${team.name} has programId ${team.programId}, auto-creating enrollment for player ${userId}`);
-                  try {
-                    await db.insert(productEnrollments)
-                      .values({
-                        organizationId: organizationId,
-                        programId: team.programId,
-                        accountHolderId: accountHolderId,
-                        profileId: userId,
-                        status: 'active',
-                        source: 'admin',
-                      });
-                    console.log(`[PATCH] Created product enrollment for player ${userId} in program ${team.programId}`);
-                  } catch (enrollErr) {
-                    console.error(`[PATCH] Failed to create product enrollment:`, enrollErr);
-                  }
-                } else {
-                  console.log(`[PATCH] Player ${userId} already enrolled in program ${team.programId}, skipping`);
-                }
-              }
             } catch (err) {
               console.error(`[PATCH] Failed to add player to team_memberships:`, err);
             }
@@ -6369,9 +6353,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Update users.teamId to the first valid team (for backward compatibility)
-        if (newTeamIds.length > 0) {
-          updateData.teamId = newTeamIds[0];
+        if (unenrolledTeams.length > 0) {
+          console.log(`[PATCH] Skipped team assignments for unenrolled programs: ${unenrolledTeams.join(', ')}`);
+        }
+        
+        // Update users.teamId to the first successfully assigned team (for backward compatibility)
+        // Get fresh active memberships after assignments to determine the correct teamId
+        const finalMemberships = await db.select({ teamId: teamMemberships.teamId })
+          .from(teamMemberships)
+          .where(
+            and(
+              eq(teamMemberships.profileId, userId),
+              eq(teamMemberships.status, 'active'),
+              eq(teamMemberships.role, 'player')
+            )
+          );
+        if (finalMemberships.length > 0) {
+          updateData.teamId = finalMemberships[0].teamId;
         } else {
           updateData.teamId = null;
         }
@@ -7093,10 +7091,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Coordinator endpoint: Create team with player assignments and auto-enrollment
+  // Coordinator endpoint: Create team with player assignments (enrollment required for program teams)
   app.post('/api/teams/with-assignments', requireAuth, async (req: any, res) => {
     const { organizationId } = req.user;
-    // Check all profiles with same email for admin access (multi-profile support)
     const isAdminUser = req.user.role === 'admin' || await hasAdminProfile(req.user.id, req.user.organizationId);
     if (!isAdminUser) {
       return res.status(403).json({ message: 'Only admins can use this endpoint' });
@@ -7105,7 +7102,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { teamData, playerIds = [] } = req.body;
     
     try {
-      // 1. Create the team
       const parsedTeamData = insertTeamSchema.parse(teamData);
       const team = await storage.createTeam(parsedTeamData);
       
@@ -7115,21 +7111,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const results = {
         team,
-        assignments: { success: [] as string[], failed: [] as string[] },
-        enrollments: { success: [] as string[], failed: [] as string[] },
+        assignments: { success: [] as string[], failed: [] as string[], skippedNotEnrolled: [] as string[] },
       };
       
-      // 2. Assign players and create enrollments
       for (const playerId of playerIds) {
         try {
-          // Get the player to find their parent account
           const player = await storage.getUser(playerId);
           if (!player) {
             results.assignments.failed.push(playerId);
             continue;
           }
           
-          // Create team membership
+          // Enforce enrollment for program-linked teams
+          if (team.programId) {
+            const accountHolderId = player.accountHolderId || player.id;
+            const enrollments = await storage.getEnrollmentsByAccountHolder(accountHolderId);
+            const hasActiveEnrollment = enrollments.some(
+              (e: any) => e.programId === team.programId && e.profileId === playerId && e.status === 'active'
+            );
+            if (!hasActiveEnrollment) {
+              results.assignments.skippedNotEnrolled.push(playerId);
+              continue;
+            }
+          }
+          
           await db.insert(teamMemberships)
             .values({
               teamId: team.id,
@@ -7144,46 +7149,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               set: { status: 'active', role: 'player' },
             });
           
-          // Update legacy teamId field
           await storage.updateUser(playerId, { teamId: team.id } as any);
           results.assignments.success.push(playerId);
-          
-          // 3. Create product enrollment if team has a programId
-          if (team.programId) {
-            try {
-              const accountHolderId = player.parentId || playerId;
-              
-              // Check if enrollment already exists
-              const [existingEnrollment] = await db.select()
-                .from(productEnrollments)
-                .where(
-                  and(
-                    eq(productEnrollments.programId, team.programId),
-                    eq(productEnrollments.profileId, playerId)
-                  )
-                );
-              
-              if (!existingEnrollment) {
-                await db.insert(productEnrollments)
-                  .values({
-                    organizationId: organizationId || team.organizationId || 'default-org',
-                    programId: team.programId,
-                    accountHolderId: accountHolderId,
-                    profileId: playerId,
-                    status: 'active',
-                    source: 'admin',
-                    autoRenew: false,
-                  });
-                results.enrollments.success.push(playerId);
-              } else {
-                // Already enrolled, count as success
-                results.enrollments.success.push(playerId);
-              }
-            } catch (enrollErr) {
-              console.error(`Failed to enroll player ${playerId}:`, enrollErr);
-              results.enrollments.failed.push(playerId);
-            }
-          }
         } catch (assignErr) {
           console.error(`Failed to assign player ${playerId}:`, assignErr);
           results.assignments.failed.push(playerId);
@@ -7464,13 +7431,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Players to add
+      // Players to add (enrollment required for program-linked teams)
+      const skippedNotEnrolled: string[] = [];
       for (const newPlayerId of playerIds) {
         if (!currentPlayerIds.includes(newPlayerId)) {
           const player = await storage.getUser(newPlayerId);
           if (!player) continue;
 
-          // Add to team_memberships
+          // Enforce enrollment for program-linked teams
+          if (team.programId) {
+            const accountHolderId = player.accountHolderId || player.id;
+            const existingEnrollments = await storage.getEnrollmentsByAccountHolder(accountHolderId);
+            const hasActiveEnrollment = existingEnrollments.some(
+              (e: any) => e.programId === team.programId && e.profileId === newPlayerId && e.status === 'active'
+            );
+            if (!hasActiveEnrollment) {
+              skippedNotEnrolled.push(newPlayerId);
+              continue;
+            }
+          }
+
           await db.insert(teamMemberships)
             .values({
               teamId,
@@ -7484,30 +7464,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               target: [teamMemberships.teamId, teamMemberships.profileId],
               set: { status: 'active', role: 'player' },
             });
-
-          // Auto-enroll in program if team has one
-          if (team.programId) {
-            const accountHolderId = player.accountHolderId || player.id;
-            const existingEnrollments = await storage.getEnrollmentsByAccountHolder(accountHolderId);
-            const alreadyEnrolled = existingEnrollments.some(
-              (e: any) => e.programId === team.programId && e.profileId === newPlayerId && e.status === 'active'
-            );
-
-            if (!alreadyEnrolled) {
-              await storage.createEnrollment({
-                organizationId: team.organizationId || organizationId,
-                programId: team.programId,
-                accountHolderId,
-                profileId: newPlayerId,
-                status: 'active',
-              });
-            }
-          }
         }
       }
 
-      // Invalidate caches by returning success
-      res.json({ success: true, playerIds });
+      res.json({ success: true, playerIds, skippedNotEnrolled });
     } catch (error: any) {
       console.error('Error updating team roster:', error);
       res.status(500).json({ message: 'Failed to update team roster' });
@@ -7630,6 +7590,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Team not found' });
       }
 
+      // Enforce enrollment requirement: if the team belongs to a program,
+      // the player must already have an active enrollment in that program
+      if (team.programId) {
+        const accountHolderId = player.accountHolderId || player.id;
+        const existingEnrollments = await storage.getEnrollmentsByAccountHolder(accountHolderId);
+        const hasActiveEnrollment = existingEnrollments.some(
+          (e: any) => e.programId === team.programId && e.profileId === playerId && e.status === 'active'
+        );
+        
+        if (!hasActiveEnrollment) {
+          const program = await storage.getProduct(team.programId);
+          const programName = program?.name || 'this program';
+          return res.status(400).json({ 
+            message: `Player must be enrolled in "${programName}" before being assigned to this team. They need to complete enrollment and payment first.`,
+            code: 'ENROLLMENT_REQUIRED'
+          });
+        }
+      }
+
       // Add to team_memberships table (upsert to handle existing memberships)
       await db.insert(teamMemberships)
         .values({
@@ -7646,7 +7625,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       
       // Also add parent to team_memberships so they receive team notifications
-      // Use parentId (schema field) - the linked parent account for child players
       const parentId = player.parentId;
       if (parentId && parentId !== playerId) {
         await db.insert(teamMemberships)
@@ -7661,30 +7639,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             set: { status: 'active' },
           });
         console.log(`Added parent ${parentId} to team ${teamId} memberships`);
-      }
-      
-      // Auto-enroll player if team has a programId
-      if (team.programId) {
-        // Get the account holder ID
-        const accountHolderId = player.accountHolderId || player.id;
-        
-        // Check if already enrolled in this program
-        const existingEnrollments = await storage.getEnrollmentsByAccountHolder(accountHolderId);
-        const alreadyEnrolled = existingEnrollments.some(
-          (e: any) => e.programId === team.programId && e.profileId === playerId && e.status === 'active'
-        );
-        
-        if (!alreadyEnrolled) {
-          await storage.createEnrollment({
-            organizationId: team.organizationId || organizationId,
-            programId: team.programId,
-            accountHolderId: accountHolderId,
-            profileId: playerId,
-            status: 'active',
-            source: 'team_assignment',
-          });
-          console.log(`Auto-enrolled player ${playerId} in program ${team.programId}`);
-        }
       }
       
       // Also update legacy teamId field for backwards compatibility

@@ -3207,8 +3207,9 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       const availableRoles = ['player', 'parent', 'coach', 'admin'].filter(r => r === 'player' || !allProfileRoles.includes(r));
 
                       return (
+                        <>
+                        <Label>Account Profiles</Label>
                         <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
-                          <Label>Account Profiles</Label>
                           <div className="space-y-1">
                             <div className="flex items-center gap-2 bg-white border rounded px-2 py-1.5">
                               <Badge className={`text-[10px] px-1.5 ${
@@ -3285,6 +3286,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                             </div>
                           )}
                         </div>
+                        </>
                       );
                     })()}
                   </div>

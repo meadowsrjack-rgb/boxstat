@@ -3472,20 +3472,28 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                             )}
                                           </p>
                                         </div>
+                                        {(enrollment.pricingOptionType || enrollment.pricingAmount) && (
+                                          <div>
+                                            <label className="text-[10px] text-gray-500 uppercase">Plan</label>
+                                            <p className="text-xs text-gray-700">
+                                              {enrollment.pricingOptionType === 'subscription'
+                                                ? `Subscription${enrollment.billingCycle ? ` · ${enrollment.billingCycle}` : ''}`
+                                                : enrollment.pricingOptionType === 'credit_pack'
+                                                ? `Credit Pack${enrollment.totalCredits ? ` · ${enrollment.totalCredits} credits` : ''}`
+                                                : enrollment.pricingOptionType === 'one_time'
+                                                ? 'One-time'
+                                                : enrollment.billingCycle || '—'}
+                                            </p>
+                                          </div>
+                                        )}
                                         {enrollment.pricingAmount && (
                                           <div>
                                             <label className="text-[10px] text-gray-500 uppercase">Amount</label>
                                             <p className="text-xs text-gray-700">
                                               ${(enrollment.pricingAmount / 100).toFixed(2)}
-                                              {enrollment.pricingOptionName && <span className="text-gray-400 ml-1">({enrollment.pricingOptionName})</span>}
-                                            </p>
-                                          </div>
-                                        )}
-                                        {enrollment.stripeSubscriptionId && (
-                                          <div>
-                                            <label className="text-[10px] text-gray-500 uppercase">Billing</label>
-                                            <p className="text-xs text-gray-700">
-                                              Recurring {enrollment.autoRenew ? '(auto-renew)' : ''}
+                                              {enrollment.pricingOptionName && enrollment.pricingOptionName !== 'Subscription' && enrollment.pricingOptionName !== 'Paid' && (
+                                                <span className="text-gray-400 ml-1">({enrollment.pricingOptionName})</span>
+                                              )}
                                             </p>
                                           </div>
                                         )}

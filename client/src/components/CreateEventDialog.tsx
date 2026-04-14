@@ -32,7 +32,7 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { Plus } from "lucide-react";
+import { Plus, Trash2, Settings2 } from "lucide-react";
 import { LocationSearch } from "@/components/LocationSearch";
 import DateTimeRangePicker from "@/components/DateTimeRangePicker";
 import EventWindowsConfigurator from "@/components/EventWindowsConfigurator";
@@ -107,6 +107,11 @@ export function CreateEventDialog({
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [userSearch, setUserSearch] = useState("");
   const [eventWindows, setEventWindows] = useState<Partial<EventWindow>[]>([]);
+  const [showFacilityManager, setShowFacilityManager] = useState(false);
+  const [newFacilityName, setNewFacilityName] = useState("");
+  const [newFacilityAddress, setNewFacilityAddress] = useState("");
+  const [newFacilityLat, setNewFacilityLat] = useState("");
+  const [newFacilityLng, setNewFacilityLng] = useState("");
 
   const { data: allUsers = [] } = useQuery<any[]>({ queryKey: ["/api/users"] });
   const { data: divisions = [] } = useQuery<any[]>({ queryKey: ["/api/divisions"] });
@@ -511,6 +516,50 @@ export function CreateEventDialog({
     },
   });
 
+  const addFacility = useMutation({
+    mutationFn: async () => {
+      if (!newFacilityName.trim() || !newFacilityAddress.trim()) return;
+      return apiRequest("POST", "/api/facilities", {
+        name: newFacilityName.trim(),
+        address: newFacilityAddress.trim(),
+        latitude: parseFloat(newFacilityLat) || 0,
+        longitude: parseFloat(newFacilityLng) || 0,
+        isActive: true,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/facilities"] });
+      toast({ title: "Facility added" });
+      setNewFacilityName("");
+      setNewFacilityAddress("");
+      setNewFacilityLat("");
+      setNewFacilityLng("");
+    },
+    onError: () => {
+      toast({ title: "Failed to add facility", variant: "destructive" });
+    },
+  });
+
+  const deleteFacility = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/facilities/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/facilities"] });
+      if (form.getValues("facilityId") !== null) {
+        const currentFacId = form.getValues("facilityId");
+        const stillExists = facilities.find((f: any) => f.id === currentFacId);
+        if (!stillExists) {
+          form.setValue("facilityId", null);
+        }
+      }
+      toast({ title: "Facility deleted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete facility", variant: "destructive" });
+    },
+  });
+
   const watchedTargetType = form.watch("targetType");
   const watchedStartTime = form.watch("startTime");
   const watchedEndTime = form.watch("endTime");
@@ -672,44 +721,126 @@ export function CreateEventDialog({
 
                   {locationType === "physical" ? (
                     <>
-                      {facilities.length > 0 && (
-                        <div className="space-y-2">
-                          <label className="text-xs font-medium text-muted-foreground">Facility</label>
-                          <Select
-                            value={watchedFacilityId ? String(watchedFacilityId) : "none"}
-                            onValueChange={(value) => {
-                              if (value === "none") {
-                                form.setValue("facilityId", null);
-                                form.setValue("location", "");
-                                form.setValue("latitude", undefined);
-                                form.setValue("longitude", undefined);
-                              } else {
-                                const fac = facilities.find((f: any) => String(f.id) === value);
-                                if (fac) {
-                                  form.setValue("facilityId", fac.id);
-                                  form.setValue("location", fac.address);
-                                  form.setValue("latitude", fac.latitude);
-                                  form.setValue("longitude", fac.longitude);
+                      <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-medium text-muted-foreground">Facility</label>
+                            <button
+                              type="button"
+                              onClick={() => setShowFacilityManager(!showFacilityManager)}
+                              className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                            >
+                              <Settings2 className="w-3 h-3" />
+                              {showFacilityManager ? "Done" : "Manage"}
+                            </button>
+                          </div>
+
+                          {!showFacilityManager ? (
+                            <Select
+                              value={watchedFacilityId ? String(watchedFacilityId) : "none"}
+                              onValueChange={(value) => {
+                                if (value === "none") {
+                                  form.setValue("facilityId", null);
+                                  form.setValue("location", "");
+                                  form.setValue("latitude", undefined);
+                                  form.setValue("longitude", undefined);
+                                } else {
+                                  const fac = facilities.find((f: any) => String(f.id) === value);
+                                  if (fac) {
+                                    form.setValue("facilityId", fac.id);
+                                    form.setValue("location", fac.address);
+                                    form.setValue("latitude", fac.latitude);
+                                    form.setValue("longitude", fac.longitude);
+                                  }
                                 }
-                              }
-                            }}
-                          >
-                            <SelectTrigger data-testid="select-event-facility">
-                              <SelectValue placeholder="Select a saved facility" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">None (enter manually)</SelectItem>
-                              {facilities
-                                .filter((f: any) => f.isActive !== false)
-                                .map((f: any) => (
-                                  <SelectItem key={f.id} value={String(f.id)}>
-                                    {f.name} — {f.address}
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
+                              }}
+                            >
+                              <SelectTrigger data-testid="select-event-facility">
+                                <SelectValue placeholder="Select a saved facility" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">None (enter manually)</SelectItem>
+                                {facilities
+                                  .filter((f: any) => f.isActive !== false)
+                                  .map((f: any) => (
+                                    <SelectItem key={f.id} value={String(f.id)}>
+                                      {f.name} — {f.address}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
+                              <div className="space-y-2">
+                                {facilities.filter((f: any) => f.isActive !== false).length === 0 ? (
+                                  <p className="text-xs text-muted-foreground text-center py-2">No facilities yet</p>
+                                ) : (
+                                  facilities.filter((f: any) => f.isActive !== false).map((f: any) => (
+                                    <div key={f.id} className="flex items-center justify-between gap-2 text-sm bg-background rounded px-3 py-2 border">
+                                      <div className="min-w-0 flex-1">
+                                        <span className="font-medium">{f.name}</span>
+                                        <span className="text-muted-foreground ml-1 text-xs truncate">— {f.address}</span>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (confirm(`Delete "${f.name}"?`)) {
+                                            deleteFacility.mutate(f.id);
+                                          }
+                                        }}
+                                        className="text-destructive hover:text-destructive/80 shrink-0 p-1"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                              <div className="border-t pt-3 space-y-2">
+                                <p className="text-xs font-medium text-muted-foreground">Add New Facility</p>
+                                <Input
+                                  placeholder="Facility name"
+                                  value={newFacilityName}
+                                  onChange={(e) => setNewFacilityName(e.target.value)}
+                                  className="h-8 text-sm"
+                                />
+                                <Input
+                                  placeholder="Address"
+                                  value={newFacilityAddress}
+                                  onChange={(e) => setNewFacilityAddress(e.target.value)}
+                                  className="h-8 text-sm"
+                                />
+                                <div className="grid grid-cols-2 gap-2">
+                                  <Input
+                                    placeholder="Latitude"
+                                    value={newFacilityLat}
+                                    onChange={(e) => setNewFacilityLat(e.target.value)}
+                                    className="h-8 text-sm"
+                                    type="number"
+                                    step="any"
+                                  />
+                                  <Input
+                                    placeholder="Longitude"
+                                    value={newFacilityLng}
+                                    onChange={(e) => setNewFacilityLng(e.target.value)}
+                                    className="h-8 text-sm"
+                                    type="number"
+                                    step="any"
+                                  />
+                                </div>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="w-full"
+                                  disabled={!newFacilityName.trim() || !newFacilityAddress.trim() || addFacility.isPending}
+                                  onClick={() => addFacility.mutate()}
+                                >
+                                  <Plus className="w-3.5 h-3.5 mr-1" />
+                                  {addFacility.isPending ? "Adding..." : "Add Facility"}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )}
                       {watchedFacilityId && (
                         <div className="space-y-2">
                           <label className="text-xs font-medium text-muted-foreground">Court / Field</label>

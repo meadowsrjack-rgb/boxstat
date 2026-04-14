@@ -14632,8 +14632,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/facilities', requireAuth, async (req: any, res) => {
     try {
       const { role, organizationId, id } = req.user;
-      if (role !== 'admin') {
-        return res.status(403).json({ message: 'Only admins can create facilities' });
+      const isAdminOrCoach = role === 'admin' || role === 'coach' || await hasAdminProfile(id, organizationId);
+      if (!isAdminOrCoach) {
+        return res.status(403).json({ message: 'Only admins and coaches can create facilities' });
       }
       
       const facilityData = insertFacilitySchema.parse({
@@ -14651,9 +14652,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.patch('/api/facilities/:id', requireAuth, async (req: any, res) => {
     try {
-      const { role } = req.user;
-      if (role !== 'admin') {
-        return res.status(403).json({ message: 'Only admins can update facilities' });
+      const { role, id: userId, organizationId } = req.user;
+      const isAdminOrCoach = role === 'admin' || role === 'coach' || await hasAdminProfile(userId, organizationId);
+      if (!isAdminOrCoach) {
+        return res.status(403).json({ message: 'Only admins and coaches can update facilities' });
       }
       
       const id = parseInt(req.params.id, 10);
@@ -14675,9 +14677,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.delete('/api/facilities/:id', requireAuth, async (req: any, res) => {
     try {
-      const { role } = req.user;
-      if (role !== 'admin') {
-        return res.status(403).json({ message: 'Only admins can delete facilities' });
+      const { role, id: userId, organizationId } = req.user;
+      const isAdminOrCoach = role === 'admin' || role === 'coach' || await hasAdminProfile(userId, organizationId);
+      if (!isAdminOrCoach) {
+        return res.status(403).json({ message: 'Only admins and coaches can delete facilities' });
       }
       
       const id = parseInt(req.params.id, 10);

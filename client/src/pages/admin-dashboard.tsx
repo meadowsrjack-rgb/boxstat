@@ -2541,9 +2541,9 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     const hasExpired = uniqueEnrollments.some((e: any) =>
       e.status === 'expired' || e.status === 'cancelled'
     );
-    if (hasActiveEnrollmentWithoutTeam) return "Pending Assignment";
     if (hasPaymentFailed) return "Payment Failed";
     if (hasLowBalance) return "Low Balance";
+    if (hasActiveEnrollmentWithoutTeam) return "Needs Team";
     const hasActiveEnrollmentOnTeam = (() => {
       const checkPlayer = (player: any) => {
         const playerActiveEnrollments = uniqueEnrollments.filter((e: any) =>
@@ -2554,9 +2554,9 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
       if (user.role === "player" && checkPlayer(user)) return true;
       return linkedPlayersForUser.some((player: any) => checkPlayer(player));
     })();
-    if (hasActiveEnrollmentOnTeam) return "Active Program";
-    if (hasActiveSubscriber) return "Active Subscriber";
-    if (hasActiveOneTime) return "Active Program";
+    if (hasActiveEnrollmentOnTeam) return "Active";
+    if (hasActiveSubscriber) return "Active";
+    if (hasActiveOneTime) return "Active";
     if (hasExpired) return "Expired";
     return "No Enrollment";
   };
@@ -4049,11 +4049,10 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Status</p>
                     <div className="flex flex-wrap gap-1.5">
                       {[
-                        "Active Program",
-                        "Pending Assignment",
+                        "Active",
+                        "Needs Team",
                         "Payment Failed",
                         "Low Balance",
-                        "Active Subscriber",
                         "Expired",
                         "No Enrollment",
                       ].map((status) => (
@@ -4231,6 +4230,8 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   const allEnrollments = enrollments.filter((e: any) =>
                     allProfileIds.includes(e.profileId) || allProfileIds.includes(e.accountHolderId)
                   );
+                  const hasPaymentFailedStatus = allEnrollments.some((e: any) => e.status === 'payment_failed' || e.paymentStatus === 'failed');
+                  if (hasPaymentFailedStatus) return { label: "Payment Failed", cls: "bg-red-600 text-white" };
                   const activeEnrollments = allEnrollments.filter((e: any) => e.status === 'active');
                   if (activeEnrollments.length === 0) {
                     const hasExpired = allEnrollments.some((e: any) => e.status === 'expired' || e.status === 'cancelled');
@@ -4239,12 +4240,10 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   }
                   const now = new Date();
                   const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-                  let hasPaymentFailed = false;
                   let hasLowBalance = false;
                   let hasNeedsTeam = false;
                   let hasActive = false;
                   for (const enrollment of activeEnrollments) {
-                    if (enrollment.paymentStatus === 'failed') { hasPaymentFailed = true; continue; }
                     if (enrollment.endDate) {
                       const endDate = new Date(enrollment.endDate);
                       if (endDate <= threeDaysFromNow && endDate > now) { hasLowBalance = true; continue; }
@@ -4268,7 +4267,6 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       else hasActive = true;
                     } else { hasActive = true; }
                   }
-                  if (hasPaymentFailed) return { label: "Payment Failed", cls: "bg-red-600 text-white" };
                   if (hasLowBalance) return { label: "Low Balance", cls: "bg-yellow-400 text-yellow-900" };
                   if (hasNeedsTeam) return { label: "Needs Team", cls: "bg-amber-500 text-white" };
                   if (hasActive) return { label: "Active", cls: "bg-green-600 text-white" };

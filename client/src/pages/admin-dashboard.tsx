@@ -3178,7 +3178,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <Label data-testid="label-edit-role">Role</Label>
-                      <span className="text-xs text-gray-500">Changing the role updates this profile's current role.</span>
+                      <span className="text-xs text-gray-500">Changing the role updates this user's current role.</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Select

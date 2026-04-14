@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, Settings2 } from "lucide-react";
+import { Plus, Trash2, Settings2, ChevronDown, ChevronRight } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -139,6 +139,20 @@ export function EditEventDialog({ event, teams, programs, facilities, organizati
   const [recurrenceEndType, setRecurrenceEndType] = useState<"count" | "date">(init.recurrenceEndType);
   const [recurrenceEndDate, setRecurrenceEndDate] = useState(init.recurrenceEndDate);
   const [userSearch, setUserSearch] = useState("");
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+
+  const allRolesSet = ["player", "coach", "parent", "admin"];
+  const initHasAllRoles =
+    event.assignTo?.roles && allRolesSet.every((r: string) => event.assignTo.roles.includes(r));
+  const [isEveryoneSelected, setIsEveryoneSelected] = useState<boolean>(!!initHasAllRoles || !event.assignTo);
+  const [selectedTeams, setSelectedTeams] = useState<string[]>((event.assignTo?.teams || []).map(String));
+  const [selectedPrograms, setSelectedPrograms] = useState<string[]>((event.assignTo?.programs || []).map(String));
+  const [selectedDivisions, setSelectedDivisions] = useState<string[]>((event.assignTo?.divisions || []).map(String));
+  const [selectedRoles, setSelectedRoles] = useState<string[]>(
+    initHasAllRoles ? [] : (event.assignTo?.roles || [])
+  );
+  const [selectedUsers, setSelectedUsers] = useState<string[]>((event.assignTo?.users || []).map(String));
+
   const [eventWindows, setEventWindows] = useState<Partial<EventWindow>[]>([]);
   const [showFacilityManager, setShowFacilityManager] = useState(false);
   const [newFacilityName, setNewFacilityName] = useState("");
@@ -208,26 +222,18 @@ export function EditEventDialog({ event, teams, programs, facilities, organizati
         payload.endTime = localDatetimeToUTC(payload.endTime, tz);
       }
 
-      const ids = targetIds?.length > 0 ? targetIds : targetId ? [String(targetId)] : [];
-
-      if (targetType === "team" && ids.length > 0) {
-        payload.assignTo = { teams: ids };
-        payload.visibility = { teams: ids };
-      } else if (targetType === "program" && ids.length > 0) {
-        payload.assignTo = { programs: ids };
-        payload.visibility = { programs: ids };
-      } else if (targetType === "division" && ids.length > 0) {
-        payload.assignTo = { divisions: ids };
-        payload.visibility = { divisions: ids };
-      } else if (targetType === "user" && ids.length > 0) {
-        payload.assignTo = { users: ids };
-        payload.visibility = { users: ids };
-      } else if (targetType === "role" && ids.length > 0) {
-        payload.assignTo = { roles: ids };
-        payload.visibility = { roles: ids };
-      } else if (targetType === "all") {
+      if (isEveryoneSelected) {
         payload.assignTo = { roles: ["player", "coach", "parent", "admin"] };
         payload.visibility = { roles: ["player", "coach", "parent", "admin"] };
+      } else {
+        const assignTo: any = {};
+        if (selectedTeams.length > 0) assignTo.teams = selectedTeams.map(String);
+        if (selectedPrograms.length > 0) assignTo.programs = selectedPrograms.map(String);
+        if (selectedDivisions.length > 0) assignTo.divisions = selectedDivisions.map(String);
+        if (selectedUsers.length > 0) assignTo.users = selectedUsers;
+        if (selectedRoles.length > 0) assignTo.roles = selectedRoles;
+        payload.assignTo = assignTo;
+        payload.visibility = { ...assignTo };
       }
 
       const updatedEvent = await apiRequest("PATCH", `/api/events/${id}`, payload);
@@ -263,6 +269,19 @@ export function EditEventDialog({ event, teams, programs, facilities, organizati
       }
       if (recurrenceEndType === "date" && !recurrenceEndDate) {
         toast({ title: "Please select an end date for recurring events", variant: "destructive" });
+        return;
+      }
+    }
+
+    if (!isEveryoneSelected) {
+      const hasAny =
+        selectedTeams.length > 0 ||
+        selectedPrograms.length > 0 ||
+        selectedDivisions.length > 0 ||
+        selectedUsers.length > 0 ||
+        selectedRoles.length > 0;
+      if (!hasAny) {
+        toast({ title: "Select Audience", description: "Please select at least one audience category or choose Everyone.", variant: "destructive" });
         return;
       }
     }
@@ -667,203 +686,203 @@ export function EditEventDialog({ event, teams, programs, facilities, organizati
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Audience
                 </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { value: "all", label: "Everyone" },
-                    { value: "program", label: "Program" },
-                    { value: "team", label: "Team" },
-                    { value: "user", label: "User" },
-                    { value: "role", label: "Role" },
-                    { value: "division", label: "Division" },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                        (editingEvent.targetType || "all") === opt.value
-                          ? "bg-blue-600 text-white"
-                          : "border bg-background hover:bg-muted"
-                      }`}
-                      onClick={() =>
-                        setEditingEvent({ ...editingEvent, targetType: opt.value, targetIds: [] })
-                      }
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
+                <button
+                  type="button"
+                  className={`w-full px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isEveryoneSelected
+                      ? "bg-blue-600 text-white"
+                      : "border bg-background hover:bg-muted"
+                  }`}
+                  onClick={() => {
+                    if (!isEveryoneSelected) {
+                      setIsEveryoneSelected(true);
+                      setSelectedTeams([]);
+                      setSelectedPrograms([]);
+                      setSelectedDivisions([]);
+                      setSelectedUsers([]);
+                      setSelectedRoles([]);
+                      setExpandedSections({});
+                    }
+                  }}
+                  data-testid="audience-everyone-toggle"
+                >
+                  Everyone
+                </button>
 
-                {editingEvent.targetType === "team" && (
+                {!isEveryoneSelected && (
                   <div className="space-y-2">
-                    <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                      {teams.map((team: any) => (
-                        <div key={team.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            checked={(editingEvent.targetIds || []).includes(String(team.id))}
-                            onCheckedChange={(checked) => {
-                              const currentIds = editingEvent.targetIds || [];
-                              setEditingEvent({
-                                ...editingEvent,
-                                targetIds: checked
-                                  ? [...currentIds, String(team.id)]
-                                  : currentIds.filter((id: string) => id !== String(team.id)),
-                              });
-                            }}
-                            data-testid={`checkbox-edit-team-${team.id}`}
-                          />
-                          <label className="text-sm cursor-pointer">
-                            {team.name}
-                            {team.programType ? ` (${team.programType})` : ""}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {(editingEvent.targetIds || []).length} team(s) selected
-                    </p>
-                  </div>
-                )}
+                    {[
+                      { key: "teams", label: "Teams", count: selectedTeams.length },
+                      { key: "programs", label: "Programs", count: selectedPrograms.length },
+                      { key: "divisions", label: "Divisions", count: selectedDivisions.length },
+                      { key: "roles", label: "Roles", count: selectedRoles.length },
+                      { key: "users", label: "Users", count: selectedUsers.length },
+                    ].map(({ key, label, count }) => (
+                      <div key={key} className="border rounded-md overflow-hidden">
+                        <button
+                          type="button"
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
+                          onClick={() =>
+                            setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }))
+                          }
+                        >
+                          <span className="flex items-center gap-2">
+                            {expandedSections[key] ? (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            {label}
+                          </span>
+                          {count > 0 && (
+                            <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-2 py-0.5 rounded-full font-semibold">
+                              {count} selected
+                            </span>
+                          )}
+                        </button>
 
-                {editingEvent.targetType === "program" && (
-                  <div className="space-y-2">
-                    <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                      {programs
-                        .filter((p: any) => p.isActive && p.productCategory === "service")
-                        .map((program: any) => (
-                          <div key={program.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={(editingEvent.targetIds || []).includes(String(program.id))}
-                              onCheckedChange={(checked) => {
-                                const currentIds = editingEvent.targetIds || [];
-                                setEditingEvent({
-                                  ...editingEvent,
-                                  targetIds: checked
-                                    ? [...currentIds, String(program.id)]
-                                    : currentIds.filter((id: string) => id !== String(program.id)),
-                                });
-                              }}
-                              data-testid={`checkbox-edit-program-${program.id}`}
-                            />
-                            <label className="text-sm cursor-pointer">{program.name}</label>
+                        {expandedSections[key] && (
+                          <div className="border-t p-3 max-h-48 overflow-y-auto space-y-2">
+                            {key === "teams" && teams.map((team: any) => (
+                              <div key={team.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                  checked={selectedTeams.includes(String(team.id))}
+                                  onCheckedChange={(checked) => {
+                                    setIsEveryoneSelected(false);
+                                    if (checked) setSelectedTeams([...selectedTeams, String(team.id)]);
+                                    else setSelectedTeams(selectedTeams.filter((id) => id !== String(team.id)));
+                                  }}
+                                  data-testid={`checkbox-edit-team-${team.id}`}
+                                />
+                                <label className="text-sm cursor-pointer">
+                                  {team.name}{team.programType ? ` (${team.programType})` : ""}
+                                </label>
+                              </div>
+                            ))}
+
+                            {key === "programs" && programs
+                              .filter((p: any) => p.isActive && p.productCategory === "service")
+                              .map((program: any) => (
+                                <div key={program.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    checked={selectedPrograms.includes(String(program.id))}
+                                    onCheckedChange={(checked) => {
+                                      setIsEveryoneSelected(false);
+                                      if (checked) setSelectedPrograms([...selectedPrograms, String(program.id)]);
+                                      else setSelectedPrograms(selectedPrograms.filter((id) => id !== String(program.id)));
+                                    }}
+                                    data-testid={`checkbox-edit-program-${program.id}`}
+                                  />
+                                  <label className="text-sm cursor-pointer">{program.name}</label>
+                                </div>
+                              ))}
+
+                            {key === "divisions" && divisions
+                              .filter((d: any) => d.isActive)
+                              .map((division: any) => (
+                                <div key={division.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    checked={selectedDivisions.includes(String(division.id))}
+                                    onCheckedChange={(checked) => {
+                                      setIsEveryoneSelected(false);
+                                      if (checked) setSelectedDivisions([...selectedDivisions, String(division.id)]);
+                                      else setSelectedDivisions(selectedDivisions.filter((id) => id !== String(division.id)));
+                                    }}
+                                    data-testid={`checkbox-edit-division-${division.id}`}
+                                  />
+                                  <label className="text-sm cursor-pointer">
+                                    {division.name}{division.ageRange ? ` (${division.ageRange})` : ""}
+                                  </label>
+                                </div>
+                              ))}
+
+                            {key === "roles" && [
+                              { id: "player", name: "Player" },
+                              { id: "parent", name: "Parent" },
+                              { id: "coach", name: "Coach" },
+                              { id: "admin", name: "Admin" },
+                            ].map((role) => (
+                              <div key={role.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                  checked={selectedRoles.includes(role.id)}
+                                  onCheckedChange={(checked) => {
+                                    setIsEveryoneSelected(false);
+                                    if (checked) setSelectedRoles([...selectedRoles, role.id]);
+                                    else setSelectedRoles(selectedRoles.filter((r) => r !== role.id));
+                                  }}
+                                  data-testid={`checkbox-edit-role-${role.id}`}
+                                />
+                                <label className="text-sm cursor-pointer">{role.name}</label>
+                              </div>
+                            ))}
+
+                            {key === "users" && (
+                              <>
+                                <Input
+                                  placeholder="Search by name, email, or role..."
+                                  value={userSearch}
+                                  onChange={(e) => setUserSearch(e.target.value)}
+                                  className="mb-2"
+                                />
+                                {allUsers
+                                  .filter((u: any) => u.isActive)
+                                  .filter((user: any) => {
+                                    const q = userSearch.toLowerCase();
+                                    if (!q) return true;
+                                    return (
+                                      (user.firstName || "").toLowerCase().includes(q) ||
+                                      (user.lastName || "").toLowerCase().includes(q) ||
+                                      (user.email || "").toLowerCase().includes(q) ||
+                                      (user.role || "").toLowerCase().includes(q)
+                                    );
+                                  })
+                                  .map((user: any) => (
+                                    <div key={user.id} className="flex items-center space-x-2">
+                                      <Checkbox
+                                        checked={selectedUsers.includes(String(user.id))}
+                                        onCheckedChange={(checked) => {
+                                          setIsEveryoneSelected(false);
+                                          if (checked) setSelectedUsers([...selectedUsers, String(user.id)]);
+                                          else setSelectedUsers(selectedUsers.filter((id) => id !== String(user.id)));
+                                        }}
+                                        data-testid={`checkbox-edit-user-${user.id}`}
+                                      />
+                                      <label className="text-sm cursor-pointer">
+                                        {user.firstName} {user.lastName} ({user.email})
+                                      </label>
+                                    </div>
+                                  ))}
+                              </>
+                            )}
                           </div>
-                        ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {(editingEvent.targetIds || []).length} program(s) selected
-                    </p>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
 
-                {editingEvent.targetType === "role" && (
-                  <div className="space-y-2">
-                    <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                      {[
-                        { id: "player", name: "Player" },
-                        { id: "parent", name: "Parent" },
-                        { id: "coach", name: "Coach" },
-                        { id: "admin", name: "Admin" },
-                      ].map((role) => (
-                        <div key={role.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            checked={(editingEvent.targetIds || []).includes(role.id)}
-                            onCheckedChange={(checked) => {
-                              const currentIds = editingEvent.targetIds || [];
-                              setEditingEvent({
-                                ...editingEvent,
-                                targetIds: checked
-                                  ? [...currentIds, role.id]
-                                  : currentIds.filter((id: string) => id !== role.id),
-                              });
-                            }}
-                            data-testid={`checkbox-edit-role-${role.id}`}
-                          />
-                          <label className="text-sm cursor-pointer">{role.name}</label>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {(editingEvent.targetIds || []).length} role(s) selected
-                    </p>
-                  </div>
+                {!isEveryoneSelected && (
+                  <p className="text-xs text-muted-foreground">
+                    {(() => {
+                      const parts: string[] = [];
+                      if (selectedTeams.length > 0) parts.push(`${selectedTeams.length} team${selectedTeams.length !== 1 ? "s" : ""}`);
+                      if (selectedPrograms.length > 0) parts.push(`${selectedPrograms.length} program${selectedPrograms.length !== 1 ? "s" : ""}`);
+                      if (selectedDivisions.length > 0) parts.push(`${selectedDivisions.length} division${selectedDivisions.length !== 1 ? "s" : ""}`);
+                      if (selectedRoles.length > 0) parts.push(`${selectedRoles.length} role${selectedRoles.length !== 1 ? "s" : ""}`);
+                      if (selectedUsers.length > 0) parts.push(`${selectedUsers.length} user${selectedUsers.length !== 1 ? "s" : ""}`);
+                      return parts.length > 0 ? parts.join(", ") + " selected" : "No specific audience selected";
+                    })()}
+                  </p>
                 )}
 
-                {editingEvent.targetType === "user" && (
-                  <div className="space-y-2">
-                    <Input
-                      placeholder="Search by name, email, or role..."
-                      value={userSearch}
-                      onChange={(e) => setUserSearch(e.target.value)}
-                    />
-                    <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                      {allUsers
-                        .filter((u: any) => u.isActive)
-                        .filter((user: any) => {
-                          const q = userSearch.toLowerCase();
-                          if (!q) return true;
-                          return (
-                            (user.firstName || "").toLowerCase().includes(q) ||
-                            (user.lastName || "").toLowerCase().includes(q) ||
-                            (user.email || "").toLowerCase().includes(q) ||
-                            (user.role || "").toLowerCase().includes(q)
-                          );
-                        })
-                        .map((user: any) => (
-                          <div key={user.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={(editingEvent.targetIds || []).includes(String(user.id))}
-                              onCheckedChange={(checked) => {
-                                const currentIds = editingEvent.targetIds || [];
-                                setEditingEvent({
-                                  ...editingEvent,
-                                  targetIds: checked
-                                    ? [...currentIds, String(user.id)]
-                                    : currentIds.filter((id: string) => id !== String(user.id)),
-                                });
-                              }}
-                              data-testid={`checkbox-edit-user-${user.id}`}
-                            />
-                            <label className="text-sm cursor-pointer">
-                              {user.firstName} {user.lastName} ({user.email})
-                            </label>
-                          </div>
-                        ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {(editingEvent.targetIds || []).length} user(s) selected
-                    </p>
-                  </div>
-                )}
-
-                {editingEvent.targetType === "division" && (
-                  <div className="space-y-2">
-                    <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                      {divisions
-                        .filter((d: any) => d.isActive)
-                        .map((division: any) => (
-                          <div key={division.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={(editingEvent.targetIds || []).includes(String(division.id))}
-                              onCheckedChange={(checked) => {
-                                const currentIds = editingEvent.targetIds || [];
-                                setEditingEvent({
-                                  ...editingEvent,
-                                  targetIds: checked
-                                    ? [...currentIds, String(division.id)]
-                                    : currentIds.filter((id: string) => id !== String(division.id)),
-                                });
-                              }}
-                              data-testid={`checkbox-edit-division-${division.id}`}
-                            />
-                            <label className="text-sm cursor-pointer">
-                              {division.name} {division.ageRange ? `(${division.ageRange})` : ""}
-                            </label>
-                          </div>
-                        ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {(editingEvent.targetIds || []).length} division(s) selected
-                    </p>
-                  </div>
+                {isEveryoneSelected && (
+                  <button
+                    type="button"
+                    className="text-xs text-blue-600 hover:underline"
+                    onClick={() => setIsEveryoneSelected(false)}
+                  >
+                    + Target specific teams, programs, or roles instead
+                  </button>
                 )}
               </div>
 

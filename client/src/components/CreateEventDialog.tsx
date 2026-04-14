@@ -32,7 +32,7 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { Plus, Trash2, Settings2 } from "lucide-react";
+import { Plus, Trash2, Settings2, ChevronDown, ChevronRight } from "lucide-react";
 import { LocationSearch } from "@/components/LocationSearch";
 import DateTimeRangePicker from "@/components/DateTimeRangePicker";
 import EventWindowsConfigurator from "@/components/EventWindowsConfigurator";
@@ -60,7 +60,6 @@ const createEventSchema = z.object({
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   description: z.string().optional(),
-  targetType: z.enum(["all", "user", "team", "division", "program", "role"]),
   facilityId: z.number().nullable().optional(),
   courtName: z.string().optional(),
 });
@@ -100,6 +99,8 @@ export function CreateEventDialog({
   const [playerRsvpEnabled, setPlayerRsvpEnabled] = useState(true);
   const [eventTimezone, setEventTimezone] = useState(getDefaultTimezone);
   const [locationType, setLocationType] = useState<"physical" | "online">("physical");
+  const [isEveryoneSelected, setIsEveryoneSelected] = useState(true);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [selectedDivisions, setSelectedDivisions] = useState<string[]>([]);
@@ -128,7 +129,6 @@ export function CreateEventDialog({
       latitude: undefined,
       longitude: undefined,
       description: "",
-      targetType: "all" as const,
       facilityId: null,
       courtName: "",
     },
@@ -145,11 +145,12 @@ export function CreateEventDialog({
       latitude: undefined,
       longitude: undefined,
       description: "",
-      targetType: "all",
       facilityId: null,
       courtName: "",
     });
     setEventWindows([]);
+    setIsEveryoneSelected(true);
+    setExpandedSections({});
     setSelectedUsers([]);
     setSelectedTeams([]);
     setSelectedDivisions([]);
@@ -179,30 +180,26 @@ export function CreateEventDialog({
       const allRoles = ["player", "coach", "parent", "admin"];
       const hasAllRoles =
         event.assignTo?.roles && allRoles.every((r: string) => event.assignTo.roles.includes(r));
-      let targetType = "all";
-      if (!hasAllRoles) {
-        if (event.scheduleRequestSource && event.assignTo?.users?.length > 0) targetType = "user";
-        else if (event.assignTo?.teams?.length > 0) targetType = "team";
-        else if (event.assignTo?.programs?.length > 0) targetType = "program";
-        else if (event.assignTo?.divisions?.length > 0) targetType = "division";
-        else if (event.assignTo?.users?.length > 0) targetType = "user";
-        else if (event.assignTo?.roles?.length > 0) targetType = "role";
-        else if (event.targetType) targetType = event.targetType;
-      }
 
       setLocationType(event.location === "Online" ? "online" : "physical");
       setEventTimezone(etz);
 
-      if (targetType === "team") setSelectedTeams((event.assignTo?.teams || []).map(String));
-      else setSelectedTeams([]);
-      if (targetType === "program") setSelectedPrograms((event.assignTo?.programs || []).map(String));
-      else setSelectedPrograms([]);
-      if (targetType === "division") setSelectedDivisions((event.assignTo?.divisions || []).map(String));
-      else setSelectedDivisions([]);
-      if (targetType === "user") setSelectedUsers((event.assignTo?.users || []).map(String));
-      else setSelectedUsers([]);
-      if (targetType === "role") setSelectedRoles(event.assignTo?.roles || []);
-      else setSelectedRoles([]);
+      if (hasAllRoles) {
+        setIsEveryoneSelected(true);
+        setSelectedTeams([]);
+        setSelectedPrograms([]);
+        setSelectedDivisions([]);
+        setSelectedUsers([]);
+        setSelectedRoles([]);
+      } else {
+        setIsEveryoneSelected(false);
+        setSelectedTeams((event.assignTo?.teams || []).map(String));
+        setSelectedPrograms((event.assignTo?.programs || []).map(String));
+        setSelectedDivisions((event.assignTo?.divisions || []).map(String));
+        setSelectedUsers((event.assignTo?.users || []).map(String));
+        setSelectedRoles(event.assignTo?.roles || []);
+      }
+      setExpandedSections({});
 
       if (event.isRecurring || event.recurringType) {
         setIsRecurring(true);
@@ -258,59 +255,40 @@ export function CreateEventDialog({
         latitude: event.latitude,
         longitude: event.longitude,
         description: event.description || "",
-        targetType: targetType as any,
       });
     }
   }, [isOpen, duplicatingEvent]);
 
   const createEvent = useMutation({
     mutationFn: async (data: any) => {
-      const { type, targetType, ...rest } = data;
+      const { type, ...rest } = data;
 
       let assignTo: any = {};
       let visibility: any = {};
 
-      if (targetType === "all") {
+      if (isEveryoneSelected) {
         assignTo = { roles: ["player", "coach", "parent", "admin"] };
         visibility = { roles: ["player", "coach", "parent", "admin"] };
-      } else if (targetType === "user") {
-        if (selectedUsers.length === 0) {
-          toast({ title: "Select Users", description: "Please select at least one user.", variant: "destructive" });
+      } else {
+        const hasAny =
+          selectedTeams.length > 0 ||
+          selectedPrograms.length > 0 ||
+          selectedDivisions.length > 0 ||
+          selectedUsers.length > 0 ||
+          selectedRoles.length > 0;
+        if (!hasAny) {
+          toast({ title: "Select Audience", description: "Please select at least one audience category or choose Everyone.", variant: "destructive" });
           return;
         }
-        assignTo = { users: selectedUsers };
-        visibility = { users: selectedUsers };
-      } else if (targetType === "team") {
-        if (selectedTeams.length === 0) {
-          toast({ title: "Select Teams", description: "Please select at least one team.", variant: "destructive" });
-          return;
-        }
-        assignTo = { teams: selectedTeams.map(String) };
-        visibility = { teams: selectedTeams.map(String) };
-      } else if (targetType === "division") {
-        if (selectedDivisions.length === 0) {
-          toast({ title: "Select Divisions", description: "Please select at least one division.", variant: "destructive" });
-          return;
-        }
-        assignTo = { divisions: selectedDivisions.map(String) };
-        visibility = { divisions: selectedDivisions.map(String) };
-      } else if (targetType === "program") {
-        if (selectedPrograms.length === 0) {
-          toast({ title: "Select Programs", description: "Please select at least one program.", variant: "destructive" });
-          return;
-        }
-        assignTo = { programs: selectedPrograms.map(String) };
-        visibility = { programs: selectedPrograms.map(String) };
-      } else if (targetType === "role") {
-        if (selectedRoles.length === 0) {
-          toast({ title: "Select Roles", description: "Please select at least one role.", variant: "destructive" });
-          return;
-        }
-        assignTo = { roles: selectedRoles };
-        visibility = { roles: selectedRoles };
+        if (selectedTeams.length > 0) assignTo.teams = selectedTeams.map(String);
+        if (selectedPrograms.length > 0) assignTo.programs = selectedPrograms.map(String);
+        if (selectedDivisions.length > 0) assignTo.divisions = selectedDivisions.map(String);
+        if (selectedUsers.length > 0) assignTo.users = selectedUsers;
+        if (selectedRoles.length > 0) assignTo.roles = selectedRoles;
+        visibility = { ...assignTo };
       }
 
-      console.log("Event form data before submission:", { type, targetType, assignTo, ...rest });
+      console.log("Event form data before submission:", { type, assignTo, ...rest });
       const utcStartTime = localDatetimeToUTC(rest.startTime, eventTimezone);
       const utcEndTime = localDatetimeToUTC(rest.endTime, eventTimezone);
       const recurringEndDateISO =
@@ -560,7 +538,6 @@ export function CreateEventDialog({
     },
   });
 
-  const watchedTargetType = form.watch("targetType");
   const watchedStartTime = form.watch("startTime");
   const watchedEndTime = form.watch("endTime");
   const watchedTitle = form.watch("title");
@@ -907,178 +884,199 @@ export function CreateEventDialog({
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Audience
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { value: "all", label: "Everyone" },
-                      { value: "program", label: "Program" },
-                      { value: "team", label: "Team" },
-                      { value: "user", label: "User" },
-                      { value: "role", label: "Role" },
-                      { value: "division", label: "Division" },
-                    ].map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                          String(watchedTargetType) === opt.value
-                            ? "bg-blue-600 text-white"
-                            : "border bg-background hover:bg-muted"
-                        }`}
-                        onClick={() => {
-                          form.setValue("targetType", opt.value as any);
-                          setSelectedUsers([]);
-                          setSelectedTeams([]);
-                          setSelectedDivisions([]);
-                          setSelectedPrograms([]);
-                          setSelectedRoles([]);
-                        }}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
 
-                  {String(watchedTargetType) === "user" && (
+                  <button
+                    type="button"
+                    className={`w-full px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      isEveryoneSelected
+                        ? "bg-blue-600 text-white"
+                        : "border bg-background hover:bg-muted"
+                    }`}
+                    onClick={() => {
+                      if (!isEveryoneSelected) {
+                        setIsEveryoneSelected(true);
+                        setSelectedTeams([]);
+                        setSelectedPrograms([]);
+                        setSelectedDivisions([]);
+                        setSelectedUsers([]);
+                        setSelectedRoles([]);
+                        setExpandedSections({});
+                      }
+                    }}
+                    data-testid="audience-everyone-toggle"
+                  >
+                    Everyone
+                  </button>
+
+                  {!isEveryoneSelected && (
                     <div className="space-y-2">
-                      <Input
-                        placeholder="Search by name, email, or role..."
-                        value={userSearch}
-                        onChange={(e) => setUserSearch(e.target.value)}
-                      />
-                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                        {allUsers
-                          .filter((u: any) => u.isActive)
-                          .filter((user: any) => {
-                            const q = userSearch.toLowerCase();
-                            if (!q) return true;
-                            return (
-                              (user.firstName || "").toLowerCase().includes(q) ||
-                              (user.lastName || "").toLowerCase().includes(q) ||
-                              (user.email || "").toLowerCase().includes(q) ||
-                              (user.role || "").toLowerCase().includes(q)
-                            );
-                          })
-                          .map((user: any) => (
-                            <div key={user.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                checked={selectedUsers.includes(user.id)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) setSelectedUsers([...selectedUsers, user.id]);
-                                  else setSelectedUsers(selectedUsers.filter((id) => id !== user.id));
-                                }}
-                                data-testid={`checkbox-user-${user.id}`}
-                              />
-                              <label className="text-sm cursor-pointer">
-                                {user.firstName} {user.lastName} - {user.role} ({user.email})
-                              </label>
+                      {[
+                        { key: "teams", label: "Teams", count: selectedTeams.length },
+                        { key: "programs", label: "Programs", count: selectedPrograms.length },
+                        { key: "divisions", label: "Divisions", count: selectedDivisions.length },
+                        { key: "roles", label: "Roles", count: selectedRoles.length },
+                        { key: "users", label: "Users", count: selectedUsers.length },
+                      ].map(({ key, label, count }) => (
+                        <div key={key} className="border rounded-md overflow-hidden">
+                          <button
+                            type="button"
+                            className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
+                            onClick={() =>
+                              setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }))
+                            }
+                          >
+                            <span className="flex items-center gap-2">
+                              {expandedSections[key] ? (
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              )}
+                              {label}
+                            </span>
+                            {count > 0 && (
+                              <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-2 py-0.5 rounded-full font-semibold">
+                                {count} selected
+                              </span>
+                            )}
+                          </button>
+
+                          {expandedSections[key] && (
+                            <div className="border-t p-3 max-h-48 overflow-y-auto space-y-2">
+                              {key === "teams" && teams.map((team: any) => (
+                                <div key={team.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    checked={selectedTeams.includes(String(team.id))}
+                                    onCheckedChange={(checked) => {
+                                      setIsEveryoneSelected(false);
+                                      if (checked) setSelectedTeams([...selectedTeams, String(team.id)]);
+                                      else setSelectedTeams(selectedTeams.filter((id) => id !== String(team.id)));
+                                    }}
+                                    data-testid={`checkbox-team-${team.id}`}
+                                  />
+                                  <label className="text-sm cursor-pointer">
+                                    {team.name}{team.programType ? ` (${team.programType})` : ""}
+                                  </label>
+                                </div>
+                              ))}
+
+                              {key === "programs" && programs
+                                .filter((p: any) => p.isActive && p.productCategory === "service")
+                                .map((program: any) => (
+                                  <div key={program.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      checked={selectedPrograms.includes(String(program.id))}
+                                      onCheckedChange={(checked) => {
+                                        setIsEveryoneSelected(false);
+                                        if (checked) setSelectedPrograms([...selectedPrograms, String(program.id)]);
+                                        else setSelectedPrograms(selectedPrograms.filter((id) => id !== String(program.id)));
+                                      }}
+                                      data-testid={`checkbox-program-${program.id}`}
+                                    />
+                                    <label className="text-sm cursor-pointer">{program.name}</label>
+                                  </div>
+                                ))}
+
+                              {key === "divisions" && divisions
+                                .filter((d: any) => d.isActive)
+                                .map((division: any) => (
+                                  <div key={division.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      checked={selectedDivisions.includes(String(division.id))}
+                                      onCheckedChange={(checked) => {
+                                        setIsEveryoneSelected(false);
+                                        if (checked) setSelectedDivisions([...selectedDivisions, String(division.id)]);
+                                        else setSelectedDivisions(selectedDivisions.filter((id) => id !== String(division.id)));
+                                      }}
+                                      data-testid={`checkbox-division-${division.id}`}
+                                    />
+                                    <label className="text-sm cursor-pointer">
+                                      {division.name}{division.ageRange ? ` (${division.ageRange})` : ""}
+                                    </label>
+                                  </div>
+                                ))}
+
+                              {key === "roles" && ["player", "parent", "coach", "admin"].map((role) => (
+                                <div key={role} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    checked={selectedRoles.includes(role)}
+                                    onCheckedChange={(checked) => {
+                                      setIsEveryoneSelected(false);
+                                      if (checked) setSelectedRoles([...selectedRoles, role]);
+                                      else setSelectedRoles(selectedRoles.filter((r) => r !== role));
+                                    }}
+                                    data-testid={`checkbox-role-${role}`}
+                                  />
+                                  <label className="text-sm cursor-pointer capitalize">{role}</label>
+                                </div>
+                              ))}
+
+                              {key === "users" && (
+                                <>
+                                  <Input
+                                    placeholder="Search by name, email, or role..."
+                                    value={userSearch}
+                                    onChange={(e) => setUserSearch(e.target.value)}
+                                    className="mb-2"
+                                  />
+                                  {allUsers
+                                    .filter((u: any) => u.isActive)
+                                    .filter((user: any) => {
+                                      const q = userSearch.toLowerCase();
+                                      if (!q) return true;
+                                      return (
+                                        (user.firstName || "").toLowerCase().includes(q) ||
+                                        (user.lastName || "").toLowerCase().includes(q) ||
+                                        (user.email || "").toLowerCase().includes(q) ||
+                                        (user.role || "").toLowerCase().includes(q)
+                                      );
+                                    })
+                                    .map((user: any) => (
+                                      <div key={user.id} className="flex items-center space-x-2">
+                                        <Checkbox
+                                          checked={selectedUsers.includes(String(user.id))}
+                                          onCheckedChange={(checked) => {
+                                            setIsEveryoneSelected(false);
+                                            if (checked) setSelectedUsers([...selectedUsers, String(user.id)]);
+                                            else setSelectedUsers(selectedUsers.filter((id) => id !== String(user.id)));
+                                          }}
+                                          data-testid={`checkbox-user-${user.id}`}
+                                        />
+                                        <label className="text-sm cursor-pointer">
+                                          {user.firstName} {user.lastName} - {user.role} ({user.email})
+                                        </label>
+                                      </div>
+                                    ))}
+                                </>
+                              )}
                             </div>
-                          ))}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {selectedUsers.length} user(s) selected
-                      </p>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   )}
 
-                  {String(watchedTargetType) === "team" && (
-                    <div className="space-y-2">
-                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                        {teams.map((team: any) => (
-                          <div key={team.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={selectedTeams.includes(String(team.id))}
-                              onCheckedChange={(checked) => {
-                                if (checked) setSelectedTeams([...selectedTeams, String(team.id)]);
-                                else setSelectedTeams(selectedTeams.filter((id) => id !== String(team.id)));
-                              }}
-                              data-testid={`checkbox-team-${team.id}`}
-                            />
-                            <label className="text-sm cursor-pointer">
-                              {team.name}
-                              {team.programType ? ` (${team.programType})` : ""}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {selectedTeams.length} team(s) selected
-                      </p>
-                    </div>
+                  {!isEveryoneSelected && (
+                    <p className="text-xs text-muted-foreground">
+                      {(() => {
+                        const parts: string[] = [];
+                        if (selectedTeams.length > 0) parts.push(`${selectedTeams.length} team${selectedTeams.length !== 1 ? "s" : ""}`);
+                        if (selectedPrograms.length > 0) parts.push(`${selectedPrograms.length} program${selectedPrograms.length !== 1 ? "s" : ""}`);
+                        if (selectedDivisions.length > 0) parts.push(`${selectedDivisions.length} division${selectedDivisions.length !== 1 ? "s" : ""}`);
+                        if (selectedRoles.length > 0) parts.push(`${selectedRoles.length} role${selectedRoles.length !== 1 ? "s" : ""}`);
+                        if (selectedUsers.length > 0) parts.push(`${selectedUsers.length} user${selectedUsers.length !== 1 ? "s" : ""}`);
+                        return parts.length > 0 ? parts.join(", ") + " selected" : "No specific audience selected — use Everyone button above to reset";
+                      })()}
+                    </p>
                   )}
 
-                  {String(watchedTargetType) === "division" && (
-                    <div className="space-y-2">
-                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                        {divisions
-                          .filter((d: any) => d.isActive)
-                          .map((division: any) => (
-                            <div key={division.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                checked={selectedDivisions.includes(String(division.id))}
-                                onCheckedChange={(checked) => {
-                                  if (checked) setSelectedDivisions([...selectedDivisions, String(division.id)]);
-                                  else setSelectedDivisions(selectedDivisions.filter((id) => id !== String(division.id)));
-                                }}
-                                data-testid={`checkbox-division-${division.id}`}
-                              />
-                              <label className="text-sm cursor-pointer">
-                                {division.name} {division.ageRange ? `(${division.ageRange})` : ""}
-                              </label>
-                            </div>
-                          ))}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {selectedDivisions.length} division(s) selected
-                      </p>
-                    </div>
-                  )}
-
-                  {String(watchedTargetType) === "program" && (
-                    <div className="space-y-2">
-                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                        {programs
-                          .filter((p: any) => p.isActive && p.productCategory === "service")
-                          .map((program: any) => (
-                            <div key={program.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                checked={selectedPrograms.includes(String(program.id))}
-                                onCheckedChange={(checked) => {
-                                  if (checked) setSelectedPrograms([...selectedPrograms, String(program.id)]);
-                                  else setSelectedPrograms(selectedPrograms.filter((id) => id !== String(program.id)));
-                                }}
-                                data-testid={`checkbox-program-${program.id}`}
-                              />
-                              <label className="text-sm cursor-pointer">{program.name}</label>
-                            </div>
-                          ))}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {selectedPrograms.length} program(s) selected
-                      </p>
-                    </div>
-                  )}
-
-                  {String(watchedTargetType) === "role" && (
-                    <div className="space-y-2">
-                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
-                        {["player", "parent", "coach", "admin"].map((role) => (
-                          <div key={role} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={selectedRoles.includes(role)}
-                              onCheckedChange={(checked) => {
-                                if (checked) setSelectedRoles([...selectedRoles, role]);
-                                else setSelectedRoles(selectedRoles.filter((r) => r !== role));
-                              }}
-                              data-testid={`checkbox-role-${role}`}
-                            />
-                            <label className="text-sm cursor-pointer capitalize">{role}</label>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {selectedRoles.length} role(s) selected
-                      </p>
-                    </div>
+                  {isEveryoneSelected && (
+                    <button
+                      type="button"
+                      className="text-xs text-blue-600 hover:underline"
+                      onClick={() => setIsEveryoneSelected(false)}
+                    >
+                      + Target specific teams, programs, or roles instead
+                    </button>
                   )}
                 </div>
 

@@ -3466,7 +3466,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                                 ? `Access until ${new Date(enrollment.endDate).toLocaleDateString()}`
                                                 : 'Lifetime access'
                                             ) : enrollment.endDate ? (
-                                              `Expires ${new Date(enrollment.endDate).toLocaleDateString()}`
+                                              `${enrollment.autoRenew ? 'Renews' : 'Expires'} ${new Date(enrollment.endDate).toLocaleDateString()}`
                                             ) : (
                                               'No expiration set'
                                             )}

@@ -13436,8 +13436,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           chatMode: product?.chatMode || 'two_way',
           status: enrollment.status,
           startDate: enrollment.startDate,
-          endDate: enrollment.endDate,
+          endDate: enrollment.endDate || (() => {
+            if (enrollment.startDate && product?.durationDays) {
+              const d = new Date(enrollment.startDate);
+              d.setDate(d.getDate() + product.durationDays);
+              return d.toISOString();
+            }
+            return null;
+          })(),
           autoRenew: enrollment.autoRenew,
+          billingCycle: product?.billingCycle || null,
           stripeSubscriptionId: enrollment.stripeSubscriptionId,
           remainingCredits: enrollment.remainingCredits,
           totalCredits: enrollment.totalCredits,

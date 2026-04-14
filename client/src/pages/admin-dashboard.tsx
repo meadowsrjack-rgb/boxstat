@@ -4136,7 +4136,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-10">
+                <TableHead className="w-8 px-2">
                   <Checkbox 
                     checked={paginatedUsers.length > 0 && paginatedUsers.every((u: any) => selectedUserIds.has(u.id))}
                     onCheckedChange={() => toggleAllUsers(paginatedUsers.map((u: any) => u.id))}
@@ -4144,128 +4144,190 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   />
                 </TableHead>
                 <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
+                  className="cursor-pointer select-none hover:bg-gray-100 px-2 whitespace-nowrap"
                   onClick={() => handleSort('firstName')}
                   data-testid="sort-name"
                 >Name {sortField === 'firstName' && (sortDirection === 'asc' ? '↑' : '↓')}</TableHead>
                 <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
+                  className="cursor-pointer select-none hover:bg-gray-100 px-2 whitespace-nowrap"
                   onClick={() => handleSort('email')}
                   data-testid="sort-email"
                 >
                   Email {sortField === 'email' && (sortDirection === 'asc' ? '↑' : '↓')}
                 </TableHead>
                 <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
-                  onClick={() => handleSort('phoneNumber')}
-                  data-testid="sort-phoneNumber"
-                >
-                  Phone {sortField === 'phoneNumber' && (sortDirection === 'asc' ? '↑' : '↓')}
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
+                  className="cursor-pointer select-none hover:bg-gray-100 px-2 whitespace-nowrap"
                   onClick={() => handleSort('role')}
                   data-testid="sort-role"
                 >
                   Role {sortField === 'role' && (sortDirection === 'asc' ? '↑' : '↓')}
                 </TableHead>
                 <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
-                  data-testid="sort-players"
-                >
-                  Players
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
-                  data-testid="sort-programs"
-                >
-                  Programs
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
+                  className="cursor-pointer select-none hover:bg-gray-100 px-2 whitespace-nowrap"
                   onClick={() => handleSort('team')}
                   data-testid="sort-team"
                 >
                   Teams
                 </TableHead>
                 <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
+                  className="select-none hover:bg-gray-100 px-2 whitespace-nowrap"
                   data-testid="sort-status"
                 >
                   Status
                 </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
-                  onClick={() => handleSort('createdAt')}
-                  data-testid="sort-created"
-                >
-                  Date Created {sortField === 'createdAt' && (sortDirection === 'asc' ? '↑' : '↓')}
-                </TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead className="px-2">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedUsers.map((user: any) => {
                 const userTeam = teams.find((t: any) => String(t.id) === String(user.teamId));
-                const userProgram = userTeam ? programs.find((p: any) => String(p.id) === String(userTeam.programId)) : null;
                 const linkedPlayers = users.filter((u: any) => (u.accountHolderId === user.id || u.parentId === user.id) && u.role === "player");
+
+                const getPlayerStatusColor = (player: any) => {
+                  const playerEnrollments = enrollments.filter((e: any) => e.profileId === player.id);
+                  const isOnTeam = player.teamId || (Array.isArray(player.teamIds) && player.teamIds.length > 0) || (Array.isArray(player.activeTeams) && player.activeTeams.length > 0);
+                  const now = new Date();
+                  const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+                  const hasPaymentFailed = playerEnrollments.some((e: any) => e.status === 'payment_failed' || e.paymentStatus === 'failed');
+                  const hasActiveWithoutTeam = playerEnrollments.some((e: any) => e.status === 'active') && !isOnTeam && teams.length > 0;
+                  const hasLowBalance = playerEnrollments.some((e: any) => {
+                    if (e.status !== 'active' || !e.endDate) return false;
+                    const endDate = new Date(e.endDate);
+                    return endDate <= threeDaysFromNow && endDate > now;
+                  });
+                  const hasActiveOnTeam = playerEnrollments.some((e: any) => e.status === 'active') && !!isOnTeam;
+                  const hasActiveSubscriber = playerEnrollments.some((e: any) => e.status === 'active' && e.stripeSubscriptionId);
+                  const hasActiveOneTime = playerEnrollments.some((e: any) => e.status === 'active' && !e.stripeSubscriptionId);
+                  const hasExpired = playerEnrollments.some((e: any) => e.status === 'expired' || e.status === 'cancelled');
+                  if (hasPaymentFailed) return "text-red-600";
+                  if (hasActiveWithoutTeam) return "text-amber-500";
+                  if (hasLowBalance) return "text-yellow-600";
+                  if (hasActiveOnTeam || hasActiveSubscriber || hasActiveOneTime) return "text-green-600";
+                  if (hasExpired) return "text-gray-500";
+                  return "text-gray-600";
+                };
+
+                const allTeamNames: string[] = [];
+                if (userTeam && !allTeamNames.includes(userTeam.name)) allTeamNames.push(userTeam.name);
+                const coachedTeams = teams.filter((t: any) => t.coachId === user.id);
+                coachedTeams.forEach((team: any) => { if (!allTeamNames.includes(team.name)) allTeamNames.push(team.name); });
+                linkedPlayers.forEach((player: any) => {
+                  if (Array.isArray(player.activeTeams) && player.activeTeams.length > 0) {
+                    player.activeTeams.forEach((at: any) => { if (at.teamName && !allTeamNames.includes(at.teamName)) allTeamNames.push(at.teamName); });
+                  }
+                  const playerTeam = teams.find((t: any) => String(t.id) === String(player.teamId));
+                  if (playerTeam && !allTeamNames.includes(playerTeam.name)) allTeamNames.push(playerTeam.name);
+                });
+
+                const teamColorFromName = (name: string) => {
+                  let hash = 0;
+                  for (let i = 0; i < name.length; i++) { hash = name.charCodeAt(i) + ((hash << 5) - hash); }
+                  const hue = ((hash % 360) + 360) % 360;
+                  return { bg: `hsl(${hue}, 65%, 92%)`, text: `hsl(${hue}, 60%, 30%)`, border: `hsl(${hue}, 50%, 75%)` };
+                };
+
+                const getUserSummaryStatus = () => {
+                  const allProfileIds = [user.id, ...linkedPlayers.map((p: any) => p.id)];
+                  const allEnrollments = enrollments.filter((e: any) =>
+                    allProfileIds.includes(e.profileId) || allProfileIds.includes(e.accountHolderId)
+                  );
+                  const activeEnrollments = allEnrollments.filter((e: any) => e.status === 'active');
+                  if (activeEnrollments.length === 0) {
+                    const hasExpired = allEnrollments.some((e: any) => e.status === 'expired' || e.status === 'cancelled');
+                    if (hasExpired) return { label: "Expired", cls: "bg-gray-500 text-white" };
+                    return { label: "No Enrollment", cls: "bg-gray-200 text-gray-600" };
+                  }
+                  const now = new Date();
+                  const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+                  let hasPaymentFailed = false;
+                  let hasLowBalance = false;
+                  let hasNeedsTeam = false;
+                  let hasActive = false;
+                  for (const enrollment of activeEnrollments) {
+                    if (enrollment.paymentStatus === 'failed') { hasPaymentFailed = true; continue; }
+                    if (enrollment.endDate) {
+                      const endDate = new Date(enrollment.endDate);
+                      if (endDate <= threeDaysFromNow && endDate > now) { hasLowBalance = true; continue; }
+                    }
+                    const profileId = enrollment.profileId;
+                    const profile = profileId === user.id ? user : linkedPlayers.find((p: any) => p.id === profileId);
+                    if (profile?.role === 'player') {
+                      const programTeams = teams.filter((t: any) => String(t.programId) === String(enrollment.programId));
+                      const hasAnyTeam = (Array.isArray(profile?.activeTeams) && profile.activeTeams.length > 0) || profile?.teamId;
+                      if (programTeams.length > 0) {
+                        const playerOnTeam = programTeams.some((t: any) => {
+                          if (!profile) return false;
+                          if (Array.isArray(profile.activeTeams) && profile.activeTeams.some((at: any) => String(at.teamId) === String(t.id))) return true;
+                          if (profile.teamId && String(profile.teamId) === String(t.id)) return true;
+                          if (Array.isArray(profile.teamIds) && profile.teamIds.some((tid: any) => String(tid) === String(t.id))) return true;
+                          return false;
+                        });
+                        if (playerOnTeam) hasActive = true;
+                        else hasNeedsTeam = true;
+                      } else if (!hasAnyTeam) { hasNeedsTeam = true; }
+                      else hasActive = true;
+                    } else { hasActive = true; }
+                  }
+                  if (hasPaymentFailed) return { label: "Payment Failed", cls: "bg-red-600 text-white" };
+                  if (hasLowBalance) return { label: "Low Balance", cls: "bg-yellow-400 text-yellow-900" };
+                  if (hasNeedsTeam) return { label: "Needs Team", cls: "bg-amber-500 text-white" };
+                  if (hasActive) return { label: "Active", cls: "bg-green-600 text-white" };
+                  return { label: "Active", cls: "bg-green-600 text-white" };
+                };
+
+                const summaryStatus = getUserSummaryStatus();
+
                 return (
                   <TableRow key={user.id} className="cursor-default" data-testid={`row-user-${user.id}`}>
-                    <TableCell>
+                    <TableCell className="px-2 py-1.5">
                       <Checkbox 
                         checked={selectedUserIds.has(user.id)}
                         onCheckedChange={() => toggleUserSelection(user.id)}
                         aria-label={`Select ${user.firstName} ${user.lastName}`}
                       />
                     </TableCell>
-                    <TableCell data-testid={`text-name-${user.id}`}>
-                      <div className="font-medium flex items-center gap-2">
+                    <TableCell className="px-2 py-1.5" data-testid={`text-name-${user.id}`}>
+                      <div className="font-medium text-sm flex items-center gap-1.5">
                         {user.firstName || ""} {user.lastName || ""}
                         {user.flaggedForRosterChange && (
                           <span 
-                            className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded cursor-help" 
+                            className="inline-flex items-center gap-0.5 text-[10px] bg-red-100 text-red-700 px-1 py-0 rounded cursor-help" 
                             title={user.flagReason ? `Reason: ${user.flagReason}` : "Flagged for roster review by coach"}
                             data-testid={`flag-indicator-${user.id}`}
                           >
-                            <Flag className="w-3 h-3" /> Flagged
+                            <Flag className="w-2.5 h-2.5" /> Flagged
                           </span>
                         )}
                       </div>
+                      {linkedPlayers.length > 0 && (
+                        <div className="ml-3 mt-0.5 flex flex-col">
+                          {linkedPlayers.slice(0, 3).map((p: any) => (
+                            <span key={p.id} className={`text-[11px] leading-tight ${getPlayerStatusColor(p)}`}>
+                              {p.firstName} {p.lastName}
+                            </span>
+                          ))}
+                          {linkedPlayers.length > 3 && (
+                            <span className="text-[10px] text-gray-400">+{linkedPlayers.length - 3} more</span>
+                          )}
+                        </div>
+                      )}
                     </TableCell>
-                    <TableCell data-testid={`text-email-${user.id}`}>
+                    <TableCell className="px-2 py-1.5" data-testid={`text-email-${user.id}`}>
                       {(() => {
-                        if (user.email) {
-                          return <span className="text-gray-600 text-sm">{user.email}</span>;
-                        }
+                        if (user.email) return <span className="text-gray-600 text-xs">{user.email}</span>;
                         if (user.role === "player") {
                           const holderId = user.accountHolderId || user.parentId;
                           if (holderId) {
                             const accountHolder = users.find((u: any) => u.id === holderId);
-                            if (accountHolder?.email) {
-                              return <span className="text-gray-400 text-sm italic">{accountHolder.email}</span>;
-                            }
+                            if (accountHolder?.email) return <span className="text-gray-400 text-xs italic">{accountHolder.email}</span>;
                           }
                         }
-                        return <span className="text-gray-400 text-sm">-</span>;
+                        return <span className="text-gray-400 text-xs">-</span>;
                       })()}
                     </TableCell>
-                    <TableCell data-testid={`text-phone-${user.id}`}>
-                      {(() => {
-                        if (user.role === "player") {
-                          const holderId = user.accountHolderId || user.parentId;
-                          if (holderId) {
-                            const accountHolder = users.find((u: any) => u.id === holderId);
-                            if (accountHolder?.phoneNumber || accountHolder?.phone) {
-                              return <span className="text-gray-600 text-sm">{accountHolder.phoneNumber || accountHolder.phone}</span>;
-                            }
-                          }
-                        }
-                        return <span className="text-gray-600 text-sm">{user.phoneNumber || user.phone || "-"}</span>;
-                      })()}
-                    </TableCell>
-                    <TableCell>
+                    <TableCell className="px-2 py-1.5">
                       <Badge 
-                        className={`capitalize ${
+                        className={`capitalize text-[10px] px-1.5 py-0 ${
                           user.role === "admin" 
                             ? "bg-red-600 text-white hover:bg-red-700" 
                             : user.role === "coach" 
@@ -4281,225 +4343,44 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                         {user.role}
                       </Badge>
                     </TableCell>
-                    <TableCell data-testid={`text-players-${user.id}`}>
-                      {linkedPlayers.length > 0 ? (
-                        <div className="flex flex-col gap-0.5">
-                          {linkedPlayers.slice(0, 3).map((p: any) => {
-                            const playerEnrollments = enrollments.filter((e: any) => e.profileId === p.id);
-                            const isOnTeam = p.teamId || (Array.isArray(p.teamIds) && p.teamIds.length > 0) || (Array.isArray(p.activeTeams) && p.activeTeams.length > 0);
-                            const now = new Date();
-                            const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-                            const hasPaymentFailed = playerEnrollments.some((e: any) => e.status === 'payment_failed' || e.paymentStatus === 'failed');
-                            const hasActiveWithoutTeam = playerEnrollments.some((e: any) => e.status === 'active') && !isOnTeam && teams.length > 0;
-                            const hasLowBalance = playerEnrollments.some((e: any) => {
-                              if (e.status !== 'active' || !e.endDate) return false;
-                              const endDate = new Date(e.endDate);
-                              return endDate <= threeDaysFromNow && endDate > now;
-                            });
-                            const hasActiveOnTeam = playerEnrollments.some((e: any) => e.status === 'active') && !!isOnTeam;
-                            const hasActiveSubscriber = playerEnrollments.some((e: any) => e.status === 'active' && e.stripeSubscriptionId);
-                            const hasActiveOneTime = playerEnrollments.some((e: any) => e.status === 'active' && !e.stripeSubscriptionId);
-                            const hasExpired = playerEnrollments.some((e: any) => e.status === 'expired' || e.status === 'cancelled');
-                            let playerStatus = "No Enrollment";
-                            if (hasActiveWithoutTeam) playerStatus = "Pending Assignment";
-                            else if (hasPaymentFailed) playerStatus = "Payment Failed";
-                            else if (hasLowBalance) playerStatus = "Low Balance";
-                            else if (hasActiveOnTeam) playerStatus = "Active Program";
-                            else if (hasActiveSubscriber) playerStatus = "Active Subscriber";
-                            else if (hasActiveOneTime) playerStatus = "Active Program";
-                            else if (hasExpired) playerStatus = "Expired";
-                            const playerNameColor =
-                              playerStatus === "Active Program" || playerStatus === "Active Subscriber" ? "text-green-600" :
-                              playerStatus === "Pending Assignment" ? "text-amber-500" :
-                              playerStatus === "Payment Failed" ? "text-red-600" :
-                              playerStatus === "Low Balance" ? "text-yellow-600" :
-                              playerStatus === "Expired" ? "text-gray-500" :
-                              "text-gray-600";
+                    <TableCell className="px-2 py-1.5" data-testid={`text-teams-${user.id}`}>
+                      {allTeamNames.length === 0 ? (
+                        <span className="text-gray-400 text-xs">-</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {allTeamNames.slice(0, 3).map((name, idx) => {
+                            const tc = teamColorFromName(name);
                             return (
-                              <span key={p.id} className={`text-xs ${playerNameColor}`}>{p.firstName} {p.lastName}</span>
+                              <span
+                                key={idx}
+                                className="text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap border"
+                                style={{ backgroundColor: tc.bg, color: tc.text, borderColor: tc.border }}
+                              >
+                                {name}
+                              </span>
                             );
                           })}
-                          {linkedPlayers.length > 3 && (
-                            <span className="text-xs text-gray-400">+{linkedPlayers.length - 3} more</span>
+                          {allTeamNames.length > 3 && (
+                            <span className="text-[10px] text-gray-400 self-center">+{allTeamNames.length - 3}</span>
                           )}
                         </div>
-                      ) : (
-                        <span className="text-gray-400 text-sm">-</span>
                       )}
                     </TableCell>
-                    <TableCell data-testid={`text-programs-${user.id}`}>
-                      {(() => {
-                        const userProgramNames: string[] = [];
-                        const userEnrollments = enrollments.filter((e: any) => 
-                          e.accountHolderId === user.id || e.profileId === user.id
-                        );
-                        userEnrollments.forEach((enrollment: any) => {
-                          const prog = programs.find((p: any) => String(p.id) === String(enrollment.programId));
-                          if (prog && !userProgramNames.includes(prog.name)) {
-                            userProgramNames.push(prog.name);
-                          }
-                        });
-                        linkedPlayers.forEach((player: any) => {
-                          const playerEnrollments = enrollments.filter((e: any) => e.profileId === player.id);
-                          playerEnrollments.forEach((enrollment: any) => {
-                            const prog = programs.find((p: any) => String(p.id) === String(enrollment.programId));
-                            if (prog && !userProgramNames.includes(prog.name)) {
-                              userProgramNames.push(prog.name);
-                            }
-                          });
-                        });
-                        if (userProgramNames.length === 0) {
-                          return <span className="text-gray-400 text-sm">-</span>;
-                        }
-                        return (
-                          <div className="flex flex-col gap-0.5">
-                            {userProgramNames.slice(0, 3).map((name, idx) => (
-                              <span key={idx} className="text-xs text-gray-600">{name}</span>
-                            ))}
-                            {userProgramNames.length > 3 && (
-                              <span className="text-xs text-gray-400">+{userProgramNames.length - 3} more</span>
-                            )}
-                          </div>
-                        );
-                      })()}
+                    <TableCell className="px-2 py-1.5" data-testid={`text-status-${user.id}`}>
+                      <Badge className={`${summaryStatus.cls} whitespace-nowrap text-[10px] px-1.5 py-0.5`}>{summaryStatus.label}</Badge>
                     </TableCell>
-                    <TableCell data-testid={`text-teams-${user.id}`}>
-                      {(() => {
-                        const allTeamNames: string[] = [];
-                        // User's own team (as player)
-                        if (userTeam && !allTeamNames.includes(userTeam.name)) {
-                          allTeamNames.push(userTeam.name);
-                        }
-                        // Teams where user is the coach
-                        const coachedTeams = teams.filter((t: any) => t.coachId === user.id);
-                        coachedTeams.forEach((team: any) => {
-                          if (!allTeamNames.includes(team.name)) {
-                            allTeamNames.push(team.name);
-                          }
-                        });
-                        linkedPlayers.forEach((player: any) => {
-                          if (Array.isArray(player.activeTeams) && player.activeTeams.length > 0) {
-                            player.activeTeams.forEach((at: any) => {
-                              if (at.teamName && !allTeamNames.includes(at.teamName)) {
-                                allTeamNames.push(at.teamName);
-                              }
-                            });
-                          }
-                          const playerTeam = teams.find((t: any) => String(t.id) === String(player.teamId));
-                          if (playerTeam && !allTeamNames.includes(playerTeam.name)) {
-                            allTeamNames.push(playerTeam.name);
-                          }
-                        });
-                        if (allTeamNames.length === 0) {
-                          return <span className="text-gray-400 text-sm">-</span>;
-                        }
-                        return (
-                          <div className="flex flex-col gap-0.5">
-                            {allTeamNames.slice(0, 3).map((name, idx) => (
-                              <span key={idx} className="text-xs text-gray-600">{name}</span>
-                            ))}
-                            {allTeamNames.length > 3 && (
-                              <span className="text-xs text-gray-400">+{allTeamNames.length - 3} more</span>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </TableCell>
-                    <TableCell data-testid={`text-status-${user.id}`}>
-                      {(() => {
-                        const allProfileIds = [user.id, ...linkedPlayers.map((p: any) => p.id)];
-                        const allEnrollments = enrollments.filter((e: any) =>
-                          allProfileIds.includes(e.profileId) || allProfileIds.includes(e.accountHolderId)
-                        );
-                        const activeEnrollments = allEnrollments.filter((e: any) => e.status === 'active');
-
-                        if (activeEnrollments.length === 0) {
-                          const hasExpired = allEnrollments.some((e: any) => e.status === 'expired' || e.status === 'cancelled');
-                          if (hasExpired) return <Badge className="bg-gray-500 text-white hover:bg-gray-600 whitespace-nowrap">Expired</Badge>;
-                          return <Badge className="bg-gray-200 text-gray-600 hover:bg-gray-300 whitespace-nowrap">No Enrollment</Badge>;
-                        }
-
-                        const seen = new Set<string>();
-                        const badges: { label: string; cls: string; key: string }[] = [];
-                        for (const enrollment of activeEnrollments) {
-                          const prog = programs.find((p: any) => String(p.id) === String(enrollment.programId));
-                          const progName = prog?.name || 'Program';
-                          const enrollKey = `${enrollment.profileId}-${enrollment.programId}`;
-                          if (seen.has(enrollKey)) continue;
-                          seen.add(enrollKey);
-
-                          if (enrollment.paymentStatus === 'failed') {
-                            badges.push({ label: `${progName}: Payment Failed`, cls: "bg-red-600 text-white hover:bg-red-700", key: enrollKey });
-                            continue;
-                          }
-
-                          const now = new Date();
-                          const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-                          if (enrollment.endDate) {
-                            const endDate = new Date(enrollment.endDate);
-                            if (endDate <= threeDaysFromNow && endDate > now) {
-                              badges.push({ label: `${progName}: Low Balance`, cls: "bg-yellow-400 text-yellow-900 hover:bg-yellow-500", key: enrollKey });
-                              continue;
-                            }
-                          }
-
-                          const profileId = enrollment.profileId;
-                          const profile = profileId === user.id ? user : linkedPlayers.find((p: any) => p.id === profileId);
-                          const isPlayerProfile = profile?.role === 'player';
-
-                          if (isPlayerProfile) {
-                            const programTeams = teams.filter((t: any) => String(t.programId) === String(enrollment.programId));
-                            const hasAnyTeam = (Array.isArray(profile?.activeTeams) && profile.activeTeams.length > 0) || profile?.teamId;
-                            if (programTeams.length > 0) {
-                              const playerOnTeam = programTeams.some((t: any) => {
-                                if (!profile) return false;
-                                if (Array.isArray(profile.activeTeams) && profile.activeTeams.some((at: any) => String(at.teamId) === String(t.id))) return true;
-                                if (profile.teamId && String(profile.teamId) === String(t.id)) return true;
-                                if (Array.isArray(profile.teamIds) && profile.teamIds.some((tid: any) => String(tid) === String(t.id))) return true;
-                                return false;
-                              });
-                              if (playerOnTeam) {
-                                badges.push({ label: `${progName}: Active`, cls: "bg-green-600 text-white hover:bg-green-700", key: enrollKey });
-                              } else {
-                                badges.push({ label: `${progName}: Needs Team`, cls: "bg-amber-500 text-white hover:bg-amber-600", key: enrollKey });
-                              }
-                            } else if (!hasAnyTeam) {
-                              badges.push({ label: `${progName}: Unassigned`, cls: "bg-amber-500 text-white hover:bg-amber-600", key: enrollKey });
-                            } else {
-                              badges.push({ label: `${progName}: Active`, cls: "bg-green-600 text-white hover:bg-green-700", key: enrollKey });
-                            }
-                          } else {
-                            badges.push({ label: `${progName}: Active`, cls: "bg-green-600 text-white hover:bg-green-700", key: enrollKey });
-                          }
-                        }
-
-                        if (badges.length === 0) {
-                          return <Badge className="bg-green-600 text-white hover:bg-green-700 whitespace-nowrap">Active Program</Badge>;
-                        }
-
-                        return (
-                          <div className="flex flex-col gap-1">
-                            {badges.map(b => (
-                              <Badge key={b.key} className={`${b.cls} whitespace-nowrap text-[10px] px-1.5 py-0.5`}>{b.label}</Badge>
-                            ))}
-                          </div>
-                        );
-                      })()}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-sm text-gray-500">
-                      {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
-                    </TableCell>
-                    <TableCell>
+                    <TableCell className="px-2 py-1.5">
                         <Button 
                           variant="ghost" 
                           size="sm" 
+                          className="h-7 w-7 p-0"
                           onClick={() => {
                             setEditingUser(user);
                           }}
                           data-testid={`button-edit-user-${user.id}`}
                           title="Edit User"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="w-3.5 h-3.5" />
                         </Button>
                     </TableCell>
                   </TableRow>

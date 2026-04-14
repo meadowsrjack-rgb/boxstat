@@ -13417,6 +13417,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
       }
       
+      // Fetch payments for this user to match pricing options when selectedPricingOptionId is missing
+      const userPayments = await db.select()
+        .from(payments)
+        .where(
+          and(
+            eq(payments.playerId, userId),
+            eq(payments.status, 'completed')
+          )
+        );
+
       // Build response combining enrollments with team info, social settings, and members
       const memberships = await Promise.all(enrollments.map(async ({ enrollment, product }) => {
         // Find teams linked to this program
@@ -13424,50 +13434,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ({ team }) => team?.programId === enrollment.programId
         );
         
+        // Resolve pricing option: direct lookup or match via payment amount
+        const pricingOptions = Array.isArray(product?.pricingOptions) ? product.pricingOptions as any[] : [];
+        let resolvedOption: any = null;
+        if (enrollment.selectedPricingOptionId) {
+          resolvedOption = pricingOptions.find((o: any) => o.id === enrollment.selectedPricingOptionId) || null;
+        }
+        if (!resolvedOption && pricingOptions.length > 0) {
+          const programPayment = userPayments.find(p => p.programId === enrollment.programId);
+          if (programPayment) {
+            resolvedOption = pricingOptions.find((o: any) => o.price === programPayment.amount) || null;
+          }
+          if (!resolvedOption) {
+            resolvedOption = pricingOptions.find((o: any) => o.isDefault) || null;
+          }
+        }
+
+        // Compute end date from resolved pricing option's billingIntervalDays
+        const derivedEndDate = enrollment.endDate || (() => {
+          if (!enrollment.startDate) return null;
+          const intervalDays = resolvedOption?.billingIntervalDays;
+          if (intervalDays) {
+            const d = new Date(enrollment.startDate);
+            d.setDate(d.getDate() + intervalDays);
+            return d.toISOString();
+          }
+          if (product?.durationDays) {
+            const d = new Date(enrollment.startDate);
+            d.setDate(d.getDate() + product.durationDays);
+            return d.toISOString();
+          }
+          return null;
+        })();
+
         return {
           enrollmentId: enrollment.id,
           programId: enrollment.programId,
           programName: product?.name || 'Unknown Program',
           programType: product?.type,
-          // Social settings from program
           hasSubgroups: product?.hasSubgroups ?? true,
           subgroupLabel: product?.subgroupLabel || 'Team',
           rosterVisibility: product?.rosterVisibility || 'members',
           chatMode: product?.chatMode || 'two_way',
           status: enrollment.status,
           startDate: enrollment.startDate,
-          endDate: enrollment.endDate || (() => {
-            if (enrollment.startDate && product?.durationDays) {
-              const d = new Date(enrollment.startDate);
-              d.setDate(d.getDate() + product.durationDays);
-              return d.toISOString();
-            }
-            return null;
-          })(),
+          endDate: derivedEndDate,
           autoRenew: enrollment.autoRenew,
           billingCycle: product?.billingCycle || null,
           stripeSubscriptionId: enrollment.stripeSubscriptionId,
           remainingCredits: enrollment.remainingCredits,
           totalCredits: enrollment.totalCredits,
           selectedPricingOptionId: enrollment.selectedPricingOptionId,
-          pricingAmount: (() => {
-            if (!product?.pricingOptions || !enrollment.selectedPricingOptionId) return null;
-            const options = Array.isArray(product.pricingOptions) ? product.pricingOptions : [];
-            const selected = options.find((o: any) => o.id === enrollment.selectedPricingOptionId);
-            return selected?.price || null;
-          })(),
-          pricingOptionName: (() => {
-            if (!product?.pricingOptions || !enrollment.selectedPricingOptionId) return null;
-            const options = Array.isArray(product.pricingOptions) ? product.pricingOptions : [];
-            const selected = options.find((o: any) => o.id === enrollment.selectedPricingOptionId);
-            return selected?.name || null;
-          })(),
-          pricingOptionType: (() => {
-            if (!product?.pricingOptions || !enrollment.selectedPricingOptionId) return null;
-            const options = Array.isArray(product.pricingOptions) ? product.pricingOptions : [];
-            const selected = options.find((o: any) => o.id === enrollment.selectedPricingOptionId);
-            return selected?.optionType || null;
-          })(),
+          pricingAmount: resolvedOption?.price || null,
+          pricingOptionName: resolvedOption?.name || null,
+          pricingOptionType: resolvedOption?.optionType || null,
           // Team/group assignments within this program, with member data
           teams: await Promise.all(programTeams.map(async ({ membership, team }) => {
             // Get members for this team (exclude admins from player-facing roster)

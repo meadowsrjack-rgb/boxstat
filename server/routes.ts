@@ -13441,10 +13441,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (enrollment.selectedPricingOptionId) {
           resolvedOption = pricingOptions.find((o: any) => o.id === enrollment.selectedPricingOptionId) || null;
         }
-        if (!resolvedOption && pricingOptions.length > 0) {
-          if (programPayment) {
-            resolvedOption = pricingOptions.find((o: any) => o.price === programPayment.amount) || null;
-          }
+        if (!resolvedOption && pricingOptions.length > 0 && programPayment) {
+          resolvedOption = pricingOptions.find((o: any) => o.price === programPayment.amount) || null;
           if (!resolvedOption) {
             resolvedOption = pricingOptions.find((o: any) => o.isDefault) || null;
           }

@@ -513,12 +513,12 @@ function PlayersStep({
 
         <TabsContent value="paste" className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Include a <strong>Parent Email</strong> column to auto-link players. Subscription End{hasTeams ? " and Team" : ""} columns are detected automatically.
+            Include a <strong>Parent</strong> column to auto-link players. Program, Team, and Sub end date columns are detected automatically.
           </p>
           <Textarea
             value={pasteRaw}
             onChange={(e) => setPasteRaw(e.target.value)}
-            placeholder={"First Name\tLast Name\tParent Email\tSubscription End\tTeam\nAlex\tJohnson\tsarah@email.com\t08/31/2026\tBlue"}
+            placeholder={"First name\tLast name\tParent\tProgram\tTeam\tSub end date\nAlex\tJohnson\tsarah@email.com\tYouth Club\tBlue\t08/31/2026"}
             className="font-mono text-xs min-h-[100px]"
           />
           <Button variant="default" size="sm" onClick={importPaste} disabled={!pasteRaw.trim()}>

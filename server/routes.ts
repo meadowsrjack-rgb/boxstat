@@ -13454,6 +13454,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const selected = options.find((o: any) => o.id === enrollment.selectedPricingOptionId);
             return selected?.name || null;
           })(),
+          pricingOptionType: (() => {
+            if (!product?.pricingOptions || !enrollment.selectedPricingOptionId) return null;
+            const options = Array.isArray(product.pricingOptions) ? product.pricingOptions : [];
+            const selected = options.find((o: any) => o.id === enrollment.selectedPricingOptionId);
+            return selected?.optionType || null;
+          })(),
           // Team/group assignments within this program, with member data
           teams: await Promise.all(programTeams.map(async ({ membership, team }) => {
             // Get members for this team (exclude admins from player-facing roster)

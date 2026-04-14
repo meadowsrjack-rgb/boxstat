@@ -3451,30 +3451,26 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                           </p>
                                         </div>
                                         <div>
-                                          <label className="text-[10px] text-gray-500 uppercase">End Date</label>
-                                          <input
-                                            type="date"
-                                            className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-full"
-                                            value={enrollment.endDate ? new Date(enrollment.endDate).toISOString().split('T')[0] : ''}
-                                            onChange={(e) => {
-                                              const updated = (editingUser.pendingEnrollments || programEnrollments).map((en: any) =>
-                                                en.enrollmentId === enrollment.enrollmentId
-                                                  ? { ...en, endDate: e.target.value ? new Date(e.target.value).toISOString() : null }
-                                                  : en
-                                              );
-                                              setEditingUser({
-                                                ...editingUser,
-                                                pendingEnrollments: updated,
-                                                enrollmentUpdates: {
-                                                  ...(editingUser.enrollmentUpdates || {}),
-                                                  [enrollment.enrollmentId]: {
-                                                    ...(editingUser.enrollmentUpdates?.[enrollment.enrollmentId] || {}),
-                                                    endDate: e.target.value ? new Date(e.target.value).toISOString() : null
-                                                  }
-                                                }
-                                              });
-                                            }}
-                                          />
+                                          <label className="text-[10px] text-gray-500 uppercase">Status</label>
+                                          <p className="text-xs text-gray-700">
+                                            {enrollment.pricingOptionType === 'credit_pack' ? (
+                                              enrollment.remainingCredits != null
+                                                ? `${enrollment.remainingCredits}${enrollment.totalCredits ? ` of ${enrollment.totalCredits}` : ''} credits remaining`
+                                                : 'Credit-based'
+                                            ) : enrollment.pricingOptionType === 'subscription' || enrollment.stripeSubscriptionId ? (
+                                              enrollment.endDate
+                                                ? (enrollment.autoRenew ? `Renews ${new Date(enrollment.endDate).toLocaleDateString()}` : `Ends ${new Date(enrollment.endDate).toLocaleDateString()}`)
+                                                : (enrollment.autoRenew ? 'Auto-renewing' : 'Active')
+                                            ) : enrollment.pricingOptionType === 'one_time' ? (
+                                              enrollment.endDate
+                                                ? `Access until ${new Date(enrollment.endDate).toLocaleDateString()}`
+                                                : 'Lifetime access'
+                                            ) : enrollment.endDate ? (
+                                              `Until ${new Date(enrollment.endDate).toLocaleDateString()}`
+                                            ) : (
+                                              'Team assignment only'
+                                            )}
+                                          </p>
                                         </div>
                                         {enrollment.pricingAmount && (
                                           <div>
@@ -3514,20 +3510,6 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                             onChange={(e) => {
                                               const updated = (editingUser.pendingEnrollments || programEnrollments).map((en: any) =>
                                                 en.enrollmentId === enrollment.enrollmentId ? { ...en, startDate: e.target.value } : en
-                                              );
-                                              setEditingUser({ ...editingUser, pendingEnrollments: updated });
-                                            }}
-                                          />
-                                        </div>
-                                        <div>
-                                          <label className="text-[10px] text-gray-500 uppercase">End Date</label>
-                                          <input
-                                            type="date"
-                                            className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-full"
-                                            value={enrollment.endDate || ''}
-                                            onChange={(e) => {
-                                              const updated = (editingUser.pendingEnrollments || programEnrollments).map((en: any) =>
-                                                en.enrollmentId === enrollment.enrollmentId ? { ...en, endDate: e.target.value } : en
                                               );
                                               setEditingUser({ ...editingUser, pendingEnrollments: updated });
                                             }}

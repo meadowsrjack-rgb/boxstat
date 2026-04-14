@@ -7656,8 +7656,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               return res.status(403).json({ message: 'Only admins can create enrollments when assigning unenrolled players' });
             }
             const parsedDate = new Date(enrollmentEndDate + 'T23:59:59Z');
+            const maxDate = new Date();
+            maxDate.setMonth(maxDate.getMonth() + 2);
+            maxDate.setHours(23, 59, 59, 999);
             if (isNaN(parsedDate.getTime()) || parsedDate <= new Date()) {
               return res.status(400).json({ message: 'Enrollment end date must be a valid future date (YYYY-MM-DD format)' });
+            }
+            if (parsedDate > maxDate) {
+              return res.status(400).json({ message: 'Enrollment end date cannot be more than 2 months from today' });
             }
             const endDateIso = parsedDate.toISOString();
             await storage.createEnrollment({

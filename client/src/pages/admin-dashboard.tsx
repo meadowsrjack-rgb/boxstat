@@ -14662,6 +14662,7 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
               value={enrollEndDate}
               onChange={(e) => setEnrollEndDate(e.target.value)}
               min={new Date().toISOString().split('T')[0]}
+              max={(() => { const d = new Date(); d.setMonth(d.getMonth() + 2); return d.toISOString().split('T')[0]; })()}
             />
             <p className="text-[11px] text-gray-500">
               {enrollEndDate

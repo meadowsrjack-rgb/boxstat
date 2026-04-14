@@ -6259,6 +6259,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`[PATCH] Player ${userId}: current teams=${JSON.stringify(currentTeamIds)}, new teams=${JSON.stringify(newTeamIds)}`);
         
+        // Verify enrollment for all new teams BEFORE making any changes
+        for (const newTeamId of newTeamIds) {
+          if (currentTeamIds.includes(newTeamId)) continue;
+          const team = await storage.getTeam(String(newTeamId));
+          if (team && team.programId) {
+            const accountHolderId = user.accountHolderId || userId;
+            const existingEnrollment = await db.select({ id: productEnrollments.id })
+              .from(productEnrollments)
+              .where(
+                and(
+                  eq(productEnrollments.profileId, userId),
+                  eq(productEnrollments.programId, team.programId),
+                  eq(productEnrollments.status, 'active')
+                )
+              )
+              .limit(1);
+            
+            if (existingEnrollment.length === 0) {
+              const program = await storage.getProduct(team.programId);
+              const programName = program?.name || 'this program';
+              return res.status(400).json({ 
+                message: `Player must be enrolled in "${programName}" before being assigned to team "${team.name}". They need to complete enrollment and payment first.`,
+                code: 'ENROLLMENT_REQUIRED'
+              });
+            }
+          }
+        }
+
+        // All enrollment checks passed — now apply team changes
+        
         // Mark removed teams as inactive and cancel associated enrollments
         for (const oldTeamId of currentTeamIds) {
           if (!newTeamIds.includes(oldTeamId)) {
@@ -6272,7 +6302,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 )
               );
             
-            // Cancel enrollment for this team's program if exists
             const removedTeam = await storage.getTeam(String(oldTeamId));
             if (removedTeam?.programId) {
               console.log(`[PATCH] Cancelling enrollment for player ${userId} in program ${removedTeam.programId}`);
@@ -6289,33 +6318,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Add to new teams (enrollment must already exist for program-linked teams)
-        const unenrolledTeams: string[] = [];
+        // Add to new teams
         for (const newTeamId of newTeamIds) {
+          if (currentTeamIds.includes(newTeamId)) continue;
           const team = await storage.getTeam(String(newTeamId));
           if (team) {
-            // Enforce enrollment requirement for program-linked teams
-            if (team.programId) {
-              const accountHolderId = user.accountHolderId || userId;
-              const existingEnrollment = await db.select({ id: productEnrollments.id })
-                .from(productEnrollments)
-                .where(
-                  and(
-                    eq(productEnrollments.profileId, userId),
-                    eq(productEnrollments.programId, team.programId),
-                    eq(productEnrollments.status, 'active')
-                  )
-                )
-                .limit(1);
-              
-              if (existingEnrollment.length === 0) {
-                const program = await storage.getProduct(team.programId);
-                unenrolledTeams.push(program?.name || team.name);
-                console.log(`[PATCH] Player ${userId} not enrolled in program ${team.programId} for team ${team.name}, skipping assignment`);
-                continue;
-              }
-            }
-
             console.log(`[PATCH] Adding player ${userId} to team ${newTeamId} (${team.name})`);
             try {
               await db.insert(teamMemberships)
@@ -6353,23 +6360,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        if (unenrolledTeams.length > 0) {
-          console.log(`[PATCH] Skipped team assignments for unenrolled programs: ${unenrolledTeams.join(', ')}`);
-        }
-        
-        // Update users.teamId to the first successfully assigned team (for backward compatibility)
-        // Get fresh active memberships after assignments to determine the correct teamId
-        const finalMemberships = await db.select({ teamId: teamMemberships.teamId })
-          .from(teamMemberships)
-          .where(
-            and(
-              eq(teamMemberships.profileId, userId),
-              eq(teamMemberships.status, 'active'),
-              eq(teamMemberships.role, 'player')
-            )
-          );
-        if (finalMemberships.length > 0) {
-          updateData.teamId = finalMemberships[0].teamId;
+        // Update users.teamId to the first valid team (for backward compatibility)
+        if (newTeamIds.length > 0) {
+          updateData.teamId = newTeamIds[0];
         } else {
           updateData.teamId = null;
         }

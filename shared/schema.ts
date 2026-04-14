@@ -1503,15 +1503,15 @@ export interface Event {
 export const insertEventSchema = z.object({
   organizationId: z.string(),
   title: z.string().min(1),
-  description: z.string().optional(),
-  eventType: z.string().optional(),
+  description: z.string().nullable().optional(),
+  eventType: z.string().nullable().optional(),
   startTime: z.string().min(1, "Start time is required"), // ISO date string
   endTime: z.string().min(1, "End time is required"), // ISO date string
   location: z.string().default(""),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
-  teamId: z.string().optional(),
-  opponentTeam: z.string().optional(),
+  teamId: z.string().nullable().optional(),
+  opponentTeam: z.string().nullable().optional(),
   visibility: z.object({
     roles: z.array(z.string()).optional(),
     teams: z.array(z.string()).optional(),

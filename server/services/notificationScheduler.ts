@@ -5,8 +5,8 @@ import { pushNotifications, resolveEventParticipants } from './pushNotificationH
 import { analyzePlayerAttendance, getOrgPlayers, getTeamCoachIds, getOrgAdminIds } from './attendanceTracker';
 import type { Event } from '@shared/schema';
 import { db } from '../db';
-import { notifications, notificationRecipients, productEnrollments, products, users, teamMemberships, teams } from '@shared/schema';
-import { eq, and, sql, lte, gte, gt, inArray } from 'drizzle-orm';
+import { notifications, notificationRecipients, productEnrollments, products, users, teamMemberships, teams, organizations } from '@shared/schema';
+import { eq, and, sql, lte, gte, gt, lt, inArray } from 'drizzle-orm';
 import { adminNotificationService } from './adminNotificationService';
 
 export class NotificationScheduler {
@@ -69,6 +69,12 @@ export class NotificationScheduler {
       scheduled: false
     });
 
+    const gracePeriodExpiryJob = cron.schedule('0 7 * * *', async () => {
+      await this.processGracePeriodExpiry();
+    }, {
+      scheduled: false
+    });
+
     const enrollmentExpiryWarningsJob = cron.schedule('0 9 * * *', async () => {
       await this.processEnrollmentExpiryWarnings();
     }, {
@@ -87,6 +93,7 @@ export class NotificationScheduler {
     this.jobs.set('attendanceNotifications', attendanceNotificationsJob);
     this.jobs.set('abandonedCartReminders', abandonedCartRemindersJob);
     this.jobs.set('enrollmentExpiry', enrollmentExpiryJob);
+    this.jobs.set('gracePeriodExpiry', gracePeriodExpiryJob);
     this.jobs.set('enrollmentExpiryWarnings', enrollmentExpiryWarningsJob);
     this.jobs.set('missingLocationAlerts', missingLocationJob);
 
@@ -738,10 +745,12 @@ export class NotificationScheduler {
         profileFirstName: users.firstName,
         profileLastName: users.lastName,
         profileEmail: users.email,
+        orgGracePeriodDays: organizations.gracePeriodDays,
       })
         .from(productEnrollments)
         .leftJoin(products, eq(productEnrollments.programId, products.id))
         .leftJoin(users, eq(productEnrollments.profileId, users.id))
+        .leftJoin(organizations, eq(productEnrollments.organizationId, organizations.id))
         .where(
           and(
             eq(productEnrollments.status, 'active'),
@@ -753,49 +762,85 @@ export class NotificationScheduler {
 
       for (const row of expiredEnrollments) {
         try {
-          await db.update(productEnrollments)
-            .set({ status: 'expired', updatedAt: now.toISOString() })
-            .where(eq(productEnrollments.id, row.enrollment.id));
-
           const orgId = row.enrollment.organizationId;
           const programName = row.programName || 'Unknown Program';
           const userName = `${row.profileFirstName || ''} ${row.profileLastName || ''}`.trim() || 'A member';
           const profileId = row.enrollment.profileId;
+          const gracePeriodDays = row.orgGracePeriodDays ?? 14;
 
-          // Remove team memberships for teams linked to the expired program only
-          if (profileId) {
-            try {
-              const programId = row.enrollment.programId;
-              // Find teams that belong to this program
-              const programTeams = await db.select({ id: teams.id })
-                .from(teams)
-                .where(eq(teams.programId, programId));
-              const programTeamIds = programTeams.map(t => t.id);
-              if (programTeamIds.length > 0) {
-                await db.delete(teamMemberships)
+          // Transition to grace_period instead of expired
+          const gracePeriodEndDate = new Date(now.getTime() + gracePeriodDays * 24 * 60 * 60 * 1000);
+          await db.update(productEnrollments)
+            .set({
+              status: 'grace_period',
+              gracePeriodEndDate: gracePeriodEndDate.toISOString(),
+              updatedAt: now.toISOString(),
+            })
+            .where(eq(productEnrollments.id, row.enrollment.id));
+
+          // Mark team memberships as 'restricted' so downstream server-side gates reflect limited access.
+          // For family-wide enrollments (profileId=null), resolve all child profiles under the account holder.
+          try {
+            const programId = row.enrollment.programId;
+            const programTeams = await db.select({ id: teams.id })
+              .from(teams)
+              .where(eq(teams.programId, programId));
+            const programTeamIds = programTeams.map(t => t.id);
+            if (programTeamIds.length > 0) {
+              let affectedProfileIds: string[] = profileId ? [profileId] : [];
+              if (!profileId && row.enrollment.accountHolderId) {
+                // Family-wide: restrict all child profiles under the account holder
+                const childProfiles = await db.select({ id: users.id })
+                  .from(users)
                   .where(
                     and(
-                      eq(teamMemberships.profileId, profileId),
+                      or(
+                        eq(users.accountHolderId, row.enrollment.accountHolderId),
+                        eq(users.parentId, row.enrollment.accountHolderId)
+                      ),
+                      eq(users.isActive, true)
+                    )
+                  );
+                affectedProfileIds = childProfiles.map(c => c.id);
+              }
+              if (affectedProfileIds.length > 0) {
+                await db.update(teamMemberships)
+                  .set({ status: 'restricted' })
+                  .where(
+                    and(
+                      inArray(teamMemberships.profileId, affectedProfileIds),
                       inArray(teamMemberships.teamId, programTeamIds)
                     )
                   );
-                console.log(`[Enrollment Expiry] Removed program team memberships for player ${profileId} (program: ${programId})`);
+                console.log(`[Enrollment Expiry] Marked program team memberships as restricted for profiles [${affectedProfileIds.join(', ')}] (program: ${programId})`);
               }
-            } catch (membershipError) {
-              console.error(`[Enrollment Expiry] Failed to remove team memberships for ${profileId}:`, membershipError);
             }
+          } catch (membershipError) {
+            console.error(`[Enrollment Expiry] Failed to restrict team memberships for enrollment ${row.enrollment.id}:`, membershipError);
           }
 
           const userTargetIds = [profileId, row.enrollment.accountHolderId].filter(Boolean) as string[];
           const uniqueUserIds = [...new Set(userTargetIds)];
 
-          if (uniqueUserIds.length > 0) {
+          const dedupTitle = `[system:grace-start-${row.enrollment.id}] Enrollment grace period started`;
+
+          const existingNotif = await db.select({ id: notifications.id })
+            .from(notifications)
+            .where(
+              and(
+                eq(notifications.organizationId, orgId),
+                eq(notifications.title, dedupTitle)
+              )
+            )
+            .limit(1);
+
+          if (uniqueUserIds.length > 0 && existingNotif.length === 0) {
             try {
               await adminNotificationService.createNotification({
                 organizationId: orgId,
                 types: ['notification'],
-                title: `${programName} Enrollment Expired`,
-                message: `You have been unenrolled from ${programName}. Re-enroll through the Payments tab to continue.`,
+                title: dedupTitle,
+                message: `Your enrollment in ${programName} has expired. You have ${gracePeriodDays} days of limited access remaining. Re-enroll through BoxStat to restore full access.`,
                 recipientTarget: 'users',
                 recipientUserIds: uniqueUserIds,
                 deliveryChannels: ['in_app', 'push'],
@@ -813,11 +858,11 @@ export class NotificationScheduler {
               await adminNotificationService.createNotification({
                 organizationId: orgId,
                 types: ['notification'],
-                title: `Enrollment Expired: ${userName}`,
-                message: `${userName}'s enrollment in ${programName} has expired and they have been automatically unenrolled.`,
+                title: `Grace Period Started: ${userName}`,
+                message: `${userName}'s enrollment in ${programName} has expired. They have ${gracePeriodDays} days of limited access before team memberships are removed.`,
                 recipientTarget: 'users',
                 recipientUserIds: adminIds,
-                deliveryChannels: ['in_app', 'push'],
+                deliveryChannels: ['in_app'],
                 sentBy: 'system',
                 status: 'sent',
               });
@@ -826,13 +871,210 @@ export class NotificationScheduler {
             }
           }
 
-          console.log(`[Enrollment Expiry] Expired enrollment ${row.enrollment.id} for ${userName} in ${programName}`);
+          console.log(`[Enrollment Expiry] Enrollment ${row.enrollment.id} for ${userName} in ${programName} entered grace period (${gracePeriodDays} days)`);
         } catch (enrollError) {
           console.error(`[Enrollment Expiry] Error processing enrollment ${row.enrollment.id}:`, enrollError);
         }
       }
     } catch (error) {
       console.error('[Enrollment Expiry] Error:', error);
+    }
+  }
+
+  private async processGracePeriodExpiry() {
+    try {
+      console.log('[Grace Period Expiry] Checking for enrollments past grace period...');
+      const now = new Date();
+
+      const expiredGracePeriods = await db.select({
+        enrollment: productEnrollments,
+        programName: products.name,
+        profileFirstName: users.firstName,
+        profileLastName: users.lastName,
+      })
+        .from(productEnrollments)
+        .leftJoin(products, eq(productEnrollments.programId, products.id))
+        .leftJoin(users, eq(productEnrollments.profileId, users.id))
+        .where(
+          and(
+            eq(productEnrollments.status, 'grace_period'),
+            lte(productEnrollments.gracePeriodEndDate, now.toISOString())
+          )
+        );
+
+      console.log(`[Grace Period Expiry] Found ${expiredGracePeriods.length} enrollments past grace period`);
+
+      for (const row of expiredGracePeriods) {
+        try {
+          await db.update(productEnrollments)
+            .set({ status: 'expired', updatedAt: now.toISOString() })
+            .where(eq(productEnrollments.id, row.enrollment.id));
+
+          const orgId = row.enrollment.organizationId;
+          const programName = row.programName || 'Unknown Program';
+          const userName = `${row.profileFirstName || ''} ${row.profileLastName || ''}`.trim() || 'A member';
+          const profileId = row.enrollment.profileId;
+
+          // Remove team memberships for teams linked to the expired program.
+          // For family-wide enrollments (profileId=null), resolve all child profiles under the account holder.
+          try {
+            const programId = row.enrollment.programId;
+            const programTeams = await db.select({ id: teams.id })
+              .from(teams)
+              .where(eq(teams.programId, programId));
+            const programTeamIds = programTeams.map(t => t.id);
+            if (programTeamIds.length > 0) {
+              let removalProfileIds: string[] = profileId ? [profileId] : [];
+              if (!profileId && row.enrollment.accountHolderId) {
+                const childProfiles = await db.select({ id: users.id })
+                  .from(users)
+                  .where(
+                    and(
+                      or(
+                        eq(users.accountHolderId, row.enrollment.accountHolderId),
+                        eq(users.parentId, row.enrollment.accountHolderId)
+                      ),
+                      eq(users.isActive, true)
+                    )
+                  );
+                removalProfileIds = childProfiles.map(c => c.id);
+              }
+              if (removalProfileIds.length > 0) {
+                await db.delete(teamMemberships)
+                  .where(
+                    and(
+                      inArray(teamMemberships.profileId, removalProfileIds),
+                      inArray(teamMemberships.teamId, programTeamIds)
+                    )
+                  );
+                console.log(`[Grace Period Expiry] Removed program team memberships for profiles [${removalProfileIds.join(', ')}] (program: ${programId})`);
+              }
+            }
+          } catch (membershipError) {
+            console.error(`[Grace Period Expiry] Failed to remove team memberships for enrollment ${row.enrollment.id}:`, membershipError);
+          }
+
+          const userTargetIds = [profileId, row.enrollment.accountHolderId].filter(Boolean) as string[];
+          const uniqueUserIds = [...new Set(userTargetIds)];
+
+          if (uniqueUserIds.length > 0) {
+            try {
+              await adminNotificationService.createNotification({
+                organizationId: orgId,
+                types: ['notification'],
+                title: `${programName} Enrollment Expired`,
+                message: `Your grace period for ${programName} has ended. You have been unenrolled. Re-enroll through BoxStat to continue.`,
+                recipientTarget: 'users',
+                recipientUserIds: uniqueUserIds,
+                deliveryChannels: ['in_app', 'push'],
+                sentBy: 'system',
+                status: 'sent',
+              });
+            } catch (notifError) {
+              console.error(`[Grace Period Expiry] Failed to notify user for enrollment ${row.enrollment.id}:`, notifError);
+            }
+          }
+
+          const adminIds = await getOrgAdminIds(orgId);
+          if (adminIds.length > 0) {
+            try {
+              await adminNotificationService.createNotification({
+                organizationId: orgId,
+                types: ['notification'],
+                title: `Enrollment Fully Expired: ${userName}`,
+                message: `${userName}'s grace period for ${programName} has ended. They have been automatically unenrolled.`,
+                recipientTarget: 'users',
+                recipientUserIds: adminIds,
+                deliveryChannels: ['in_app', 'push'],
+                sentBy: 'system',
+                status: 'sent',
+              });
+            } catch (notifError) {
+              console.error(`[Grace Period Expiry] Failed to notify admins for enrollment ${row.enrollment.id}:`, notifError);
+            }
+          }
+
+          console.log(`[Grace Period Expiry] Fully expired enrollment ${row.enrollment.id} for ${userName} in ${programName}`);
+        } catch (enrollError) {
+          console.error(`[Grace Period Expiry] Error processing enrollment ${row.enrollment.id}:`, enrollError);
+        }
+      }
+
+      // Also send 3-day-before-grace-period-end notifications
+      await this.processGracePeriodEndWarnings(now);
+    } catch (error) {
+      console.error('[Grace Period Expiry] Error:', error);
+    }
+  }
+
+  private async processGracePeriodEndWarnings(now: Date) {
+    try {
+      // Target enrollments whose grace period ends in the 24-hour window starting exactly 3 days from now
+      const windowStart = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+      const windowEnd = new Date(windowStart.getTime() + 24 * 60 * 60 * 1000);
+
+      const warningEnrollments = await db.select({
+        enrollment: productEnrollments,
+        programName: products.name,
+        profileFirstName: users.firstName,
+        profileLastName: users.lastName,
+      })
+        .from(productEnrollments)
+        .leftJoin(products, eq(productEnrollments.programId, products.id))
+        .leftJoin(users, eq(productEnrollments.profileId, users.id))
+        .where(
+          and(
+            eq(productEnrollments.status, 'grace_period'),
+            gte(productEnrollments.gracePeriodEndDate, windowStart.toISOString()),
+            lt(productEnrollments.gracePeriodEndDate, windowEnd.toISOString())
+          )
+        );
+
+      for (const row of warningEnrollments) {
+        try {
+          const orgId = row.enrollment.organizationId;
+          const programName = row.programName || 'Unknown Program';
+          const userName = `${row.profileFirstName || ''} ${row.profileLastName || ''}`.trim() || 'A member';
+
+          // Single dedup key — no day-count suffix so we never re-send
+          const dedupTitle = `[system:grace-warning-${row.enrollment.id}] Grace period ending in 3 days`;
+
+          const existing = await db.select({ id: notifications.id })
+            .from(notifications)
+            .where(
+              and(
+                eq(notifications.organizationId, orgId),
+                eq(notifications.title, dedupTitle)
+              )
+            )
+            .limit(1);
+
+          if (existing.length > 0) continue;
+
+          const userTargetIds = [row.enrollment.profileId, row.enrollment.accountHolderId].filter(Boolean) as string[];
+          const uniqueUserIds = [...new Set(userTargetIds)];
+
+          if (uniqueUserIds.length > 0) {
+            await adminNotificationService.createNotification({
+              organizationId: orgId,
+              types: ['notification'],
+              title: dedupTitle,
+              message: `Your limited access to ${programName} ends in 3 days. Re-enroll through BoxStat to restore full access and keep your team memberships.`,
+              recipientTarget: 'users',
+              recipientUserIds: uniqueUserIds,
+              deliveryChannels: ['in_app', 'push'],
+              sentBy: 'system',
+              status: 'sent',
+            });
+          }
+
+          console.log(`[Grace Period Expiry] Sent 3-day warning for ${userName} in ${programName}`);
+        } catch (rowError) {
+          console.error(`[Grace Period Expiry] Error processing grace period warning for enrollment ${row.enrollment.id}:`, rowError);
+        }
+      }
+    } catch (error) {
+      console.error('[Grace Period Expiry] Error processing end warnings:', error);
     }
   }
 

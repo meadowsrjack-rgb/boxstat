@@ -49,7 +49,7 @@ import { analyzePlayerAttendance, getTeamCoachIds, getOrgAdminIds, triggerRealTi
 import { db } from "./db";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards, platformSettings, organizations, attendances, rsvpResponses, contactManagementMessages, payments, messages as messagesTable } from "@shared/schema";
-import { eq, and, or, sql, desc, inArray, gte, count } from "drizzle-orm";
+import { eq, and, or, sql, desc, inArray, gte, count, isNull } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;
 
@@ -9715,6 +9715,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get user role for location bypass check
       const userRole = req.user?.role;
+
+      // Server-side grace period enforcement: players in grace period cannot check in.
+      // Scope to the specific participant to avoid blocking siblings in multi-child families.
+      if (userRole === 'player' || userRole === 'parent') {
+        const effectiveUserId = (restBody.userId || req.user.id) as string;
+        // Resolve the root account holder for the effective participant so that
+        // family-wide enrollments (profileId IS NULL, accountHolderId = parent) are enforced
+        // even when the authenticated user is the child profile itself.
+        const effectiveUserRow = await db.select({ accountHolderId: users.accountHolderId, parentId: users.parentId })
+          .from(users)
+          .where(eq(users.id, effectiveUserId))
+          .limit(1);
+        const rootAccountId = effectiveUserRow[0]?.accountHolderId || effectiveUserRow[0]?.parentId || req.user.id;
+        const gracePeriodRows = await db.select({ id: productEnrollments.id })
+          .from(productEnrollments)
+          .where(
+            and(
+              eq(productEnrollments.status, 'grace_period'),
+              or(
+                // Direct player enrollment for this specific participant
+                eq(productEnrollments.profileId, effectiveUserId),
+                // Family-wide enrollment (no profileId) owned by the root account holder
+                and(
+                  eq(productEnrollments.accountHolderId, rootAccountId),
+                  isNull(productEnrollments.profileId)
+                )
+              )
+            )
+          )
+          .limit(1);
+        if (gracePeriodRows.length > 0) {
+          return res.status(403).json({ error: 'Check-in is unavailable during the enrollment grace period.' });
+        }
+      }
       
       // Handle QR code check-in (bypasses location check)
       if (method === 'qr' && qr) {
@@ -11219,6 +11253,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         // If not valid, fall back to req.user.id (don't allow spoofing)
       }
+    }
+
+    // Server-side grace period enforcement: block posting during grace period.
+    // Scope to the specific sender profile to avoid blocking siblings in multi-child families.
+    // Resolve the root account holder so family-wide enrollments (profileId IS NULL) are
+    // enforced even when the authenticated user is a child profile.
+    const senderUserRow = await db.select({ accountHolderId: users.accountHolderId, parentId: users.parentId })
+      .from(users)
+      .where(eq(users.id, validatedSenderId))
+      .limit(1);
+    const senderRootAccountId = senderUserRow[0]?.accountHolderId || senderUserRow[0]?.parentId || req.user.id;
+    const gracePeriodEnrollments = await db.select({ id: productEnrollments.id })
+      .from(productEnrollments)
+      .where(
+        and(
+          eq(productEnrollments.status, 'grace_period'),
+          or(
+            // Direct player enrollment for this specific sender
+            eq(productEnrollments.profileId, validatedSenderId),
+            // Family-wide enrollment (no profileId) owned by the root account holder
+            and(
+              eq(productEnrollments.accountHolderId, senderRootAccountId),
+              isNull(productEnrollments.profileId)
+            )
+          )
+        )
+      )
+      .limit(1);
+    if (gracePeriodEnrollments.length > 0) {
+      return res.status(403).json({ error: 'Chat participation is unavailable during the enrollment grace period.' });
     }
 
     // Check if the effective sender is muted in this channel
@@ -17311,6 +17375,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!programId || !enrollmentId || !playerId || !startTime || !endTime) {
         return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Server-side grace period enforcement: block session booking during grace period.
+      // Check the specific enrollment being booked to avoid blocking siblings.
+      const scheduleGraceRows = await db.select({ id: productEnrollments.id, status: productEnrollments.status })
+        .from(productEnrollments)
+        .where(eq(productEnrollments.id, enrollmentId))
+        .limit(1);
+      if (scheduleGraceRows.length > 0 && scheduleGraceRows[0].status === 'grace_period') {
+        return res.status(403).json({ error: 'Session scheduling is unavailable during the enrollment grace period.' });
       }
       
       // Verify enrollment exists and belongs to this user

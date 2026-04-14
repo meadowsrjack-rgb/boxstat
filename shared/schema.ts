@@ -41,6 +41,8 @@ export interface Organization {
   stripeConnectedId?: string | null;
   stripeConnectStatus?: string | null;
   stripeConnectType?: string | null;
+
+  gracePeriodDays?: number | null;
   
   createdAt: Date;
   updatedAt: Date;
@@ -79,6 +81,7 @@ export const organizations = pgTable("organizations", {
   platformPlan: varchar("platform_plan"),
   platformSubscriptionId: varchar("platform_subscription_id"),
   platformSubscriptionStatus: varchar("platform_subscription_status").default("inactive"),
+  gracePeriodDays: integer("grace_period_days").default(14),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 });
@@ -537,7 +540,7 @@ export const productEnrollments = pgTable("product_enrollments", {
   programId: varchar("program_id").notNull(), // References programs table
   accountHolderId: varchar("account_holder_id").notNull(), // The parent/purchaser
   profileId: varchar("profile_id"), // The player enrolled (null for family-wide)
-  status: varchar().notNull().default('active'), // 'active', 'expired', 'cancelled', 'pending'
+  status: varchar().notNull().default('active'), // 'active', 'grace_period', 'expired', 'cancelled', 'pending'
   source: varchar().default('direct'), // 'direct', 'migration', 'gift', 'promo'
   paymentId: varchar("payment_id"), // Reference to the payment that created this enrollment
   stripeSubscriptionId: varchar("stripe_subscription_id"), // For recurring enrollments
@@ -554,6 +557,7 @@ export const productEnrollments = pgTable("product_enrollments", {
   selectedPricingOptionId: varchar("selected_pricing_option_id"), // Which pricing tier was selected
   isTryout: boolean("is_tryout").default(false), // True if this is a tryout enrollment (not regular)
   recommendedTeamId: integer("recommended_team_id"), // Team recommended for tryout
+  gracePeriodEndDate: timestamp("grace_period_end_date", { mode: 'string' }), // Set when enrollment enters grace_period status
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 }, (table) => [

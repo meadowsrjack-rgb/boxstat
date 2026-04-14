@@ -4,6 +4,15 @@ import { pool } from "./db";
 export async function ensureAuxTables() {
   const client = await pool.connect();
   try {
+    // Add grace_period_days to organizations if missing
+    await client.query(`
+      ALTER TABLE organizations ADD COLUMN IF NOT EXISTS grace_period_days integer NOT NULL DEFAULT 14;
+    `);
+
+    // Add grace_period_end_date to product_enrollments if missing
+    await client.query(`
+      ALTER TABLE product_enrollments ADD COLUMN IF NOT EXISTS grace_period_end_date timestamp;
+    `);
     await client.query(`
       CREATE TABLE IF NOT EXISTS profile_privacy (
         profile_id varchar PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,

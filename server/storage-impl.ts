@@ -3099,6 +3099,7 @@ class DatabaseStorage implements IStorage {
         platformPlan: org.platformPlan,
         platformSubscriptionId: org.platformSubscriptionId,
         platformSubscriptionStatus: org.platformSubscriptionStatus,
+        gracePeriodDays: org.gracePeriodDays ?? 14,
         createdAt: org.createdAt ? new Date(org.createdAt) : new Date(),
         updatedAt: org.updatedAt ? new Date(org.updatedAt) : new Date(),
       } as any;
@@ -3129,6 +3130,7 @@ class DatabaseStorage implements IStorage {
         platformPlan: org.platformPlan,
         platformSubscriptionId: org.platformSubscriptionId,
         platformSubscriptionStatus: org.platformSubscriptionStatus,
+        gracePeriodDays: org.gracePeriodDays ?? 14,
         createdAt: org.createdAt ? new Date(org.createdAt) : new Date(),
         updatedAt: org.updatedAt ? new Date(org.updatedAt) : new Date(),
       }));
@@ -3192,6 +3194,7 @@ class DatabaseStorage implements IStorage {
       if ((updates as any).platformPlan !== undefined) updateData.platformPlan = (updates as any).platformPlan;
       if ((updates as any).platformSubscriptionId !== undefined) updateData.platformSubscriptionId = (updates as any).platformSubscriptionId;
       if ((updates as any).platformSubscriptionStatus !== undefined) updateData.platformSubscriptionStatus = (updates as any).platformSubscriptionStatus;
+      if (updates.gracePeriodDays !== undefined) updateData.gracePeriodDays = updates.gracePeriodDays;
       
       await db.update(schema.organizations)
         .set(updateData)
@@ -3272,7 +3275,7 @@ class DatabaseStorage implements IStorage {
       }).from(schema.teamMemberships).where(
         and(
           sql`${schema.teamMemberships.profileId} IN (${sql.join(allUserIds.map(id => sql`${id}`), sql`, `)})`,
-          eq(schema.teamMemberships.status, 'active')
+          inArray(schema.teamMemberships.status, ['active', 'restricted'])
         )
       );
       
@@ -3299,13 +3302,13 @@ class DatabaseStorage implements IStorage {
   async getUsersByTeam(teamId: string): Promise<User[]> {
     const teamIdNum = parseInt(teamId);
     
-    // First get users from team_memberships table (new system, active only)
+    // First get users from team_memberships table (active + restricted for grace period)
     const membershipUserIds = await db.select({ profileId: schema.teamMemberships.profileId })
       .from(schema.teamMemberships)
       .where(
         and(
           eq(schema.teamMemberships.teamId, teamIdNum),
-          eq(schema.teamMemberships.status, 'active')
+          inArray(schema.teamMemberships.status, ['active', 'restricted'])
         )
       );
     
@@ -3631,13 +3634,13 @@ class DatabaseStorage implements IStorage {
   }
 
   async getTeamsByCoach(coachId: string): Promise<Team[]> {
-    // First get teams from the new team_memberships table (active only)
+    // First get teams from the new team_memberships table (active + restricted)
     const membershipTeamIds = await db.select({ teamId: schema.teamMemberships.teamId })
       .from(schema.teamMemberships)
       .where(
         and(
           eq(schema.teamMemberships.profileId, coachId),
-          eq(schema.teamMemberships.status, 'active'),
+          inArray(schema.teamMemberships.status, ['active', 'restricted']),
           sql`${schema.teamMemberships.role} IN ('coach', 'assistant_coach')`
         )
       );
@@ -3680,7 +3683,7 @@ class DatabaseStorage implements IStorage {
     .where(
       and(
         eq(schema.teamMemberships.profileId, profileId),
-        eq(schema.teamMemberships.status, 'active')
+        inArray(schema.teamMemberships.status, ['active', 'restricted'])
       )
     );
     

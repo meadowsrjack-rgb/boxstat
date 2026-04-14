@@ -12647,7 +12647,11 @@ function SettingsTab({ organization }: any) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const { primaryColor, secondaryColor, terminology, ...cleanData } = formData;
-    updateOrganization.mutate({ name: cleanData.name, sportType: cleanData.sportType });
+    updateOrganization.mutate({
+      name: cleanData.name,
+      sportType: cleanData.sportType,
+      gracePeriodDays: Number(cleanData.gracePeriodDays) || 14,
+    });
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -12780,6 +12784,23 @@ function SettingsTab({ organization }: any) {
                   placeholder="basketball, soccer, baseball, etc."
                   data-testid="input-sport-type"
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="gracePeriodDays">Enrollment Grace Period (days)</Label>
+                <Input
+                  id="gracePeriodDays"
+                  type="number"
+                  min={0}
+                  max={90}
+                  value={formData.gracePeriodDays ?? 14}
+                  onChange={(e) => setFormData({ ...formData, gracePeriodDays: parseInt(e.target.value, 10) || 0 })}
+                  placeholder="14"
+                  data-testid="input-grace-period-days"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Number of days players retain limited access after their enrollment expires before team memberships are removed. Default: 14.
+                </p>
               </div>
             </div>
 

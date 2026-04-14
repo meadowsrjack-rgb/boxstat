@@ -8,7 +8,7 @@
  * 4. inactive - no active payments or packages
  */
 
-export type PlayerStatus = "active" | "overdue" | "paid_one_time" | "inactive";
+export type PlayerStatus = "active" | "grace_period" | "overdue" | "paid_one_time" | "inactive";
 
 export interface Payment {
   id: number;
@@ -39,17 +39,36 @@ export interface StatusResult {
   plan: string | null;
 }
 
+export interface EnrollmentStatus {
+  status: string;
+  profileId?: string | null;
+}
+
 /**
- * Derives player status from payments and programs
- * Correctly handles per-player vs per-family billing models
+ * Derives player status from payments, programs, and (optionally) enrollments.
+ * Enrollments take priority: grace_period enrollment surfaces as grace_period status.
+ * Correctly handles per-player vs per-family billing models.
  */
 export function derivePlayerStatus(
   payments: Payment[] | undefined,
   programs: Program[] | undefined,
   playerId: string,
   parentId?: string,
-  playerPackageSelected?: string
+  playerPackageSelected?: string,
+  enrollments?: EnrollmentStatus[]
 ): StatusResult {
+  // Check enrollment status first — enrollment lifecycle takes precedence
+  if (enrollments && enrollments.length > 0) {
+    const playerEnrollments = enrollments.filter(
+      (e) => !e.profileId || e.profileId === playerId
+    );
+    if (playerEnrollments.some((e) => e.status === 'active')) {
+      // Fall through to payment-based logic which will derive the plan name
+    } else if (playerEnrollments.some((e) => e.status === 'grace_period')) {
+      return { status: "grace_period", plan: null };
+    }
+  }
+
   if (!payments || payments.length === 0) {
     return { status: "inactive", plan: null };
   }
@@ -183,6 +202,8 @@ export function getStatusColor(status: PlayerStatus): string {
   switch (status) {
     case "active":
       return "bg-green-500";
+    case "grace_period":
+      return "bg-yellow-400";
     case "overdue":
       return "bg-red-500";
     case "paid_one_time":
@@ -200,6 +221,8 @@ export function getStatusLabel(status: PlayerStatus): string {
   switch (status) {
     case "active":
       return "Active";
+    case "grace_period":
+      return "Grace Period";
     case "overdue":
       return "Overdue";
     case "paid_one_time":
@@ -208,4 +231,23 @@ export function getStatusLabel(status: PlayerStatus): string {
     default:
       return "Inactive";
   }
+}
+
+/**
+ * Derives player status from enrollments, prioritizing enrollment status over payment status.
+ * Returns grace_period if the player has an active grace period enrollment.
+ */
+export function derivePlayerStatusFromEnrollments(
+  enrollments: Array<{ status: string; profileId?: string | null }> | undefined,
+  playerId: string,
+  paymentsStatus: PlayerStatus,
+): PlayerStatus {
+  if (!enrollments) return paymentsStatus;
+
+  const playerEnrollments = enrollments.filter(e => !e.profileId || e.profileId === playerId);
+
+  if (playerEnrollments.some(e => e.status === 'active')) return 'active';
+  if (playerEnrollments.some(e => e.status === 'grace_period')) return 'grace_period';
+
+  return paymentsStatus;
 }

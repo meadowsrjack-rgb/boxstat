@@ -7,6 +7,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { db } from "./db";
 import { notificationScheduler } from "./services/notificationScheduler";
+import { ensureAuxTables } from "./boot";
 
 const app = express();
 
@@ -152,6 +153,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  await ensureAuxTables().catch(console.error);
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

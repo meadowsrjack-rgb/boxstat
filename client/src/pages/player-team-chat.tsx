@@ -35,6 +35,15 @@ export default function PlayerTeamChat() {
     enabled: !!user?.id,
   });
 
+  // Check grace period status
+  const { data: enrollments = [] } = useQuery<any[]>({
+    queryKey: ["/api/enrollments"],
+    enabled: !!user?.id,
+  });
+  const isInGracePeriod = enrollments.some(
+    (e: any) => e.status === 'grace_period' && (!e.profileId || e.profileId === user?.id)
+  );
+
   // Get team players
   const { data: players = [] } = useQuery<any[]>({
     queryKey: ["/api/team-players", userTeam?.id],
@@ -319,7 +328,8 @@ export default function PlayerTeamChat() {
                                   variant="outline"
                                   className="border-green-500 text-green-600 hover:bg-green-50"
                                   onClick={() => acknowledgeAnnouncementMutation.mutate(msg.id)}
-                                  disabled={acknowledgeAnnouncementMutation.isPending}
+                                  disabled={acknowledgeAnnouncementMutation.isPending || isInGracePeriod}
+                                  title={isInGracePeriod ? "Unavailable during grace period" : undefined}
                                 >
                                   <Check className="w-4 h-4 mr-2" />
                                   {acknowledgeAnnouncementMutation.isPending ? "Acknowledging..." : "Acknowledge"}
@@ -335,7 +345,8 @@ export default function PlayerTeamChat() {
                                     variant="ghost"
                                     className="h-8 w-8 p-0 hover:bg-gray-100"
                                     onClick={() => reactToMessageMutation.mutate({ messageId: msg.id, emoji })}
-                                    disabled={reactToMessageMutation.isPending}
+                                    disabled={reactToMessageMutation.isPending || isInGracePeriod}
+                                    title={isInGracePeriod ? "Unavailable during grace period" : undefined}
                                   >
                                     {emoji}
                                   </Button>
@@ -390,28 +401,34 @@ export default function PlayerTeamChat() {
 
                 {/* Message Input */}
                 <div className="border-t p-4 flex-shrink-0">
-                  <div className="space-y-3">
-                    <Textarea
-                      placeholder="Type your message to the team..."
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      rows={3}
-                      className="resize-none"
-                    />
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-500">
-                        Share updates with your team
-                      </p>
-                      <Button 
-                        onClick={handleSendMessage}
-                        disabled={!message.trim() || sendMessageMutation.isPending}
-                        className="bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700"
-                      >
-                        <Send className="w-4 h-4 mr-2" />
-                        Send Message
-                      </Button>
+                  {isInGracePeriod ? (
+                    <div className="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded px-3 py-2 text-center">
+                      Posting is unavailable during your enrollment grace period. Re-enroll to participate in team chat.
                     </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <Textarea
+                        placeholder="Type your message to the team..."
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        rows={3}
+                        className="resize-none"
+                      />
+                      <div className="flex justify-between items-center">
+                        <p className="text-xs text-gray-500">
+                          Share updates with your team
+                        </p>
+                        <Button 
+                          onClick={handleSendMessage}
+                          disabled={!message.trim() || sendMessageMutation.isPending}
+                          className="bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700"
+                        >
+                          <Send className="w-4 h-4 mr-2" />
+                          Send Message
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

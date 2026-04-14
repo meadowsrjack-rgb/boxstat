@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Clock } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
@@ -9,6 +9,7 @@ interface Enrollment {
   programId: string;
   profileId: string | null;
   endDate: string | null;
+  gracePeriodEndDate: string | null;
   status: string;
 }
 
@@ -53,7 +54,9 @@ export function EnrollmentExpiryBanner() {
     return days >= 0 && days <= 7;
   });
 
-  if (expiringSoon.length === 0) return null;
+  const inGracePeriod = enrollments.filter((e) => e.status === "grace_period");
+
+  if (expiringSoon.length === 0 && inGracePeriod.length === 0) return null;
 
   return (
     <div className="space-y-2 mb-4">
@@ -84,6 +87,39 @@ export function EnrollmentExpiryBanner() {
                 onClick={() => setLocation("/account?tab=payments")}
               >
                 Payments
+              </Button>
+            </AlertDescription>
+          </Alert>
+        );
+      })}
+
+      {inGracePeriod.map((e) => {
+        const programName = programMap[e.programId] || "your program";
+        const playerName = e.profileId ? playerMap[e.profileId] : null;
+        const subject = playerName ? `${playerName}'s enrollment` : "Your enrollment";
+        const daysLeft = e.gracePeriodEndDate ? Math.max(0, daysUntil(e.gracePeriodEndDate)) : 0;
+        return (
+          <Alert
+            key={e.id}
+            className="border-l-4 border-l-yellow-500 bg-yellow-50"
+          >
+            <Clock className="h-4 w-4 text-yellow-600" />
+            <AlertDescription className="flex items-center justify-between gap-4">
+              <span className="text-yellow-800 text-sm">
+                <strong>Limited Access:</strong>{" "}
+                {subject} in {programName} has expired.{" "}
+                {daysLeft > 0
+                  ? `You have ${daysLeft} day${daysLeft !== 1 ? "s" : ""} of limited access remaining.`
+                  : "Your grace period ends today."}{" "}
+                You can view your roster and schedule but cannot check in to events or post in team chat.
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-yellow-500 text-yellow-800 hover:bg-yellow-100 shrink-0"
+                onClick={() => setLocation("/account?tab=payments")}
+              >
+                Re-enroll
               </Button>
             </AlertDescription>
           </Alert>

@@ -135,7 +135,7 @@ export default function ProfileGateway() {
     enabled: !!user,
   });
 
-  const hasActiveEnrollment = enrollments.some((e: any) => e.status === 'active');
+  const hasActiveEnrollment = enrollments.some((e: any) => e.status === 'active' || e.status === 'grace_period');
   const needsOnboarding = !isLoading && !playersLoading && !profilesLoading && user && !hasActiveEnrollment && players.length === 0;
 
   if (isLoading || playersLoading || profilesLoading || switching) {

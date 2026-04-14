@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -38,12 +39,22 @@ export default function ScheduleRequest() {
   const { programId } = useParams<{ programId: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [booked, setBooked] = useState(false);
 
   const searchParams = new URLSearchParams(window.location.search);
   const playerId = searchParams.get("playerId");
+
+  // Check grace period status
+  const { data: enrollments = [] } = useQuery<any[]>({
+    queryKey: ["/api/enrollments"],
+    enabled: !!user?.id,
+  });
+  const isInGracePeriod = enrollments.some(
+    (e: any) => e.status === 'grace_period' && (!e.profileId || e.profileId === (playerId || user?.id))
+  );
 
   const dateStr = selectedDate.toISOString().split("T")[0];
 
@@ -93,6 +104,14 @@ export default function ScheduleRequest() {
   };
 
   const confirmBooking = () => {
+    if (isInGracePeriod) {
+      toast({
+        title: "Unavailable during grace period",
+        description: "Re-enroll through BoxStat to schedule sessions.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (selectedSlot) {
       bookSession.mutate(selectedSlot);
     }
@@ -181,6 +200,16 @@ export default function ScheduleRequest() {
       </div>
 
       <div className="p-4 max-w-lg mx-auto space-y-4">
+        {isInGracePeriod && (
+          <Card className="border-yellow-200 bg-yellow-50">
+            <CardContent className="pt-4 pb-4">
+              <p className="text-sm text-yellow-800 font-medium">
+                Session scheduling is unavailable during your enrollment grace period.
+                Re-enroll through BoxStat to schedule sessions.
+              </p>
+            </CardContent>
+          </Card>
+        )}
         {isTryoutMode ? (
           /* Tryout mode: show team practice/skills events as selectable sessions */
           <Card>

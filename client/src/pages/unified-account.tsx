@@ -641,13 +641,20 @@ function EnhancedPlayerCard({
     };
   }, [player.id]);
 
-  // Derive payment status for this player
+  // Fetch enrollments for grace period status
+  const { data: allEnrollments = [] } = useQuery<any[]>({
+    queryKey: ["/api/enrollments"],
+    enabled: !!player.id,
+  });
+
+  // Derive payment status for this player (with enrollment grace period awareness)
   const { status, plan } = derivePlayerStatus(
     payments, 
     programs, 
     player.id, 
     parentId,
-    player.packageSelected
+    player.packageSelected,
+    allEnrollments
   );
   const statusColor = getStatusColor(status);
   const statusLabel = getStatusLabel(status);
@@ -2242,7 +2249,7 @@ export default function UnifiedAccount() {
         <AnnouncementBanner />
         <EnrollmentExpiryBanner />
 
-        {!enrollmentsLoading && !playerEnrollments.some((e: any) => e.status === 'active') && parentDashTab !== "payments" && (
+        {!enrollmentsLoading && !playerEnrollments.some((e: any) => e.status === 'active' || e.status === 'grace_period') && parentDashTab !== "payments" && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex items-center gap-3" data-testid="payments-guide-banner">
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
               <DollarSign className="w-4 h-4 text-red-600" />
@@ -2260,7 +2267,7 @@ export default function UnifiedAccount() {
               </TabsTrigger>
               <TabsTrigger value="payments" data-testid="tab-payments" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <DollarSign className="w-4 h-4 mr-2" />
-                <span className={!enrollmentsLoading && !playerEnrollments.some((e: any) => e.status === 'active') ? 'shimmer-text' : ''}>Payments</span>
+                <span className={!enrollmentsLoading && !playerEnrollments.some((e: any) => e.status === 'active' || e.status === 'grace_period') ? 'shimmer-text' : ''}>Payments</span>
               </TabsTrigger>
               <TabsTrigger value="messages" data-testid="tab-messages" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <MessageSquare className="w-4 h-4 mr-2" />

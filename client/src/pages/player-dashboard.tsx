@@ -54,6 +54,7 @@ import {
 import NotificationCenter from "@/components/NotificationCenter";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
+import { EnrollmentExpiryBanner } from "@/components/EnrollmentExpiryBanner";
 import { EvaluationPopup } from "@/components/awards/EvaluationPopup";
 import { AwardUnlockPopup } from "@/components/awards/AwardUnlockPopup";
 
@@ -483,6 +484,15 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   // Use child profile ID if viewing as child, otherwise use current user ID
   // Priority: activeProfile (from localStorage) > currentChildProfile (from device config) > currentUser
   const userIdForData = activeProfile?.id || currentChildProfile?.id || currentUser.id;
+
+  // Fetch enrollments to check grace period status
+  const { data: playerEnrollments = [] } = useQuery<any[]>({
+    queryKey: ["/api/enrollments"],
+    enabled: !!currentUser.id,
+  });
+  const isInGracePeriod = playerEnrollments.some(
+    (e: any) => e.status === 'grace_period' && (!e.profileId || e.profileId === userIdForData)
+  );
   
   const { data: tasks = [] as Task[] } = useQuery<Task[]>({
     queryKey: ["/api/users", userIdForData, "tasks"],
@@ -1161,6 +1171,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         {/* Announcement Banner */}
         <div className="px-6 pt-4">
           <AnnouncementBanner />
+          <EnrollmentExpiryBanner />
         </div>
         {/* Hidden file input for player photo upload */}
         <input
@@ -1392,8 +1403,8 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                       const onsiteDone = !!check.onsite;
                       const inAdvance = isAdvanceWindow(start);
                       const inOnsite = isOnsiteWindow(start);
-                      const canAdvance = inAdvance && !advanceDone;
-                      const canOnsite = inOnsite && !onsiteDone;
+                      const canAdvance = inAdvance && !advanceDone && !isInGracePeriod;
+                      const canOnsite = inOnsite && !onsiteDone && !isInGracePeriod;
 
                       return (
                         <div key={ev.id} className="p-3 bg-white rounded-lg shadow-sm">

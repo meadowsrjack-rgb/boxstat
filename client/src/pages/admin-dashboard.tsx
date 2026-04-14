@@ -278,7 +278,7 @@ function useTabCycleScroll(tabValues: string[], activeTab: string, setActiveTab:
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const adminTabValues = ['overview','users','programs','teams','events','awards','store','waivers','messages','migrations'];
+  const adminTabValues = ['overview','users','programs','teams','events','awards','store','waivers','messages','facilities','migrations'];
 
   const getInitialTab = () => {
     if (typeof window !== 'undefined') {
@@ -719,6 +719,10 @@ export default function AdminDashboard() {
                   </span>
                 )}
               </TabsTrigger>
+              <TabsTrigger value="facilities" data-testid="tab-facilities" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 lg:border-b-0 lg:border-l-2 lg:data-[state=active]:border-l-red-600 lg:data-[state=active]:bg-red-50 lg:justify-start lg:w-full lg:px-3 lg:py-2 lg:text-xs lg:rounded-r-md">
+                <MapPin className="w-4 h-4 mr-2 lg:w-3.5 lg:h-3.5" />
+                Facilities
+              </TabsTrigger>
               <TabsTrigger value="migrations" data-testid="tab-migrations" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 lg:border-b-0 lg:border-l-2 lg:data-[state=active]:border-l-red-600 lg:data-[state=active]:bg-red-50 lg:justify-start lg:w-full lg:px-3 lg:py-2 lg:text-xs lg:rounded-r-md">
                 <ArrowLeftRight className="w-4 h-4 mr-2 lg:w-3.5 lg:h-3.5" />
                 Migrations
@@ -926,6 +930,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="settings">
             <SettingsTab organization={organization} />
+          </TabsContent>
+
+          <TabsContent value="facilities">
+            <FacilitiesTab organization={organization} />
           </TabsContent>
 
           <TabsContent value="migrations">
@@ -16066,5 +16074,362 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
       </Dialog>
 
     </Card>
+  );
+}
+
+function FacilitiesTab({ organization }: { organization: any }) {
+  const { toast } = useToast();
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingFacility, setEditingFacility] = useState<any>(null);
+  const [deletingFacility, setDeletingFacility] = useState<any>(null);
+
+  const { data: facilities = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/facilities"],
+  });
+
+  const facilitySchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    address: z.string().min(1, "Address is required"),
+    latitude: z.coerce.number({ invalid_type_error: "Must be a number" }),
+    longitude: z.coerce.number({ invalid_type_error: "Must be a number" }),
+    isActive: z.boolean().default(true),
+  });
+
+  type FacilityFormValues = z.infer<typeof facilitySchema>;
+
+  const addForm = useForm<FacilityFormValues>({
+    resolver: zodResolver(facilitySchema),
+    defaultValues: { name: "", address: "", latitude: 0, longitude: 0, isActive: true },
+  });
+
+  const editForm = useForm<FacilityFormValues>({
+    resolver: zodResolver(facilitySchema),
+    defaultValues: { name: "", address: "", latitude: 0, longitude: 0, isActive: true },
+  });
+
+  useEffect(() => {
+    if (editingFacility) {
+      editForm.reset({
+        name: editingFacility.name || "",
+        address: editingFacility.address || "",
+        latitude: editingFacility.latitude ?? 0,
+        longitude: editingFacility.longitude ?? 0,
+        isActive: editingFacility.isActive !== false,
+      });
+    }
+  }, [editingFacility]);
+
+  const createFacility = useMutation({
+    mutationFn: async (data: FacilityFormValues) => {
+      return apiRequest("POST", "/api/facilities", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/facilities"] });
+      toast({ title: "Facility created successfully" });
+      setShowAddDialog(false);
+      addForm.reset({ name: "", address: "", latitude: 0, longitude: 0, isActive: true });
+    },
+    onError: () => {
+      toast({ title: "Failed to create facility", variant: "destructive" });
+    },
+  });
+
+  const updateFacility = useMutation({
+    mutationFn: async (data: FacilityFormValues) => {
+      return apiRequest("PATCH", `/api/facilities/${editingFacility.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/facilities"] });
+      toast({ title: "Facility updated successfully" });
+      setEditingFacility(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to update facility", variant: "destructive" });
+    },
+  });
+
+  const deleteFacility = useMutation({
+    mutationFn: async () => {
+      return apiRequest("DELETE", `/api/facilities/${deletingFacility.id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/facilities"] });
+      toast({ title: "Facility deleted successfully" });
+      setDeletingFacility(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to delete facility", variant: "destructive" });
+    },
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Facilities</h2>
+          <p className="text-sm text-muted-foreground">Manage preset locations for events</p>
+        </div>
+        <Button
+          onClick={() => {
+            addForm.reset({ name: "", address: "", latitude: 0, longitude: 0, isActive: true });
+            setShowAddDialog(true);
+          }}
+          size="sm"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add Facility
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
+        </div>
+      ) : facilities.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <MapPin className="w-10 h-10 mx-auto mb-3 text-muted-foreground opacity-40" />
+            <p className="text-sm text-muted-foreground">No facilities yet. Add one to get started.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>Coordinates</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {facilities.map((facility: any) => (
+                <TableRow key={facility.id}>
+                  <TableCell className="font-medium">{facility.name}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{facility.address}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{facility.latitude?.toFixed(4)}, {facility.longitude?.toFixed(4)}</TableCell>
+                  <TableCell>
+                    <Badge variant={facility.isActive !== false ? "default" : "secondary"}>
+                      {facility.isActive !== false ? "Active" : "Inactive"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => setEditingFacility(facility)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setDeletingFacility(facility)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+
+      {/* Add Facility Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Facility</DialogTitle>
+            <DialogDescription>Add a new preset location for events.</DialogDescription>
+          </DialogHeader>
+          <Form {...addForm}>
+            <form onSubmit={addForm.handleSubmit((data) => createFacility.mutate(data))} className="space-y-4">
+              <FormField
+                control={addForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Main Arena" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={addForm.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address</FormLabel>
+                    <FormControl>
+                      <Input placeholder="123 Main St, City, State" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={addForm.control}
+                  name="latitude"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Latitude</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="any" placeholder="37.7749" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={addForm.control}
+                  name="longitude"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Longitude</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="any" placeholder="-122.4194" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={addForm.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-3">
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Active</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>
+                <Button type="submit" disabled={createFacility.isPending}>
+                  {createFacility.isPending ? "Creating..." : "Create Facility"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Facility Dialog */}
+      <Dialog open={!!editingFacility} onOpenChange={(open) => { if (!open) setEditingFacility(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Facility</DialogTitle>
+            <DialogDescription>Update this facility's details.</DialogDescription>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit((data) => updateFacility.mutate(data))} className="space-y-4">
+              <FormField
+                control={editForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Main Arena" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address</FormLabel>
+                    <FormControl>
+                      <Input placeholder="123 Main St, City, State" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={editForm.control}
+                  name="latitude"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Latitude</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="any" placeholder="37.7749" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="longitude"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Longitude</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="any" placeholder="-122.4194" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={editForm.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-3">
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Active</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditingFacility(null)}>Cancel</Button>
+                <Button type="submit" disabled={updateFacility.isPending}>
+                  {updateFacility.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deletingFacility} onOpenChange={(open) => { if (!open) setDeletingFacility(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Facility</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{deletingFacility?.name}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteFacility.mutate()}
+              disabled={deleteFacility.isPending}
+            >
+              {deleteFacility.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }

@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueries } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { authPersistence } from "@/services/authPersistence";
@@ -1872,30 +1873,58 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   const [filterStatuses, setFilterStatuses] = useState<Set<string>>(new Set());
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
   const tableRef = useDragScroll();
-  const stickyScrollbarRef = useRef<HTMLDivElement>(null);
-  const stickyScrollbarInnerRef = useRef<HTMLDivElement>(null);
+  const tableWrapperRef = useRef<HTMLDivElement>(null);
+  const fixedScrollbarRef = useRef<HTMLDivElement>(null);
+  const fixedScrollbarInnerRef = useRef<HTMLDivElement>(null);
   const [hasHorizontalOverflow, setHasHorizontalOverflow] = useState(false);
+  const [tableIsVisible, setTableIsVisible] = useState(false);
+  const [scrollbarLeft, setScrollbarLeft] = useState(0);
+  const [scrollbarWidth, setScrollbarWidth] = useState(0);
+  const isSyncingScroll = useRef(false);
 
   useEffect(() => {
     const table = tableRef.current;
     if (!table) return;
     const syncOverflow = () => {
-      setHasHorizontalOverflow(table.scrollWidth > table.clientWidth);
-      if (stickyScrollbarInnerRef.current) {
-        stickyScrollbarInnerRef.current.style.width = table.scrollWidth + 'px';
+      const overflows = table.scrollWidth > table.clientWidth;
+      setHasHorizontalOverflow(overflows);
+      if (fixedScrollbarInnerRef.current) {
+        fixedScrollbarInnerRef.current.style.width = table.scrollWidth + 'px';
       }
     };
     syncOverflow();
-    const observer = new ResizeObserver(syncOverflow);
-    observer.observe(table);
-    return () => observer.disconnect();
+    const resizeObs = new ResizeObserver(syncOverflow);
+    resizeObs.observe(table);
+    return () => resizeObs.disconnect();
   }, []);
 
   useEffect(() => {
-    if (hasHorizontalOverflow && stickyScrollbarInnerRef.current && tableRef.current) {
-      stickyScrollbarInnerRef.current.style.width = tableRef.current.scrollWidth + 'px';
-    }
-  }, [hasHorizontalOverflow]);
+    const wrapper = tableWrapperRef.current;
+    if (!wrapper) return;
+    const updatePosition = () => {
+      const rect = wrapper.getBoundingClientRect();
+      setScrollbarLeft(rect.left);
+      setScrollbarWidth(rect.width);
+    };
+    updatePosition();
+    const intersectionObs = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        setTableIsVisible(entry.isIntersecting);
+        if (entry.isIntersecting) updatePosition();
+      },
+      { threshold: 0 }
+    );
+    intersectionObs.observe(wrapper);
+    const onScroll = () => { if (tableIsVisible) updatePosition(); };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      intersectionObs.disconnect();
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [tableIsVisible]);
 
   // Fetch user evaluations - only when viewing user in performance tab
   const { data: userEvaluations = [], isLoading: evaluationsLoading, error: evaluationsError } = useQuery<any[]>({
@@ -4109,13 +4138,17 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
         </div>
         
         {/* Table with bottom scrollbar and mobile swipe support */}
+        <div ref={tableWrapperRef}>
         <div 
           ref={tableRef} 
           className="overflow-x-scroll hide-scrollbar drag-scroll touch-pan-x"
           onScroll={(e) => {
-            if (stickyScrollbarRef.current) {
-              stickyScrollbarRef.current.scrollLeft = e.currentTarget.scrollLeft;
+            if (isSyncingScroll.current) return;
+            isSyncingScroll.current = true;
+            if (fixedScrollbarRef.current) {
+              fixedScrollbarRef.current.scrollLeft = e.currentTarget.scrollLeft;
             }
+            isSyncingScroll.current = false;
           }}
         >
           <Table>
@@ -4493,19 +4526,31 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
           </TableBody>
         </Table>
         </div>
-        {hasHorizontalOverflow && (
+        </div>
+        {hasHorizontalOverflow && tableIsVisible && createPortal(
           <div
-            ref={stickyScrollbarRef}
-            className="overflow-x-auto bg-white dark:bg-gray-900"
-            style={{ position: 'sticky', bottom: 0, zIndex: 10 }}
+            ref={fixedScrollbarRef}
+            className="overflow-x-auto bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700"
+            style={{
+              position: 'fixed',
+              bottom: 0,
+              left: scrollbarLeft,
+              width: scrollbarWidth,
+              zIndex: 50,
+              height: '14px',
+            }}
             onScroll={(e) => {
+              if (isSyncingScroll.current) return;
+              isSyncingScroll.current = true;
               if (tableRef.current) {
                 tableRef.current.scrollLeft = e.currentTarget.scrollLeft;
               }
+              isSyncingScroll.current = false;
             }}
           >
-            <div ref={stickyScrollbarInnerRef} style={{ width: tableRef.current?.scrollWidth || '100%', height: '12px' }} />
-          </div>
+            <div ref={fixedScrollbarInnerRef} style={{ width: tableRef.current?.scrollWidth || '100%', height: '14px' }} />
+          </div>,
+          document.body
         )}
       </CardContent>
       {/* User Detail View Dialog */}

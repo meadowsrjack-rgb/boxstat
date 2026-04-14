@@ -6068,57 +6068,68 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
       </CardContent>
       
       {/* Delete Event Confirmation Dialog */}
-      <AlertDialog open={!!deleteConfirmEvent} onOpenChange={(open) => !open && setDeleteConfirmEvent(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Event</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteConfirmEvent?.isRecurring
-                ? `"${deleteConfirmEvent?.title}" is a recurring event. Would you like to delete just this event or all occurrences?`
-                : `Are you sure you want to delete "${deleteConfirmEvent?.title}"? This action cannot be undone.`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className={deleteConfirmEvent?.isRecurring ? "flex-col sm:flex-row gap-2" : ""}>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            {deleteConfirmEvent?.isRecurring && (
-              <AlertDialogAction
-                className="bg-red-600 hover:bg-red-700"
-                onClick={() => {
-                  const target = deleteConfirmEvent;
-                  const matchingIds = events
-                    .filter((e: any) =>
-                      e.isRecurring &&
-                      e.title === target.title &&
-                      e.eventType === target.eventType &&
-                      JSON.stringify(e.visibility) === JSON.stringify(target.visibility)
-                    )
-                    .map((e: any) => Number(e.id));
-                  if (matchingIds.length > 0) {
-                    bulkDeleteEvents.mutate(matchingIds);
-                  }
-                  setDeleteConfirmEvent(null);
-                }}
-              >
-                Delete All Occurrences ({events.filter((e: any) =>
-                  e.isRecurring &&
-                  e.title === deleteConfirmEvent?.title &&
-                  e.eventType === deleteConfirmEvent?.eventType &&
-                  JSON.stringify(e.visibility) === JSON.stringify(deleteConfirmEvent?.visibility)
-                ).length})
-              </AlertDialogAction>
-            )}
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
-              onClick={() => {
-                deleteEvent.mutate(deleteConfirmEvent.id);
-                setDeleteConfirmEvent(null);
-              }}
-            >
-              {deleteConfirmEvent?.isRecurring ? "Delete This Event Only" : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {(() => {
+        const normalizeVis = (v: any) => {
+          if (!v || typeof v !== 'object') return '';
+          const sorted: any = {};
+          Object.keys(v).sort().forEach(k => {
+            sorted[k] = Array.isArray(v[k]) ? [...v[k]].sort() : v[k];
+          });
+          return JSON.stringify(sorted);
+        };
+        const findRecurringSiblings = (target: any) => {
+          if (!target) return [];
+          return events.filter((e: any) =>
+            e.title === target.title &&
+            (e.eventType || e.type) === (target.eventType || target.type) &&
+            normalizeVis(e.visibility) === normalizeVis(target.visibility) &&
+            (e.recurringType || null) === (target.recurringType || null)
+          );
+        };
+        const siblings = deleteConfirmEvent ? findRecurringSiblings(deleteConfirmEvent) : [];
+        const hasSiblings = deleteConfirmEvent?.isRecurring || siblings.length > 1;
+
+        return (
+          <AlertDialog open={!!deleteConfirmEvent} onOpenChange={(open) => !open && setDeleteConfirmEvent(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Event</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {hasSiblings
+                    ? `"${deleteConfirmEvent?.title}" has ${siblings.length} matching event(s). Would you like to delete just this event or all occurrences?`
+                    : `Are you sure you want to delete "${deleteConfirmEvent?.title}"? This action cannot be undone.`}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className={hasSiblings ? "flex-col sm:flex-row gap-2" : ""}>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                {hasSiblings && (
+                  <AlertDialogAction
+                    className="bg-red-600 hover:bg-red-700"
+                    onClick={() => {
+                      const matchingIds = siblings.map((e: any) => Number(e.id));
+                      if (matchingIds.length > 0) {
+                        bulkDeleteEvents.mutate(matchingIds);
+                      }
+                      setDeleteConfirmEvent(null);
+                    }}
+                  >
+                    Delete All Occurrences ({siblings.length})
+                  </AlertDialogAction>
+                )}
+                <AlertDialogAction
+                  className="bg-red-600 hover:bg-red-700"
+                  onClick={() => {
+                    deleteEvent.mutate(deleteConfirmEvent.id);
+                    setDeleteConfirmEvent(null);
+                  }}
+                >
+                  {hasSiblings ? "Delete This Event Only" : "Delete"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        );
+      })()}
     </Card>
     </div>
   );

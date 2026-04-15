@@ -206,15 +206,15 @@ function TryoutSchedulePrompt({ enrollments, userIdForData, onNavigate }: {
     (e: any) => e.isTryout === true && e.status === 'active' && (e.remainingCredits ?? 0) > 0
       && (!e.profileId || e.profileId === userIdForData)
   );
-  if (!tryoutEnrollment) return null;
-  const alreadyScheduled = !!(tryoutEnrollment.metadata as any)?.scheduledEventId;
-  if (alreadyScheduled) return null;
+  const programId = tryoutEnrollment?.programId;
+  const alreadyScheduled = !!(tryoutEnrollment?.metadata as any)?.scheduledEventId;
 
   const { data: program } = useQuery<any>({
-    queryKey: ['/api/programs', tryoutEnrollment.programId],
-    enabled: !!tryoutEnrollment.programId,
+    queryKey: ['/api/programs', programId],
+    enabled: !!programId && !alreadyScheduled,
   });
 
+  if (!tryoutEnrollment || alreadyScheduled) return null;
   if (program && !program.scheduleRequestEnabled) return null;
 
   return (
@@ -1407,6 +1407,11 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                   onDateSelect={setSelectedDate}
                   eventTypeColors={userPrefs.eventTypeColors || {}}
                 />
+                <TryoutSchedulePrompt
+                  enrollments={playerEnrollments}
+                  userIdForData={userIdForData}
+                  onNavigate={setLocation}
+                />
               </div>
             </div>
           )}
@@ -1503,13 +1508,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 </div>
               </section>
 
-
-              {/* Tryout Schedule Prompt */}
-              <TryoutSchedulePrompt
-                enrollments={playerEnrollments}
-                userIdForData={userIdForData}
-                onNavigate={setLocation}
-              />
 
               {/* View Calendar Button */}
               <section className="px-6 py-4">

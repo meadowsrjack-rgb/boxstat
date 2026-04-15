@@ -128,7 +128,6 @@ import EventWindowsConfigurator from "@/components/EventWindowsConfigurator";
 import DateTimeRangePicker from "@/components/DateTimeRangePicker";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { GoogleCalendarImportDialog } from "@/components/GoogleCalendarImportDialog";
-import { GoogleCalendarImport } from "@/components/GoogleCalendarImport";
 import { EditEventDialog } from "@/components/EditEventDialog";
 import type { EventWindow } from "@shared/schema";
 import EventDetailModal from "@/components/EventDetailModal";
@@ -5482,7 +5481,31 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
           </div>
         </div>
         <div className="flex gap-2 justify-end w-full">
-          <GoogleCalendarImport />
+          <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon" title="Bulk Upload" data-testid="button-bulk-upload-events">
+                <Upload className="w-4 h-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Bulk Upload Events</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">Upload a CSV file with columns: Title, Type, Start Time, End Time, Location, Team</p>
+                <Input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleBulkUpload}
+                  data-testid="input-event-csv-upload"
+                />
+                <Button variant="outline" className="w-full" onClick={downloadEventTemplate} data-testid="button-download-event-template">
+                  <Download className="w-4 h-4 mr-2" />
+                  Download CSV Template
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
           
           <Button variant="outline" size="icon" title="Download Data" onClick={downloadEventsData} data-testid="button-download-events">
             <Download className="w-4 h-4" />

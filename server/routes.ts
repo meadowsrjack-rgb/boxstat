@@ -9710,10 +9710,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'A valid URL is required' });
       }
 
-      let trimmedUrl = url.trim();
-      if (trimmedUrl.includes('calendar.google.com/calendar/ical/') && trimmedUrl.includes('#')) {
-        trimmedUrl = trimmedUrl.replace(/#/g, '%23');
-      }
+      const trimmedUrl = url.trim();
       let parsedUrl: URL;
       try {
         parsedUrl = new URL(trimmedUrl);
@@ -9740,35 +9737,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!allowedHostPatterns.some(p => p.test(hostname))) {
         return res.status(400).json({
-          message: 'Only calendar URLs from Google Calendar, Outlook, or iCloud are supported. Copy the public iCal URL from your calendar settings.'
+          message: 'Only calendar URLs from Google Calendar, Outlook, or iCloud are supported. Copy the iCal URL from your calendar settings, or use the file upload option instead.'
         });
-      }
-
-      if (hostname === 'calendar.google.com') {
-        const resolveGCalId = (raw: string): string => {
-          let decoded = decodeURIComponent(raw);
-          if (decoded.includes('@')) return decoded;
-          try {
-            const b64 = Buffer.from(raw, 'base64').toString('utf-8');
-            if (b64.includes('@') && b64.includes('.')) return b64;
-          } catch {}
-          return decoded;
-        };
-
-        const cid = parsedUrl.searchParams.get('cid');
-        if (cid && !parsedUrl.pathname.includes('/ical/')) {
-          const calendarId = resolveGCalId(cid);
-          trimmedUrl = `https://calendar.google.com/calendar/ical/${encodeURIComponent(calendarId)}/public/basic.ics`;
-          try { parsedUrl = new URL(trimmedUrl); } catch {}
-        }
-        if (parsedUrl.pathname.match(/\/embed/) || parsedUrl.pathname.match(/\/r\//)) {
-          const srcParam = parsedUrl.searchParams.get('src');
-          if (srcParam) {
-            const calendarId = resolveGCalId(srcParam);
-            trimmedUrl = `https://calendar.google.com/calendar/ical/${encodeURIComponent(calendarId)}/public/basic.ics`;
-            try { parsedUrl = new URL(trimmedUrl); } catch {}
-          }
-        }
       }
 
       const controller = new AbortController();
@@ -9824,9 +9794,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         if (!response.ok) {
-          if (response.status === 404 || response.status === 403) {
-            return res.status(400).json({ message: 'This calendar is not publicly accessible. To fix this:\n\n1. Open Google Calendar on your computer\n2. Click the three dots next to your calendar name\n3. Click "Settings and sharing"\n4. Under "Access permissions for events", check "Make available to public"\n5. Then scroll to "Integrate calendar" and copy the "Public address in iCal format"' });
-          }
           return res.status(400).json({ message: `Failed to fetch calendar: HTTP ${response.status}` });
         }
 

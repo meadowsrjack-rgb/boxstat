@@ -2560,6 +2560,35 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     );
     if (hasPaymentFailed) return "Payment Failed";
     if (hasLowBalance) return "Low Balance";
+    const hasUnpaidEnrollment = (() => {
+      const checkPlayer = (player: any) => {
+        if (player.role !== 'player') return false;
+        const playerActiveEnrollments = uniqueEnrollments.filter((e: any) =>
+          e.profileId === player.id && e.status === 'active'
+        );
+        return playerActiveEnrollments.some((e: any) => {
+          if (e.isTryout) {
+            if (e.remainingCredits !== null && e.remainingCredits !== undefined && e.remainingCredits <= 0) {
+              const hasPaidForProgram = uniqueEnrollments.some((other: any) =>
+                other.id !== e.id && other.profileId === player.id && other.status === 'active' && String(other.programId) === String(e.programId) && !other.isTryout && (other.paymentId || other.stripeSubscriptionId)
+              );
+              if (!hasPaidForProgram) return true;
+            }
+            return false;
+          }
+          const noPayment = !e.paymentId && !e.stripeSubscriptionId;
+          if (noPayment) return true;
+          return false;
+        });
+      };
+      const hasAnyPaid = uniqueEnrollments.some((e: any) =>
+        e.status === 'active' && (e.paymentId || e.stripeSubscriptionId) && !e.isTryout
+      );
+      if (hasAnyPaid) return false;
+      if (user.role === "player" && checkPlayer(user)) return true;
+      return linkedPlayersForUser.some((player: any) => checkPlayer(player));
+    })();
+    if (hasUnpaidEnrollment) return "Unpaid";
     if (hasActiveEnrollmentWithoutTeam) return "Needs Team";
     const hasActiveEnrollmentOnTeam = (() => {
       const checkPlayer = (player: any) => {
@@ -4051,6 +4080,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                     <div className="flex flex-wrap gap-1.5">
                       {[
                         "Active",
+                        "Unpaid",
                         "Needs Team",
                         "Payment Failed",
                         "Low Balance",
@@ -4267,7 +4297,25 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       else hasActive = true;
                     } else { hasActive = true; }
                   }
+                  const hasUnpaid = (() => {
+                    for (const enrollment of activeEnrollments) {
+                      if (enrollment.isTryout) {
+                        if (enrollment.remainingCredits !== null && enrollment.remainingCredits !== undefined && enrollment.remainingCredits <= 0) {
+                          const hasPaidForProgram = activeEnrollments.some((other: any) =>
+                            other.id !== enrollment.id && String(other.programId) === String(enrollment.programId) && !other.isTryout && (other.paymentId || other.stripeSubscriptionId)
+                          );
+                          if (!hasPaidForProgram) return true;
+                        }
+                        continue;
+                      }
+                      const noPayment = !enrollment.paymentId && !enrollment.stripeSubscriptionId;
+                      if (noPayment) return true;
+                    }
+                    return false;
+                  })();
+                  const hasAnyPaidEnrollment = activeEnrollments.some((e: any) => (e.paymentId || e.stripeSubscriptionId) && !e.isTryout);
                   if (hasLowBalance) return { label: "Low Balance", cls: "bg-yellow-400 text-yellow-900" };
+                  if (hasUnpaid && !hasAnyPaidEnrollment) return { label: "Unpaid", cls: "bg-orange-500 text-white" };
                   if (hasNeedsTeam) return { label: "Needs Team", cls: "bg-amber-500 text-white" };
                   if (hasActive) return { label: "Active", cls: "bg-green-600 text-white" };
                   return { label: "Active", cls: "bg-green-600 text-white" };

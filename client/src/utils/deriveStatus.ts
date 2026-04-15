@@ -8,7 +8,7 @@
  * 4. inactive - no active payments or packages
  */
 
-export type PlayerStatus = "active" | "grace_period" | "overdue" | "paid_one_time" | "inactive";
+export type PlayerStatus = "active" | "grace_period" | "overdue" | "paid_one_time" | "unpaid" | "inactive";
 
 export interface Payment {
   id: number;
@@ -42,6 +42,12 @@ export interface StatusResult {
 export interface EnrollmentStatus {
   status: string;
   profileId?: string | null;
+  paymentId?: string | null;
+  stripeSubscriptionId?: string | null;
+  source?: string | null;
+  isTryout?: boolean | null;
+  remainingCredits?: number | null;
+  programId?: string | null;
 }
 
 /**
@@ -63,6 +69,27 @@ export function derivePlayerStatus(
       (e) => !e.profileId || e.profileId === playerId
     );
     if (playerEnrollments.some((e) => e.status === 'active')) {
+      const activeEnrollments = playerEnrollments.filter((e) => e.status === 'active');
+      const hasUnpaidEnrollment = activeEnrollments.some((e) => {
+        if (e.isTryout) {
+          if (e.remainingCredits !== null && e.remainingCredits !== undefined && e.remainingCredits <= 0) {
+            const hasPaidEnrollmentForProgram = playerEnrollments.some(
+              (other) => other !== e && other.status === 'active' && String(other.programId) === String(e.programId) && !other.isTryout && (other.paymentId || other.stripeSubscriptionId)
+            );
+            if (!hasPaidEnrollmentForProgram) return true;
+          }
+          return false;
+        }
+        const noPayment = !e.paymentId && !e.stripeSubscriptionId;
+        if (noPayment) return true;
+        return false;
+      });
+      const hasAnyPaidEnrollment = activeEnrollments.some(
+        (e) => (e.paymentId || e.stripeSubscriptionId) && !e.isTryout
+      );
+      if (hasUnpaidEnrollment && !hasAnyPaidEnrollment) {
+        return { status: "unpaid", plan: null };
+      }
       // Fall through to payment-based logic which will derive the plan name
     } else if (playerEnrollments.some((e) => e.status === 'grace_period')) {
       return { status: "grace_period", plan: null };
@@ -208,6 +235,8 @@ export function getStatusColor(status: PlayerStatus): string {
       return "bg-red-500";
     case "paid_one_time":
       return "bg-purple-500";
+    case "unpaid":
+      return "bg-orange-500";
     case "inactive":
     default:
       return "bg-gray-300";
@@ -227,6 +256,8 @@ export function getStatusLabel(status: PlayerStatus): string {
       return "Overdue";
     case "paid_one_time":
       return "One-Time Paid";
+    case "unpaid":
+      return "Unpaid";
     case "inactive":
     default:
       return "Inactive";
@@ -238,7 +269,7 @@ export function getStatusLabel(status: PlayerStatus): string {
  * Returns grace_period if the player has an active grace period enrollment.
  */
 export function derivePlayerStatusFromEnrollments(
-  enrollments: Array<{ status: string; profileId?: string | null }> | undefined,
+  enrollments: Array<{ status: string; profileId?: string | null; paymentId?: string | null; stripeSubscriptionId?: string | null; isTryout?: boolean | null; remainingCredits?: number | null; programId?: string | null }> | undefined,
   playerId: string,
   paymentsStatus: PlayerStatus,
 ): PlayerStatus {
@@ -246,7 +277,25 @@ export function derivePlayerStatusFromEnrollments(
 
   const playerEnrollments = enrollments.filter(e => !e.profileId || e.profileId === playerId);
 
-  if (playerEnrollments.some(e => e.status === 'active')) return 'active';
+  if (playerEnrollments.some(e => e.status === 'active')) {
+    const activeEnrollments = playerEnrollments.filter(e => e.status === 'active');
+    const hasUnpaid = activeEnrollments.some((e) => {
+      if (e.isTryout) {
+        if (e.remainingCredits !== null && e.remainingCredits !== undefined && e.remainingCredits <= 0) {
+          const hasPaidForProgram = playerEnrollments.some(
+            (other) => other !== e && other.status === 'active' && String(other.programId) === String(e.programId) && !other.isTryout && (other.paymentId || other.stripeSubscriptionId)
+          );
+          if (!hasPaidForProgram) return true;
+        }
+        return false;
+      }
+      if (!e.paymentId && !e.stripeSubscriptionId) return true;
+      return false;
+    });
+    const hasAnyPaid = activeEnrollments.some(e => (e.paymentId || e.stripeSubscriptionId) && !e.isTryout);
+    if (hasUnpaid && !hasAnyPaid) return 'unpaid';
+    return 'active';
+  }
   if (playerEnrollments.some(e => e.status === 'grace_period')) return 'grace_period';
 
   return paymentsStatus;

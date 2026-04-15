@@ -46,8 +46,6 @@ import {
   Users,
   Copy,
   Target,
-  Dumbbell,
-  Trophy,
   Camera,
   Loader2,
 } from "lucide-react";
@@ -2100,15 +2098,6 @@ function ProgramCard({
 }) {
   const [expandedTeamId, setExpandedTeamId] = useState<number | null>(null);
   
-  // Get icon based on program type or name
-  const getProgramIcon = () => {
-    const name = membership.programName.toLowerCase();
-    if (name.includes('club') || name.includes('youth')) return <Shirt className="h-6 w-6 text-red-600" />;
-    if (name.includes('skill') || name.includes('training')) return <Dumbbell className="h-6 w-6 text-blue-600" />;
-    if (name.includes('private') || name.includes('coach')) return <Users className="h-6 w-6 text-green-600" />;
-    return <Trophy className="h-6 w-6 text-red-600" />;
-  };
-  
   const getSubgroupColor = () => {
     const label = membership.subgroupLabel.toLowerCase();
     if (label === 'team') return 'bg-red-100 text-red-700';
@@ -2120,20 +2109,15 @@ function ProgramCard({
     <Card className="border-0 shadow-sm mb-4 max-sm:rounded-none max-sm:-mx-4 max-sm:border-x-0" data-testid={`program-card-${membership.programId}`}>
       <CardContent className="p-4 max-sm:px-3">
         {/* Program Header */}
-        <div className="flex items-start space-x-4 mb-4">
-          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-            {getProgramIcon()}
-          </div>
-          <div className="flex-1">
-            <h3 className="font-bold text-gray-900" data-testid={`text-program-name-${membership.programId}`}>
-              {membership.programName}
-            </h3>
-            {membership.remainingCredits !== null && (
-              <div className="text-xs text-gray-500 mt-1">
-                {membership.remainingCredits} of {membership.totalCredits} credits remaining
-              </div>
-            )}
-          </div>
+        <div className="mb-4">
+          <h3 className="font-bold text-gray-900" data-testid={`text-program-name-${membership.programId}`}>
+            {membership.programName}
+          </h3>
+          {membership.remainingCredits !== null && (
+            <div className="text-xs text-gray-500 mt-1">
+              {membership.remainingCredits} of {membership.totalCredits} credits remaining
+            </div>
+          )}
         </div>
         
         {/* Subgroups (Teams/Levels/Groups) - only show if program has subgroups */}

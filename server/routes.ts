@@ -3585,6 +3585,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sendPaymentReceiptEmail(session).catch(() => {});
       }
 
+      let tryoutData: any = null;
       if (session.metadata?.isTryout === 'true') {
         const accountHolderId = session.metadata.accountHolderId || session.metadata.userId;
         const profileId = session.metadata.profileId;
@@ -3639,33 +3640,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`✅ Created tryout enrollment via verify-session for ${profileId} in ${programId}`);
               paymentWasProcessed = true;
             }
-          } catch (tryoutError: any) {
-            console.error('Error creating tryout enrollment via verify-session:', tryoutError);
-          }
-        }
-      }
 
-      let tryoutData: any = null;
-      if (session.metadata?.isTryout === 'true') {
-        const profileId = session.metadata.profileId;
-        const programId = session.metadata.programId;
-        const recTeamId = session.metadata.recommendedTeamId;
-        if (profileId && programId) {
-          const enrollments = await db.select().from(productEnrollments).where(
-            and(
-              eq(productEnrollments.profileId, profileId),
-              eq(productEnrollments.programId, programId),
-              eq(productEnrollments.isTryout, true),
-              eq(productEnrollments.status, 'active')
-            )
-          );
-          const enrollment = enrollments[0];
-          if (enrollment) {
-            tryoutData = {
-              enrollmentId: enrollment.id,
-              programId,
-              recommendedTeamId: recTeamId || null,
-            };
+            const enrollments = await db.select().from(productEnrollments).where(
+              and(
+                eq(productEnrollments.profileId, profileId),
+                eq(productEnrollments.programId, programId),
+                eq(productEnrollments.isTryout, true),
+                eq(productEnrollments.status, 'active')
+              )
+            );
+            const enrollment = enrollments[0];
+            if (enrollment) {
+              tryoutData = {
+                enrollmentId: enrollment.id,
+                programId,
+                recommendedTeamId: recTeamId || null,
+              };
+            }
+          } catch (tryoutError: any) {
+            console.error('Error processing tryout via verify-session:', tryoutError);
           }
         }
       }

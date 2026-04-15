@@ -288,15 +288,6 @@ export default function AdminDashboard() {
     return 'overview';
   };
   const [activeTab, setActiveTabState] = useState(getInitialTab);
-  const [isLgScreen, setIsLgScreen] = useState(() =>
-    typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : false
-  );
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1024px)');
-    const handler = (e: MediaQueryListEvent) => setIsLgScreen(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
   const getInitialCrmSubTab = () => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -685,9 +676,6 @@ export default function AdminDashboard() {
       </div>
 
       <div className="mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-8">
-        {/* Banners shown only on mobile/tablet — on lg screens they render inside the content column */}
-        {!isLgScreen && alertBannersJSX}
-
         <Tabs value={activeTab} onValueChange={setActiveTab} className="lg:flex lg:gap-6">
           <div ref={tabsRef} className="overflow-x-auto hide-scrollbar mb-6 lg:mb-0 -mx-4 px-4 sm:mx-0 sm:px-0 cursor-grab lg:cursor-default lg:overflow-visible lg:shrink-0 lg:w-44 lg:border-r lg:border-gray-200 lg:pr-4 lg:fixed lg:top-[6.5rem] lg:bottom-4 lg:z-10">
             <div className="lg:overflow-y-auto lg:h-full hide-scrollbar">
@@ -747,8 +735,8 @@ export default function AdminDashboard() {
 
           <div className="lg:flex-1 lg:min-w-0 lg:overflow-x-hidden lg:ml-48">
 
-          {/* Banners shown only on lg+ screens in the content column beside the tabs */}
-          {isLgScreen && <div className="mb-4">{alertBannersJSX}</div>}
+          {/* Alert banners — always inside the content column so they respect lg:ml-48 */}
+          <div className="mb-4">{alertBannersJSX}</div>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">

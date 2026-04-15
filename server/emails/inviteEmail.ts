@@ -62,12 +62,12 @@ function buildEmailHtml(record: InviteRecord, inviteUrl: string, orgName: string
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
 
         <!-- Header -->
-        <tr><td style="background:#ffffff;border-radius:12px 12px 0 0;padding:32px 16px;text-align:center">
+        <tr><td style="background:#ffffff;padding:16px 16px 8px;text-align:center">
           <img src="${process.env.APP_URL || process.env.DOMAIN}/assets/logo-full" alt="BoxStat" style="height:240px;width:auto;display:inline-block" />
         </td></tr>
 
         <!-- Body -->
-        <tr><td style="background:white;padding:32px;border-left:1px solid #e9ecef;border-right:1px solid #e9ecef">
+        <tr><td style="background:white;padding:32px">
           <p style="font-size:16px;color:#1a202c;margin:0 0 8px;font-weight:500">Hi ${parent.firstName},</p>
           <p style="font-size:14px;color:#6c757d;line-height:1.7;margin:0 0 24px">
             ${introText}
@@ -117,7 +117,7 @@ function buildEmailHtml(record: InviteRecord, inviteUrl: string, orgName: string
         </td></tr>
 
         <!-- Footer -->
-        <tr><td style="background:#f8f9fa;border:1px solid #e9ecef;border-top:none;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center">
+        <tr><td style="background:#f8f9fa;padding:20px 32px;text-align:center">
           <p style="font-size:12px;color:#adb5bd;margin:0">
             BoxStat · <a href="https://boxstat.app" style="color:#adb5bd">boxstat.app</a>
           </p>
@@ -171,12 +171,12 @@ function buildPlayerAddedEmailHtml(record: InviteRecord, orgName: string): strin
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
 
         <!-- Header -->
-        <tr><td style="background:#ffffff;border-radius:12px 12px 0 0;padding:32px 16px;text-align:center">
+        <tr><td style="background:#ffffff;padding:16px 16px 8px;text-align:center">
           <img src="${appUrl}/assets/logo-full" alt="BoxStat" style="height:240px;width:auto;display:inline-block" />
         </td></tr>
 
         <!-- Body -->
-        <tr><td style="background:white;padding:32px;border-left:1px solid #e9ecef;border-right:1px solid #e9ecef">
+        <tr><td style="background:white;padding:32px">
           <p style="font-size:16px;color:#1a202c;margin:0 0 8px;font-weight:500">Hi ${parent.firstName},</p>
           <p style="font-size:14px;color:#6c757d;line-height:1.7;margin:0 0 24px">
             Your ${orgName} admin has added ${players.length > 1 ? 'new players' : 'a new player'} to your account: ${playerNames}. ${actionText}
@@ -206,7 +206,7 @@ function buildPlayerAddedEmailHtml(record: InviteRecord, orgName: string): strin
         </td></tr>
 
         <!-- Footer -->
-        <tr><td style="background:#f8f9fa;border:1px solid #e9ecef;border-top:none;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center">
+        <tr><td style="background:#f8f9fa;padding:20px 32px;text-align:center">
           <p style="font-size:12px;color:#adb5bd;margin:0">
             BoxStat · <a href="https://boxstat.app" style="color:#adb5bd">boxstat.app</a>
           </p>

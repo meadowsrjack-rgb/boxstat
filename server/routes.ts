@@ -9742,23 +9742,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (hostname === 'calendar.google.com') {
+        const decodeGCalId = (raw: string): string => {
+          const urlDecoded = decodeURIComponent(raw);
+          if (urlDecoded.includes('@')) return urlDecoded;
+          try {
+            const b64 = Buffer.from(raw, 'base64').toString('utf-8');
+            if (b64.includes('@') && b64.includes('.')) return b64;
+          } catch {}
+          return urlDecoded;
+        };
+
         const cid = parsedUrl.searchParams.get('cid');
         if (cid && !parsedUrl.pathname.includes('/ical/')) {
-          try {
-            const calendarId = decodeURIComponent(cid);
-            trimmedUrl = `https://calendar.google.com/calendar/ical/${encodeURIComponent(calendarId)}/public/basic.ics`;
-            parsedUrl = new URL(trimmedUrl);
-          } catch {}
+          const calendarId = decodeGCalId(cid);
+          trimmedUrl = `https://calendar.google.com/calendar/ical/${calendarId}/public/basic.ics`;
+          try { parsedUrl = new URL(trimmedUrl); } catch {}
         }
         if (parsedUrl.pathname.match(/\/embed/) || parsedUrl.pathname.match(/\/r\//)) {
           const srcParam = parsedUrl.searchParams.get('src');
           if (srcParam) {
-            try {
-              const calendarId = decodeURIComponent(srcParam);
-              trimmedUrl = `https://calendar.google.com/calendar/ical/${encodeURIComponent(calendarId)}/public/basic.ics`;
-              parsedUrl = new URL(trimmedUrl);
-            } catch {}
+            const calendarId = decodeGCalId(srcParam);
+            trimmedUrl = `https://calendar.google.com/calendar/ical/${calendarId}/public/basic.ics`;
+            try { parsedUrl = new URL(trimmedUrl); } catch {}
           }
+        }
+        if (parsedUrl.pathname.includes('/ical/')) {
+          trimmedUrl = trimmedUrl.replace(/%40/g, '@');
+          try { parsedUrl = new URL(trimmedUrl); } catch {}
         }
       }
 
@@ -9815,6 +9825,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         if (!response.ok) {
+          if (response.status === 404) {
+            return res.status(400).json({ message: 'Calendar not found (404). Make sure the calendar is set to public and you\'re using the iCal format URL (ends in .ics) from Settings > Integrate calendar.' });
+          }
+          if (response.status === 403) {
+            return res.status(400).json({ message: 'Access denied. The calendar may not be public. Go to calendar Settings > Access permissions and enable "Make available to public".' });
+          }
           return res.status(400).json({ message: `Failed to fetch calendar: HTTP ${response.status}` });
         }
 

@@ -288,6 +288,15 @@ export default function AdminDashboard() {
     return 'overview';
   };
   const [activeTab, setActiveTabState] = useState(getInitialTab);
+  const [isLgScreen, setIsLgScreen] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : false
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const handler = (e: MediaQueryListEvent) => setIsLgScreen(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
   const getInitialCrmSubTab = () => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -547,6 +556,96 @@ export default function AdminDashboard() {
     );
   }
 
+  const alertBannersJSX = (
+    <>
+      <AnnouncementBanner />
+      {visibleAlerts.length > 0 && (
+        <div className="mb-4 space-y-2">
+          {visibleAlerts.map((alert: any, index: number) => {
+            const alertConfig: Record<string, { icon: any; bg: string; border: string; text: string; tab: string }> = {
+              low_credits: { icon: CreditCard, bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-800', tab: 'programs' },
+              payment_overdue: { icon: DollarSign, bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-800', tab: 'users' },
+              pending_requests: { icon: Clock, bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', tab: 'events' },
+              missing_location: { icon: MapPinOff, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800', tab: 'events' },
+            };
+            const config = alertConfig[alert.type] || { icon: AlertCircle, bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-800', tab: 'overview' };
+            const Icon = config.icon;
+            const isCompleting = completingAlerts.has(alert.type);
+            return (
+              <div
+                key={alert.type}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-left overflow-hidden transition-all duration-500 ${
+                  isCompleting
+                    ? 'bg-green-50 border-green-300 max-h-16 opacity-100 scale-100'
+                    : `${config.bg} ${config.border} max-h-24 opacity-100 scale-100`
+                }`}
+                style={isCompleting ? { animation: 'alertSlideOut 0.8s ease-in-out forwards' } : undefined}
+              >
+                {isCompleting ? (
+                  <div className="flex items-center gap-3 w-full justify-center py-1">
+                    <div className="p-1 rounded-full bg-green-100">
+                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    </div>
+                    <span className="text-sm font-semibold text-green-700">Completed</span>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDismissAlert(alert.type);
+                      }}
+                      className={`p-1.5 rounded-full border-2 border-current ${config.text} hover:bg-green-100 hover:border-green-600 hover:text-green-600 transition-colors shrink-0`}
+                      title="Mark as reviewed"
+                    >
+                      <Check className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={() => setActiveTab(config.tab)}
+                      className="flex-1 flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <span className={`text-sm font-medium ${config.text}`}>{alert.message}</span>
+                        {alert.type === 'low_credits' && alert.details?.length > 0 && (
+                          <p className="text-xs text-orange-600 mt-0.5 truncate">
+                            {alert.details.slice(0, 3).map((d: any) => `${d.profileName} (${d.remainingCredits} left)`).join(', ')}
+                            {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
+                          </p>
+                        )}
+                        {alert.type === 'pending_requests' && alert.details?.length > 0 && (
+                          <p className="text-xs text-blue-600 mt-0.5 truncate">
+                            {alert.details.slice(0, 3).map((d: any) => d.requestedFor).join(', ')}
+                            {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
+                          </p>
+                        )}
+                        {alert.type === 'payment_overdue' && alert.details?.length > 0 && (
+                          <p className="text-xs text-red-600 mt-0.5 truncate">
+                            {alert.details.slice(0, 3).map((d: any) => d.name).join(', ')}
+                            {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
+                          </p>
+                        )}
+                        {alert.type === 'missing_location' && alert.details?.length > 0 && (
+                          <p className="text-xs text-amber-600 mt-0.5 truncate">
+                            {alert.details.slice(0, 3).map((d: any) => d.title).join(', ')}
+                            {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant="outline" className={`${config.text} border-current shrink-0`}>
+                        {alert.count}
+                      </Badge>
+                      <ChevronRight className={`w-4 h-4 ${config.text} shrink-0`} />
+                    </button>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+
   return (
     <>
       <div className="ios-full-bleed" style={{ backgroundColor: '#f9fafb' }} />
@@ -586,93 +685,8 @@ export default function AdminDashboard() {
       </div>
 
       <div className="mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-8">
-        {/* Announcement Banner */}
-        <AnnouncementBanner />
-        
-        {visibleAlerts.length > 0 && (
-          <div className="mb-4 space-y-2">
-            {visibleAlerts.map((alert: any, index: number) => {
-              const alertConfig: Record<string, { icon: any; bg: string; border: string; text: string; tab: string }> = {
-                low_credits: { icon: CreditCard, bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-800', tab: 'programs' },
-                payment_overdue: { icon: DollarSign, bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-800', tab: 'users' },
-                pending_requests: { icon: Clock, bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', tab: 'events' },
-                missing_location: { icon: MapPinOff, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800', tab: 'events' },
-              };
-              const config = alertConfig[alert.type] || { icon: AlertCircle, bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-800', tab: 'overview' };
-              const Icon = config.icon;
-              const isCompleting = completingAlerts.has(alert.type);
-              return (
-                <div
-                  key={alert.type}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-left overflow-hidden transition-all duration-500 ${
-                    isCompleting
-                      ? 'bg-green-50 border-green-300 max-h-16 opacity-100 scale-100'
-                      : `${config.bg} ${config.border} max-h-24 opacity-100 scale-100`
-                  }`}
-                  style={isCompleting ? { animation: 'alertSlideOut 0.8s ease-in-out forwards' } : undefined}
-                >
-                  {isCompleting ? (
-                    <div className="flex items-center gap-3 w-full justify-center py-1">
-                      <div className="p-1 rounded-full bg-green-100">
-                        <CheckCircle2 className="w-5 h-5 text-green-600" />
-                      </div>
-                      <span className="text-sm font-semibold text-green-700">Completed</span>
-                    </div>
-                  ) : (
-                    <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDismissAlert(alert.type);
-                        }}
-                        className={`p-1.5 rounded-full border-2 border-current ${config.text} hover:bg-green-100 hover:border-green-600 hover:text-green-600 transition-colors shrink-0`}
-                        title="Mark as reviewed"
-                      >
-                        <Check className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={() => setActiveTab(config.tab)}
-                        className="flex-1 flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <span className={`text-sm font-medium ${config.text}`}>{alert.message}</span>
-                          {alert.type === 'low_credits' && alert.details?.length > 0 && (
-                            <p className="text-xs text-orange-600 mt-0.5 truncate">
-                              {alert.details.slice(0, 3).map((d: any) => `${d.profileName} (${d.remainingCredits} left)`).join(', ')}
-                              {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
-                            </p>
-                          )}
-                          {alert.type === 'pending_requests' && alert.details?.length > 0 && (
-                            <p className="text-xs text-blue-600 mt-0.5 truncate">
-                              {alert.details.slice(0, 3).map((d: any) => d.requestedFor).join(', ')}
-                              {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
-                            </p>
-                          )}
-                          {alert.type === 'payment_overdue' && alert.details?.length > 0 && (
-                            <p className="text-xs text-red-600 mt-0.5 truncate">
-                              {alert.details.slice(0, 3).map((d: any) => d.name).join(', ')}
-                              {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
-                            </p>
-                          )}
-                          {alert.type === 'missing_location' && alert.details?.length > 0 && (
-                            <p className="text-xs text-amber-600 mt-0.5 truncate">
-                              {alert.details.slice(0, 3).map((d: any) => d.title).join(', ')}
-                              {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
-                            </p>
-                          )}
-                        </div>
-                        <Badge variant="outline" className={`${config.text} border-current shrink-0`}>
-                          {alert.count}
-                        </Badge>
-                        <ChevronRight className={`w-4 h-4 ${config.text} shrink-0`} />
-                      </button>
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+        {/* Banners shown only on mobile/tablet — on lg screens they render inside the content column */}
+        {!isLgScreen && alertBannersJSX}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="lg:flex lg:gap-6">
           <div ref={tabsRef} className="overflow-x-auto hide-scrollbar mb-6 lg:mb-0 -mx-4 px-4 sm:mx-0 sm:px-0 cursor-grab lg:cursor-default lg:overflow-visible lg:shrink-0 lg:w-44 lg:border-r lg:border-gray-200 lg:pr-4 lg:fixed lg:top-[6.5rem] lg:bottom-4 lg:z-10">
@@ -732,6 +746,9 @@ export default function AdminDashboard() {
           </div>
 
           <div className="lg:flex-1 lg:min-w-0 lg:overflow-x-hidden lg:ml-48">
+
+          {/* Banners shown only on lg+ screens in the content column beside the tabs */}
+          {isLgScreen && <div className="mb-4">{alertBannersJSX}</div>}
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">

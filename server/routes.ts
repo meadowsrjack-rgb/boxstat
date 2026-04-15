@@ -2183,10 +2183,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
       const successUrl = isNativeIOS 
-        ? `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`
+        ? `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}&native=true`
         : `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl = isNativeIOS 
-        ? `${origin}/payment-success?canceled=true`
+        ? `${origin}/payment-success?canceled=true&native=true`
         : `${origin}/unified-account?payment=canceled`;
         
       const checkoutMode = (isSubscription || isInstallmentPlan) ? 'subscription' : 'payment';
@@ -3059,10 +3059,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const origin = `${req.protocol}://${req.get('host')}`;
       const isNativePlatform = platform === 'ios' || platform === 'android';
       const tryoutSuccessUrl = isNativePlatform
-        ? `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`
+        ? `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}&native=true`
         : (successUrl || `${origin}/payments?success=true&session_id={CHECKOUT_SESSION_ID}`);
       const tryoutCancelUrl = isNativePlatform
-        ? `${origin}/payment-success?canceled=true`
+        ? `${origin}/payment-success?canceled=true&native=true`
         : (cancelUrl || `${origin}/payments?canceled=true`);
 
       const session = await orgStripe.checkout.sessions.create({
@@ -3766,10 +3766,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const successUrl = isNativeIOS
-        ? `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`
+        ? `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}&native=true`
         : `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl = isNativeIOS
-        ? `${origin}/payment-success?canceled=true`
+        ? `${origin}/payment-success?canceled=true&native=true`
         : `${origin}/unified-account?payment=canceled`;
 
       const cartLineItems: any[] = [{

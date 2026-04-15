@@ -1,20 +1,20 @@
 import { CheckCircle, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Capacitor } from "@capacitor/core";
-import { Browser } from "@capacitor/browser";
 import { useLocation } from "wouter";
 
 export default function PaymentSuccess() {
   const urlParams = new URLSearchParams(window.location.search);
   const isCanceled = urlParams.get('canceled') === 'true';
   const sessionId = urlParams.get('session_id');
+  const isNative = urlParams.get('native') === 'true';
   const [countdown, setCountdown] = useState(3);
+  const [verified, setVerified] = useState(false);
   const [, setLocation] = useLocation();
 
   useEffect(() => {
     if (isCanceled) return;
 
-    const verifyAndRedirect = async () => {
+    const verifySession = async () => {
       if (sessionId) {
         try {
           await fetch('/api/payments/verify-session', {
@@ -28,29 +28,12 @@ export default function PaymentSuccess() {
         } catch (e) {
         }
       }
-
-      if (Capacitor.isNativePlatform()) {
-        try {
-          Browser.close();
-        } catch (e) {
-        }
-      }
+      setVerified(true);
     };
 
-    if (Capacitor.isNativePlatform()) {
-      verifyAndRedirect();
-    } else {
-      if (sessionId) {
-        fetch('/api/payments/verify-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
-          },
-          body: JSON.stringify({ sessionId }),
-        }).catch(() => {});
-      }
+    verifySession();
 
+    if (!isNative) {
       const interval = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
@@ -64,7 +47,7 @@ export default function PaymentSuccess() {
 
       return () => clearInterval(interval);
     }
-  }, [isCanceled, sessionId]);
+  }, [isCanceled, sessionId, isNative]);
 
   if (isCanceled) {
     return (
@@ -80,7 +63,7 @@ export default function PaymentSuccess() {
             No worries — your payment was not processed. You can try again anytime from the app.
           </p>
           <p className="text-sm text-gray-400">
-            Close this window to return to the app.
+            Tap the <strong>✕</strong> button above to return to the app.
           </p>
         </div>
       </div>
@@ -99,9 +82,9 @@ export default function PaymentSuccess() {
         <p className="text-gray-600 mb-6">
           Thank you for your payment. A receipt has been sent to your email.
         </p>
-        {Capacitor.isNativePlatform() ? (
+        {isNative ? (
           <p className="text-sm text-gray-400">
-            Redirecting you back to the app...
+            Tap the <strong>✕</strong> button above to return to the app.
           </p>
         ) : (
           <p className="text-sm text-gray-400">

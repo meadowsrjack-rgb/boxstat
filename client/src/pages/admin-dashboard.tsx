@@ -148,7 +148,7 @@ import {
 import type { SkillCategoryName, EvalScores, Quarter } from "@/components/CoachAwardDialogs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { DateScrollPicker } from "react-date-wheel-picker";
@@ -1085,6 +1085,7 @@ function StatCard({ title, value, icon, subtitle, testId }: any) {
 }
 
 function StoreAtAGlance({ storeStats, onNavigateToStore, programs }: { storeStats: any; onNavigateToStore: () => void; programs: any[] }) {
+  const [showAllProducts, setShowAllProducts] = useState(false);
   const { toast } = useToast();
   const { data: pendingOrdersData, refetch: refetchOrders } = useQuery<any>({
     queryKey: ['/api/admin/pending-orders'],
@@ -1197,7 +1198,7 @@ function StoreAtAGlance({ storeStats, onNavigateToStore, programs }: { storeStat
               <Package className="w-8 h-8 mx-auto mb-2 text-gray-300" />
               <p className="text-sm">No products yet</p>
             </div>
-          ) : storeStats.products.map((product: any) => (
+          ) : (showAllProducts ? storeStats.products : storeStats.products.slice(0, 4)).map((product: any) => (
             <div
               key={product.id}
               className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
@@ -1261,6 +1262,18 @@ function StoreAtAGlance({ storeStats, onNavigateToStore, programs }: { storeStat
               </div>
             </div>
           ))}
+          {storeStats.products.length > 4 && (
+            <button
+              onClick={() => setShowAllProducts(!showAllProducts)}
+              className="w-full text-center py-2 text-xs font-medium text-gray-500 hover:text-gray-700 flex items-center justify-center gap-1 transition-colors"
+            >
+              {showAllProducts ? (
+                <>Show Less <ChevronUp className="w-3 h-3" /></>
+              ) : (
+                <>Show More ({storeStats.products.length - 4} more) <ChevronDown className="w-3 h-3" /></>
+              )}
+            </button>
+          )}
         </div>
 
         {orders.length > 0 && (

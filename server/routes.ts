@@ -3065,21 +3065,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? `${origin}/payment-success?canceled=true&native=true`
         : (cancelUrl || `${origin}/payments?canceled=true`);
 
-      const session = await orgStripe.checkout.sessions.create({
+      const { lineItem: tryoutFeeLineItem, feeCents: tryoutServiceFeeCents } = await getServiceFeeLineItem(tryoutPrice);
+
+      const tryoutSessionParams: any = {
         customer: stripeCustomerId,
         payment_method_types: ['card'],
         mode: 'payment',
-        line_items: [{
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `Tryout: ${program.name}`,
-              description: 'Tryout fee — includes 1 session credit',
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: `Tryout: ${program.name}`,
+                description: 'Tryout fee — includes 1 session credit',
+              },
+              unit_amount: tryoutPrice,
             },
-            unit_amount: tryoutPrice,
+            quantity: 1,
           },
-          quantity: 1,
-        }],
+          tryoutFeeLineItem,
+        ],
         success_url: tryoutSuccessUrl,
         cancel_url: tryoutCancelUrl,
         metadata: {
@@ -3091,7 +3096,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           recommendedTeamId: recommendedTeamId ? String(recommendedTeamId) : '',
           organizationId: req.user.organizationId,
         },
-      });
+      };
+
+      const tryoutConnectResult = await applyConnectChargeParams(tryoutSessionParams, req.user.organizationId, 'payment', tryoutServiceFeeCents);
+      verifyConnectRouting(tryoutSessionParams, 'payment', req.user.organizationId, tryoutConnectResult, { applicationFeeAmount: tryoutServiceFeeCents, checkoutType: 'tryout' });
+
+      const session = await orgStripe.checkout.sessions.create(tryoutSessionParams);
 
       res.json({ sessionUrl: session.url, sessionId: session.id });
     } catch (error: any) {

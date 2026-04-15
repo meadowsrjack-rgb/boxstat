@@ -12182,7 +12182,7 @@ function StripeSettingsSection() {
             <p className="text-sm text-muted-foreground">
               Your account is set up to receive payments. All program and store payments from parents will be deposited to your connected bank account.
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {isStandard ? (
                 <Button
                   variant="outline"

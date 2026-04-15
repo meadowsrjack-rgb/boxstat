@@ -12,6 +12,8 @@ import {
   XCircle, RefreshCw, ShoppingBag,
   Gift, Clock, Users, ChevronRight, Trophy, ChevronLeft, History
 } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 import type { Payment } from "@/utils/deriveStatus";
 
 type Program = {
@@ -1350,13 +1352,18 @@ export default function PaymentsPage() {
     try {
       setLoading(true);
       setError(null);
+      const currentPlatform = Capacitor.getPlatform();
       const response = await fetch('/api/payments/create-tryout-checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
+        },
         body: JSON.stringify({
           programId,
           playerId,
           recommendedTeamId,
+          platform: currentPlatform === 'ios' || currentPlatform === 'android' ? currentPlatform : 'web',
           successUrl: `${window.location.origin}/payments?success=true&session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: `${window.location.origin}/payments?canceled=true`,
         }),
@@ -1366,7 +1373,21 @@ export default function PaymentsPage() {
         throw new Error(errorData.error || 'Failed to create tryout checkout');
       }
       const data = await response.json();
-      if (data.sessionUrl) window.location.href = data.sessionUrl;
+      if (data.sessionUrl) {
+        if (Capacitor.isNativePlatform()) {
+          try {
+            await Browser.open({
+              url: data.sessionUrl,
+              toolbarColor: '#dc2626',
+              presentationStyle: 'popover',
+            });
+          } catch (browserError: any) {
+            window.location.href = data.sessionUrl;
+          }
+        } else {
+          window.location.href = data.sessionUrl;
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setLoading(false);

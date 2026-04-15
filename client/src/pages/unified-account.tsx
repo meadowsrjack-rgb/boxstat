@@ -3577,18 +3577,19 @@ export default function UnifiedAccount() {
                                 let checkoutSessionId: string | undefined;
 
                                 if (isTryoutPurchase) {
-                                  // Tryout checkout flow
                                   const tryoutData = await apiRequest("/api/payments/create-tryout-checkout", {
                                     method: "POST",
                                     data: {
                                       programId: selectedPackage,
                                       playerId: selectedPlayer || null,
                                       recommendedTeamId: tryoutSelectedTeamId ? parseInt(tryoutSelectedTeamId) : undefined,
-                                      successUrl: `${window.location.origin}/account?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-                                      cancelUrl: `${window.location.origin}/account?payment=canceled`,
+                                      platform: Capacitor.getPlatform() === 'ios' ? 'ios' : (Capacitor.getPlatform() === 'android' ? 'android' : 'web'),
+                                      successUrl: `${window.location.origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+                                      cancelUrl: `${window.location.origin}/unified-account?payment=canceled`,
                                     },
-                                  }) as { sessionUrl?: string; url?: string };
+                                  }) as { sessionUrl?: string; url?: string; sessionId?: string };
                                   checkoutUrl = tryoutData.sessionUrl || tryoutData.url || '';
+                                  checkoutSessionId = tryoutData.sessionId;
                                 } else {
                                   // Regular checkout session - backend handles both program and store purchases
                                   // Pass platform so server can use deep links for iOS

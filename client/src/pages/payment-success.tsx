@@ -7,20 +7,50 @@ import { useLocation } from "wouter";
 export default function PaymentSuccess() {
   const urlParams = new URLSearchParams(window.location.search);
   const isCanceled = urlParams.get('canceled') === 'true';
+  const sessionId = urlParams.get('session_id');
   const [countdown, setCountdown] = useState(3);
   const [, setLocation] = useLocation();
 
   useEffect(() => {
     if (isCanceled) return;
 
-    if (Capacitor.isNativePlatform()) {
-      setTimeout(() => {
+    const verifyAndRedirect = async () => {
+      if (sessionId) {
+        try {
+          await fetch('/api/payments/verify-session', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
+            },
+            body: JSON.stringify({ sessionId }),
+          });
+        } catch (e) {
+        }
+      }
+
+      if (Capacitor.isNativePlatform()) {
         try {
           Browser.close();
         } catch (e) {
         }
-      }, 2500);
+      }
+    };
+
+    if (Capacitor.isNativePlatform()) {
+      verifyAndRedirect();
     } else {
+      if (sessionId) {
+        fetch('/api/payments/verify-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
+          },
+          body: JSON.stringify({ sessionId }),
+        }).catch(() => {});
+      }
+
       const interval = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
@@ -34,7 +64,7 @@ export default function PaymentSuccess() {
 
       return () => clearInterval(interval);
     }
-  }, [isCanceled]);
+  }, [isCanceled, sessionId]);
 
   if (isCanceled) {
     return (

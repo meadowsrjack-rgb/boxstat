@@ -3012,7 +3012,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const { programId, playerId, recommendedTeamId, successUrl, cancelUrl } = req.body;
+      const { programId, playerId, recommendedTeamId, successUrl, cancelUrl, platform } = req.body;
 
       if (!programId || !playerId) {
         return res.status(400).json({ error: "programId and playerId are required" });
@@ -3057,6 +3057,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const stripeCustomerId = await getOrCreateStripeCustomer(orgStripe, user);
       const origin = `${req.protocol}://${req.get('host')}`;
+      const isNativePlatform = platform === 'ios' || platform === 'android';
+      const tryoutSuccessUrl = isNativePlatform
+        ? `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`
+        : (successUrl || `${origin}/payments?success=true&session_id={CHECKOUT_SESSION_ID}`);
+      const tryoutCancelUrl = isNativePlatform
+        ? `${origin}/payment-success?canceled=true`
+        : (cancelUrl || `${origin}/payments?canceled=true`);
 
       const session = await orgStripe.checkout.sessions.create({
         customer: stripeCustomerId,
@@ -3073,8 +3080,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           quantity: 1,
         }],
-        success_url: successUrl || `${origin}/payments?success=true&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: cancelUrl || `${origin}/payments?canceled=true`,
+        success_url: tryoutSuccessUrl,
+        cancel_url: tryoutCancelUrl,
         metadata: {
           userId: req.user.id,
           accountHolderId: req.user.id,
@@ -3086,7 +3093,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       });
 
-      res.json({ sessionUrl: session.url });
+      res.json({ sessionUrl: session.url, sessionId: session.id });
     } catch (error: any) {
       console.error('Error creating tryout checkout:', error);
       res.status(500).json({ error: error.message || 'Failed to create tryout checkout' });
@@ -3567,6 +3574,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (paymentWasProcessed) {
         sendPaymentReceiptEmail(session).catch(() => {});
+      }
+
+      if (session.metadata?.isTryout === 'true') {
+        const accountHolderId = session.metadata.accountHolderId || session.metadata.userId;
+        const profileId = session.metadata.profileId;
+        const programId = session.metadata.programId;
+        const recTeamId = session.metadata.recommendedTeamId ? parseInt(session.metadata.recommendedTeamId) : undefined;
+        const orgId = session.metadata.organizationId;
+
+        if (accountHolderId && profileId && programId) {
+          try {
+            const program = await storage.getProgram(programId);
+            const resolvedOrgId = orgId || program?.organizationId || 'default-org';
+
+            const existingPayments = await storage.getPaymentsByUser(accountHolderId);
+            const alreadyPaid = existingPayments.some((p: any) =>
+              p.stripePaymentId === session.payment_intent && p.status === 'completed'
+            );
+
+            if (!alreadyPaid && session.amount_total) {
+              await storage.createPayment({
+                organizationId: resolvedOrgId,
+                userId: accountHolderId,
+                amount: session.amount_total,
+                currency: 'usd',
+                paymentType: 'stripe_checkout',
+                status: 'completed',
+                description: `Tryout: ${program?.name || programId}`,
+                programId,
+                stripePaymentId: session.payment_intent as string,
+              });
+              paymentWasProcessed = true;
+            }
+
+            const existingEnrollments = await storage.getActiveEnrollmentsWithCredits(profileId);
+            const hasTryoutEnrollment = existingEnrollments.some(
+              (e: any) => e.programId === programId && e.isTryout === true
+            );
+
+            if (!hasTryoutEnrollment) {
+              await storage.createEnrollment({
+                organizationId: resolvedOrgId,
+                programId,
+                accountHolderId,
+                profileId,
+                status: 'active',
+                source: 'direct',
+                totalCredits: 1,
+                remainingCredits: 1,
+                isTryout: true,
+                recommendedTeamId: recTeamId || null,
+                metadata: { tryout: true, recommendedTeamId: recTeamId },
+              });
+              console.log(`✅ Created tryout enrollment via verify-session for ${profileId} in ${programId}`);
+              paymentWasProcessed = true;
+            }
+          } catch (tryoutError: any) {
+            console.error('Error creating tryout enrollment via verify-session:', tryoutError);
+          }
+        }
       }
 
       let tryoutData: any = null;

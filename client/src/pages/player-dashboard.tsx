@@ -1458,6 +1458,41 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               </section>
 
 
+              {/* Tryout Schedule Prompt */}
+              {(() => {
+                const tryoutEnrollment = playerEnrollments.find(
+                  (e: any) => e.isTryout === true && e.status === 'active' && (e.remainingCredits ?? 0) > 0
+                    && (!e.profileId || e.profileId === userIdForData)
+                );
+                if (!tryoutEnrollment) return null;
+                const alreadyScheduled = !!(tryoutEnrollment.metadata as any)?.scheduledEventId;
+                if (alreadyScheduled) return null;
+                return (
+                  <section className="px-6 py-2">
+                    <Card className="border-purple-200 bg-purple-50">
+                      <CardContent className="pt-4 pb-4">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                            <CalendarIcon className="w-4 h-4 text-purple-600" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-purple-900 text-sm">Schedule Your Tryout</p>
+                            <p className="text-xs text-purple-700">You have 1 tryout session to schedule</p>
+                          </div>
+                        </div>
+                        <Button
+                          className="w-full bg-purple-600 hover:bg-purple-700 text-white mt-1"
+                          onClick={() => setLocation(`/schedule/${tryoutEnrollment.programId}?playerId=${userIdForData}`)}
+                        >
+                          Pick a Time
+                          <ChevronRight className="w-4 h-4 ml-1" />
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </section>
+                );
+              })()}
+
               {/* View Calendar Button */}
               <section className="px-6 py-4">
                 <Button

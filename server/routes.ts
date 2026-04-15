@@ -818,6 +818,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.sendFile(logoPath);
   });
 
+  app.get('/assets/badge-appstore', (req, res) => {
+    const imgPath = new URL('../attached_assets/App_Store_1776216642840.png', import.meta.url).pathname;
+    res.sendFile(imgPath);
+  });
+
+  app.get('/assets/badge-googleplay', (req, res) => {
+    const imgPath = new URL('../attached_assets/Google_Play_1776216642840.png', import.meta.url).pathname;
+    res.sendFile(imgPath);
+  });
+
   app.get('/assets/org-logo/uyp', (req, res) => {
     const logoPath = new URL('../attached_assets/image_1770353179552.png', import.meta.url).pathname;
     res.sendFile(logoPath);

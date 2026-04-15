@@ -96,12 +96,12 @@ ${DOMAIN}
                         <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                           <tr>
                             <td style="text-align: center; padding: 5px 0;">
-                              <a href="https://apps.apple.com/us/app/boxstat/id6754899159" style="display: inline-block; background-color: #000000; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 6px;">Download on the App Store</a>
+                              <a href="https://apps.apple.com/us/app/boxstat/id6754899159" style="display: inline-block; text-decoration: none;"><img src="https://${DOMAIN}/assets/badge-appstore" alt="Download on the App Store" style="height: 44px; width: auto; display: block;" /></a>
                             </td>
                           </tr>
                           <tr>
                             <td style="text-align: center; padding: 5px 0;">
-                              <a href="https://play.google.com/store/apps/details?id=com.boxstat.app&hl=en_US" style="display: inline-block; background-color: #000000; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 6px;">Get it on Google Play</a>
+                              <a href="https://play.google.com/store/apps/details?id=com.boxstat.app&hl=en_US" style="display: inline-block; text-decoration: none;"><img src="https://${DOMAIN}/assets/badge-googleplay" alt="Get it on Google Play" style="height: 44px; width: auto; display: block;" /></a>
                             </td>
                           </tr>
                         </table>
@@ -601,12 +601,12 @@ ${DOMAIN}
                           </tr>
                           <tr>
                             <td style="text-align: center; padding: 10px 0;">
-                              <a href="${appStoreUrl}" style="display: inline-block; background-color: #000000; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">Download on the App Store</a>
+                              <a href="${appStoreUrl}" style="display: inline-block; text-decoration: none;"><img src="https://${DOMAIN}/assets/badge-appstore" alt="Download on the App Store" style="height: 44px; width: auto; display: block;" /></a>
                             </td>
                           </tr>
                           <tr>
                             <td style="text-align: center; padding: 10px 0;">
-                              <a href="${playStoreUrl}" style="display: inline-block; background-color: #000000; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">Get it on Google Play</a>
+                              <a href="${playStoreUrl}" style="display: inline-block; text-decoration: none;"><img src="https://${DOMAIN}/assets/badge-googleplay" alt="Get it on Google Play" style="height: 44px; width: auto; display: block;" /></a>
                             </td>
                           </tr>
                         </table>
@@ -714,12 +714,12 @@ ${DOMAIN}
                           </tr>
                           <tr>
                             <td style="text-align: center; padding: 10px 0;">
-                              <a href="${appStoreUrl}" style="display: inline-block; background-color: #000000; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">Download on the App Store</a>
+                              <a href="${appStoreUrl}" style="display: inline-block; text-decoration: none;"><img src="https://${DOMAIN}/assets/badge-appstore" alt="Download on the App Store" style="height: 44px; width: auto; display: block;" /></a>
                             </td>
                           </tr>
                           <tr>
                             <td style="text-align: center; padding: 10px 0;">
-                              <a href="${playStoreUrl}" style="display: inline-block; background-color: #000000; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">Get it on Google Play</a>
+                              <a href="${playStoreUrl}" style="display: inline-block; text-decoration: none;"><img src="https://${DOMAIN}/assets/badge-googleplay" alt="Get it on Google Play" style="height: 44px; width: auto; display: block;" /></a>
                             </td>
                           </tr>
                         </table>

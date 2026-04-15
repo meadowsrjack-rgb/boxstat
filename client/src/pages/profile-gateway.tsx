@@ -344,24 +344,30 @@ export default function ProfileGateway() {
                 onClick={() => {
                   const platform = getMobilePlatform();
                   if (platform === 'ios') {
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = 'boxstat://';
+                    document.body.appendChild(iframe);
                     const timer = setTimeout(() => {
+                      document.body.removeChild(iframe);
                       window.location.href = APP_STORE_URL;
                     }, 1500);
                     const onBlur = () => {
                       clearTimeout(timer);
+                      try { document.body.removeChild(iframe); } catch (_e) {}
                       window.removeEventListener('blur', onBlur);
                       document.removeEventListener('visibilitychange', onVisChange);
                     };
                     const onVisChange = () => {
                       if (document.hidden) {
                         clearTimeout(timer);
+                        try { document.body.removeChild(iframe); } catch (_e) {}
                         document.removeEventListener('visibilitychange', onVisChange);
                         window.removeEventListener('blur', onBlur);
                       }
                     };
                     window.addEventListener('blur', onBlur);
                     document.addEventListener('visibilitychange', onVisChange);
-                    window.location.href = 'boxstat://';
                   } else if (platform === 'android') {
                     window.location.href = 'intent://open#Intent;scheme=boxstat;package=com.boxstat.app;S.browser_fallback_url=' + encodeURIComponent(PLAY_STORE_URL) + ';end';
                   } else {

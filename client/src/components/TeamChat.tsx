@@ -271,7 +271,7 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
 
       <div 
         ref={scrollContainerRef}
-        className="h-72 overflow-y-auto bg-gray-50 rounded-xl p-4"
+        className="h-72 overflow-y-auto bg-gray-50 rounded-xl p-4 max-sm:p-2 max-sm:rounded-lg"
       >
         {isLoading ? (
           <div className="flex items-center justify-center h-full">

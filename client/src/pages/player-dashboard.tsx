@@ -2117,8 +2117,8 @@ function ProgramCard({
   };
 
   return (
-    <Card className="border-0 shadow-sm mb-4" data-testid={`program-card-${membership.programId}`}>
-      <CardContent className="p-4">
+    <Card className="border-0 shadow-sm mb-4 max-sm:rounded-none max-sm:-mx-4 max-sm:border-x-0" data-testid={`program-card-${membership.programId}`}>
+      <CardContent className="p-4 max-sm:px-3">
         {/* Program Header */}
         <div className="flex items-start space-x-4 mb-4">
           <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -2223,7 +2223,7 @@ function SubgroupCard({
   });
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden" data-testid={`subgroup-${team.teamId}`}>
+    <div className="border border-gray-200 rounded-lg overflow-hidden max-sm:border-x-0 max-sm:rounded-none max-sm:-mx-1" data-testid={`subgroup-${team.teamId}`}>
       {/* Subgroup Header - clickable to expand */}
       <div 
         className="p-3 bg-gray-50 flex items-center justify-between cursor-pointer hover:bg-gray-100"
@@ -2252,7 +2252,7 @@ function SubgroupCard({
       
       {/* Expanded Content */}
       {isExpanded && (
-        <div className="p-3 space-y-4">
+        <div className="p-3 max-sm:px-2 space-y-4">
           {/* Roster Section - only if visible */}
           {showRoster && (
             <div>

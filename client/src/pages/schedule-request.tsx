@@ -229,8 +229,9 @@ export default function ScheduleRequest() {
                 </div>
               ) : availableSlots.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  <p className="font-medium">No upcoming sessions</p>
-                  <p className="text-sm mt-1">No practice or skills sessions are scheduled for your team in the next 30 days. Please contact your coach.</p>
+                  <CalendarDays className="w-10 h-10 mx-auto mb-3 text-purple-300" />
+                  <p className="font-medium text-gray-700">No Times Available</p>
+                  <p className="text-sm mt-1">There are no practice or skills sessions scheduled for your assigned team in the next 30 days. Please check back later or contact your coach for more information.</p>
                 </div>
               ) : (
                 <div className="space-y-4">

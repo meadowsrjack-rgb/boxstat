@@ -3443,7 +3443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Handle tryout checkout
+      // Handle tryout checkout (idempotent: payment + enrollment created independently)
       if (session.metadata?.isTryout === 'true') {
         const accountHolderId = session.metadata.accountHolderId || session.metadata.userId;
         const profileId = session.metadata.profileId;
@@ -3452,19 +3452,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const orgId = session.metadata.organizationId;
 
         if (accountHolderId && profileId && programId) {
-          const existingPayments = await storage.getPaymentsByUser(accountHolderId);
-          const alreadyProcessed = existingPayments.some((p: any) =>
-            p.stripePaymentId === session.payment_intent && p.status === 'completed'
-          );
+          try {
+            const program = await storage.getProgram(programId);
+            const playerUser = await storage.getUser(profileId);
+            const playerName = playerUser ? `${playerUser.firstName || ''} ${playerUser.lastName || ''}`.trim() : 'Player';
+            const resolvedOrgId = orgId || program?.organizationId || 'default-org';
 
-          if (!alreadyProcessed && session.amount_total) {
-            try {
-              const program = await storage.getProgram(programId);
-              const playerUser = await storage.getUser(profileId);
-              const playerName = playerUser ? `${playerUser.firstName || ''} ${playerUser.lastName || ''}`.trim() : 'Player';
+            const existingPayments = await storage.getPaymentsByUser(accountHolderId);
+            const alreadyPaid = existingPayments.some((p: any) =>
+              p.stripePaymentId === session.payment_intent && p.status === 'completed'
+            );
 
+            if (!alreadyPaid && session.amount_total) {
               await storage.createPayment({
-                organizationId: orgId || program?.organizationId || 'default-org',
+                organizationId: resolvedOrgId,
                 userId: accountHolderId,
                 amount: session.amount_total,
                 currency: 'usd',
@@ -3474,10 +3475,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 programId,
                 stripePaymentId: session.payment_intent as string,
               });
+              paymentWasProcessed = true;
+            }
 
-              // Create tryout enrollment with 1 credit
+            const existingEnrollments = await storage.getActiveEnrollmentsWithCredits(profileId);
+            const hasTryoutEnrollment = existingEnrollments.some(
+              (e: any) => e.programId === programId && e.isTryout === true
+            );
+
+            if (!hasTryoutEnrollment) {
               await storage.createEnrollment({
-                organizationId: orgId || program?.organizationId || 'default-org',
+                organizationId: resolvedOrgId,
                 programId,
                 accountHolderId,
                 profileId,
@@ -3489,24 +3497,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 recommendedTeamId: recTeamId || null,
                 metadata: { tryout: true, recommendedTeamId: recTeamId },
               });
-
               paymentWasProcessed = true;
-              console.log(`✅ Created tryout enrollment for ${profileId} in ${programId}`);
+            }
 
+            if (paymentWasProcessed) {
+              console.log(`✅ Created tryout enrollment for ${profileId} in ${programId}`);
               try {
-                await pushNotifications.parentPaymentSuccessful(storage, accountHolderId, playerName, session.amount_total);
+                await pushNotifications.parentPaymentSuccessful(storage, accountHolderId, playerName, session.amount_total || 0);
                 await pushNotifications.notifyAllAdmins(
                   storage,
                   '🏀 New Tryout',
                   `${playerName} paid for a tryout in ${program?.name || programId}`,
-                  orgId || program?.organizationId || 'default-org'
+                  resolvedOrgId
                 );
               } catch (notifError: any) {
                 console.error('⚠️ Tryout notification failed (non-fatal):', notifError.message);
               }
-            } catch (tryoutError: any) {
-              console.error('Error creating tryout enrollment:', tryoutError);
             }
+          } catch (tryoutError: any) {
+            console.error('Error creating tryout enrollment:', tryoutError);
           }
         }
       }

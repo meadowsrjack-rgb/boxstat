@@ -9771,9 +9771,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      console.log(`[iCal] Input: ${url.substring(0, 150)}`);
-      console.log(`[iCal] Resolved: ${trimmedUrl.substring(0, 150)}`);
-
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 30000);
 
@@ -9827,11 +9824,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         if (!response.ok) {
-          if (response.status === 404) {
-            return res.status(400).json({ message: 'Calendar not found (404). Make sure the calendar is set to public and you\'re using the iCal format URL (ends in .ics) from Settings > Integrate calendar.' });
-          }
-          if (response.status === 403) {
-            return res.status(400).json({ message: 'Access denied. The calendar may not be public. Go to calendar Settings > Access permissions and enable "Make available to public".' });
+          if (response.status === 404 || response.status === 403) {
+            return res.status(400).json({ message: 'This calendar is not publicly accessible. To fix this:\n\n1. Open Google Calendar on your computer\n2. Click the three dots next to your calendar name\n3. Click "Settings and sharing"\n4. Under "Access permissions for events", check "Make available to public"\n5. Then scroll to "Integrate calendar" and copy the "Public address in iCal format"' });
           }
           return res.status(400).json({ message: `Failed to fetch calendar: HTTP ${response.status}` });
         }

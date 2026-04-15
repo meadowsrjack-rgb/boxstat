@@ -215,6 +215,7 @@ export function GoogleCalendarImport() {
   const [fileName, setFileName] = useState<string>("");
   const [calendarUrl, setCalendarUrl] = useState("");
   const [inputMode, setInputMode] = useState<"url" | "file">("url");
+  const [fetchError, setFetchError] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const step = parsedEvents.length > 0 ? "events" : "upload";
@@ -224,6 +225,7 @@ export function GoogleCalendarImport() {
     setSelectedEventIds(new Set());
     setFileName("");
     setCalendarUrl("");
+    setFetchError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -251,6 +253,7 @@ export function GoogleCalendarImport() {
 
   const fetchFromUrl = useMutation({
     mutationFn: async () => {
+      setFetchError("");
       const url = calendarUrl.trim();
       if (!url) throw new Error("Please enter a calendar URL");
       const result = await apiRequest("POST", "/api/ical/fetch-url", { url });
@@ -264,6 +267,7 @@ export function GoogleCalendarImport() {
       throw new Error("Unexpected response format from server");
     },
     onSuccess: (data) => {
+      setFetchError("");
       processICalText(data.content, "Google Calendar");
     },
     onError: (err: any) => {
@@ -276,7 +280,7 @@ export function GoogleCalendarImport() {
       } catch {
         parsed = cleanMsg;
       }
-      toast({ title: "Failed to fetch calendar", description: parsed, variant: "destructive" });
+      setFetchError(parsed);
     },
   });
 
@@ -405,16 +409,34 @@ export function GoogleCalendarImport() {
                     )}
                   </Button>
                 </div>
-                <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                  <p className="text-xs font-medium">How to get your Google Calendar public link:</p>
-                  <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-                    <li>Open <span className="font-medium">Google Calendar</span> on your computer</li>
-                    <li>Click the three dots next to your calendar, then <span className="font-medium">Settings and sharing</span></li>
-                    <li>Under <span className="font-medium">Access permissions</span>, check <span className="font-medium">Make available to public</span></li>
-                    <li>Scroll to <span className="font-medium">Integrate calendar</span></li>
-                    <li>Copy the <span className="font-medium">Public address in iCal format</span></li>
-                  </ol>
-                </div>
+                {fetchError && (
+                  <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 space-y-2">
+                    <p className="text-sm font-medium text-destructive">Could not access this calendar</p>
+                    <div className="text-xs text-destructive/80 space-y-1">
+                      <p>The calendar needs to be <span className="font-medium">public</span> for this to work. Here's how to fix it:</p>
+                      <ol className="list-decimal list-inside space-y-1 mt-2">
+                        <li>Open <span className="font-medium">Google Calendar</span> on your computer</li>
+                        <li>Click the three dots next to your calendar name</li>
+                        <li>Click <span className="font-medium">Settings and sharing</span></li>
+                        <li>Under <span className="font-medium">Access permissions for events</span>, check <span className="font-medium">Make available to public</span></li>
+                        <li>Scroll down to <span className="font-medium">Integrate calendar</span></li>
+                        <li>Copy the <span className="font-medium">Public address in iCal format</span> (the URL that ends in .ics)</li>
+                      </ol>
+                    </div>
+                  </div>
+                )}
+                {!fetchError && (
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                    <p className="text-xs font-medium">How to get your Google Calendar public link:</p>
+                    <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                      <li>Open <span className="font-medium">Google Calendar</span> on your computer</li>
+                      <li>Click the three dots next to your calendar, then <span className="font-medium">Settings and sharing</span></li>
+                      <li>Under <span className="font-medium">Access permissions</span>, check <span className="font-medium">Make available to public</span></li>
+                      <li>Scroll to <span className="font-medium">Integrate calendar</span></li>
+                      <li>Copy the <span className="font-medium">Public address in iCal format</span></li>
+                    </ol>
+                  </div>
+                )}
               </div>
             )}
 

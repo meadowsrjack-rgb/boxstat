@@ -9710,7 +9710,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'A valid URL is required' });
       }
 
-      const trimmedUrl = url.trim();
+      let trimmedUrl = url.trim();
       let parsedUrl: URL;
       try {
         parsedUrl = new URL(trimmedUrl);
@@ -9737,8 +9737,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!allowedHostPatterns.some(p => p.test(hostname))) {
         return res.status(400).json({
-          message: 'Only calendar URLs from Google Calendar, Outlook, or iCloud are supported. Copy the iCal URL from your calendar settings, or use the file upload option instead.'
+          message: 'Only calendar URLs from Google Calendar, Outlook, or iCloud are supported. Copy the public iCal URL from your calendar settings.'
         });
+      }
+
+      if (hostname === 'calendar.google.com') {
+        const cid = parsedUrl.searchParams.get('cid');
+        if (cid && !parsedUrl.pathname.includes('/ical/')) {
+          try {
+            const calendarId = decodeURIComponent(cid);
+            trimmedUrl = `https://calendar.google.com/calendar/ical/${encodeURIComponent(calendarId)}/public/basic.ics`;
+            parsedUrl = new URL(trimmedUrl);
+          } catch {}
+        }
+        if (parsedUrl.pathname.match(/\/embed/) || parsedUrl.pathname.match(/\/r\//)) {
+          const srcParam = parsedUrl.searchParams.get('src');
+          if (srcParam) {
+            try {
+              const calendarId = decodeURIComponent(srcParam);
+              trimmedUrl = `https://calendar.google.com/calendar/ical/${encodeURIComponent(calendarId)}/public/basic.ics`;
+              parsedUrl = new URL(trimmedUrl);
+            } catch {}
+          }
+        }
       }
 
       const controller = new AbortController();

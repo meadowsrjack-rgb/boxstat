@@ -194,7 +194,7 @@ export default function EventDetailPanel({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg" data-testid="event-detail-modal">
+        <DialogContent className="max-w-lg max-sm:!top-auto max-sm:!bottom-0 max-sm:!translate-y-0 max-sm:!max-h-[calc(100dvh-1rem)] max-sm:!h-[calc(100dvh-1rem)] max-sm:!rounded-b-none max-sm:!rounded-t-2xl max-sm:!pb-[env(safe-area-inset-bottom,1rem)]" data-testid="event-detail-modal">
           <div className="flex flex-col space-y-1.5 text-center sm:text-left">
             <div className="flex items-start">
               <div className="flex-1">

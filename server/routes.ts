@@ -808,13 +808,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Serve BoxStat logo for emails
   app.get('/assets/logo', (req, res) => {
-    const logoPath = new URL('../attached_assets/light_1770352137773.png', import.meta.url).pathname;
+    const logoPath = new URL('../attached_assets/Logo_Dark_1776220808575.png', import.meta.url).pathname;
     res.sendFile(logoPath);
   });
 
   // Serve BoxStat full logo for emails
   app.get('/assets/logo-full', (req, res) => {
-    const logoPath = new URL('../attached_assets/logofull_light_1775785908348.png', import.meta.url).pathname;
+    const logoPath = new URL('../attached_assets/Logo_Dark_1776220808575.png', import.meta.url).pathname;
     res.sendFile(logoPath);
   });
 

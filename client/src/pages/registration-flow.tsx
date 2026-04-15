@@ -319,7 +319,7 @@ export default function RegistrationFlow() {
             paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))',
           }}
         >
-        <div className="w-full max-w-lg md:max-w-xl mx-auto flex-1 flex flex-col">
+        <div className="w-full max-w-lg md:max-w-xl mx-auto flex flex-col">
           {/* Progress Bar */}
           <div className="flex items-center justify-between mb-8 pt-8">
             <div className="flex gap-2 flex-1">
@@ -344,7 +344,7 @@ export default function RegistrationFlow() {
           </h1>
 
           {/* Step Content */}
-          <div className="flex-1">
+          <div>
             {currentStep === 1 && (
               <OrganizationSelectionStep
                 organizations={organizations}

@@ -748,6 +748,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   setAuthStorage(storage);
 
+  app.use((req, res, next) => {
+    if (/\/(favicon|apple-touch-icon)/.test(req.path) && /\.(ico|png)$/.test(req.path)) {
+      res.set('Cache-Control', 'public, max-age=86400, must-revalidate');
+    }
+    next();
+  });
+
   app.get('/api/health', (_req, res) => {
     res.set('Cache-Control', 'no-store');
     res.json({ status: 'ok', timestamp: Date.now() });

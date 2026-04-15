@@ -4,10 +4,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Shield, ChevronRight, Settings, LogOut, Crown, Bug, ArrowDown, X, Download } from "lucide-react";
+import { User, Shield, ChevronRight, Settings, LogOut, Crown, Bug, ArrowDown, X } from "lucide-react";
 import { BanterLoader } from "@/components/BanterLoader";
-import appStoreBadge from "@assets/App_Store_1776216642840.png";
-import googlePlayBadge from "@assets/Google_Play_1776216642840.png";
+import lightThemeLogo from "@assets/light_1773300199014.png";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -315,36 +314,78 @@ export default function ProfileGateway() {
             <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-who-is-watching">Whose ball?</h1>
           </div>
 
-        {showAppBanner && (
-          <div className="mb-4 rounded-xl bg-gradient-to-r from-blue-600/20 to-blue-500/10 border border-blue-500/30 px-4 py-3" data-testid="gateway-app-download-banner">
-            <div className="flex items-center gap-3">
-              <Download className="w-8 h-8 text-blue-400 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white">Get the BoxStat App</p>
-                <p className="text-xs text-gray-400 mt-0.5">For the best experience, download our free app.</p>
-              </div>
+        <Dialog open={showAppBanner} onOpenChange={(open) => {
+          if (!open) {
+            localStorage.setItem(DISMISS_KEY, 'true');
+            setShowAppBanner(false);
+          }
+        }}>
+          <DialogContent hideClose className="max-w-[320px] rounded-2xl bg-white p-6 border-0 shadow-xl">
+            <button
+              onClick={() => {
+                localStorage.setItem(DISMISS_KEY, 'true');
+                setShowAppBanner(false);
+              }}
+              className="absolute right-3 top-3 p-1 text-gray-400 hover:text-gray-600 transition-colors z-10"
+              aria-label="Dismiss app download prompt"
+              data-testid="button-dismiss-app-banner"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="flex flex-col items-center text-center pt-2">
+              <img src={lightThemeLogo} alt="BoxStat" className="h-14 w-auto mb-5" />
+              <DialogTitle className="text-xl font-bold text-gray-900 mb-2">
+                Get the full app experience
+              </DialogTitle>
+              <DialogDescription className="text-sm text-gray-500 mb-6">
+                Stay in the know and enjoy more great features on the app
+              </DialogDescription>
+              <button
+                onClick={() => {
+                  const platform = getMobilePlatform();
+                  if (platform === 'ios') {
+                    const timer = setTimeout(() => {
+                      window.location.href = APP_STORE_URL;
+                    }, 1500);
+                    const onBlur = () => {
+                      clearTimeout(timer);
+                      window.removeEventListener('blur', onBlur);
+                      document.removeEventListener('visibilitychange', onVisChange);
+                    };
+                    const onVisChange = () => {
+                      if (document.hidden) {
+                        clearTimeout(timer);
+                        document.removeEventListener('visibilitychange', onVisChange);
+                        window.removeEventListener('blur', onBlur);
+                      }
+                    };
+                    window.addEventListener('blur', onBlur);
+                    document.addEventListener('visibilitychange', onVisChange);
+                    window.location.href = 'boxstat://';
+                  } else if (platform === 'android') {
+                    window.location.href = 'intent://open#Intent;scheme=boxstat;package=com.boxstat.app;S.browser_fallback_url=' + encodeURIComponent(PLAY_STORE_URL) + ';end';
+                  } else {
+                    window.open(APP_STORE_URL, '_blank');
+                  }
+                }}
+                className="w-full py-3 rounded-full bg-[#fe2c55] hover:bg-[#e5284d] text-white font-semibold text-base transition-colors"
+                data-testid="button-open-boxstat-app"
+              >
+                Open BoxStat
+              </button>
               <button
                 onClick={() => {
                   localStorage.setItem(DISMISS_KEY, 'true');
                   setShowAppBanner(false);
                 }}
-                className="p-1 text-gray-500 hover:text-white transition-colors flex-shrink-0"
-                aria-label="Dismiss app download prompt"
-                data-testid="button-dismiss-app-banner"
+                className="mt-3 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                data-testid="button-not-now-app-banner"
               >
-                <X className="w-4 h-4" />
+                Not now
               </button>
             </div>
-            <div className="flex items-center justify-center gap-3 mt-3">
-              <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
-                <img src={appStoreBadge} alt="Download on the App Store" className="h-[40px]" />
-              </a>
-              <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
-                <img src={googlePlayBadge} alt="Get it on Google Play" className="h-[40px]" />
-              </a>
-            </div>
-          </div>
-        )}
+          </DialogContent>
+        </Dialog>
 
         {needsOnboarding && (
           <div className="mb-4 rounded-xl bg-gradient-to-r from-red-600/20 to-red-500/10 border border-red-500/30 px-4 py-3 flex items-center gap-3" data-testid="gateway-onboarding-banner">

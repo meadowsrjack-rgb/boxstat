@@ -74,7 +74,7 @@ ${DOMAIN}
                   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <tr>
                       <td style="padding: 40px 40px 30px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-                        <img src="https://${DOMAIN}/assets/logo" alt="BoxStat Logo" style="height: 120px; width: auto; display: block; margin: 0 auto;" />
+                        <img src="https://${DOMAIN}/assets/logo" alt="BoxStat Logo" style="height: 240px; width: auto; display: block; margin: 0 auto;" />
                       </td>
                     </tr>
                     <tr>
@@ -177,7 +177,7 @@ ${DOMAIN}
                   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <tr>
                       <td style="padding: 40px 40px 30px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-                        <img src="https://${DOMAIN}/assets/logo" alt="BoxStat Logo" style="height: 120px; width: auto; display: block; margin: 0 auto;" />
+                        <img src="https://${DOMAIN}/assets/logo" alt="BoxStat Logo" style="height: 240px; width: auto; display: block; margin: 0 auto;" />
                       </td>
                     </tr>
                     <tr>
@@ -261,7 +261,7 @@ ${DOMAIN}
                   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <tr>
                       <td style="padding: 40px 40px 30px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-                        <img src="https://${DOMAIN}/assets/logo" alt="BoxStat Logo" style="height: 120px; width: auto; display: block; margin: 0 auto;" />
+                        <img src="https://${DOMAIN}/assets/logo" alt="BoxStat Logo" style="height: 240px; width: auto; display: block; margin: 0 auto;" />
                       </td>
                     </tr>
                     <tr>
@@ -375,7 +375,7 @@ ${DOMAIN}
                   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <tr>
                       <td style="padding: 40px 40px 30px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-                        <img src="https://${DOMAIN}/assets/logo" alt="BoxStat Logo" style="height: 120px; width: auto; display: block; margin: 0 auto;" />
+                        <img src="https://${DOMAIN}/assets/logo" alt="BoxStat Logo" style="height: 240px; width: auto; display: block; margin: 0 auto;" />
                       </td>
                     </tr>
                     <tr>
@@ -478,7 +478,7 @@ To manage your notification preferences, visit ${appUrl}/settings/notifications
                   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <tr>
                       <td style="padding: 40px 40px 30px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-                        <img src="https://${DOMAIN}/assets/logo" alt="BoxStat Logo" style="height: 120px; width: auto; display: block; margin: 0 auto;" />
+                        <img src="https://${DOMAIN}/assets/logo" alt="BoxStat Logo" style="height: 240px; width: auto; display: block; margin: 0 auto;" />
                       </td>
                     </tr>
                     <tr>
@@ -584,7 +584,7 @@ ${DOMAIN}
                   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <tr>
                       <td style="padding: 40px 40px 30px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-                        <img src="https://${DOMAIN}/assets/logo" alt="BoxStat Logo" style="height: 120px; width: auto; display: block; margin: 0 auto;" />
+                        <img src="https://${DOMAIN}/assets/logo" alt="BoxStat Logo" style="height: 240px; width: auto; display: block; margin: 0 auto;" />
                       </td>
                     </tr>
                     <tr>
@@ -698,7 +698,7 @@ ${DOMAIN}
                   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <tr>
                       <td style="padding: 40px 40px 30px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-                        <img src="https://${DOMAIN}/assets/logo" alt="BoxStat Logo" style="height: 120px; width: auto; display: block; margin: 0 auto;" />
+                        <img src="https://${DOMAIN}/assets/logo" alt="BoxStat Logo" style="height: 240px; width: auto; display: block; margin: 0 auto;" />
                       </td>
                     </tr>
                     <tr>

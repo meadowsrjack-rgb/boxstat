@@ -63,7 +63,7 @@ function buildEmailHtml(record: InviteRecord, inviteUrl: string, orgName: string
 
         <!-- Header -->
         <tr><td style="background:#ffffff;border-radius:12px 12px 0 0;padding:32px 16px;text-align:center">
-          <img src="${process.env.APP_URL || process.env.DOMAIN}/assets/logo-full" alt="BoxStat" style="height:120px;width:auto;display:inline-block" />
+          <img src="${process.env.APP_URL || process.env.DOMAIN}/assets/logo-full" alt="BoxStat" style="height:240px;width:auto;display:inline-block" />
         </td></tr>
 
         <!-- Body -->
@@ -172,7 +172,7 @@ function buildPlayerAddedEmailHtml(record: InviteRecord, orgName: string): strin
 
         <!-- Header -->
         <tr><td style="background:#ffffff;border-radius:12px 12px 0 0;padding:32px 16px;text-align:center">
-          <img src="${appUrl}/assets/logo-full" alt="BoxStat" style="height:120px;width:auto;display:inline-block" />
+          <img src="${appUrl}/assets/logo-full" alt="BoxStat" style="height:240px;width:auto;display:inline-block" />
         </td></tr>
 
         <!-- Body -->

@@ -15034,7 +15034,7 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <CardTitle className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5" />

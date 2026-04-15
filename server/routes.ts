@@ -9711,6 +9711,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       let trimmedUrl = url.trim();
+      if (trimmedUrl.includes('calendar.google.com/calendar/ical/') && trimmedUrl.includes('#')) {
+        trimmedUrl = trimmedUrl.replace(/#/g, '%23');
+      }
       let parsedUrl: URL;
       try {
         parsedUrl = new URL(trimmedUrl);
@@ -9742,33 +9745,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (hostname === 'calendar.google.com') {
-        const decodeGCalId = (raw: string): string => {
-          const urlDecoded = decodeURIComponent(raw);
-          if (urlDecoded.includes('@')) return urlDecoded;
+        const resolveGCalId = (raw: string): string => {
+          let decoded = decodeURIComponent(raw);
+          if (decoded.includes('@')) return decoded;
           try {
             const b64 = Buffer.from(raw, 'base64').toString('utf-8');
             if (b64.includes('@') && b64.includes('.')) return b64;
           } catch {}
-          return urlDecoded;
+          return decoded;
         };
 
         const cid = parsedUrl.searchParams.get('cid');
         if (cid && !parsedUrl.pathname.includes('/ical/')) {
-          const calendarId = decodeGCalId(cid);
-          trimmedUrl = `https://calendar.google.com/calendar/ical/${calendarId}/public/basic.ics`;
+          const calendarId = resolveGCalId(cid);
+          trimmedUrl = `https://calendar.google.com/calendar/ical/${encodeURIComponent(calendarId)}/public/basic.ics`;
           try { parsedUrl = new URL(trimmedUrl); } catch {}
         }
         if (parsedUrl.pathname.match(/\/embed/) || parsedUrl.pathname.match(/\/r\//)) {
           const srcParam = parsedUrl.searchParams.get('src');
           if (srcParam) {
-            const calendarId = decodeGCalId(srcParam);
-            trimmedUrl = `https://calendar.google.com/calendar/ical/${calendarId}/public/basic.ics`;
+            const calendarId = resolveGCalId(srcParam);
+            trimmedUrl = `https://calendar.google.com/calendar/ical/${encodeURIComponent(calendarId)}/public/basic.ics`;
             try { parsedUrl = new URL(trimmedUrl); } catch {}
           }
-        }
-        if (parsedUrl.pathname.includes('/ical/')) {
-          trimmedUrl = trimmedUrl.replace(/%40/g, '@');
-          try { parsedUrl = new URL(trimmedUrl); } catch {}
         }
       }
 

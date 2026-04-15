@@ -4207,6 +4207,13 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                 >
                   Status
                 </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100 px-2 whitespace-nowrap"
+                  onClick={() => handleSort('createdAt')}
+                  data-testid="sort-joined"
+                >
+                  Joined {sortField === 'createdAt' && (sortDirection === 'asc' ? '↑' : '↓')}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -4417,6 +4424,9 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                     <TableCell className="px-2 py-1.5" data-testid={`text-status-${user.id}`}>
                       <Badge className={`${summaryStatus.cls} whitespace-nowrap text-[10px] px-1.5 py-0.5`}>{summaryStatus.label}</Badge>
                     </TableCell>
+                    <TableCell className="px-2 py-1.5 text-xs text-gray-500 whitespace-nowrap">
+                      {user.createdAt ? new Date(user.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -4507,6 +4517,11 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                         <Badge variant="outline" className="bg-gray-50 text-gray-500">Inactive</Badge>
                       )}
                     </div>
+                    {viewingUser.createdAt && (
+                      <span className="text-xs text-gray-400 mt-1">
+                        Signed up {new Date(viewingUser.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <Button

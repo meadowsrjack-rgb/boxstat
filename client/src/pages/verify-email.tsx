@@ -40,12 +40,36 @@ export default function VerifyEmail() {
 
           const userEmail = data.email || params.get("email");
           const orgId = organizationId || "";
-          let redirectUrl = `/registration?email=${encodeURIComponent(userEmail || "")}&verified=true`;
+          let redirectPath = `/registration?email=${encodeURIComponent(userEmail || "")}&verified=true`;
           if (orgId) {
-            redirectUrl += `&organizationId=${encodeURIComponent(orgId)}`;
+            redirectPath += `&organizationId=${encodeURIComponent(orgId)}`;
           }
           setTimeout(() => {
-            setLocation(redirectUrl);
+            const deepLink = `boxstat://${redirectPath}`;
+            const fallback = () => setLocation(redirectPath);
+
+            const ua = navigator.userAgent || "";
+            const isAndroid = /android/i.test(ua);
+            const isIOS = /iPhone|iPad|iPod/i.test(ua);
+
+            if (isAndroid) {
+              window.location.href = `intent://${redirectPath}#Intent;scheme=boxstat;package=com.boxstat.app;S.browser_fallback_url=${encodeURIComponent(window.location.origin + redirectPath)};end`;
+            } else if (isIOS) {
+              let didLeave = false;
+              const onBlur = () => { didLeave = true; };
+              window.addEventListener("blur", onBlur);
+              const iframe = document.createElement("iframe");
+              iframe.style.display = "none";
+              iframe.src = deepLink;
+              document.body.appendChild(iframe);
+              setTimeout(() => {
+                window.removeEventListener("blur", onBlur);
+                document.body.removeChild(iframe);
+                if (!didLeave) fallback();
+              }, 1500);
+            } else {
+              fallback();
+            }
           }, 2000);
         } else {
           setStatus("error");

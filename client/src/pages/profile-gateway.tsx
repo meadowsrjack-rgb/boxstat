@@ -6,6 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, Shield, ChevronRight, Settings, LogOut, Crown, Bug, ArrowDown, X, Download } from "lucide-react";
 import { BanterLoader } from "@/components/BanterLoader";
+import appStoreBadge from "@assets/App_Store_1776216642840.png";
+import googlePlayBadge from "@assets/Google_Play_1776216642840.png";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -314,31 +316,33 @@ export default function ProfileGateway() {
           </div>
 
         {showAppBanner && (
-          <div className="mb-4 rounded-xl bg-gradient-to-r from-blue-600/20 to-blue-500/10 border border-blue-500/30 px-4 py-3 flex items-center gap-3" data-testid="gateway-app-download-banner">
-            <Download className="w-8 h-8 text-blue-400 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white">Get the BoxStat App</p>
-              <p className="text-xs text-gray-400 mt-0.5">For the best experience, download our free app.</p>
-              <a
-                href={getMobilePlatform() === 'ios' ? APP_STORE_URL : PLAY_STORE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block mt-2 text-xs font-semibold text-blue-400 underline"
+          <div className="mb-4 rounded-xl bg-gradient-to-r from-blue-600/20 to-blue-500/10 border border-blue-500/30 px-4 py-3" data-testid="gateway-app-download-banner">
+            <div className="flex items-center gap-3">
+              <Download className="w-8 h-8 text-blue-400 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white">Get the BoxStat App</p>
+                <p className="text-xs text-gray-400 mt-0.5">For the best experience, download our free app.</p>
+              </div>
+              <button
+                onClick={() => {
+                  localStorage.setItem(DISMISS_KEY, 'true');
+                  setShowAppBanner(false);
+                }}
+                className="p-1 text-gray-500 hover:text-white transition-colors flex-shrink-0"
+                aria-label="Dismiss app download prompt"
+                data-testid="button-dismiss-app-banner"
               >
-                {getMobilePlatform() === 'ios' ? 'Download on the App Store' : 'Get it on Google Play'}
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex items-center justify-center gap-3 mt-3">
+              <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
+                <img src={appStoreBadge} alt="Download on the App Store" className="h-[40px]" />
+              </a>
+              <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
+                <img src={googlePlayBadge} alt="Get it on Google Play" className="h-[40px]" />
               </a>
             </div>
-            <button
-              onClick={() => {
-                localStorage.setItem(DISMISS_KEY, 'true');
-                setShowAppBanner(false);
-              }}
-              className="p-1 text-gray-500 hover:text-white transition-colors flex-shrink-0"
-              aria-label="Dismiss app download prompt"
-              data-testid="button-dismiss-app-banner"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
         )}
 

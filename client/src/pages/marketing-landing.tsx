@@ -26,8 +26,9 @@ import {
   Check,
   Info
 } from "lucide-react";
-import { SiApple } from "react-icons/si";
 import darkThemeLogo from "@assets/darktheme_1768878672908.png";
+import appStoreBadge from "@assets/App_Store_1776216642840.png";
+import googlePlayBadge from "@assets/Google_Play_1776216642840.png";
 import uypLogo from "@assets/UYP Logo nback_1752703900579.png";
 import screenshot1 from "@assets/1_1768860806315.png";
 import screenshot2 from "@assets/2_1768860806316.png";
@@ -193,18 +194,23 @@ export default function MarketingLanding() {
           </div>
 
           {/* App Download */}
-          <div className="flex flex-col items-center gap-2 mt-12 mb-12 pt-[60px] pb-[60px]">
+          <div className="flex flex-wrap items-center justify-center gap-4 mt-12 mb-12 pt-[60px] pb-[60px]">
             <a 
               href="https://apps.apple.com/us/app/boxstat/id6754899159"
               target="_blank"
               rel="noopener noreferrer"
-              className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/10 border border-white/20 hover:bg-white/15 hover:border-white/30 transition-all duration-300"
+              className="hover:opacity-80 transition-opacity"
             >
-              <SiApple className="w-4 h-4" />
-              <span className="text-sm font-medium">Download for iOS</span>
-              <ChevronRight className="w-3 h-3 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
+              <img src={appStoreBadge} alt="Download on the App Store" className="h-[50px]" />
             </a>
-            <span className="text-xs text-gray-500">Android coming soon</span>
+            <a 
+              href="https://play.google.com/store/apps/details?id=com.boxstat.app&hl=en_US"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:opacity-80 transition-opacity"
+            >
+              <img src={googlePlayBadge} alt="Get it on Google Play" className="h-[50px]" />
+            </a>
           </div>
 
           {/* Currently Transforming Case Study */}

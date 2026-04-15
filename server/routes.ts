@@ -9725,10 +9725,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allowedHostPatterns = [
         /^calendar\.google\.com$/,
         /^[a-z0-9-]+\.calendar\.google\.com$/,
+        /^clients\d*\.google\.com$/,
+        /^www\.google\.com$/,
         /^outlook\.office365\.com$/,
         /^outlook\.live\.com$/,
         /^caldav\.icloud\.com$/,
         /^[a-z0-9-]+\.icloud\.com$/,
+        /^p\d+-caldav\.icloud\.com$/,
       ];
       const hostname = parsedUrl.hostname.toLowerCase();
 
@@ -9742,27 +9745,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const timeout = setTimeout(() => controller.abort(), 30000);
 
       try {
-        const response = await fetch(trimmedUrl, {
-          signal: controller.signal,
-          headers: { 'Accept': 'text/calendar, text/plain, */*' },
-          redirect: 'manual',
-        });
-        clearTimeout(timeout);
+        let fetchUrl = trimmedUrl;
+        let response: globalThis.Response | undefined;
+        const maxRedirects = 5;
 
-        if (response.status >= 300 && response.status < 400) {
-          const redirectUrl = response.headers.get('location');
-          if (redirectUrl) {
+        for (let hop = 0; hop <= maxRedirects; hop++) {
+          response = await fetch(fetchUrl, {
+            signal: controller.signal,
+            headers: { 'Accept': 'text/calendar, text/plain, */*' },
+            redirect: 'manual',
+          });
+
+          if (response.status >= 300 && response.status < 400) {
+            const redirectUrl = response.headers.get('location');
+            if (!redirectUrl) {
+              clearTimeout(timeout);
+              return res.status(400).json({ message: 'Calendar URL redirected but no location was provided.' });
+            }
+            let redirectParsed: URL;
             try {
-              const redirectParsed = new URL(redirectUrl, trimmedUrl);
-              const redirectHost = redirectParsed.hostname.toLowerCase();
-              if (!allowedHostPatterns.some(p => p.test(redirectHost))) {
-                return res.status(400).json({ message: 'Calendar URL redirected to an unsupported domain' });
-              }
+              redirectParsed = new URL(redirectUrl, fetchUrl);
             } catch {
+              clearTimeout(timeout);
               return res.status(400).json({ message: 'Calendar URL has an invalid redirect' });
             }
+            if (!['http:', 'https:'].includes(redirectParsed.protocol)) {
+              clearTimeout(timeout);
+              return res.status(400).json({ message: 'Calendar URL redirected to an unsupported protocol' });
+            }
+            const redirectHost = redirectParsed.hostname.toLowerCase();
+            if (!allowedHostPatterns.some(p => p.test(redirectHost))) {
+              clearTimeout(timeout);
+              return res.status(400).json({ message: 'Calendar URL redirected to an unsupported domain' });
+            }
+            fetchUrl = redirectParsed.href;
+            continue;
           }
-          return res.status(400).json({ message: 'Calendar URL redirected. Please use the final URL directly.' });
+          break;
+        }
+        clearTimeout(timeout);
+
+        if (!response) {
+          return res.status(400).json({ message: 'Failed to fetch calendar data' });
+        }
+
+        if (response.status >= 300 && response.status < 400) {
+          return res.status(400).json({ message: 'Too many redirects while fetching the calendar URL' });
         }
 
         if (!response.ok) {

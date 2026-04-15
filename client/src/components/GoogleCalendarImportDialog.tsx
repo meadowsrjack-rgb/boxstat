@@ -274,6 +274,14 @@ export function GoogleCalendarImportDialog() {
   };
 
   const processICalText = (text: string, source: string) => {
+    if (!text || typeof text !== "string") {
+      toast({
+        title: "Failed to parse calendar",
+        description: "No calendar data was received. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       const events = parseICalFile(text);
       if (events.length === 0) {
@@ -292,7 +300,8 @@ export function GoogleCalendarImportDialog() {
         title: `Found ${events.length} event${events.length !== 1 ? "s" : ""}`,
         description: "Select which events you'd like to import.",
       });
-    } catch {
+    } catch (err) {
+      console.error("[iCal parse error]", err, "content length:", text?.length, "starts with:", text?.substring(0, 100));
       toast({
         title: "Failed to parse calendar",
         description: "The data doesn't appear to be a valid iCal format.",
@@ -305,7 +314,15 @@ export function GoogleCalendarImportDialog() {
     mutationFn: async () => {
       const url = calendarUrl.trim();
       if (!url) throw new Error("Please enter a calendar URL");
-      return apiRequest("POST", "/api/ical/fetch-url", { url }) as Promise<{ content: string }>;
+      const result = await apiRequest("POST", "/api/ical/fetch-url", { url });
+      if (result && typeof result === "object" && "content" in result) {
+        return result as { content: string };
+      }
+      if (result instanceof Response) {
+        const json = await result.json();
+        return json as { content: string };
+      }
+      throw new Error("Unexpected response format from server");
     },
     onSuccess: (data) => {
       processICalText(data.content, "Calendar URL");

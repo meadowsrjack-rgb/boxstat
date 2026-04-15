@@ -10940,7 +10940,9 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                         <span className={`text-xs ${program.isActive !== false ? 'text-green-600' : 'text-gray-400'}`}>
                           {program.isActive !== false ? "Active" : "Inactive"}
                         </span>
-                        {program.visibility === 'members_only' ? (
+                        {program.tryoutEnabled ? (
+                          <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">Tryout</span>
+                        ) : program.visibility === 'members_only' ? (
                           <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Members Only</span>
                         ) : (
                           <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">Public</span>

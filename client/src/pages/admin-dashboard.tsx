@@ -127,6 +127,7 @@ import { TIMEZONE_OPTIONS, getBrowserTimezone, localDatetimeToUTC, utcToLocalDat
 import EventWindowsConfigurator from "@/components/EventWindowsConfigurator";
 import DateTimeRangePicker from "@/components/DateTimeRangePicker";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
+import { GoogleCalendarImportDialog } from "@/components/GoogleCalendarImportDialog";
 import { EditEventDialog } from "@/components/EditEventDialog";
 import type { EventWindow } from "@shared/schema";
 import EventDetailModal from "@/components/EventDetailModal";
@@ -5509,6 +5510,8 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
           <Button variant="outline" size="icon" title="Download Data" onClick={downloadEventsData} data-testid="button-download-events">
             <Download className="w-4 h-4" />
           </Button>
+
+          <GoogleCalendarImportDialog />
           
           <CreateEventDialog
             isOpen={isDialogOpen}

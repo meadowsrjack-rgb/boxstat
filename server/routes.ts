@@ -9697,6 +9697,193 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/ical/fetch-url', requireAuth, async (req: any, res) => {
+    try {
+      const { role, id: userId, organizationId } = req.user;
+      const isAdminUser = role === 'admin' || role === 'coach' || await hasAdminProfile(userId, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ message: 'Only admins and coaches can import events' });
+      }
+
+      const { url } = req.body;
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ message: 'A valid URL is required' });
+      }
+
+      const trimmedUrl = url.trim();
+      let parsedUrl: URL;
+      try {
+        parsedUrl = new URL(trimmedUrl);
+      } catch {
+        return res.status(400).json({ message: 'Invalid URL format' });
+      }
+
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        return res.status(400).json({ message: 'Only HTTP/HTTPS URLs are supported' });
+      }
+
+      const allowedHostPatterns = [
+        /^calendar\.google\.com$/,
+        /^[a-z0-9-]+\.calendar\.google\.com$/,
+        /^outlook\.office365\.com$/,
+        /^outlook\.live\.com$/,
+        /^caldav\.icloud\.com$/,
+        /^[a-z0-9-]+\.icloud\.com$/,
+      ];
+      const hostname = parsedUrl.hostname.toLowerCase();
+
+      if (!allowedHostPatterns.some(p => p.test(hostname))) {
+        return res.status(400).json({
+          message: 'Only calendar URLs from Google Calendar, Outlook, or iCloud are supported. Copy the iCal URL from your calendar settings, or use the file upload option instead.'
+        });
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+
+      try {
+        const response = await fetch(trimmedUrl, {
+          signal: controller.signal,
+          headers: { 'Accept': 'text/calendar, text/plain, */*' },
+          redirect: 'manual',
+        });
+        clearTimeout(timeout);
+
+        if (response.status >= 300 && response.status < 400) {
+          const redirectUrl = response.headers.get('location');
+          if (redirectUrl) {
+            try {
+              const redirectParsed = new URL(redirectUrl, trimmedUrl);
+              const redirectHost = redirectParsed.hostname.toLowerCase();
+              if (!allowedHostPatterns.some(p => p.test(redirectHost))) {
+                return res.status(400).json({ message: 'Calendar URL redirected to an unsupported domain' });
+              }
+            } catch {
+              return res.status(400).json({ message: 'Calendar URL has an invalid redirect' });
+            }
+          }
+          return res.status(400).json({ message: 'Calendar URL redirected. Please use the final URL directly.' });
+        }
+
+        if (!response.ok) {
+          return res.status(400).json({ message: `Failed to fetch calendar: HTTP ${response.status}` });
+        }
+
+        const chunks: Buffer[] = [];
+        let totalSize = 0;
+        const maxSize = 10 * 1024 * 1024;
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+          return res.status(400).json({ message: 'Failed to read response' });
+        }
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          totalSize += value.length;
+          if (totalSize > maxSize) {
+            reader.cancel();
+            return res.status(400).json({ message: 'Calendar file is too large (max 10MB)' });
+          }
+          chunks.push(Buffer.from(value));
+        }
+
+        const content = Buffer.concat(chunks).toString('utf-8');
+
+        if (!content.includes('BEGIN:VCALENDAR') && !content.includes('BEGIN:VEVENT')) {
+          return res.status(400).json({ message: 'The URL does not appear to contain calendar data. Make sure you\'re using an iCal (.ics) URL.' });
+        }
+
+        res.json({ content });
+      } catch (fetchError: any) {
+        clearTimeout(timeout);
+        if (fetchError.name === 'AbortError') {
+          return res.status(408).json({ message: 'Request timed out while fetching the calendar' });
+        }
+        return res.status(400).json({ message: `Could not fetch the calendar URL: ${fetchError.message}` });
+      }
+    } catch (error: any) {
+      console.error('Error fetching iCal URL:', error);
+      res.status(500).json({ message: error.message || 'Failed to fetch calendar' });
+    }
+  });
+
+  app.post('/api/ical/import', requireAuth, async (req: any, res) => {
+    try {
+      const { role, id: userId, organizationId } = req.user;
+      const isAdminUser = role === 'admin' || role === 'coach' || await hasAdminProfile(userId, organizationId);
+      if (!isAdminUser) {
+        return res.status(403).json({ message: 'Only admins and coaches can import events' });
+      }
+
+      const { events: icalEvents } = req.body;
+      if (!Array.isArray(icalEvents) || icalEvents.length === 0) {
+        return res.status(400).json({ message: 'events array is required' });
+      }
+      if (icalEvents.length > 500) {
+        return res.status(400).json({ message: 'Maximum 500 events per import' });
+      }
+
+      const { mapICalEventToAppEvent } = await import('./services/googleCalendar');
+
+      let successCount = 0;
+      let errorCount = 0;
+      const createdEvents: any[] = [];
+
+      const validParsed: any[] = [];
+      for (const ev of icalEvents) {
+        try {
+          if (!ev.title || typeof ev.title !== 'string') { errorCount++; continue; }
+          if (!ev.startTime || !ev.endTime) { errorCount++; continue; }
+          const start = new Date(ev.startTime);
+          const end = new Date(ev.endTime);
+          if (isNaN(start.getTime()) || isNaN(end.getTime())) { errorCount++; continue; }
+          if (end <= start) { errorCount++; continue; }
+
+          const mapped = mapICalEventToAppEvent(ev, organizationId, userId);
+          const parsed = insertEventSchema.parse(mapped);
+          validParsed.push(parsed);
+        } catch {
+          errorCount++;
+        }
+      }
+
+      if (validParsed.length === 0) {
+        return res.status(400).json({ message: 'No valid events to import' });
+      }
+
+      try {
+        const batchResult = await storage.createEventsBatch(validParsed);
+        createdEvents.push(...batchResult);
+        successCount = batchResult.length;
+      } catch (batchError) {
+        for (const parsed of validParsed) {
+          try {
+            const event = await storage.createEvent(parsed);
+            createdEvents.push(event);
+            successCount++;
+          } catch (e) {
+            errorCount++;
+          }
+        }
+      }
+
+      res.json({
+        success: true,
+        imported: successCount,
+        failed: errorCount,
+        events: createdEvents,
+      });
+    } catch (error: any) {
+      console.error('Error importing iCal events:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: 'Invalid event data', errors: error.errors });
+      }
+      res.status(500).json({ message: error.message || 'Failed to import events' });
+    }
+  });
+
   app.patch('/api/events/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;

@@ -650,7 +650,7 @@ export const teamMemberships = pgTable("team_memberships", {
   teamId: integer("team_id").notNull(),
   profileId: varchar("profile_id").notNull(), // User ID (player or coach)
   role: varchar().notNull().default('player'), // 'player', 'coach', 'assistant_coach', 'manager'
-  status: varchar().default('active'), // 'active', 'inactive', 'pending'
+  status: varchar().default('active'), // 'active', 'inactive', 'pending', 'tryout'
   jerseyNumber: integer("jersey_number"),
   position: varchar(),
   joinedAt: timestamp("joined_at", { mode: 'string' }).defaultNow(),

@@ -3308,7 +3308,7 @@ class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(schema.teamMemberships.teamId, teamIdNum),
-          inArray(schema.teamMemberships.status, ['active', 'restricted'])
+          inArray(schema.teamMemberships.status, ['active', 'restricted', 'tryout'])
         )
       );
     

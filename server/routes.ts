@@ -3100,75 +3100,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/tryout/available-sessions/:teamId', requireAuth, async (req: any, res) => {
-    try {
-      const { teamId } = req.params;
-      const events = await storage.getEventsByTeam(teamId);
-      const now = new Date();
-      const upcoming = events.filter((e: any) => {
-        const eventTime = new Date(e.startTime);
-        if (eventTime <= now) return false;
-        const eventType = (e.eventType || '').toLowerCase();
-        if (eventType === 'game') return false;
-        return true;
-      });
-      upcoming.sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-      res.json(upcoming.slice(0, 20));
-    } catch (error: any) {
-      console.error('Error fetching tryout sessions:', error);
-      res.status(500).json({ error: 'Failed to fetch available sessions' });
-    }
-  });
-
-  app.post('/api/tryout/schedule', requireAuth, async (req: any, res) => {
-    try {
-      const { enrollmentId, eventId } = req.body;
-      if (!enrollmentId || !eventId) {
-        return res.status(400).json({ error: 'enrollmentId and eventId are required' });
-      }
-
-      const enrollment = await db.select().from(productEnrollments).where(eq(productEnrollments.id, parseInt(enrollmentId))).then(r => r[0]);
-      if (!enrollment) {
-        return res.status(404).json({ error: 'Enrollment not found' });
-      }
-      if (!enrollment.isTryout) {
-        return res.status(400).json({ error: 'Only tryout enrollments can schedule tryout sessions' });
-      }
-      const userId = req.user.id;
-      const isOwner = enrollment.accountHolderId === userId || enrollment.profileId === userId;
-      if (!isOwner) {
-        return res.status(403).json({ error: 'Not authorized to schedule this tryout' });
-      }
-
-      const event = await storage.getEvent(eventId);
-      if (!event) {
-        return res.status(404).json({ error: 'Event not found' });
-      }
-      if (event.eventType === 'game') {
-        return res.status(400).json({ error: 'Cannot schedule tryout for a game event' });
-      }
-      const eventStart = new Date(event.startTime);
-      if (eventStart < new Date()) {
-        return res.status(400).json({ error: 'Cannot schedule tryout for a past event' });
-      }
-      const recommendedTeamId = (enrollment.metadata as any)?.recommendedTeamId;
-      if (recommendedTeamId && event.teamId && String(event.teamId) !== String(recommendedTeamId)) {
-        return res.status(400).json({ error: 'Event does not belong to the assigned team' });
-      }
-
-      const existingMeta = (enrollment.metadata as any) || {};
-      await db.update(productEnrollments)
-        .set({
-          metadata: { ...existingMeta, scheduledEventId: eventId, scheduledAt: new Date().toISOString() },
-        })
-        .where(eq(productEnrollments.id, parseInt(enrollmentId)));
-
-      res.json({ success: true, scheduledEventId: eventId, eventTitle: event.title, eventStartTime: event.startTime });
-    } catch (error: any) {
-      console.error('Error scheduling tryout:', error);
-      res.status(500).json({ error: 'Failed to schedule tryout session' });
-    }
-  });
+  // Tryout schedule endpoints removed — tryout players are now auto-added to the team roster
+  // and see team events on their calendar like any regular member.
 
   // Payment success callback (for when webhooks don't fire in test mode)
   app.post('/api/payments/verify-session', requireAuth, async (req: any, res) => {
@@ -3500,6 +3433,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
               paymentWasProcessed = true;
             }
 
+            if (recTeamId) {
+              try {
+                const recTeam = await storage.getTeam(String(recTeamId));
+                if (recTeam && String(recTeam.programId) === String(program?.id)) {
+                  await db.insert(teamMemberships).values({
+                    teamId: recTeamId,
+                    profileId,
+                    role: 'player',
+                    status: 'tryout',
+                  }).onConflictDoUpdate({
+                    target: [teamMemberships.teamId, teamMemberships.profileId],
+                    set: { status: 'tryout', leftAt: null },
+                  });
+                  console.log(`✅ Added tryout player ${profileId} to team ${recTeamId} roster`);
+                } else {
+                  console.warn(`⚠️ Skipped tryout membership: team ${recTeamId} not found or not in program`);
+                }
+              } catch (tmError: any) {
+                console.error('⚠️ Tryout team membership creation failed (non-fatal):', tmError.message);
+              }
+            }
+
             if (paymentWasProcessed) {
               console.log(`✅ Created tryout enrollment for ${profileId} in ${programId}`);
               try {
@@ -3639,6 +3594,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
               });
               console.log(`✅ Created tryout enrollment via verify-session for ${profileId} in ${programId}`);
               paymentWasProcessed = true;
+            }
+
+            if (recTeamId) {
+              try {
+                const recTeam = await storage.getTeam(String(recTeamId));
+                if (recTeam && String(recTeam.programId) === String(program?.id)) {
+                  await db.insert(teamMemberships).values({
+                    teamId: recTeamId,
+                    profileId,
+                    role: 'player',
+                    status: 'tryout',
+                  }).onConflictDoUpdate({
+                    target: [teamMemberships.teamId, teamMemberships.profileId],
+                    set: { status: 'tryout', leftAt: null },
+                  });
+                  console.log(`✅ Added tryout player ${profileId} to team ${recTeamId} roster (verify-session)`);
+                } else {
+                  console.warn(`⚠️ Skipped tryout membership: team ${recTeamId} not found or not in program`);
+                }
+              } catch (tmError: any) {
+                console.error('⚠️ Tryout team membership creation failed (non-fatal):', tmError.message);
+              }
             }
 
             const enrollments = await db.select().from(productEnrollments).where(
@@ -6156,16 +6133,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const activeMemberships = await db.select({
       profileId: teamMemberships.profileId,
       teamId: teamMemberships.teamId,
+      status: teamMemberships.status,
     })
       .from(teamMemberships)
-      .where(eq(teamMemberships.status, 'active'));
+      .where(inArray(teamMemberships.status, ['active', 'tryout']));
     
     // Group memberships by profileId
     const membershipsByUser = new Map<string, number[]>();
+    const tryoutMembershipSet = new Set<string>();
     for (const m of activeMemberships) {
       const existing = membershipsByUser.get(m.profileId) || [];
       existing.push(m.teamId);
       membershipsByUser.set(m.profileId, existing);
+      if (m.status === 'tryout') {
+        tryoutMembershipSet.add(`${m.profileId}-${m.teamId}`);
+      }
     }
     
     // Separate players from non-players
@@ -6195,8 +6177,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamName: team.name,
           programId: team.programId,
           programName: program?.name || null,
+          isTryout: tryoutMembershipSet.has(`${player.id}-${teamId}`),
         };
       }).filter(Boolean);
+      
+      const hasTryoutMembership = activeTeams.some((t: any) => t?.isTryout);
       
       return {
         ...player,
@@ -6205,6 +6190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lowBalance: statusTag.lowBalance,
         teamIds: activeTeamIds,
         activeTeams,
+        isTryout: hasTryoutMembership,
       };
     });
     
@@ -7686,6 +7672,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return status as 'grace_period' | 'expired';
       };
 
+      const tryoutMemberships = await db.select({ profileId: teamMemberships.profileId })
+        .from(teamMemberships)
+        .where(and(
+          eq(teamMemberships.teamId, parseInt(teamId)),
+          eq(teamMemberships.status, 'tryout')
+        ));
+      const tryoutProfileIds = new Set(tryoutMemberships.map(m => m.profileId));
+
       // Add app users
       for (const user of appUsers) {
         roster.push({
@@ -7702,6 +7696,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           flaggedForRosterChange: user.flaggedForRosterChange || false,
           flagReason: user.flagReason || null,
           enrollmentTag: getEnrollmentTag(user.id),
+          isTryout: tryoutProfileIds.has(user.id),
         });
       }
       
@@ -8128,10 +8123,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (team?.programId) programIds.push(team.programId);
         }
         
-        // Also check team_memberships table for active memberships
+        // Also check team_memberships table for active/tryout memberships
         const memberships = await storage.getTeamMembershipsByProfile(childProfileId);
         for (const membership of memberships) {
-          if (membership.status === 'active' && membership.teamId) {
+          if ((membership.status === 'active' || membership.status === 'tryout') && membership.teamId) {
             teamIds.push(membership.teamId);
             const team = await storage.getTeam(String(membership.teamId));
             if (team?.programId) programIds.push(team.programId);
@@ -8159,10 +8154,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (team?.programId) programIds.push(team.programId);
         }
         
-        // Also check team_memberships table for active memberships
+        // Also check team_memberships table for active/tryout memberships
         const childMemberships = await storage.getTeamMembershipsByProfile(child.id);
         for (const membership of childMemberships) {
-          if (membership.status === 'active' && membership.teamId) {
+          if ((membership.status === 'active' || membership.status === 'tryout') && membership.teamId) {
             teamIds.push(membership.teamId);
             const team = await storage.getTeam(String(membership.teamId));
             if (team?.programId) programIds.push(team.programId);
@@ -8211,10 +8206,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (team?.programId) programIds.push(team.programId);
         }
         
-        // Also check team_memberships table for active memberships
+        // Also check team_memberships table for active/tryout memberships
         const memberships = await storage.getTeamMembershipsByProfile(userId);
         for (const membership of memberships) {
-          if (membership.status === 'active' && membership.teamId) {
+          if ((membership.status === 'active' || membership.status === 'tryout') && membership.teamId) {
             teamIds.push(membership.teamId);
             const team = await storage.getTeam(String(membership.teamId));
             if (team?.programId) programIds.push(team.programId);
@@ -13101,74 +13096,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const targetDate = date ? new Date(date as string) : new Date();
       const orgId = program.organizationId;
       
-      // Check if the requesting player has a tryout enrollment with a recommended team
-      let checkPlayerId = req.user.id;
-      if (queryPlayerId && queryPlayerId !== req.user.id) {
-        // Verify the requesting user owns or manages the specified player
-        const queriedPlayer = await storage.getUser(queryPlayerId as string);
-        const isOwned = queriedPlayer &&
-          ((queriedPlayer as any).parentId === req.user.id ||
-           (queriedPlayer as any).guardianId === req.user.id ||
-           (queriedPlayer as any).accountHolderId === req.user.id);
-        if (isOwned) {
-          checkPlayerId = queryPlayerId as string;
-        }
-        // If not owned, silently fall back to the requesting user's own context
-      }
-      const playerEnrollments = await storage.getActiveEnrollmentsWithCredits(checkPlayerId);
-      const tryoutEnrollment = playerEnrollments.find((e: any) => e.programId === programId && e.isTryout === true);
-      const recommendedTeamId = tryoutEnrollment?.recommendedTeamId ?? null;
-
       // Get all events for this organization
       const allEvents = await storage.getEventsByOrganization(orgId);
 
-      // For tryout players with a recommended team: return team's upcoming practice/skills events
-      // as selectable slots within the next 30 days (not game events, not past events)
-      if (recommendedTeamId && tryoutEnrollment) {
-        const now = new Date();
-        const thirtyDaysOut = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-        const NON_GAME_TYPES = ['practice', 'skills', 'training', 'skill', 'clinic', 'workout'];
-        
-        const teamEvents = allEvents.filter((event: any) => {
-          if (event.teamId !== recommendedTeamId) return false;
-          if (event.isActive === false || event.status === 'cancelled') return false;
-          const eventStart = new Date(event.startTime);
-          if (eventStart <= now || eventStart > thirtyDaysOut) return false;
-          // Exclude game events
-          const type = (event.eventType || event.type || '').toLowerCase();
-          if (type === 'game') return false;
-          // Only include practice/skills events (if type is set), otherwise include non-game events
-          if (type && !NON_GAME_TYPES.some(t => type.includes(t))) return false;
-          return true;
-        });
-
-        // Sort by start time
-        teamEvents.sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-
-        // Convert team events to selectable slots (all available by default for tryout)
-        const slots: Array<{ startTime: string; endTime: string; available: boolean; eventTitle?: string; eventId?: number; eventType?: string }> = 
-          teamEvents.map((event: any) => ({
-            startTime: event.startTime,
-            endTime: event.endTime,
-            available: true,
-            eventTitle: event.title,
-            eventId: event.id,
-            eventType: event.eventType || event.type || 'practice',
-          }));
-
-        return res.json({
-          programId,
-          programName: program.name,
-          sessionLengthMinutes: sessionLength,
-          date: targetDate.toISOString().split('T')[0],
-          slots,
-          blockedEvents: [],
-          isTryoutMode: true,
-          recommendedTeamId,
-        });
-      }
-
-      // Non-tryout path: use admin-defined availability windows
+      // Use admin-defined availability windows
       const availabilitySlots = await storage.getAvailabilitySlotsByProgram(programId);
       const dayOfWeek = targetDate.getDay(); // 0=Sunday, 6=Saturday
       
@@ -13324,75 +13255,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create recurring weekly sessions for all available credits
       const createdEvents: any[] = [];
       const skippedWeeks: string[] = [];
-      // Tryout enrollments book into existing team events — no generic conflict checking
-      const isTryoutEnrollment = !!(enrollment.isTryout && enrollment.recommendedTeamId);
       const availabilitySlots = await storage.getAvailabilitySlotsByProgram(programId);
-
-      // For tryout enrollments: validate the submitted startTime matches an eligible
-      // practice/skills/training team event (non-game, within 30 days) for the recommended team
-      if (isTryoutEnrollment) {
-        const now = new Date();
-        const thirtyDaysOut = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-        const NON_GAME_TYPES = ['practice', 'skills', 'training', 'skill', 'clinic', 'workout'];
-        const submittedStart = new Date(startTime);
-        const recommendedTeamId = enrollment.recommendedTeamId;
-        const eligibleEvent = allOrgEvents.find((event: any) => {
-          if (event.teamId !== recommendedTeamId) return false;
-          if (event.isActive === false || event.status === 'cancelled') return false;
-          const eventStart = new Date(event.startTime);
-          if (eventStart <= now || eventStart > thirtyDaysOut) return false;
-          const type = (event.eventType || event.type || '').toLowerCase();
-          if (type === 'game') return false;
-          if (type && !NON_GAME_TYPES.some(t => type.includes(t))) return false;
-          // Match by startTime (within 1 minute tolerance)
-          return Math.abs(eventStart.getTime() - submittedStart.getTime()) < 60000;
-        });
-        if (!eligibleEvent) {
-          return res.status(400).json({ error: 'Selected time does not match an eligible upcoming team practice or skills session.' });
-        }
-      }
       
       for (let week = 0; week < creditsToBook; week++) {
         const sessionStart = new Date(new Date(startTime).getTime() + week * 7 * 24 * 60 * 60 * 1000);
         const sessionEnd = new Date(sessionStart.getTime() + sessionLength * 60 * 1000);
         
-        // For tryout enrollments: skip availability window and conflict checks — the selected
-        // slot is an existing team practice/skills event so there's no window constraint and
-        // the "conflict" would be the event itself. Just book one session (no recurring).
-        if (!isTryoutEnrollment) {
-          // Validate this week falls within admin-defined availability windows (non-tryout only)
-          const dayOfWeek = sessionStart.getDay();
-          const sessionHour = sessionStart.getHours();
-          const sessionMinute = sessionStart.getMinutes();
-          const sessionTimeStr = `${String(sessionHour).padStart(2, '0')}:${String(sessionMinute).padStart(2, '0')}`;
-          const endHour = sessionEnd.getHours();
-          const endMinute = sessionEnd.getMinutes();
-          const endTimeStr = `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`;
-          
-          if (availabilitySlots.length > 0) {
-            const dayWindows = availabilitySlots.filter((s: any) => s.dayOfWeek === dayOfWeek);
-            const fitsWindow = dayWindows.some((w: any) => sessionTimeStr >= w.startTime && endTimeStr <= w.endTime);
-            if (!fitsWindow) {
-              skippedWeeks.push(sessionStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-              continue;
-            }
-          }
-          
-          // Check for conflicts with existing events AND already-created events in this batch
-          const hasConflict = allOrgEvents.some((event: any) => {
-            const eventStart = new Date(event.startTime);
-            const eventEnd = new Date(event.endTime);
-            return sessionStart < eventEnd && sessionEnd > eventStart && event.isActive !== false && event.status !== 'cancelled';
-          }) || createdEvents.some((event: any) => {
-            const eventStart = new Date(event.startTime);
-            const eventEnd = new Date(event.endTime);
-            return sessionStart < eventEnd && sessionEnd > eventStart;
-          });
-          
-          if (hasConflict) {
+        const dayOfWeek = sessionStart.getDay();
+        const sessionHour = sessionStart.getHours();
+        const sessionMinute = sessionStart.getMinutes();
+        const sessionTimeStr = `${String(sessionHour).padStart(2, '0')}:${String(sessionMinute).padStart(2, '0')}`;
+        const endHour = sessionEnd.getHours();
+        const endMinute = sessionEnd.getMinutes();
+        const endTimeStr = `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`;
+        
+        if (availabilitySlots.length > 0) {
+          const dayWindows = availabilitySlots.filter((s: any) => s.dayOfWeek === dayOfWeek);
+          const fitsWindow = dayWindows.some((w: any) => sessionTimeStr >= w.startTime && endTimeStr <= w.endTime);
+          if (!fitsWindow) {
             skippedWeeks.push(sessionStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
             continue;
           }
+        }
+        
+        const hasConflict = allOrgEvents.some((event: any) => {
+          const eventStart = new Date(event.startTime);
+          const eventEnd = new Date(event.endTime);
+          return sessionStart < eventEnd && sessionEnd > eventStart && event.isActive !== false && event.status !== 'cancelled';
+        }) || createdEvents.some((event: any) => {
+          const eventStart = new Date(event.startTime);
+          const eventEnd = new Date(event.endTime);
+          return sessionStart < eventEnd && sessionEnd > eventStart;
+        });
+        
+        if (hasConflict) {
+          skippedWeeks.push(sessionStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+          continue;
         }
 
         const newEvent = await storage.createEvent({
@@ -13419,8 +13317,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requestedByUserId: userId,
           enrollmentId: enrollment.id,
           programId: programId,
-          // For tryout enrollments, tag event with the recommended team
-          ...(enrollment.isTryout && enrollment.recommendedTeamId ? { teamId: enrollment.recommendedTeamId } : {}),
         } as any);
         
         createdEvents.push(newEvent);

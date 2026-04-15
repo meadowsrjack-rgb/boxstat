@@ -1647,8 +1647,6 @@ export default function UnifiedAccount() {
   const [tryoutRecommendedTeam, setTryoutRecommendedTeam] = useState<any | null>(null);
   const [tryoutMatchingTeams, setTryoutMatchingTeams] = useState<any[]>([]);
   const [tryoutIsFallback, setTryoutIsFallback] = useState(false);
-  const [tryoutScheduleDialogOpen, setTryoutScheduleDialogOpen] = useState(false);
-  const [tryoutScheduleData, setTryoutScheduleData] = useState<{ enrollmentId: number; programId: string; teamId: string } | null>(null);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [signedWaivers, setSignedWaivers] = useState<Record<string, boolean>>({});
   const [waiverScrollStatus, setWaiverScrollStatus] = useState<Record<string, boolean>>({});
@@ -1844,14 +1842,6 @@ export default function UnifiedAccount() {
           })
             .then(data => {
               console.log('[Payment] verify-session result:', data);
-              if (data?.success && data?.tryoutData) {
-                setTryoutScheduleData({
-                  enrollmentId: data.tryoutData.enrollmentId,
-                  programId: data.tryoutData.programId,
-                  teamId: data.tryoutData.recommendedTeamId || '',
-                });
-                setTryoutScheduleDialogOpen(true);
-              }
               if (data?.success && isIOSRedirect) {
                 console.log('[iOS Payment] Redirecting to profile gateway...');
                 setTimeout(() => {
@@ -3932,137 +3922,8 @@ export default function UnifiedAccount() {
         onOpenChange={(open) => { setCoachProfileOpen(open); if (!open) setCoachProfileId(null); }}
       />
 
-      {tryoutScheduleDialogOpen && tryoutScheduleData && (
-        <TryoutScheduleDialog
-          enrollmentId={tryoutScheduleData.enrollmentId}
-          programId={tryoutScheduleData.programId}
-          teamId={tryoutScheduleData.teamId}
-          onClose={() => { setTryoutScheduleDialogOpen(false); setTryoutScheduleData(null); }}
-        />
-      )}
-
       </div>
     </>
-  );
-}
-
-function TryoutScheduleDialog({ enrollmentId, programId, teamId, onClose }: {
-  enrollmentId: number;
-  programId: string;
-  teamId: string;
-  onClose: () => void;
-}) {
-  const [selectedEventId, setSelectedEventId] = useState<string>("");
-  const [isScheduling, setIsScheduling] = useState(false);
-  const { toast } = useToast();
-
-  const { data: availableSessions = [], isLoading } = useQuery<any[]>({
-    queryKey: ['/api/tryout/available-sessions', teamId],
-    queryFn: async () => {
-      const token = localStorage.getItem('authToken');
-      const headers: Record<string, string> = {};
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch(`/api/tryout/available-sessions/${teamId}`, { headers, credentials: "include" });
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!teamId,
-  });
-
-  const { data: programData } = useQuery<any>({
-    queryKey: ['/api/programs', programId],
-  });
-
-  const handleSchedule = async () => {
-    if (!selectedEventId) return;
-    setIsScheduling(true);
-    try {
-      await apiRequest('/api/tryout/schedule', {
-        method: 'POST',
-        data: { enrollmentId, eventId: selectedEventId },
-      });
-      toast({ title: "Tryout Scheduled!", description: "Your tryout session has been booked." });
-      onClose();
-    } catch (error: any) {
-      toast({ title: "Scheduling Failed", description: error.message || "Could not schedule tryout.", variant: "destructive" });
-    } finally {
-      setIsScheduling(false);
-    }
-  };
-
-  const formatSessionTime = (startTime: string, endTime: string) => {
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    const dateStr = start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    const startStr = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    const endStr = end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    return { dateStr, timeStr: `${startStr} - ${endStr}` };
-  };
-
-  return (
-    <Dialog open={true} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-bold">Schedule Your Tryout</DialogTitle>
-          <DialogDescription>
-            Pick a session time for your {programData?.name || 'program'} tryout
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3 py-2 max-h-[50vh] overflow-y-auto">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-              <span className="ml-2 text-sm text-gray-500">Loading available sessions...</span>
-            </div>
-          ) : availableSessions.length === 0 ? (
-            <div className="text-center py-6">
-              <CalendarCheck className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-gray-500">No upcoming sessions available for this team yet.</p>
-              <p className="text-xs text-gray-400 mt-1">Check back later or contact the organization.</p>
-            </div>
-          ) : (
-            availableSessions.map((session: any) => {
-              const { dateStr, timeStr } = formatSessionTime(session.startTime, session.endTime);
-              const isSelected = selectedEventId === String(session.id);
-              return (
-                <div
-                  key={session.id}
-                  onClick={() => setSelectedEventId(String(session.id))}
-                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                    isSelected ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-sm">{session.title}</p>
-                      <p className="text-xs text-gray-500">{dateStr} · {timeStr}</p>
-                      {session.location && <p className="text-xs text-gray-400 mt-0.5">{session.location}</p>}
-                    </div>
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      isSelected ? 'border-red-500 bg-red-500' : 'border-gray-300'
-                    }`}>
-                      {isSelected && <Check className="w-3 h-3 text-white" />}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-        <div className="flex gap-3 pt-2">
-          <Button variant="outline" className="flex-1" onClick={onClose}>
-            Skip for Now
-          </Button>
-          <Button
-            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-            disabled={!selectedEventId || isScheduling}
-            onClick={handleSchedule}
-          >
-            {isScheduling ? "Scheduling..." : "Schedule Tryout"}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }
 

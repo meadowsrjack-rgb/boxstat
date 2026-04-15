@@ -14408,6 +14408,7 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
                           <div className="flex flex-wrap gap-1.5">
                             {editingTeamPlayers.map((p: any) => {
                               const enrollTag = getPlayerEnrollmentTag(p.id, editingTeam);
+                              const playerIsTryout = (p.activeTeams || []).some((t: any) => t?.teamId === editingTeam?.id && t?.isTryout);
                               return (
                                 <button
                                   key={p.id}
@@ -14415,6 +14416,9 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
                                   className="inline-flex items-center gap-1 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium hover:bg-red-100 hover:text-red-700 transition-colors group"
                                 >
                                   {p.firstName} {p.lastName}
+                                  {playerIsTryout && (
+                                    <span className="ml-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-purple-200 text-purple-800 group-hover:bg-purple-200 group-hover:text-purple-800">Tryout</span>
+                                  )}
                                   {enrollTag === 'grace_period' && (
                                     <span className="ml-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-amber-200 text-amber-800 group-hover:bg-amber-200 group-hover:text-amber-800">Grace Period</span>
                                   )}

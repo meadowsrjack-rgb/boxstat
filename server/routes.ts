@@ -6260,11 +6260,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[PATCH] Player ${userId}: current teams=${JSON.stringify(currentTeamIds)}, new teams=${JSON.stringify(newTeamIds)}`);
         
         // Verify enrollment for all new teams BEFORE making any changes
+        // Build a set of programIds being enrolled in this same request (unified flow)
+        const programIdsBeingEnrolled = new Set<string>(
+          (updateData.enrollmentsToAdd || []).map((item: any) =>
+            typeof item === 'object' ? item.programId : String(item)
+          )
+        );
+
         for (const newTeamId of newTeamIds) {
           if (currentTeamIds.includes(newTeamId)) continue;
           const team = await storage.getTeam(String(newTeamId));
           if (team && team.programId) {
-            const accountHolderId = user.accountHolderId || userId;
+            // Skip check if the enrollment is being created in this same request (unified flow)
+            if (programIdsBeingEnrolled.has(team.programId)) continue;
+
             const existingEnrollment = await db.select({ id: productEnrollments.id })
               .from(productEnrollments)
               .where(
@@ -6494,8 +6503,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       const accountHolderId = user?.accountHolderId || userId;
       
-      for (const programId of updateData.enrollmentsToAdd) {
-        console.log(`[PATCH] Adding enrollment for user ${userId} in program ${programId}`);
+      for (const enrollmentItem of updateData.enrollmentsToAdd) {
+        // Support both legacy format (plain programId string) and new unified format (object)
+        const programId: string = typeof enrollmentItem === 'object' ? enrollmentItem.programId : String(enrollmentItem);
+        const teamId: number | null = typeof enrollmentItem === 'object' && enrollmentItem.teamId ? parseInt(String(enrollmentItem.teamId), 10) : null;
+        const endDate: string | null = typeof enrollmentItem === 'object' && enrollmentItem.endDate ? enrollmentItem.endDate : null;
+
+        console.log(`[PATCH] Adding enrollment for user ${userId} in program ${programId}${teamId ? ` + team ${teamId}` : ''}${endDate ? ` expiry ${endDate}` : ''}`);
         
         // Check if enrollment already exists
         const existingEnrollment = await db.select({ id: productEnrollments.id })
@@ -6518,8 +6532,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
               profileId: userId,
               status: 'active',
               source: 'admin',
+              ...(endDate ? { endDate: new Date(endDate) } : {}),
             });
           console.log(`[PATCH] Created enrollment for user ${userId} in program ${programId}`);
+        } else if (endDate) {
+          // Update end date on existing enrollment if provided
+          await db.update(productEnrollments)
+            .set({ endDate: new Date(endDate) })
+            .where(eq(productEnrollments.id, existingEnrollment[0].id));
+        }
+
+        // If a teamId was specified in the unified flow, create the team membership now
+        if (teamId && !isNaN(teamId)) {
+          try {
+            await db.insert(teamMemberships)
+              .values({
+                teamId: teamId,
+                profileId: userId,
+                role: 'player',
+                status: 'active',
+              })
+              .onConflictDoUpdate({
+                target: [teamMemberships.teamId, teamMemberships.profileId],
+                set: { status: 'active', role: 'player' },
+              });
+            console.log(`[PATCH] Created team membership for user ${userId} in team ${teamId} (via unified enrollment flow)`);
+
+            // Also add parent to team if applicable
+            if (user?.parentId && user.parentId !== userId) {
+              await db.insert(teamMemberships)
+                .values({
+                  teamId: teamId,
+                  profileId: user.parentId,
+                  role: 'parent',
+                  status: 'active',
+                })
+                .onConflictDoUpdate({
+                  target: [teamMemberships.teamId, teamMemberships.profileId],
+                  set: { status: 'active' },
+                });
+            }
+          } catch (err) {
+            console.error(`[PATCH] Failed to create team membership for user ${userId} in team ${teamId}:`, err);
+          }
         }
       }
     }
@@ -6579,6 +6634,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     delete updateData.statusTag;
     delete updateData.remainingCredits;
     delete updateData.lowBalance;
+    delete updateData.addEnrollmentMode;
+    delete updateData.addEnrollmentProgramId;
+    delete updateData.addEnrollmentTeamId;
+    delete updateData.addEnrollmentEndDate;
     
     // Sync userType with role to ensure consistency
     if (updateData.role) {

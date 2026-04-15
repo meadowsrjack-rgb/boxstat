@@ -3387,25 +3387,6 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       </div>
                     ) : (
                     (() => {
-                      // Use teamIds from the user data (now populated from active team memberships)
-                      const teamIds = Array.isArray(editingUser.teamIds) ? editingUser.teamIds : 
-                                     editingUser.teamId ? [editingUser.teamId] : [];
-                      
-                      // Use activeTeams from API for display (includes team/program names)
-                      const activeTeams = editingUser.activeTeams || [];
-                      
-                      // Group teams by program
-                      const teamsByProgram = programs?.reduce((acc: any, program: any) => {
-                        acc[program.id] = {
-                          program,
-                          teams: teams?.filter((t: any) => t.programId === program.id) || []
-                        };
-                        return acc;
-                      }, {}) || {};
-                      
-                      // Teams without a program
-                      const teamsWithoutProgram = teams?.filter((t: any) => !t.programId) || [];
-                      
                       // Program enrollments (from productEnrollments table)
                       const originalEnrollments = editingUserProgramMemberships || [];
                       // Use pendingEnrollments for display if there are local changes
@@ -3423,7 +3404,12 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                     <div className="flex items-center justify-between mb-1">
                                       <div className="flex items-center gap-2">
                                         <span className="text-sm font-medium">{enrollment.programName}</span>
-                                        {enrollment.teams?.length > 0 && (
+                                        {enrollment.teamName && (
+                                          <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+                                            {enrollment.teamName}
+                                          </span>
+                                        )}
+                                        {!enrollment.teamName && enrollment.teams?.length > 0 && (
                                           <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
                                             {enrollment.teams.length} team{enrollment.teams.length > 1 ? 's' : ''}
                                           </span>
@@ -3438,10 +3424,18 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                             const programTeamIds = (teams?.filter((t: any) => t.programId === enrollment.programId) || []).map((t: any) => t.id);
                                             const newTeamIds = (Array.isArray(editingUser.teamIds) ? editingUser.teamIds : editingUser.teamId ? [editingUser.teamId] : []).filter((id: number) => !programTeamIds.includes(id));
                                             const newActiveTeams = (editingUser.activeTeams || []).filter((a: any) => !programTeamIds.includes(a.teamId));
+                                            const newEnrollmentsToAdd = enrollment.isNew
+                                              ? (editingUser.enrollmentsToAdd || []).filter((item: any) =>
+                                                  (typeof item === 'object' ? item.programId : item) !== enrollment.programId
+                                                )
+                                              : editingUser.enrollmentsToAdd;
                                             setEditingUser({
                                               ...editingUser,
-                                              enrollmentsToRemove: [...(editingUser.enrollmentsToRemove || []), enrollment.enrollmentId],
+                                              enrollmentsToRemove: enrollment.isNew
+                                                ? (editingUser.enrollmentsToRemove || [])
+                                                : [...(editingUser.enrollmentsToRemove || []), enrollment.enrollmentId],
                                               pendingEnrollments: (editingUser.pendingEnrollments || programEnrollments).filter((e: any) => e.enrollmentId !== enrollment.enrollmentId),
+                                              enrollmentsToAdd: newEnrollmentsToAdd,
                                               teamIds: newTeamIds,
                                               teamId: newTeamIds[0] || null,
                                               activeTeams: newActiveTeams
@@ -3534,6 +3528,25 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                             }}
                                           />
                                         </div>
+                                        <div>
+                                          <label className="text-[10px] text-gray-500 uppercase">Expiry Date</label>
+                                          <input
+                                            type="date"
+                                            className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-full"
+                                            value={enrollment.endDate || ''}
+                                            onChange={(e) => {
+                                              const updated = (editingUser.pendingEnrollments || programEnrollments).map((en: any) =>
+                                                en.enrollmentId === enrollment.enrollmentId ? { ...en, endDate: e.target.value || null } : en
+                                              );
+                                              const updatedToAdd = (editingUser.enrollmentsToAdd || []).map((item: any) =>
+                                                (typeof item === 'object' ? item.programId : item) === enrollment.programId
+                                                  ? { ...(typeof item === 'object' ? item : { programId: item }), endDate: e.target.value || null }
+                                                  : item
+                                              );
+                                              setEditingUser({ ...editingUser, pendingEnrollments: updated, enrollmentsToAdd: updatedToAdd });
+                                            }}
+                                          />
+                                        </div>
                                       </div>
                                     )}
                                   </div>
@@ -3542,213 +3555,180 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                             </div>
                           )}
                           
-                          {/* Enroll in Program Section */}
-                          <div className="mt-2">
-                            <p className="text-xs font-semibold text-gray-600 mb-2">Enroll in Program:</p>
-                            <div className="border rounded-md max-h-32 overflow-y-auto">
-                              {programs?.filter((p: any) => 
-                                p.productCategory === 'service' && 
-                                !(editingUser.pendingEnrollments || programEnrollments).some((e: any) => e.programId === p.id)
-                              ).map((program: any) => (
-                                <div key={program.id} className="flex items-center justify-between px-3 py-2 border-b last:border-b-0 hover:bg-gray-50">
-                                  <span className="text-sm">{program.name}</span>
-                                  <button
-                                    type="button"
-                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                    onClick={() => {
-                                      // Add enrollment to pending
-                                      const newEnrollment = {
-                                        enrollmentId: `new-${program.id}`,
-                                        programId: program.id,
-                                        programName: program.name,
-                                        status: 'active',
-                                        teams: [],
-                                        isNew: true
-                                      };
-                                      setEditingUser({
+                          {/* Unified Add Enrollment Flow */}
+                          {(() => {
+                            const availablePrograms = programs?.filter((p: any) =>
+                              p.productCategory === 'service' &&
+                              !(editingUser.pendingEnrollments || programEnrollments).some((e: any) => e.programId === p.id)
+                            ) || [];
+                            const selectedProgram = programs?.find((p: any) => p.id === editingUser.addEnrollmentProgramId) || null;
+                            const programTeamsForFlow = selectedProgram
+                              ? (teams?.filter((t: any) => t.programId === selectedProgram.id) || [])
+                              : [];
+
+                            if (editingUser.addEnrollmentMode) {
+                              return (
+                                <div className="mt-2 border border-blue-200 rounded-md p-3 bg-blue-50 space-y-3" data-testid="add-enrollment-form">
+                                  <p className="text-xs font-semibold text-blue-700">Add Enrollment</p>
+
+                                  {/* Step 1: Program picker */}
+                                  <div>
+                                    <label className="text-xs text-gray-600 mb-1 block">Program</label>
+                                    <select
+                                      className="w-full text-sm border border-gray-200 rounded px-2 py-1.5 bg-white"
+                                      value={editingUser.addEnrollmentProgramId || ''}
+                                      onChange={(e) => setEditingUser({
                                         ...editingUser,
-                                        pendingEnrollments: [...(editingUser.pendingEnrollments || programEnrollments), newEnrollment],
-                                        enrollmentsToAdd: [...(editingUser.enrollmentsToAdd || []), program.id]
-                                      });
-                                    }}
-                                    data-testid={`button-enroll-${program.id}`}
-                                  >
-                                    + Enroll
-                                  </button>
-                                </div>
-                              ))}
-                              {programs?.filter((p: any) => 
-                                p.productCategory === 'service' && 
-                                !(editingUser.pendingEnrollments || programEnrollments).some((e: any) => e.programId === p.id)
-                              ).length === 0 && (
-                                <p className="text-xs text-gray-500 px-3 py-2">Already enrolled in all available programs</p>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {/* Current Team Assignments - Clear display of what teams user is on */}
-                          {activeTeams.length > 0 ? (
-                            <div className="bg-green-50 border border-green-200 rounded-md p-3" data-testid="current-assignments">
-                              <p className="text-xs font-semibold text-green-700 mb-2">Team Assignments ({activeTeams.length}):</p>
-                              <div className="space-y-1">
-                                {activeTeams.map((assignment: any) => (
-                                  <div key={assignment.teamId} className="flex items-center justify-between bg-white border border-green-100 rounded px-2 py-1.5">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-sm font-medium">{assignment.teamName}</span>
-                                      {assignment.programName && (
-                                        <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{assignment.programName}</span>
-                                      )}
+                                        addEnrollmentProgramId: e.target.value || null,
+                                        addEnrollmentTeamId: null
+                                      })}
+                                      data-testid="select-add-enrollment-program"
+                                    >
+                                      <option value="">Select a program...</option>
+                                      {availablePrograms.map((p: any) => (
+                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                      ))}
+                                    </select>
+                                    {availablePrograms.length === 0 && (
+                                      <p className="text-xs text-gray-500 mt-1">Already enrolled in all available programs</p>
+                                    )}
+                                  </div>
+
+                                  {/* Step 2: Team picker (if program has teams) */}
+                                  {selectedProgram && programTeamsForFlow.length > 0 && (
+                                    <div>
+                                      <label className="text-xs text-gray-600 mb-1 block">Team <span className="text-gray-400">(optional)</span></label>
+                                      <select
+                                        className="w-full text-sm border border-gray-200 rounded px-2 py-1.5 bg-white"
+                                        value={editingUser.addEnrollmentTeamId || ''}
+                                        onChange={(e) => setEditingUser({
+                                          ...editingUser,
+                                          addEnrollmentTeamId: e.target.value ? parseInt(e.target.value, 10) : null
+                                        })}
+                                        data-testid="select-add-enrollment-team"
+                                      >
+                                        <option value="">No team (program-only enrollment)</option>
+                                        {programTeamsForFlow.map((t: any) => (
+                                          <option key={t.id} value={t.id}>{t.name}</option>
+                                        ))}
+                                      </select>
                                     </div>
+                                  )}
+
+                                  {/* Step 3: Expiry date (if program selected) */}
+                                  {selectedProgram && (
+                                    <div>
+                                      <label className="text-xs text-gray-600 mb-1 block">Expiry Date <span className="text-gray-400">(optional)</span></label>
+                                      <input
+                                        type="date"
+                                        className="text-sm border border-gray-200 rounded px-2 py-1.5 bg-white w-full"
+                                        value={editingUser.addEnrollmentEndDate || ''}
+                                        onChange={(e) => setEditingUser({ ...editingUser, addEnrollmentEndDate: e.target.value })}
+                                        data-testid="input-add-enrollment-expiry"
+                                      />
+                                    </div>
+                                  )}
+
+                                  {/* Confirm / Cancel */}
+                                  <div className="flex gap-2">
                                     <button
                                       type="button"
-                                      className="text-red-500 hover:text-red-700 text-sm font-medium px-2"
+                                      disabled={!editingUser.addEnrollmentProgramId}
+                                      className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
                                       onClick={() => {
-                                        const newTeamIds = teamIds.filter((id: number) => id !== assignment.teamId);
+                                        const programId = editingUser.addEnrollmentProgramId;
+                                        if (!programId) return;
+                                        const teamId = editingUser.addEnrollmentTeamId || null;
+                                        const endDate = editingUser.addEnrollmentEndDate || null;
+                                        const program = programs?.find((p: any) => p.id === programId);
+                                        const team = teamId ? teams?.find((t: any) => t.id === teamId) : null;
+
+                                        const newEnrollment = {
+                                          enrollmentId: `new-${programId}`,
+                                          programId,
+                                          programName: program?.name,
+                                          teamId: teamId || null,
+                                          teamName: team?.name || null,
+                                          status: 'active',
+                                          endDate: endDate || null,
+                                          teams: team ? [{ teamId: team.id, teamName: team.name }] : [],
+                                          isNew: true
+                                        };
+
+                                        const currentTeamIds = Array.isArray(editingUser.teamIds) ? editingUser.teamIds : editingUser.teamId ? [editingUser.teamId] : [];
+                                        const newTeamIds = teamId
+                                          ? [...currentTeamIds, teamId]
+                                          : currentTeamIds;
+                                        const newActiveTeams = teamId
+                                          ? [...(editingUser.activeTeams || []), {
+                                              teamId,
+                                              teamName: team?.name,
+                                              programId,
+                                              programName: program?.name
+                                            }]
+                                          : (editingUser.activeTeams || []);
+
                                         setEditingUser({
                                           ...editingUser,
+                                          addEnrollmentMode: false,
+                                          addEnrollmentProgramId: null,
+                                          addEnrollmentTeamId: null,
+                                          addEnrollmentEndDate: '',
+                                          pendingEnrollments: [...(editingUser.pendingEnrollments || programEnrollments), newEnrollment],
+                                          enrollmentsToAdd: [
+                                            ...(editingUser.enrollmentsToAdd || []),
+                                            { programId, teamId, endDate }
+                                          ],
                                           teamIds: newTeamIds,
                                           teamId: newTeamIds[0] || null,
-                                          activeTeams: activeTeams.filter((a: any) => a.teamId !== assignment.teamId)
+                                          activeTeams: newActiveTeams
                                         });
                                       }}
-                                      data-testid={`button-remove-team-${assignment.teamId}`}
+                                      data-testid="button-confirm-add-enrollment"
                                     >
-                                      Remove
+                                      Confirm
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="text-sm px-3 py-1.5 border border-gray-300 rounded hover:bg-gray-50"
+                                      onClick={() => setEditingUser({
+                                        ...editingUser,
+                                        addEnrollmentMode: false,
+                                        addEnrollmentProgramId: null,
+                                        addEnrollmentTeamId: null,
+                                        addEnrollmentEndDate: ''
+                                      })}
+                                      data-testid="button-cancel-add-enrollment"
+                                    >
+                                      Cancel
                                     </button>
                                   </div>
-                                ))}
-                              </div>
-                            </div>
-                          ) : programEnrollments.length === 0 ? (
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3" data-testid="no-assignments">
-                              <p className="text-sm text-yellow-700">Not enrolled in any programs or assigned to any teams</p>
-                            </div>
-                          ) : (
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3" data-testid="no-team-assignments">
-                              <p className="text-sm text-yellow-700">Enrolled in programs but not assigned to any teams yet</p>
-                            </div>
-                          )}
-                          
-                          {/* Add to Teams Section */}
-                          <div className="mt-3">
-                            <p className="text-xs font-semibold text-gray-600 mb-2">Add to Team:</p>
-                            <div className="border rounded-md max-h-48 overflow-y-auto" data-testid="program-team-assignments">
-                              {programs?.filter((program: any) =>
-                                programEnrollments.some((e: any) => e.programId === program.id)
-                              ).map((program: any) => {
-                                const programTeams = teamsByProgram[program.id]?.teams || [];
-                                if (programTeams.length === 0) return null;
-                                
-                                const hasAssignedTeam = programTeams.some((t: any) => teamIds.includes(t.id));
-                                
-                                return (
-                                  <div key={program.id} className="border-b last:border-b-0">
-                                    <div className={`px-3 py-2 font-semibold text-sm ${hasAssignedTeam ? 'bg-blue-50 text-blue-800' : 'bg-gray-50 text-gray-700'}`}>
-                                      {program.name}
-                                    </div>
-                                    <div className="p-2 space-y-1">
-                                      {programTeams.map((team: any) => {
-                                        const isChecked = teamIds.includes(team.id);
-                                        return (
-                                          <div key={team.id} className="flex items-center space-x-2 pl-2">
-                                            <Checkbox
-                                              id={`team-${team.id}`}
-                                              checked={isChecked}
-                                              onCheckedChange={(checked) => {
-                                                let newTeamIds;
-                                                let newActiveTeams = [...activeTeams];
-                                                if (checked) {
-                                                  newTeamIds = [...teamIds, team.id];
-                                                  // Add to activeTeams display
-                                                  newActiveTeams.push({
-                                                    teamId: team.id,
-                                                    teamName: team.name,
-                                                    programId: program.id,
-                                                    programName: program.name
-                                                  });
-                                                } else {
-                                                  newTeamIds = teamIds.filter((id: number) => id !== team.id);
-                                                  newActiveTeams = newActiveTeams.filter((a: any) => a.teamId !== team.id);
-                                                }
-                                                setEditingUser({
-                                                  ...editingUser,
-                                                  teamIds: newTeamIds,
-                                                  teamId: newTeamIds[0] || null,
-                                                  activeTeams: newActiveTeams
-                                                });
-                                              }}
-                                              data-testid={`checkbox-team-${team.id}`}
-                                            />
-                                            <label
-                                              htmlFor={`team-${team.id}`}
-                                              className={`text-sm leading-none cursor-pointer ${isChecked ? 'text-blue-700 font-medium' : ''}`}
-                                            >
-                                              {team.name}
-                                            </label>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                              
-                              {/* Teams without program */}
-                              {teamsWithoutProgram.length > 0 && (
-                                <div className="border-b last:border-b-0">
-                                  <div className="px-3 py-2 font-semibold text-sm bg-gray-50 text-gray-700">
-                                    Other Teams
-                                  </div>
-                                  <div className="p-2 space-y-1">
-                                    {teamsWithoutProgram.map((team: any) => {
-                                      const isChecked = teamIds.includes(team.id);
-                                      return (
-                                        <div key={team.id} className="flex items-center space-x-2 pl-2">
-                                          <Checkbox
-                                            id={`team-${team.id}`}
-                                            checked={isChecked}
-                                            onCheckedChange={(checked) => {
-                                              let newTeamIds;
-                                              let newActiveTeams = [...activeTeams];
-                                              if (checked) {
-                                                newTeamIds = [...teamIds, team.id];
-                                                newActiveTeams.push({
-                                                  teamId: team.id,
-                                                  teamName: team.name,
-                                                  programId: null,
-                                                  programName: null
-                                                });
-                                              } else {
-                                                newTeamIds = teamIds.filter((id: number) => id !== team.id);
-                                                newActiveTeams = newActiveTeams.filter((a: any) => a.teamId !== team.id);
-                                              }
-                                              setEditingUser({
-                                                ...editingUser,
-                                                teamIds: newTeamIds,
-                                                teamId: newTeamIds[0] || null,
-                                                activeTeams: newActiveTeams
-                                              });
-                                            }}
-                                            data-testid={`checkbox-team-${team.id}`}
-                                          />
-                                          <label
-                                            htmlFor={`team-${team.id}`}
-                                            className={`text-sm leading-none cursor-pointer ${isChecked ? 'text-blue-700 font-medium' : ''}`}
-                                          >
-                                            {team.name}
-                                          </label>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
                                 </div>
-                              )}
-                              
-                              {(!programs || programs.length === 0) && (!teams || teams.length === 0) && (
-                                <p className="p-3 text-sm text-gray-500">No programs or teams available</p>
-                              )}
-                            </div>
-                          </div>
+                              );
+                            }
+
+                            return (
+                              <div className="mt-2">
+                                <button
+                                  type="button"
+                                  className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 border border-blue-200 rounded px-3 py-1.5 hover:bg-blue-50"
+                                  onClick={() => setEditingUser({
+                                    ...editingUser,
+                                    addEnrollmentMode: true,
+                                    addEnrollmentProgramId: null,
+                                    addEnrollmentTeamId: null,
+                                    addEnrollmentEndDate: ''
+                                  })}
+                                  data-testid="button-add-enrollment"
+                                >
+                                  + Add Enrollment
+                                </button>
+                                {programEnrollments.length === 0 && (
+                                  <p className="text-xs text-gray-500 mt-2">No enrollments yet. Click above to add one.</p>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       );
                     })()

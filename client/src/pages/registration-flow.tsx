@@ -111,7 +111,7 @@ export default function RegistrationFlow() {
     
     setIsPollingVerification(true);
     
-    const pollInterval = setInterval(async () => {
+    const checkVerification = async () => {
       try {
         const params = new URLSearchParams({
           email: registrationData.email!,
@@ -139,12 +139,46 @@ export default function RegistrationFlow() {
       } catch (error) {
         console.error("Error checking verification status:", error);
       }
-    }, 3000);
+    };
+
+    const pollInterval = setInterval(checkVerification, 3000);
+
+    // Immediately re-check when tab/app regains visibility (handles Android resume)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkVerification();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Capacitor appStateChange for Android/iOS native resume
+    let removeAppStateListener: (() => void) | undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { App } = await import('@capacitor/app');
+        const listener = await App.addListener('appStateChange', ({ isActive }) => {
+          if (isActive) {
+            checkVerification();
+          }
+        });
+        if (cancelled) {
+          listener.remove();
+        } else {
+          removeAppStateListener = () => listener.remove();
+        }
+      } catch {
+        // Capacitor App plugin not available in web context — ignore
+      }
+    })();
     
     // Cleanup interval on unmount or when conditions change
     return () => {
+      cancelled = true;
       clearInterval(pollInterval);
       setIsPollingVerification(false);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      removeAppStateListener?.();
     };
   }, [emailSent, registrationData.email, currentStep, verificationSessionId, toast]);
 
@@ -576,8 +610,8 @@ function EmailEntryStep({
   const handleSubmit = async (data: { email: string }) => {
     const checkData = await checkEmail(data.email);
     
-    // Detect if running on native iOS app
-    const sourcePlatform = Capacitor.isNativePlatform() ? 'ios' : 'web';
+    // Detect the native platform (ios/android) or web
+    const sourcePlatform = Capacitor.isNativePlatform() ? Capacitor.getPlatform() : 'web';
     
     // Store sessionId for polling correlation
     let sessionId: string | undefined;

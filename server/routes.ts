@@ -1225,10 +1225,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sourcePlatform = pendingReg.sourcePlatform || 'web';
       const hasOriginalSession = !!pendingReg.sessionId;
       
+      const isNativeApp = sourcePlatform === 'ios' || sourcePlatform === 'android';
       res.json({ 
         success: true, 
         message: hasOriginalSession 
-          ? "Email verified! Return to your original session to continue registration."
+          ? (isNativeApp ? "Email verified! Return to the BoxStat app to continue registration." : "Email verified! Return to your original session to continue registration.")
           : "Email verified successfully! Continue with registration.",
         email: pendingReg.email,
         sourcePlatform,

@@ -108,7 +108,7 @@ export default function VerifyEmail() {
             {status === "success" && hasOriginalSession && (
               <div className="text-center py-4">
                 <div className="flex justify-center mb-4">
-                  {sourcePlatform === 'ios' ? (
+                  {(sourcePlatform === 'ios' || sourcePlatform === 'android') ? (
                     <Smartphone className="h-12 w-12 text-blue-600" />
                   ) : (
                     <Monitor className="h-12 w-12 text-blue-600" />
@@ -116,7 +116,7 @@ export default function VerifyEmail() {
                 </div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">You can close this tab</h3>
                 <p className="text-sm text-gray-600">
-                  {sourcePlatform === 'ios' 
+                  {(sourcePlatform === 'ios' || sourcePlatform === 'android')
                     ? "Return to the BoxStat app to continue registration."
                     : "Return to your original browser tab to continue registration."}
                 </p>

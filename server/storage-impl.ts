@@ -3996,6 +3996,16 @@ class DatabaseStorage implements IStorage {
 
   async deleteEvent(id: string): Promise<void> {
     const eventId = parseInt(id);
+    // Clean up notification recipients for notifications tied to this event
+    const eventNotifications = await db
+      .select({ id: schema.notifications.id })
+      .from(schema.notifications)
+      .where(eq(schema.notifications.relatedEventId, eventId));
+    if (eventNotifications.length > 0) {
+      const notifIds = eventNotifications.map((n) => n.id);
+      await db.delete(schema.notificationRecipients).where(inArray(schema.notificationRecipients.notificationId, notifIds));
+      await db.delete(schema.notifications).where(inArray(schema.notifications.id, notifIds));
+    }
     await db.delete(schema.events).where(eq(schema.events.id, eventId));
   }
 

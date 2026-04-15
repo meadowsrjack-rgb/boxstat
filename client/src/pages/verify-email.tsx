@@ -39,8 +39,13 @@ export default function VerifyEmail() {
           setStripeDataFound(data.stripeDataFound || false);
 
           const userEmail = data.email || params.get("email");
+          const orgId = organizationId || "";
+          let redirectUrl = `/registration?email=${encodeURIComponent(userEmail || "")}&verified=true`;
+          if (orgId) {
+            redirectUrl += `&organizationId=${encodeURIComponent(orgId)}`;
+          }
           setTimeout(() => {
-            setLocation(`/registration?verified=${encodeURIComponent(userEmail || "")}&continue=true`);
+            setLocation(redirectUrl);
           }, 2000);
         } else {
           setStatus("error");

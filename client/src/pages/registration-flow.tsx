@@ -86,6 +86,7 @@ export default function RegistrationFlow() {
   const urlParams = new URLSearchParams(window.location.search);
   const verifiedEmail = urlParams.get('email');
   const isVerified = urlParams.get('verified') === 'true';
+  const urlOrganizationId = urlParams.get('organizationId');
   
   const [currentStep, setCurrentStep] = useState(verifiedEmail && isVerified ? 3 : 1);
   const [emailSent, setEmailSent] = useState(false);
@@ -102,6 +103,7 @@ export default function RegistrationFlow() {
     password?: string;
   }>({
     email: verifiedEmail || undefined,
+    organizationId: (verifiedEmail && isVerified && urlOrganizationId) ? urlOrganizationId : undefined,
     players: [],
   });
   

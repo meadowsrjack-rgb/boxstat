@@ -9771,6 +9771,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      console.log(`[iCal] Input: ${url.substring(0, 150)}`);
+      console.log(`[iCal] Resolved: ${trimmedUrl.substring(0, 150)}`);
+
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 30000);
 

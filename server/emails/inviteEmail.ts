@@ -96,6 +96,21 @@ function buildEmailHtml(record: InviteRecord, inviteUrl: string, orgName: string
             </td></tr>
           </table>
 
+          <p style="font-size:14px;font-weight:600;color:#1a202c;text-align:center;margin:0 0 10px">Get the BoxStat App</p>
+          <table cellpadding="0" cellspacing="0" style="margin:0 auto 24px">
+            <tr><td style="background:#000000;border-radius:8px;text-align:center;padding:0;margin-bottom:8px">
+              <a href="https://apps.apple.com/us/app/boxstat/id6754899159" style="display:inline-block;padding:10px 24px;color:white;font-size:13px;font-weight:600;text-decoration:none">
+                Download on the App Store
+              </a>
+            </td></tr>
+            <tr><td style="height:8px"></td></tr>
+            <tr><td style="background:#000000;border-radius:8px;text-align:center;padding:0">
+              <a href="https://play.google.com/store/apps/details?id=com.boxstat.app&hl=en_US" style="display:inline-block;padding:10px 24px;color:white;font-size:13px;font-weight:600;text-decoration:none">
+                Get it on Google Play
+              </a>
+            </td></tr>
+          </table>
+
           <p style="font-size:12px;color:#adb5bd;text-align:center;margin:0">
             If you weren't expecting this email, you can safely ignore it.
           </p>

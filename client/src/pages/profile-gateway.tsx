@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Shield, ChevronRight, Settings, LogOut, Crown, Bug, ArrowDown } from "lucide-react";
+import { User, Shield, ChevronRight, Settings, LogOut, Crown, Bug, ArrowDown, X, Download } from "lucide-react";
 import { BanterLoader } from "@/components/BanterLoader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,21 @@ function prefetchQuery(queryKey: string) {
   });
 }
 
+const APP_STORE_URL = 'https://apps.apple.com/us/app/boxstat/id6754899159';
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.boxstat.app&hl=en_US';
+const DISMISS_KEY = 'boxstat_app_download_dismissed';
+
+function getMobilePlatform(): 'ios' | 'android' | null {
+  const ua = navigator.userAgent || '';
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+  if (/Android/i.test(ua)) return 'android';
+  return null;
+}
+
+function isCapacitorNative(): boolean {
+  return typeof (window as any).Capacitor !== 'undefined' && (window as any).Capacitor.isNativePlatform?.();
+}
+
 export default function ProfileGateway() {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
@@ -46,6 +61,15 @@ export default function ProfileGateway() {
   const [bugTitle, setBugTitle] = useState("");
   const [bugDescription, setBugDescription] = useState("");
   const [switching, setSwitching] = useState(false);
+  const [showAppBanner, setShowAppBanner] = useState(false);
+
+  useEffect(() => {
+    const platform = getMobilePlatform();
+    const dismissed = localStorage.getItem(DISMISS_KEY);
+    if (platform && !isCapacitorNative() && !dismissed) {
+      setShowAppBanner(true);
+    }
+  }, []);
 
   const submitBugMutation = useMutation({
     mutationFn: async (bugData: { title: string; description: string }) => {
@@ -288,6 +312,35 @@ export default function ProfileGateway() {
           <div className="text-center mb-10">
             <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-who-is-watching">Whose ball?</h1>
           </div>
+
+        {showAppBanner && (
+          <div className="mb-4 rounded-xl bg-gradient-to-r from-blue-600/20 to-blue-500/10 border border-blue-500/30 px-4 py-3 flex items-center gap-3" data-testid="gateway-app-download-banner">
+            <Download className="w-8 h-8 text-blue-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white">Get the BoxStat App</p>
+              <p className="text-xs text-gray-400 mt-0.5">For the best experience, download our free app.</p>
+              <a
+                href={getMobilePlatform() === 'ios' ? APP_STORE_URL : PLAY_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block mt-2 text-xs font-semibold text-blue-400 underline"
+              >
+                {getMobilePlatform() === 'ios' ? 'Download on the App Store' : 'Get it on Google Play'}
+              </a>
+            </div>
+            <button
+              onClick={() => {
+                localStorage.setItem(DISMISS_KEY, 'true');
+                setShowAppBanner(false);
+              }}
+              className="p-1 text-gray-500 hover:text-white transition-colors flex-shrink-0"
+              aria-label="Dismiss app download prompt"
+              data-testid="button-dismiss-app-banner"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {needsOnboarding && (
           <div className="mb-4 rounded-xl bg-gradient-to-r from-red-600/20 to-red-500/10 border border-red-500/30 px-4 py-3 flex items-center gap-3" data-testid="gateway-onboarding-banner">

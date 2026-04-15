@@ -92,6 +92,19 @@ ${DOMAIN}
                         <p style="margin: 30px 0 0; font-size: 14px; color: #6b7280;">If the button does not work, copy and paste this link into your browser:</p>
                         <p style="margin: 10px 0 0; font-size: 14px; color: #6b7280; word-break: break-all;">${verificationUrl}</p>
                         <p style="margin: 30px 0 0; font-size: 14px; color: #6b7280;">This link will expire in 24 hours. If you did not create an account with BoxStat, please disregard this email.</p>
+                        <p style="margin: 30px 0 10px; font-size: 14px; font-weight: 600; color: #374151; text-align: center;">Get the BoxStat App</p>
+                        <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                          <tr>
+                            <td style="text-align: center; padding: 5px 0;">
+                              <a href="https://apps.apple.com/us/app/boxstat/id6754899159" style="display: inline-block; background-color: #000000; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 6px;">Download on the App Store</a>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="text-align: center; padding: 5px 0;">
+                              <a href="https://play.google.com/store/apps/details?id=com.boxstat.app&hl=en_US" style="display: inline-block; background-color: #000000; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 6px;">Get it on Google Play</a>
+                            </td>
+                          </tr>
+                        </table>
                       </td>
                     </tr>
                     <tr>
@@ -526,7 +539,8 @@ export async function sendAccountClaimEmail({
 }: SendAccountClaimEmailParams): Promise<{ success: boolean; error?: string }> {
   const displayName = firstName || 'there';
   const claimUrl = `https://${DOMAIN}/invite/${inviteToken}`;
-  const appStoreUrl = 'https://apps.apple.com/app/boxstat/id6738370945';
+  const appStoreUrl = 'https://apps.apple.com/us/app/boxstat/id6754899159';
+  const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.boxstat.app&hl=en_US';
   const orgName = organizationName || 'your organization';
   const roleLabel = role === 'coach' ? 'Coach' : role === 'parent' ? 'Parent' : role === 'player' ? 'Player' : 'Member';
 
@@ -542,8 +556,9 @@ You've been added to ${orgName} on BoxStat as a ${roleLabel}. To get started, cl
 Claim your account:
 ${claimUrl}
 
-Or download the BoxStat app on the App Store:
-${appStoreUrl}
+Or download the BoxStat app:
+App Store: ${appStoreUrl}
+Google Play: ${playStoreUrl}
 
 This link will expire in 7 days.
 
@@ -587,6 +602,11 @@ ${DOMAIN}
                           <tr>
                             <td style="text-align: center; padding: 10px 0;">
                               <a href="${appStoreUrl}" style="display: inline-block; background-color: #000000; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">Download on the App Store</a>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="text-align: center; padding: 10px 0;">
+                              <a href="${playStoreUrl}" style="display: inline-block; background-color: #000000; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">Get it on Google Play</a>
                             </td>
                           </tr>
                         </table>
@@ -634,7 +654,8 @@ export async function sendWelcomeEmail({
 }: SendWelcomeEmailParams): Promise<{ success: boolean; error?: string }> {
   const displayName = firstName || 'there';
   const claimUrl = `https://${DOMAIN}/magic-link-login?token=${magicLinkToken}`;
-  const appStoreUrl = 'https://apps.apple.com/app/boxstat/id6738370945';
+  const appStoreUrl = 'https://apps.apple.com/us/app/boxstat/id6754899159';
+  const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.boxstat.app&hl=en_US';
   const orgName = organizationName || 'your organization';
 
   try {
@@ -649,8 +670,9 @@ You've been added to ${orgName} on BoxStat! To get started, claim your account u
 Claim your account on the web:
 ${claimUrl}
 
-Or download the BoxStat app on the App Store:
-${appStoreUrl}
+Or download the BoxStat app:
+App Store: ${appStoreUrl}
+Google Play: ${playStoreUrl}
 
 This link will expire in 24 hours.
 
@@ -693,6 +715,11 @@ ${DOMAIN}
                           <tr>
                             <td style="text-align: center; padding: 10px 0;">
                               <a href="${appStoreUrl}" style="display: inline-block; background-color: #000000; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">Download on the App Store</a>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="text-align: center; padding: 10px 0;">
+                              <a href="${playStoreUrl}" style="display: inline-block; background-color: #000000; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">Get it on Google Play</a>
                             </td>
                           </tr>
                         </table>

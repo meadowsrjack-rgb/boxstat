@@ -107,6 +107,8 @@ import {
   Dumbbell,
   Heart,
   Zap,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -154,6 +156,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { DateScrollPicker } from "react-date-wheel-picker";
 import { MigrationWizard } from "@/components/migration/MigrationWizard";
+import { useTheme } from "@/components/ThemeProvider";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -12593,6 +12596,34 @@ function BoxStatPlatformStripeSection() {
   );
 }
 
+function DarkModeCard() {
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === "dark";
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Appearance</CardTitle>
+        <CardDescription>Customize how the dashboard looks</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {isDark ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+            <div>
+              <div className="text-sm font-medium">Dark Mode</div>
+              <div className="text-xs text-muted-foreground">
+                {isDark ? "Dark theme is active" : "Light theme is active"}
+              </div>
+            </div>
+          </div>
+          <Switch checked={isDark} onCheckedChange={toggleTheme} />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // Settings Tab Component
 function SettingsTab({ organization }: any) {
   const { toast } = useToast();
@@ -12791,6 +12822,8 @@ function SettingsTab({ organization }: any) {
           </form>
         </CardContent>
       </Card>
+
+      <DarkModeCard />
       
       <StripeSettingsSection />
 

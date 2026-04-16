@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 // Pages
 import Teams from "@/pages/teams";
@@ -619,13 +620,15 @@ function AppRouter() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <WouterRouter>
-          <AppRouter />
-          <Toaster />
-          <UpdatePrompt />
-        </WouterRouter>
-      </QueryClientProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <WouterRouter>
+            <AppRouter />
+            <Toaster />
+            <UpdatePrompt />
+          </WouterRouter>
+        </QueryClientProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

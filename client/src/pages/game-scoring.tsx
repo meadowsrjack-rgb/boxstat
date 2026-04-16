@@ -80,8 +80,8 @@ function PlayerRow({ player, stats, onUpdate, onNameChange, onToggleSub, clockRu
   const incMiss = (t: string) => { if (locked) return; const n = { ...s }; if (t === "fg") n.fga++; else if (t === "tp") n.tpa++; else if (t === "ft") n.fta++; onUpdate(n); };
   const decMade = (t: string) => { if (locked) return; const n = { ...s }; if (t === "fg" && n.fgm > 0) { n.fgm--; n.fga--; } else if (t === "tp" && n.tpm > 0) { n.tpm--; n.tpa--; } else if (t === "ft" && n.ftm > 0) { n.ftm--; n.fta--; } onUpdate(n); };
   const decMiss = (t: string) => { if (locked) return; const n = { ...s }; if (t === "fg" && (n.fga - n.fgm) > 0) n.fga--; else if (t === "tp" && (n.tpa - n.tpm) > 0) n.tpa--; else if (t === "ft" && (n.fta - n.ftm) > 0) n.fta--; onUpdate(n); };
-  const inc = (f: keyof PlayerStats) => { if (locked) return; const n = { ...s }; (n[f] as number)++; onUpdate(n); };
-  const dec = (f: keyof PlayerStats) => { if (locked) return; const n = { ...s }; if ((n[f] as number) > 0) (n[f] as number)--; onUpdate(n); };
+  const inc = (f: keyof PlayerStats) => { if (locked) return; const n: any = { ...s }; n[f] = (n[f] as number) + 1; onUpdate(n); };
+  const dec = (f: keyof PlayerStats) => { if (locked) return; const n: any = { ...s }; if ((n[f] as number) > 0) n[f] = (n[f] as number) - 1; onUpdate(n); };
 
   const O = "#E87F24", G = "#4CAF50", B = "#42A5F5";
   const misses = { fg: s.fga - s.fgm, tp: s.tpa - s.tpm, ft: s.fta - s.ftm };

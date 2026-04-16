@@ -473,18 +473,25 @@ function PlayersStep({
       ...orgPrograms.map((p: any) => ({ id: p.id, name: p.name, code: p.code || "", isNew: false } as MigrationProgram)),
       ...createdPrograms,
     ];
+    const norm = (s: string) => (s || "").trim().toLowerCase();
     const imported = rows
       .filter((r) => r.first)
       .map((r) => {
-        const parent = parents.find((p) => p.email.toLowerCase() === r.parentEmail.toLowerCase());
-        const matchedTeam = allAvailableTeams.find((t) => t.name.toLowerCase() === r.team?.toLowerCase());
+        const parent = parents.find((p) => norm(p.email) === norm(r.parentEmail));
+        const matchedProgram = allPrograms.find(
+          (p) => norm(p.name) === norm(r.program) || (p.code && norm(p.code) === norm(r.program))
+        );
+        const teamCandidates = matchedProgram
+          ? allAvailableTeams.filter((t) => String(t.programId) === String(matchedProgram.id))
+          : allAvailableTeams;
+        const matchedTeam = teamCandidates.find((t) => norm(t.name) === norm(r.team));
         return {
           id: uid(),
           firstName: r.first,
           lastName: r.last,
           parentId: parent?.id ?? null,
           subscriptionEndDate: r.expiry,
-          programId: null,
+          programId: matchedProgram?.id ?? null,
           teamId: matchedTeam?.id ?? null,
         };
       });
@@ -535,7 +542,7 @@ function PlayersStep({
             <tr className="bg-muted/50">
               <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[16%]">First name *</th>
               <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[16%]">Last name *</th>
-              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[20%]">Parent *</th>
+              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[20%]">Parent email *</th>
               {allPrograms.length > 0 && <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[16%]">Program</th>}
               {hasTeams && <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[14%]">Team</th>}
               <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-[14%]">

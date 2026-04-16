@@ -15161,7 +15161,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     firstName: z.string().default(''),
     lastName: z.string().default(''),
     dateOfBirth: z.string().optional().nullable(),
-    subscriptionEndDate: z.string().transform(v => v === '' ? null : v).pipe(z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Date must be MM/DD/YYYY').nullable()).optional(),
+    subscriptionEndDate: z.union([z.string(), z.null()])
+      .transform(v => (v === '' || v == null) ? null : v)
+      .pipe(
+        z.string()
+          .regex(/^(\d{2}\/\d{2}\/\d{4}|\d{4}-\d{2}-\d{2})$/, 'Date must be MM/DD/YYYY or YYYY-MM-DD')
+          .transform(v => {
+            if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+            const [m, d, y] = v.split('/');
+            return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+          })
+          .nullable()
+      ).optional(),
     programId: z.string().nullable().optional(),
     teamId: z.coerce.number().nullable().optional(),
   });
@@ -15233,9 +15244,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const offenders: string[] = [];
         for (const p of (players || [])) {
           if (!p.subscriptionEndDate) continue;
-          const parts = p.subscriptionEndDate.split('/');
-          if (parts.length !== 3) continue;
-          const iso = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+          let iso: string | null = null;
+          if (/^\d{4}-\d{2}-\d{2}$/.test(p.subscriptionEndDate)) {
+            iso = p.subscriptionEndDate;
+          } else {
+            const parts = p.subscriptionEndDate.split('/');
+            if (parts.length !== 3) continue;
+            iso = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+          }
           const parsed = new Date(iso + 'T23:59:59Z');
           if (isNaN(parsed.getTime())) continue;
           if (parsed > maxDate) {
@@ -15451,13 +15467,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               );
               if (!alreadyExists) {
                 const playerUserId = crypto.randomUUID();
-                let subEndDate: string | null = null;
-                if (player.subscriptionEndDate) {
-                  const parts = player.subscriptionEndDate.split('/');
-                  if (parts.length === 3) {
-                    subEndDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
-                  }
-                }
+                // subscriptionEndDate is already normalized to YYYY-MM-DD by the zod schema
+                const subEndDate: string | null = player.subscriptionEndDate ?? null;
                 const resolvedTeamId = player.teamId != null ? (teamIdMap[player.teamId] ?? null) : null;
                 // Resolve this player's own programId (null if player has no program selected)
                 const playerProgramId = player.programId ? (programIdMap[String(player.programId)] ?? null) : null;
@@ -15562,14 +15573,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // with existing profile-resolution logic.
             for (const player of linkedPlayers) {
               const playerUserId = crypto.randomUUID();
-              // Convert MM/DD/YYYY to YYYY-MM-DD for date column
-              let subEndDate: string | null = null;
-              if (player.subscriptionEndDate) {
-                const parts = player.subscriptionEndDate.split('/');
-                if (parts.length === 3) {
-                  subEndDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
-                }
-              }
+              // subscriptionEndDate is already normalized to YYYY-MM-DD by the zod schema
+              const subEndDate: string | null = player.subscriptionEndDate ?? null;
               const resolvedTeamId = player.teamId != null ? (teamIdMap[player.teamId] ?? null) : null;
               // Resolve this player's own programId (null if player has no program selected)
               const playerProgramId = player.programId ? (programIdMap[String(player.programId)] ?? null) : null;

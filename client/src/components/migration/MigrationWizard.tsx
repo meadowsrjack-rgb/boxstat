@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, AlertCircle, Loader2, X, Plus, Users, Baby, Send, Package, Info, UserCog } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2, X, Plus, Users, Baby, Send, Package, Info, UserCog, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
@@ -59,6 +59,21 @@ function ExpiryBadge({ expiry }: { expiry: string }) {
     expired: { class: "bg-red-50 text-red-800 border-red-200",        label: `expired ${expiry}` },
   }[status];
   return <Badge variant="outline" className={`text-xs font-normal ${config.class}`}>{config.label}</Badge>;
+}
+
+function downloadCsvTemplate(filename: string, headers: string[], examples: string[][]) {
+  const escape = (s: string) => /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  const rows = [headers, ...examples].map((r) => r.map(escape).join(","));
+  const csv = rows.join("\n") + "\n";
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function parsePaste(raw: string): Record<string, string>[] {
@@ -360,9 +375,25 @@ function ParentsStep({
             placeholder={"First Name\tLast Name\tEmail\tPhone\nSarah\tJohnson\tsarah@email.com\t520-555-0102"}
             className="font-mono text-xs min-h-[100px]"
           />
-          <Button variant="default" size="sm" onClick={importPaste} disabled={!pasteRaw.trim()}>
-            Import parents
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="default" size="sm" onClick={importPaste} disabled={!pasteRaw.trim()}>
+              Import parents
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => downloadCsvTemplate("parents-template.csv",
+                ["First Name", "Last Name", "Email", "Phone"],
+                [
+                  ["Sarah", "Johnson", "sarah@email.com", "520-555-0102"],
+                  ["Michael", "Lee", "michael.lee@email.com", "520-555-0199"],
+                ]
+              )}
+            >
+              <Download size={14} className="mr-1" />
+              Download template
+            </Button>
+          </div>
         </TabsContent>
 
         <TabsContent value="manual" />
@@ -528,9 +559,25 @@ function PlayersStep({
             placeholder={"First name\tLast name\tParent\tProgram\tTeam\tSub end date\nAlex\tJohnson\tsarah@email.com\tYouth Club\tBlue\t08/31/2026"}
             className="font-mono text-xs min-h-[100px]"
           />
-          <Button variant="default" size="sm" onClick={importPaste} disabled={!pasteRaw.trim()}>
-            Import players
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="default" size="sm" onClick={importPaste} disabled={!pasteRaw.trim()}>
+              Import players
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => downloadCsvTemplate("players-template.csv",
+                ["First Name", "Last Name", "Parent Email", "Program", "Team", "Sub End Date"],
+                [
+                  ["Alex", "Johnson", "sarah@email.com", "Youth Club", "Blue", "08/31/2026"],
+                  ["Jamie", "Lee", "michael.lee@email.com", "Youth Club", "Gold", "08/31/2026"],
+                ]
+              )}
+            >
+              <Download size={14} className="mr-1" />
+              Download template
+            </Button>
+          </div>
         </TabsContent>
 
         <TabsContent value="manual" />

@@ -109,6 +109,7 @@ import {
   Zap,
   Sun,
   Moon,
+  MoreVertical,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -5263,16 +5264,11 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "calendar">("calendar");
-  const [eventsPage, setEventsPage] = useState(1);
-  const EVENTS_PAGE_SIZE = 50;
+  const [calendarView, setCalendarView] = useState<"month" | "week" | "agenda" | "day">("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [selectedEventForDetails, setSelectedEventForDetails] = useState<any>(null);
-  const [selectedEventIds, setSelectedEventIds] = useState<Set<number>>(new Set());
   const [deleteConfirmEvent, setDeleteConfirmEvent] = useState<any>(null);
-  const [eventSortField, setEventSortField] = useState<string | null>(null);
-  const [eventSortDirection, setEventSortDirection] = useState<'asc' | 'desc'>('asc');
   const [duplicatingEvent, setDuplicatingEvent] = useState<any>(null);
   const [adminEventPrefs, setAdminEventPrefs] = useState<UserPreferences>(() => getUserPreferences());
 
@@ -5283,11 +5279,38 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
   const visibleEvents = useMemo(() => {
     const hidden = adminEventPrefs.hiddenEventTypes || [];
     if (hidden.length === 0) return events;
-    return events.filter((ev: any) => {
-      const parsed = parseEventMeta(ev);
-      return !hidden.includes(parsed.type);
-    });
-  }, [events, adminEventPrefs.hiddenEventTypes]);
+    const hiddenSet = new Set(hidden);
+    return events.filter((_: any, i: number) => !hiddenSet.has(parsedAdminEvents[i]?.type));
+  }, [events, parsedAdminEvents, adminEventPrefs.hiddenEventTypes]);
+
+  // Precompute events keyed by ISO date (YYYY-MM-DD) in event timezone
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, any[]>();
+    for (const event of visibleEvents) {
+      const etz = event.timezone || 'America/Los_Angeles';
+      const d = new Date(ensureUtcString(event.startTime || ''));
+      if (isNaN(d.getTime())) continue;
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: etz,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).formatToParts(d);
+      const get = (t: string) => parts.find(p => p.type === t)?.value || '00';
+      const key = `${get('year')}-${get('month')}-${get('day')}`;
+      const arr = map.get(key);
+      if (arr) arr.push(event);
+      else map.set(key, [event]);
+    }
+    // Sort each day by start time
+    for (const arr of Array.from(map.values())) {
+      arr.sort((a: any, b: any) =>
+        new Date(ensureUtcString(a.startTime || '')).getTime() -
+        new Date(ensureUtcString(b.startTime || '')).getTime()
+      );
+    }
+    return map;
+  }, [visibleEvents]);
 
   // Handle eventId deep link from push notifications (prop-driven, set by AdminDashboard on mount)
   useEffect(() => {
@@ -5312,15 +5335,6 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
     fetchAndOpenEvent();
   }, [initialEventId]);
 
-  const handleEventSort = (field: string) => {
-    if (eventSortField === field) {
-      setEventSortDirection(eventSortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setEventSortField(field);
-      setEventSortDirection('asc');
-    }
-  };
-
   const handleDuplicateEvent = (event: any) => {
     setDuplicatingEvent(event);
     setIsDialogOpen(true);
@@ -5330,36 +5344,14 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
     mutationFn: async (ids: number[]) => {
       await Promise.all(ids.map(id => apiRequest("DELETE", `/api/events/${id}`, {})));
     },
-    onSuccess: () => {
+    onSuccess: (_data, ids) => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      const count = selectedEventIds.size;
-      setSelectedEventIds(new Set());
-      toast({ title: `${count} event(s) deleted successfully` });
+      toast({ title: `${ids.length} event(s) deleted successfully` });
     },
     onError: () => {
       toast({ title: "Failed to delete some events", variant: "destructive" });
     },
   });
-
-  const toggleEventSelection = (eventId: number) => {
-    setSelectedEventIds(prev => {
-      const next = new Set(prev);
-      if (next.has(eventId)) {
-        next.delete(eventId);
-      } else {
-        next.add(eventId);
-      }
-      return next;
-    });
-  };
-
-  const toggleAllEvents = (eventIds: number[]) => {
-    if (selectedEventIds.size === eventIds.length) {
-      setSelectedEventIds(new Set());
-    } else {
-      setSelectedEventIds(new Set(eventIds));
-    }
-  };
 
   // Fetch participants for the selected event
   const { data: eventParticipants = [] } = useQuery<any[]>({
@@ -5483,6 +5475,205 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
     reader.readAsText(file);
   };
 
+  // ---------- Calendar render helpers / memos ----------
+  const isoLocal = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  const todayDate = useMemo(() => new Date(), []);
+  const todayKey = isoLocal(todayDate);
+
+  const monthCells = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const firstDow = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrev = new Date(year, month, 0).getDate();
+    const cells: Array<{ key: string; day: number; other: boolean; dateKey?: string }> = [];
+    for (let i = firstDow - 1; i >= 0; i--) {
+      cells.push({ key: `prev-${i}`, day: daysInPrev - i, other: true });
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      cells.push({ key: `c-${d}`, day: d, other: false, dateKey: isoLocal(new Date(year, month, d)) });
+    }
+    const target = cells.length <= 35 ? 35 : 42;
+    let nd = 1;
+    while (cells.length < target) cells.push({ key: `next-${nd}`, day: nd++, other: true });
+    return cells;
+  }, [currentDate]);
+
+  const weekCells = useMemo(() => {
+    const month = currentDate.getMonth();
+    const start = new Date(currentDate);
+    start.setDate(currentDate.getDate() - currentDate.getDay());
+    const cells: Array<{ key: string; date: Date; dateKey: string; other: boolean }> = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      cells.push({ key: `w-${i}`, date: d, dateKey: isoLocal(d), other: d.getMonth() !== month });
+    }
+    return cells;
+  }, [currentDate]);
+
+  const agendaGroups = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const groups: Array<{ dateKey: string; date: Date; events: any[] }> = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateObj = new Date(year, month, d);
+      const key = isoLocal(dateObj);
+      const evs = eventsByDate.get(key);
+      if (evs && evs.length) groups.push({ dateKey: key, date: dateObj, events: evs });
+    }
+    return groups;
+  }, [currentDate, eventsByDate]);
+
+  const dayInfo = useMemo(() => {
+    const d = new Date(currentDate);
+    const key = isoLocal(d);
+    return { date: d, dateKey: key, events: eventsByDate.get(key) || [] };
+  }, [currentDate, eventsByDate]);
+
+  const monthEventCount = useMemo(() => {
+    const y = currentDate.getFullYear();
+    const m = currentDate.getMonth();
+    const ymPrefix = `${y}-${String(m + 1).padStart(2, '0')}-`;
+    let total = 0;
+    eventsByDate.forEach((arr, key) => { if (key.startsWith(ymPrefix)) total += arr.length; });
+    return total;
+  }, [currentDate, eventsByDate]);
+
+  const monthLabel = useMemo(() => {
+    if (calendarView === 'day') {
+      return currentDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    }
+    if (calendarView === 'week') {
+      const start = new Date(currentDate);
+      start.setDate(currentDate.getDate() - currentDate.getDay());
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      const sameMonth = start.getMonth() === end.getMonth();
+      const startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const endStr = end.toLocaleDateString('en-US', sameMonth ? { day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
+      return `${startStr} – ${endStr}`;
+    }
+    return currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  }, [currentDate, calendarView]);
+  const periodCountLabel = useMemo(() => {
+    if (calendarView === 'day') {
+      const n = dayInfo.events.length;
+      const isToday = dayInfo.dateKey === todayKey;
+      return `${n} event${n === 1 ? '' : 's'} ${isToday ? 'today' : 'on this day'}`;
+    }
+    if (calendarView === 'week') {
+      let n = 0;
+      for (const c of weekCells) n += (eventsByDate.get(c.dateKey) || []).length;
+      return `${n} event${n === 1 ? '' : 's'} this week`;
+    }
+    return `${monthEventCount} event${monthEventCount === 1 ? '' : 's'} this month`;
+  }, [calendarView, dayInfo, weekCells, eventsByDate, monthEventCount]);
+  const todayWeekday = todayDate.toLocaleDateString('en-US', { weekday: 'short' });
+
+  const renderEventActionsMenu = (event: any, testIdPrefix: string) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className="flex-shrink-0 p-0.5 rounded hover:bg-black/10 text-current opacity-70 hover:opacity-100"
+          aria-label="Event actions"
+          data-testid={`${testIdPrefix}-actions-${event.id}`}
+        >
+          <MoreVertical className="w-3 h-3" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-36" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuItem onClick={() => setEditingEvent(event)}>
+          <Edit className="w-4 h-4 mr-2" />Edit
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleDuplicateEvent(event)}>
+          <Copy className="w-4 h-4 mr-2" />Duplicate
+        </DropdownMenuItem>
+        <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setDeleteConfirmEvent(event)}>
+          <Trash2 className="w-4 h-4 mr-2" />Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const renderEventChip = (event: any) => {
+    const parsedType = parseEventMeta(event).type;
+    const hex = getEventTypeHexColor(parsedType, adminEventPrefs.eventTypeColors);
+    return (
+      <div
+        key={event.id}
+        role="button"
+        tabIndex={0}
+        onClick={() => setSelectedEventForDetails(event)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedEventForDetails(event); } }}
+        className="flex items-center gap-1 w-full rounded-[4px] px-1.5 py-0.5 text-[10px] font-semibold leading-tight overflow-hidden cursor-pointer hover:brightness-95 transition-[filter] active:scale-[0.97]"
+        style={{ backgroundColor: `${hex}22`, color: hex }}
+        data-testid={`calendar-event-${event.id}`}
+      >
+        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: hex }} />
+        <span className="truncate flex-1 min-w-0">{event.title}</span>
+        {renderEventActionsMenu(event, 'calendar-event')}
+      </div>
+    );
+  };
+
+  const renderAgendaItem = (event: any) => {
+    const parsedType = parseEventMeta(event).type;
+    const hex = getEventTypeHexColor(parsedType, adminEventPrefs.eventTypeColors);
+    const time = new Date(ensureUtcString(event.startTime || '')).toLocaleTimeString('en-US', {
+      timeZone: event.timezone || 'America/Los_Angeles',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+    return (
+      <div
+        key={event.id}
+        role="button"
+        tabIndex={0}
+        onClick={() => setSelectedEventForDetails(event)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedEventForDetails(event); } }}
+        className="flex items-center gap-3 px-3 py-2.5 pl-6 bg-gray-50 hover:bg-gray-100 rounded-[10px] relative w-full cursor-pointer transition-colors"
+        data-testid={`agenda-event-${event.id}`}
+      >
+        <span
+          className="absolute left-2.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full"
+          style={{ backgroundColor: hex }}
+        />
+        <span className="text-[11px] font-semibold text-gray-600 min-w-[52px]">{time}</span>
+        <span className="flex-1 text-[13px] font-semibold text-gray-900 truncate">{event.title}</span>
+        <div className="text-gray-500">
+          {renderEventActionsMenu(event, 'agenda-event')}
+        </div>
+      </div>
+    );
+  };
+
+  const stepDate = (dir: 1 | -1) => {
+    const d = new Date(currentDate);
+    if (calendarView === 'week') d.setDate(d.getDate() + 7 * dir);
+    else if (calendarView === 'day') d.setDate(d.getDate() + dir);
+    else d.setMonth(d.getMonth() + dir);
+    setCurrentDate(d);
+  };
+  const goPrev = () => stepDate(-1);
+  const goNext = () => stepDate(1);
+  const goToday = () => setCurrentDate(new Date());
+
+  const VIEW_OPTIONS: Array<{ value: 'month' | 'week' | 'agenda' | 'day'; label: string }> = [
+    { value: 'month', label: 'Month' },
+    { value: 'week', label: 'Week' },
+    { value: 'agenda', label: 'Agenda' },
+    { value: 'day', label: 'Day' },
+  ];
+
+  const showTodayStrip = calendarView === 'month' || calendarView === 'week';
+  const todayEvents = eventsByDate.get(todayKey) || [];
+
   return (
     <div className="space-y-6">
     <Card>
@@ -5491,24 +5682,6 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
           <div>
             <CardTitle>Event Management</CardTitle>
             <CardDescription>Schedule practices, games, and other events</CardDescription>
-          </div>
-          <div className="flex border rounded-lg">
-            <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("list")}
-              data-testid="button-view-list"
-            >
-              <List className="w-4 h-4" />
-            </Button>
-            <Button
-              variant={viewMode === "calendar" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("calendar")}
-              data-testid="button-view-calendar"
-            >
-              <CalendarDays className="w-4 h-4" />
-            </Button>
           </div>
         </div>
         <div className="flex gap-2 justify-end w-full">
@@ -5554,9 +5727,6 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
             organization={organization}
           />
 
-          {/* Edit Event Dialog */}
-
-          {/* Edit Event Dialog */}
           {editingEvent && (
             <EditEventDialog
               key={editingEvent.id}
@@ -5569,7 +5739,6 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
             />
           )}
 
-          {/* Event Details Modal */}
           <EventDetailModal
             event={selectedEventForDetails}
             userId={currentUser?.id || ''}
@@ -5579,474 +5748,242 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
           />
         </div>
       </CardHeader>
-      <CardContent>
-        {selectedEventIds.size > 0 && (
-          <div className="flex items-center gap-4 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg">
-            <span className="text-sm font-medium text-red-800">
-              {selectedEventIds.size} event{selectedEventIds.size > 1 ? 's' : ''} selected
-            </span>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => {
-                if (confirm(`Are you sure you want to delete ${selectedEventIds.size} event(s)?`)) {
-                  bulkDeleteEvents.mutate(Array.from(selectedEventIds));
+      <CardContent className="p-0">
+        {/* Sticky Month Header */}
+        <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+          <div className="flex items-center gap-1 min-w-0">
+            <button
+              type="button"
+              onClick={goPrev}
+              className="p-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 text-gray-600 flex items-center justify-center"
+              aria-label="Previous month"
+              data-testid="button-prev-month"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div className="min-w-0">
+              <div className="text-[20px] font-bold tracking-tight whitespace-nowrap leading-tight" data-testid="text-calendar-month">
+                {monthLabel}
+              </div>
+              <div className="text-[11px] text-gray-500 font-medium mt-0.5">
+                {periodCountLabel}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={goNext}
+              className="p-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 text-gray-600 flex items-center justify-center"
+              aria-label="Next month"
+              data-testid="button-next-month"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              type="button"
+              onClick={goToday}
+              className="bg-white border border-gray-200 text-gray-600 text-xs font-semibold px-3 py-1.5 rounded-full hover:border-red-500 hover:text-red-600 active:bg-red-50"
+              data-testid="button-today"
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              onClick={() => { setDuplicatingEvent(null); setIsDialogOpen(true); }}
+              className="bg-red-600 hover:bg-red-700 active:scale-95 transition-transform w-8 h-8 rounded-full flex items-center justify-center text-white"
+              aria-label="Create event"
+              data-testid="button-create-event-header"
+            >
+              <Plus className="w-[18px] h-[18px]" strokeWidth={2.4} />
+            </button>
+          </div>
+        </div>
+
+        {/* View switcher */}
+        <div className="flex gap-1.5 px-4 py-2 bg-white border-b border-gray-200 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
+          {VIEW_OPTIONS.map(opt => {
+            const active = calendarView === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setCalendarView(opt.value)}
+                className={
+                  active
+                    ? 'bg-red-600 text-white border border-red-600 font-semibold px-3.5 py-1.5 rounded-full text-xs whitespace-nowrap hover:bg-red-700'
+                    : 'bg-white text-gray-600 border border-gray-200 font-medium px-3.5 py-1.5 rounded-full text-xs whitespace-nowrap hover:border-red-500 hover:text-red-600'
                 }
-              }}
-              disabled={bulkDeleteEvents.isPending}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              {bulkDeleteEvents.isPending ? "Deleting..." : "Delete Selected"}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedEventIds(new Set())}
-            >
-              Clear Selection
-            </Button>
+                data-testid={`button-view-${opt.value}`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Filters collapsible */}
+        <details className="bg-white border-b border-gray-200 px-4 group">
+          <summary className="py-2.5 text-[13px] font-medium text-gray-600 cursor-pointer select-none flex items-center gap-1.5 list-none [&::-webkit-details-marker]:hidden">
+            <ChevronRight className="w-3 h-3 text-gray-400 transition-transform group-open:rotate-90" />
+            Event filters
+          </summary>
+          <div className="pb-3">
+            <FiltersBar
+              events={parsedAdminEvents}
+              filters={adminEventPrefs}
+              onFiltersChange={setAdminEventPrefs}
+              horizontal
+            />
+          </div>
+        </details>
+
+        {/* Weekday header (Month + Week views) */}
+        {(calendarView === 'month' || calendarView === 'week') && (
+          <div className="grid grid-cols-7 bg-white border-b border-gray-200">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+              <div key={d} className="text-center text-[10px] font-bold text-gray-400 tracking-wider uppercase py-2">
+                {d}
+              </div>
+            ))}
           </div>
         )}
-        <div className="mb-3">
-          <details className="bg-white rounded-xl shadow-sm border">
-            <summary className="px-4 py-2 text-sm font-medium text-gray-700 cursor-pointer select-none">Event Filters</summary>
-            <div className="px-4 pb-3">
-              <FiltersBar
-                events={parsedAdminEvents}
-                filters={adminEventPrefs}
-                onFiltersChange={setAdminEventPrefs}
-                horizontal
-              />
-            </div>
-          </details>
-        </div>
-        <div className="w-full">
-        {viewMode === "list" ? (
-          <>
-          <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10 px-2">
-                  <Checkbox 
-                    checked={visibleEvents.length > 0 && selectedEventIds.size === visibleEvents.length}
-                    onCheckedChange={() => toggleAllEvents(visibleEvents.map((e: any) => e.id))}
-                    aria-label="Select all events"
-                  />
-                </TableHead>
-                <TableHead className="cursor-pointer select-none hover:bg-gray-100 whitespace-nowrap px-2" onClick={() => handleEventSort('title')}>
-                  Event {eventSortField === 'title' && (eventSortDirection === 'asc' ? '↑' : '↓')}
-                </TableHead>
-                <TableHead className="cursor-pointer select-none hover:bg-gray-100 whitespace-nowrap px-2" onClick={() => handleEventSort('type')}>
-                  Type {eventSortField === 'type' && (eventSortDirection === 'asc' ? '↑' : '↓')}
-                </TableHead>
-                <TableHead className="cursor-pointer select-none hover:bg-gray-100 whitespace-nowrap px-2" onClick={() => handleEventSort('startTime')}>
-                  Date & Time {eventSortField === 'startTime' && (eventSortDirection === 'asc' ? '↑' : '↓')}
-                </TableHead>
-                <TableHead className="cursor-pointer select-none hover:bg-gray-100 whitespace-nowrap px-2" onClick={() => handleEventSort('location')}>
-                  Location {eventSortField === 'location' && (eventSortDirection === 'asc' ? '↑' : '↓')}
-                </TableHead>
-                <TableHead className="whitespace-nowrap px-2">For</TableHead>
-                <TableHead className="whitespace-nowrap px-2">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(() => {
-                const sortedEvents = [...visibleEvents].sort((a: any, b: any) => {
-                  const field = eventSortField;
-                  if (!field) {
-                    return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
-                  }
-                  let aVal = a[field];
-                  let bVal = b[field];
-                  if (field === 'startTime') {
-                    const aTime = new Date(aVal || 0).getTime();
-                    const bTime = new Date(bVal || 0).getTime();
-                    return eventSortDirection === 'asc' ? aTime - bTime : bTime - aTime;
-                  }
-                  if (aVal == null) aVal = '';
-                  if (bVal == null) bVal = '';
-                  const aStr = typeof aVal === 'string' ? aVal.toLowerCase() : aVal;
-                  const bStr = typeof bVal === 'string' ? bVal.toLowerCase() : bVal;
-                  if (aStr < bStr) return eventSortDirection === 'asc' ? -1 : 1;
-                  if (aStr > bStr) return eventSortDirection === 'asc' ? 1 : -1;
-                  return 0;
-                });
-                const totalEventsPages = Math.max(1, Math.ceil(sortedEvents.length / EVENTS_PAGE_SIZE));
-                const safeEventsPage = Math.min(eventsPage, totalEventsPages);
-                const startIdx = (safeEventsPage - 1) * EVENTS_PAGE_SIZE;
-                const paginatedEvents = sortedEvents.slice(startIdx, startIdx + EVENTS_PAGE_SIZE);
-                
-                return paginatedEvents.map((event: any) => {
-                  // Build 'For' display from assignTo
-                  let forDisplay = "Everyone";
-                  if (event.scheduleRequestSource && event.assignTo?.users?.length > 0) {
-                    const userNames = event.assignTo.users.map((id: string) => {
-                      const user = (users || []).find((u: any) => String(u.id) === String(id));
-                      return user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : null;
-                    }).filter(Boolean);
-                    forDisplay = userNames.length > 0 ? userNames.join(", ") : "Assigned User";
-                  } else if (event.assignTo) {
-                    const parts: string[] = [];
-                    if (event.assignTo.teams?.length > 0) {
-                      const teamNames = event.assignTo.teams.map((id: string) => {
-                        const team = (teams || []).find((t: any) => String(t.id) === String(id));
-                        return team?.name || `Team ${id}`;
-                      });
-                      parts.push(teamNames.join(", "));
-                    }
-                    if (event.assignTo.programs?.length > 0) {
-                      const programNames = event.assignTo.programs.map((id: string) => {
-                        const prog = (programs || []).find((p: any) => String(p.id) === String(id));
-                        return prog?.name || `Program ${id}`;
-                      });
-                      parts.push(programNames.join(", "));
-                    }
-                    if (event.assignTo.divisions?.length > 0) {
-                      parts.push(`Divisions: ${event.assignTo.divisions.join(", ")}`);
-                    }
-                    if (event.assignTo.users?.length > 0) {
-                      const userNames = event.assignTo.users.map((id: string) => {
-                        const user = (users || []).find((u: any) => String(u.id) === String(id));
-                        return user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : `User ${id}`;
-                      });
-                      parts.push(userNames.join(", "));
-                    }
-                    if (event.assignTo.roles?.length > 0) {
-                      parts.push(`Roles: ${event.assignTo.roles.map((r: string) => r.charAt(0).toUpperCase() + r.slice(1)).join(", ")}`);
-                    }
-                    if (parts.length > 0) {
-                      forDisplay = parts.join("; ");
-                    }
-                  } else if (event.targetType && event.targetType !== "all") {
-                    const eventTeam = event.teamId ? (teams || []).find((t: any) => t.id === parseInt(event.teamId)) : null;
-                    if (eventTeam) {
-                      forDisplay = eventTeam.name;
-                    } else {
-                      forDisplay = event.targetType.charAt(0).toUpperCase() + event.targetType.slice(1);
-                    }
-                  }
-                  
-                  const etz = event.timezone || 'America/Los_Angeles';
-                  const dateTimeDisplay = new Date(ensureUtcString(event.startTime || '')).toLocaleString('en-US', {
-                    timeZone: etz,
-                    month: 'short', day: 'numeric', year: 'numeric',
-                    hour: 'numeric', minute: '2-digit', hour12: true,
-                  });
-                  
-                  return (
-                  <TableRow key={event.id} data-testid={`row-event-${event.id}`} className="whitespace-nowrap">
-                    <TableCell className="px-2 py-1.5">
-                      <Checkbox 
-                        checked={selectedEventIds.has(event.id)}
-                        onCheckedChange={() => toggleEventSelection(event.id)}
-                        aria-label={`Select ${event.title}`}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium px-2 py-1.5 max-w-[180px] truncate">
-                      <div className="flex items-center gap-1.5">
-                        <span className="truncate">{event.title}</span>
-                        {event.isRecurring && (
-                          <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-300 text-[10px] px-1 py-0 shrink-0">
-                            Recurring
-                          </Badge>
-                        )}
-                        {event.scheduleRequestSource && event.status === 'pending' && (
-                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-[10px] px-1 py-0 shrink-0">
-                            Requested
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-2 py-1.5">
-                      {(() => {
-                        const parsedType = parseEventMeta(event).type;
-                        const hexColor = getEventTypeHexColor(parsedType, adminEventPrefs.eventTypeColors);
-                        return (
-                          <Badge
-                            className="text-[10px] px-1.5 py-0 border-0"
-                            style={{
-                              backgroundColor: `${hexColor}20`,
-                              color: hexColor,
-                            }}
-                          >
-                            {parsedType.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                          </Badge>
-                        );
-                      })()}
-                    </TableCell>
-                    <TableCell className="px-2 py-1.5 text-xs">{dateTimeDisplay}</TableCell>
-                    <TableCell className="px-2 py-1.5 text-xs max-w-[140px] truncate">
-                      {event.location === 'Online' && event.meetingLink ? (
-                        <a href={event.meetingLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
-                          Online
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      ) : (
-                        <span title={[event.courtName, event.location].filter(Boolean).join(' · ')}>
-                          {event.courtName ? `${event.courtName} · ${event.location || ''}` : event.location || "-"}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-2 py-1.5 text-xs max-w-[150px] truncate" title={forDisplay}>
-                      {forDisplay}
-                    </TableCell>
-                  <TableCell className="px-2 py-1.5">
-                    <div className="flex gap-1">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-7 w-7 p-0"
-                        onClick={() => setSelectedEventForDetails(event)}
-                        data-testid={`button-view-details-${event.id}`}
-                        title="View Details"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-7 w-7 p-0 text-orange-500 hover:text-orange-700"
-                        onClick={() => setLocation(`/game-scoring?eventId=${event.id}`)}
-                        title="Score Game"
-                      >
-                        <Target className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-7 w-7 p-0"
-                        onClick={() => setEditingEvent(event)}
-                        data-testid={`button-edit-event-${event.id}`}
-                        title="Edit Event"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0"
-                        onClick={() => handleDuplicateEvent(event)}
-                        data-testid={`button-duplicate-event-${event.id}`}
-                        title="Duplicate Event"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
-                        onClick={() => setDeleteConfirmEvent(event)}
-                        data-testid={`button-delete-event-${event.id}`}
-                        title="Delete Event"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+
+        {/* Month grid */}
+        {calendarView === 'month' && (
+          <div className="grid grid-cols-7 bg-white">
+            {monthCells.map((cell, idx) => {
+              if (cell.other) {
+                return (
+                  <div
+                    key={cell.key}
+                    className={`min-h-[78px] p-1 flex flex-col gap-0.5 bg-gray-50 ${idx % 7 !== 6 ? 'border-r' : ''} border-b border-[#f4f3f0]`}
+                  >
+                    <div className="text-[11px] text-gray-300 font-medium px-0.5 leading-none flex items-center min-h-[18px]">
+                      {cell.day}
                     </div>
-                  </TableCell>
-                </TableRow>
-                  );
-                });
-              })()}
-            </TableBody>
-          </Table>
-          </div>
-          {visibleEvents.length > EVENTS_PAGE_SIZE && (
-            <div className="flex items-center justify-between mt-4 px-2">
-              <span className="text-sm text-gray-500">
-                Showing {((eventsPage - 1) * EVENTS_PAGE_SIZE) + 1}–{Math.min(eventsPage * EVENTS_PAGE_SIZE, visibleEvents.length)} of {visibleEvents.length} events
-              </span>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={eventsPage <= 1}
-                  onClick={() => setEventsPage(p => Math.max(1, p - 1))}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <span className="text-sm font-medium">
-                  Page {eventsPage} of {Math.ceil(visibleEvents.length / EVENTS_PAGE_SIZE)}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={eventsPage >= Math.ceil(visibleEvents.length / EVENTS_PAGE_SIZE)}
-                  onClick={() => setEventsPage(p => p + 1)}
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-          </>
-        ) : (
-          <div className="space-y-4">
-            {/* Calendar Navigation and Legend */}
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => {
-                    const newDate = new Date(currentDate);
-                    newDate.setMonth(newDate.getMonth() - 1);
-                    setCurrentDate(newDate);
-                  }}
-                  data-testid="button-prev-month"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <h3 className="font-semibold text-lg min-w-[200px] text-center">
-                  {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </h3>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => {
-                    const newDate = new Date(currentDate);
-                    newDate.setMonth(newDate.getMonth() + 1);
-                    setCurrentDate(newDate);
-                  }}
-                  data-testid="button-next-month"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentDate(new Date())}
-                  data-testid="button-today"
-                >
-                  Today
-                </Button>
-              </div>
-              
-              
-            </div>
-            <div className="border rounded-lg overflow-hidden">
-              {/* Calendar Header - Days of Week */}
-              <div className="grid grid-cols-7 bg-gray-50 border-b">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                  <div key={day} className="font-semibold text-sm p-3 text-center border-r last:border-r-0">
-                    {day}
                   </div>
-                ))}
-              </div>
-              
-              {/* Calendar Grid - Days */}
-              <div className="grid grid-cols-7">
-                {(() => {
-                  const year = currentDate.getFullYear();
-                  const month = currentDate.getMonth();
-                  const firstDay = new Date(year, month, 1).getDay();
-                  const daysInMonth = new Date(year, month + 1, 0).getDate();
-                  const today = new Date();
-                  const isToday = (day: number) => 
-                    today.getDate() === day && 
-                    today.getMonth() === month && 
-                    today.getFullYear() === year;
-                  
-                  const cells = [];
-                  
-                  // Empty cells for days before month starts
-                  for (let i = 0; i < firstDay; i++) {
-                    cells.push(
-                      <div key={`empty-${i}`} className="min-h-32 p-2 bg-gray-50 border-r border-b" />
-                    );
-                  }
-                  
-                  // Days of the month
-                  for (let day = 1; day <= daysInMonth; day++) {
-                    const mm = String(month + 1).padStart(2, '0');
-                    const dd = String(day).padStart(2, '0');
-                    const dateStr = `${year}-${mm}-${dd}`;
-                    const dayEvents = visibleEvents.filter((event: any) => {
-                      const etz = event.timezone || 'America/Los_Angeles';
-                      const d = new Date(ensureUtcString(event.startTime || ''));
-                      if (isNaN(d.getTime())) return false;
-                      const parts = new Intl.DateTimeFormat('en-US', { timeZone: etz, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d);
-                      const getPart = (type: string) => parts.find(p => p.type === type)?.value || '00';
-                      const localDateStr = `${getPart('year')}-${getPart('month')}-${getPart('day')}`;
-                      return localDateStr === dateStr;
-                    });
-                    
-                    cells.push(
-                      <div 
-                        key={day} 
-                        className={`min-h-32 p-2 border-r border-b hover:bg-gray-50 transition-colors ${
-                          isToday(day) ? 'bg-red-50' : ''
-                        }`}
-                        data-testid={`calendar-day-${dateStr}`}
-                      >
-                        <div className={`text-sm font-semibold mb-1 ${
-                          isToday(day) ? 'text-red-600' : 'text-gray-700'
-                        }`}>
-                          {day}
-                        </div>
-                        <div className="space-y-1">
-                          {dayEvents.slice(0, 3).map((event: any) => (
-                            <DropdownMenu key={event.id}>
-                              <DropdownMenuTrigger asChild>
-                                <button
-                                  className="w-full text-left text-xs p-1 rounded border cursor-pointer hover:opacity-80 transition-opacity"
-                                  style={{
-                                    backgroundColor: `${getEventTypeHexColor(parseEventMeta(event).type, adminEventPrefs.eventTypeColors)}20`,
-                                    borderColor: `${getEventTypeHexColor(parseEventMeta(event).type, adminEventPrefs.eventTypeColors)}60`,
-                                    color: getEventTypeHexColor(parseEventMeta(event).type, adminEventPrefs.eventTypeColors),
-                                  }}
-                                  data-testid={`calendar-event-${event.id}`}
-                                >
-                                  <div className="font-medium truncate">{event.title}</div>
-                                  <div className="text-xs opacity-75">
-                                    {new Date(ensureUtcString(event.startTime || '')).toLocaleTimeString('en-US', { 
-                                      timeZone: event.timezone || 'America/Los_Angeles',
-                                      hour: 'numeric', 
-                                      minute: '2-digit' 
-                                    })}
-                                  </div>
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="start" className="w-36">
-                                <DropdownMenuItem onClick={() => setSelectedEventForDetails(event)}>
-                                  <Eye className="w-4 h-4 mr-2" />
-                                  View
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setEditingEvent(event)}>
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDuplicateEvent(event)}>
-                                  <Copy className="w-4 h-4 mr-2" />
-                                  Duplicate
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  className="text-red-600 focus:text-red-600"
-                                  onClick={() => setDeleteConfirmEvent(event)}
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          ))}
-                          {dayEvents.length > 3 && (
-                            <div className="text-xs text-gray-500 pl-1">
-                              +{dayEvents.length - 3} more
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }
-                  
-                  return cells;
-                })()}
-              </div>
-            </div>
+                );
+              }
+              const isToday = cell.dateKey === todayKey;
+              const dayEvents = (cell.dateKey && eventsByDate.get(cell.dateKey)) || [];
+              const visible = dayEvents.slice(0, 3);
+              const overflow = dayEvents.length - visible.length;
+              return (
+                <div
+                  key={cell.key}
+                  className={`min-h-[78px] p-1 flex flex-col gap-0.5 hover:bg-gray-50/60 transition-colors ${idx % 7 !== 6 ? 'border-r' : ''} border-b border-[#f4f3f0] ${isToday ? 'bg-red-50' : ''}`}
+                  data-testid={`calendar-day-${cell.dateKey}`}
+                >
+                  <div className="px-0.5 leading-none flex items-center min-h-[18px]">
+                    {isToday ? (
+                      <span className="inline-flex items-center justify-center w-5 h-5 bg-red-600 text-white rounded-full text-[10.5px] font-bold">
+                        {cell.day}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-gray-600 font-semibold">{cell.day}</span>
+                    )}
+                  </div>
+                  {visible.map(renderEventChip)}
+                  {overflow > 0 && (
+                    <div className="text-[9.5px] text-gray-500 font-medium px-1 leading-tight">+{overflow} more</div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
-        </div>
+
+        {/* Week grid */}
+        {calendarView === 'week' && (
+          <div className="grid grid-cols-7 bg-white">
+            {weekCells.map((cell, idx) => {
+              const isToday = cell.dateKey === todayKey;
+              const dayEvents = eventsByDate.get(cell.dateKey) || [];
+              return (
+                <div
+                  key={cell.key}
+                  className={`min-h-[200px] p-1 flex flex-col gap-0.5 ${idx % 7 !== 6 ? 'border-r' : ''} border-b border-[#f4f3f0] ${cell.other ? 'bg-gray-50' : ''} ${isToday ? 'bg-red-50' : ''}`}
+                  data-testid={`calendar-week-day-${cell.dateKey}`}
+                >
+                  <div className="px-0.5 leading-none flex items-center min-h-[18px]">
+                    {isToday ? (
+                      <span className="inline-flex items-center justify-center w-5 h-5 bg-red-600 text-white rounded-full text-[10.5px] font-bold">
+                        {cell.date.getDate()}
+                      </span>
+                    ) : (
+                      <span className={`text-[11px] font-semibold ${cell.other ? 'text-gray-300' : 'text-gray-600'}`}>
+                        {cell.date.getDate()}
+                      </span>
+                    )}
+                  </div>
+                  {dayEvents.map(renderEventChip)}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Agenda view */}
+        {calendarView === 'agenda' && (
+          <div className="bg-white px-4 py-4">
+            {agendaGroups.length === 0 ? (
+              <div className="py-12 text-center text-sm text-gray-500" data-testid="text-agenda-empty">
+                No events this month.
+              </div>
+            ) : (
+              agendaGroups.map(group => (
+                <div key={group.dateKey} className="mt-4 first:mt-0">
+                  <div className="text-[11px] font-bold text-gray-900 tracking-wider uppercase mb-2">
+                    {group.date.toLocaleDateString('en-US', { weekday: 'short' })} {group.date.getDate()}
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    {group.events.map(renderAgendaItem)}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Day view */}
+        {calendarView === 'day' && (
+          <div className="bg-white px-4 py-4">
+            <div className="text-sm font-bold text-gray-900 mb-3">
+              {dayInfo.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </div>
+            {dayInfo.events.length === 0 ? (
+              <div className="py-5 text-center text-sm text-gray-500" data-testid="text-day-empty">
+                No events scheduled.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {dayInfo.events.map(renderAgendaItem)}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Today strip */}
+        {showTodayStrip && (
+          <div className="bg-white px-4 py-3.5 border-t-4 border-[#f6f6f4]">
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="text-[11px] font-bold text-gray-900 tracking-wider uppercase">
+                Today · {todayWeekday} {todayDate.getDate()}
+              </div>
+              <div className="text-[11px] text-red-600 font-semibold">
+                {todayEvents.length} event{todayEvents.length === 1 ? '' : 's'}
+              </div>
+            </div>
+            {todayEvents.length === 0 ? (
+              <div className="py-6 text-center text-sm text-gray-500">No events today.</div>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {todayEvents.map(renderAgendaItem)}
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
       
       {/* Delete Event Confirmation Dialog */}

@@ -120,6 +120,45 @@ async function handleMagicLinkDirectly(magicToken: string): Promise<void> {
   }
 }
 
+async function handleVerifyEmailDirectly(
+  token: string,
+  email: string | null,
+  organizationId: string | null,
+): Promise<void> {
+  try {
+    console.log('[DeepLink] Verifying email in app...');
+    let apiUrl = `https://boxstat.app/api/auth/verify-email?token=${encodeURIComponent(token)}`;
+    if (email) {
+      apiUrl += `&email=${encodeURIComponent(email)}`;
+    }
+    if (organizationId) {
+      apiUrl += `&organizationId=${encodeURIComponent(organizationId)}`;
+    }
+
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      console.log('[DeepLink] Email verification successful in app');
+      const userEmail = data.email || email || '';
+      const orgId = organizationId || '';
+      let redirectPath = `/registration?email=${encodeURIComponent(userEmail)}&verified=true`;
+      if (orgId) {
+        redirectPath += `&organizationId=${encodeURIComponent(orgId)}`;
+      }
+      window.location.href = redirectPath;
+    } else {
+      console.error('[DeepLink] Email verification failed:', data.message);
+      const errMsg = encodeURIComponent(data.message || 'Verification failed. Please try again.');
+      window.location.href = `/verify-email?error=${errMsg}`;
+    }
+  } catch (error) {
+    console.error('[DeepLink] Error verifying email:', error);
+    const errMsg = encodeURIComponent('An error occurred during verification. Please try again.');
+    window.location.href = `/verify-email?error=${errMsg}`;
+  }
+}
+
 export function handleDeepLink(url: string): void {
   try {
     const urlObj = new URL(url);
@@ -193,6 +232,14 @@ export function handleDeepLink(url: string): void {
       if (token) {
         console.log('[DeepLink] Claim verify token detected, navigating...');
         window.location.href = `/claim-verify?token=${token}`;
+      }
+    } else if (pathname === '/verify-email' || pathname.startsWith('/verify-email')) {
+      const token = searchParams.get('token');
+      const emailParam = searchParams.get('email');
+      const organizationId = searchParams.get('organizationId');
+      if (token) {
+        console.log('[DeepLink] Verify-email token detected, processing in app...');
+        handleVerifyEmailDirectly(token, emailParam, organizationId);
       }
     } else {
       console.log('[DeepLink] Unknown path, navigating to:', pathname);

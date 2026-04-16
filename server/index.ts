@@ -103,7 +103,9 @@ app.get('/.well-known/apple-app-site-association', (req, res) => {
             "/claim-verify/*",
             "/invite/*",
             "/registration",
-            "/registration/*"
+            "/registration/*",
+            "/verify-email",
+            "/verify-email/*"
           ]
         }
       ]
@@ -115,6 +117,37 @@ app.get('/.well-known/apple-app-site-association', (req, res) => {
   
   res.setHeader('Content-Type', 'application/json');
   res.json(aasa);
+});
+
+// Android Digital Asset Links for App Links (must be before static files)
+app.get('/.well-known/assetlinks.json', (req, res) => {
+  const packageName = 'com.boxstat.app';
+  // Comma-separated list of SHA-256 cert fingerprints (upload + signing keys).
+  // Set ANDROID_APP_CERT_SHA256 env var to a real value (e.g. "AA:BB:..:ZZ"
+  // or multiple comma-separated). The placeholder fallback below MUST be
+  // replaced with the real fingerprints for App Links auto-verification to
+  // succeed in production.
+  const fingerprintsEnv =
+    process.env.ANDROID_APP_CERT_SHA256 ||
+    'REPLACE_WITH_SHA256_FINGERPRINT';
+  const sha256CertFingerprints = fingerprintsEnv
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const assetlinks = [
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: packageName,
+        sha256_cert_fingerprints: sha256CertFingerprints,
+      },
+    },
+  ];
+
+  res.setHeader('Content-Type', 'application/json');
+  res.json(assetlinks);
 });
 
 // Serve static files from public directory (for trophies, assets, etc.)

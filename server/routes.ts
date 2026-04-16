@@ -807,7 +807,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               "/claim-verify/*",
               "/invite/*",
               "/registration",
-              "/registration/*"
+              "/registration/*",
+              "/verify-email",
+              "/verify-email/*"
             ]
           }
         ]
@@ -819,6 +821,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     res.setHeader('Content-Type', 'application/json');
     res.json(aasa);
+  });
+
+  // Android Digital Asset Links for App Links (mirrors server/index.ts)
+  app.get('/.well-known/assetlinks.json', (req, res) => {
+    const packageName = 'com.boxstat.app';
+    const fingerprintsEnv =
+      process.env.ANDROID_APP_CERT_SHA256 ||
+      'REPLACE_WITH_SHA256_FINGERPRINT';
+    const sha256CertFingerprints = fingerprintsEnv
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const assetlinks = [
+      {
+        relation: ['delegate_permission/common.handle_all_urls'],
+        target: {
+          namespace: 'android_app',
+          package_name: packageName,
+          sha256_cert_fingerprints: sha256CertFingerprints,
+        },
+      },
+    ];
+
+    res.setHeader('Content-Type', 'application/json');
+    res.json(assetlinks);
   });
   
   // Serve BoxStat logo for emails

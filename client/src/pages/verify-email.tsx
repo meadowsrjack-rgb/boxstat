@@ -15,6 +15,13 @@ export default function VerifyEmail() {
       const token = params.get("token");
       const email = params.get("email");
       const organizationId = params.get("organizationId");
+      const errorParam = params.get("error");
+
+      if (errorParam) {
+        setStatus("error");
+        setMessage(errorParam);
+        return;
+      }
 
       if (!token) {
         setStatus("error");
@@ -56,19 +63,27 @@ export default function VerifyEmail() {
             // isn't installed, the browser simply continues to the same URL,
             // which serves the registration page as a normal web fallback.
             const absoluteUrl = window.location.origin + redirectPath;
+            // Build the in-app custom scheme deep link the app's handler
+            // recognizes (host=boxstat.app preserves the /registration
+            // pathname inside the boxstat:// URL so deepLinkService routes
+            // correctly).
+            const customSchemeUrl = `boxstat://boxstat.app${redirectPath}`;
 
             if (isIOS) {
-              // On modern iOS the `boxstat://` iframe hack no longer works.
-              // A top-level navigation to the associated https URL triggers
-              // Universal Link handoff to the app when installed.
-              window.location.href = absoluteUrl;
+              // Same-domain JS navigation to an https URL does not reliably
+              // trigger Universal Link handoff in Safari. Try the custom
+              // `boxstat://` scheme first (opens the installed app), then
+              // fall back to the absolute https URL after a short delay so
+              // users without the app land on the web registration page.
+              window.location.href = customSchemeUrl;
+              setTimeout(() => {
+                window.location.href = absoluteUrl;
+              }, 1500);
             } else if (isAndroid) {
-              // Android's current manifest only registers the `boxstat://`
-              // custom scheme deep link (no HTTPS App Links yet), so use an
-              // intent URL with scheme=boxstat. browser_fallback_url drops
-              // the user on the web registration page when the app isn't
-              // installed.
-              window.location.href = `intent://${redirectPath}#Intent;scheme=boxstat;package=com.boxstat.app;S.browser_fallback_url=${encodeURIComponent(absoluteUrl)};end`;
+              // Use an intent URL targeting the in-app `boxstat://` deep
+              // link the app actually handles. browser_fallback_url drops
+              // users without the app on the web registration page.
+              window.location.href = `intent://boxstat.app${redirectPath}#Intent;scheme=boxstat;package=com.boxstat.app;S.browser_fallback_url=${encodeURIComponent(absoluteUrl)};end`;
             } else {
               fallback();
             }

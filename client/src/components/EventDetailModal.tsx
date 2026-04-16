@@ -1137,8 +1137,8 @@ export default function EventDetailModal({
               </div>
             )}
 
-            {/* Score Game Button for game events */}
-            {isAdminOrCoach && event?.eventType?.toLowerCase() === 'game' && (
+            {/* Score Game Button for all event types */}
+            {isAdminOrCoach && (
               <div className="rounded-xl p-4 flex items-center justify-between" style={{ background: '#1a1f2e' }}>
                 <div className="flex items-center gap-2">
                   <Target className="h-4 w-4 text-orange-400" />

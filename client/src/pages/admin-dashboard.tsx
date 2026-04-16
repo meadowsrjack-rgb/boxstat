@@ -5790,17 +5790,15 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
                       >
                         <Eye className="w-3.5 h-3.5" />
                       </Button>
-                      {event.eventType?.toLowerCase() === 'game' && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-7 w-7 p-0 text-orange-500 hover:text-orange-700"
-                          onClick={() => setLocation(`/game-scoring?eventId=${event.id}`)}
-                          title="Score Game"
-                        >
-                          <Target className="w-3.5 h-3.5" />
-                        </Button>
-                      )}
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-7 w-7 p-0 text-orange-500 hover:text-orange-700"
+                        onClick={() => setLocation(`/game-scoring?eventId=${event.id}`)}
+                        title="Score Game"
+                      >
+                        <Target className="w-3.5 h-3.5" />
+                      </Button>
                       <Button 
                         variant="ghost" 
                         size="sm" 

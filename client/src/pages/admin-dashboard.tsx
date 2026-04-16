@@ -5779,25 +5779,6 @@ function EventsTab({ events, teams, programs, organization, currentUser, users, 
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <button
-              type="button"
-              onClick={goToday}
-              className="bg-white border border-gray-200 text-gray-600 text-xs font-semibold px-3 py-1.5 rounded-full hover:border-red-500 hover:text-red-600 active:bg-red-50"
-              data-testid="button-today"
-            >
-              Today
-            </button>
-            <button
-              type="button"
-              onClick={() => { setDuplicatingEvent(null); setIsDialogOpen(true); }}
-              className="bg-red-600 hover:bg-red-700 active:scale-95 transition-transform w-8 h-8 rounded-full flex items-center justify-center text-white"
-              aria-label="Create event"
-              data-testid="button-create-event-header"
-            >
-              <Plus className="w-[18px] h-[18px]" strokeWidth={2.4} />
-            </button>
-          </div>
         </div>
 
         {/* View switcher */}

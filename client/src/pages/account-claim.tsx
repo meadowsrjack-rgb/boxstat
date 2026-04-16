@@ -41,10 +41,21 @@ export default function AccountClaim() {
 
   const claimMutation = useMutation({
     mutationFn: async (email: string): Promise<ClaimResponse> => {
-      return apiRequest("/api/auth/request-claim", {
+      const result: unknown = await apiRequest("/api/auth/request-claim", {
         method: "POST",
         data: { email }
       });
+      // If the backend didn't return the expected JSON shape (e.g. an HTML
+      // fallback from a missing route), surface a real error instead of
+      // silently showing the success state.
+      const isClaimResponse = (value: unknown): value is ClaimResponse =>
+        typeof value === "object" &&
+        value !== null &&
+        typeof (value as { success?: unknown }).success === "boolean";
+      if (!isClaimResponse(result)) {
+        throw new Error("Unexpected response from server. Please try again.");
+      }
+      return result;
     },
     onSuccess: (data) => {
       // Handle automatic redirect in development mode
@@ -161,7 +172,7 @@ export default function AccountClaim() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-red-500 hover:bg-red-600"
+                  className="w-full bg-[#e21224] hover:bg-[#c10f1f] text-white disabled:bg-[#e21224]/70"
                   disabled={claimMutation.isPending}
                   data-testid="button-claim-account"
                 >

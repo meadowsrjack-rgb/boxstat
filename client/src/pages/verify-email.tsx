@@ -45,28 +45,30 @@ export default function VerifyEmail() {
             redirectPath += `&organizationId=${encodeURIComponent(orgId)}`;
           }
           setTimeout(() => {
-            const deepLink = `boxstat://${redirectPath}`;
             const fallback = () => setLocation(redirectPath);
 
             const ua = navigator.userAgent || "";
             const isAndroid = /android/i.test(ua);
             const isIOS = /iPhone|iPad|iPod/i.test(ua);
 
-            if (isAndroid) {
-              window.location.href = `intent://${redirectPath}#Intent;scheme=boxstat;package=com.boxstat.app;S.browser_fallback_url=${encodeURIComponent(window.location.origin + redirectPath)};end`;
-            } else if (isIOS) {
-              let didLeave = false;
-              const onBlur = () => { didLeave = true; };
-              window.addEventListener("blur", onBlur);
-              const iframe = document.createElement("iframe");
-              iframe.style.display = "none";
-              iframe.src = deepLink;
-              document.body.appendChild(iframe);
-              setTimeout(() => {
-                window.removeEventListener("blur", onBlur);
-                document.body.removeChild(iframe);
-                if (!didLeave) fallback();
-              }, 1500);
+            // Universal Links (iOS) / App Links (Android): navigating to the
+            // https URL will be intercepted by the installed app. If the app
+            // isn't installed, the browser simply continues to the same URL,
+            // which serves the registration page as a normal web fallback.
+            const absoluteUrl = window.location.origin + redirectPath;
+
+            if (isIOS) {
+              // On modern iOS the `boxstat://` iframe hack no longer works.
+              // A top-level navigation to the associated https URL triggers
+              // Universal Link handoff to the app when installed.
+              window.location.href = absoluteUrl;
+            } else if (isAndroid) {
+              // Android's current manifest only registers the `boxstat://`
+              // custom scheme deep link (no HTTPS App Links yet), so use an
+              // intent URL with scheme=boxstat. browser_fallback_url drops
+              // the user on the web registration page when the app isn't
+              // installed.
+              window.location.href = `intent://${redirectPath}#Intent;scheme=boxstat;package=com.boxstat.app;S.browser_fallback_url=${encodeURIComponent(absoluteUrl)};end`;
             } else {
               fallback();
             }

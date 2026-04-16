@@ -100,7 +100,9 @@ app.get('/.well-known/apple-app-site-association', (req, res) => {
             "/magic-link-login/*",
             "/claim-verify",
             "/claim-verify/*",
-            "/invite/*"
+            "/invite/*",
+            "/registration",
+            "/registration/*"
           ]
         }
       ]

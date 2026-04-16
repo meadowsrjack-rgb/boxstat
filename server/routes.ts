@@ -12,6 +12,7 @@ import searchRoutes from "./routes/search";
 import privacyRoutes from "./routes/privacy";
 import { setupNotificationRoutes } from "./routes/notifications";
 import { setupAdminNotificationRoutes } from "./routes/adminNotifications";
+import { registerRequestClaimRoute } from "./routes/request-claim";
 import { adminNotificationService } from "./services/adminNotificationService";
 import { requireAuth, optionalAuth, isAdmin, isCoachOrAdmin, setAuthStorage } from "./auth";
 import multer from "multer";
@@ -762,6 +763,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register object storage routes for persistent file uploads
   registerObjectStorageRoutes(app);
+
+  // Register the minimal /api/auth/request-claim endpoint used by the
+  // "Claim Your Account" page. Scoped to just this handler on purpose —
+  // the legacy claim-routes module contains unrelated endpoints.
+  registerRequestClaimRoute(app);
   const objectStorageService = new ObjectStorageService();
   
   // Initialize organizations (always, not just dev)
@@ -799,7 +805,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               "/magic-link-login/*",
               "/claim-verify",
               "/claim-verify/*",
-              "/invite/*"
+              "/invite/*",
+              "/registration",
+              "/registration/*"
             ]
           }
         ]

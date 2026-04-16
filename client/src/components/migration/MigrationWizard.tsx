@@ -76,29 +76,55 @@ function downloadCsvTemplate(filename: string, headers: string[], examples: stri
   URL.revokeObjectURL(url);
 }
 
+function parseCsvRow(line: string, delim: string): string[] {
+  const out: string[] = [];
+  let cur = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++; }
+        else inQuotes = false;
+      } else cur += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === delim) { out.push(cur); cur = ""; }
+      else cur += ch;
+    }
+  }
+  out.push(cur);
+  return out.map((c) => c.replace(/\r$/, "").trim());
+}
+
 function parsePaste(raw: string): Record<string, string>[] {
-  const lines = raw.trim().split("\n").filter((l) => l.trim());
+  const clean = raw.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").trim();
+  const lines = clean.split("\n").filter((l) => l.trim());
   if (lines.length < 2) return [];
   const delim = lines[0].includes("\t") ? "\t" : ",";
-  const headers = lines[0].split(delim).map((h) => h.trim().toLowerCase().replace(/[^a-z]/g, ""));
+  const headers = parseCsvRow(lines[0], delim).map((h) => h.trim().toLowerCase().replace(/[^a-z0-9]/g, ""));
   const col = (...names: string[]) => {
     for (const n of names) {
-      const i = headers.findIndex((h) => h.includes(n) || n.includes(h));
+      const i = headers.findIndex((h) => h && h === n);
+      if (i >= 0) return i;
+    }
+    for (const n of names) {
+      const i = headers.findIndex((h) => h && (h.includes(n) || n.includes(h)));
       if (i >= 0) return i;
     }
     return -1;
   };
   return lines.slice(1).map((line) => {
-    const cells = line.split(delim).map((c) => c.trim().replace(/^"|"$/g, ""));
+    const cells = parseCsvRow(line, delim);
     const get = (i: number) => (i >= 0 ? cells[i] ?? "" : "");
     return {
-      first:       get(col("first", "fname", "firstname")),
-      last:        get(col("last", "lname", "lastname", "surname")),
-      email:       get(col("email", "mail")),
-      phone:       get(col("phone", "mobile", "cell")),
-      parentEmail: get(col("parent", "guardian", "parentemail", "family")),
-      expiry:      get(col("expiry", "end", "expires", "subscription", "until", "sub")),
-      program:     get(col("program", "programcode", "prog")),
+      first:       get(col("firstname", "first", "fname", "givenname")),
+      last:        get(col("lastname", "last", "lname", "surname", "familyname")),
+      email:       get(col("email", "emailaddress", "mail")),
+      phone:       get(col("phone", "phonenumber", "mobile", "cell", "contact")),
+      parentEmail: get(col("parentemail", "parent", "guardian", "guardianemail", "family")),
+      expiry:      get(col("subenddate", "subscriptionenddate", "expiry", "expires", "expiration", "enddate", "subscription", "until", "end", "sub")),
+      program:     get(col("program", "programname", "programcode", "prog")),
       team:        get(col("team", "teamname", "group")),
     };
   });

@@ -3080,6 +3080,8 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                       type="date"
                                       className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-full"
                                       value={enrollment.endDate || ''}
+                                      min={new Date().toISOString().split('T')[0]}
+                                      max={(() => { const d = new Date(); d.setMonth(d.getMonth() + 2); return d.toISOString().split('T')[0]; })()}
                                       onChange={(e) => {
                                         const updated = (newUserExtras.enrollments || []).map((en: any) =>
                                           en.programId === enrollment.programId ? { ...en, endDate: e.target.value } : en
@@ -3587,6 +3589,8 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                             type="date"
                                             className="text-xs border border-gray-200 rounded px-1.5 py-0.5 w-full"
                                             value={enrollment.endDate || ''}
+                                            min={new Date().toISOString().split('T')[0]}
+                                            max={(() => { const d = new Date(); d.setMonth(d.getMonth() + 2); return d.toISOString().split('T')[0]; })()}
                                             onChange={(e) => {
                                               const updated = (editingUser.pendingEnrollments || programEnrollments).map((en: any) =>
                                                 en.enrollmentId === enrollment.enrollmentId ? { ...en, endDate: e.target.value || null } : en
@@ -3676,6 +3680,8 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                         type="date"
                                         className="text-sm border border-gray-200 rounded px-2 py-1.5 bg-white w-full"
                                         value={editingUser.addEnrollmentEndDate || ''}
+                                        min={new Date().toISOString().split('T')[0]}
+                                        max={(() => { const d = new Date(); d.setMonth(d.getMonth() + 2); return d.toISOString().split('T')[0]; })()}
                                         onChange={(e) => setEditingUser({ ...editingUser, addEnrollmentEndDate: e.target.value })}
                                         data-testid="input-add-enrollment-expiry"
                                       />

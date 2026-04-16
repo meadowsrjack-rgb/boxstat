@@ -1,0 +1,647 @@
+<!-- ============================================================
+     BoxStat — Redesigned Mobile Calendar Element (v2)
+     Drop-in replacement. Keeps existing header + tabs unchanged.
+     Font: DM Sans | Accent: #e21224 | Surface: #f6f6f4
+     Fully interactive: prev/next month, today, view switcher.
+     ============================================================ -->
+
+<style>
+  .bs-cal { font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif; color: #1a1a1a; }
+  .bs-cal * { box-sizing: border-box; }
+
+  /* --- Header / month nav --- */
+  .bs-cal__header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px 10px;
+    background: #fff;
+    border-bottom: 1px solid #ececea;
+    position: sticky; top: 0; z-index: 5;
+  }
+  .bs-cal__month-group { display: flex; align-items: center; gap: 2px; min-width: 0; }
+  .bs-cal__month-text { min-width: 0; }
+  .bs-cal__month {
+    font-size: 20px; font-weight: 700; letter-spacing: -0.3px;
+    color: #1a1a1a; line-height: 1.1; white-space: nowrap;
+  }
+  .bs-cal__count { font-size: 11px; color: #888; font-weight: 500; margin-top: 2px; }
+  .bs-cal__navbtn {
+    background: transparent; border: none; padding: 8px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; color: #444;
+    border-radius: 8px; flex-shrink: 0;
+  }
+  .bs-cal__navbtn:hover { background: #f6f6f4; }
+  .bs-cal__navbtn:active { background: #ececea; }
+  .bs-cal__actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .bs-cal__today-btn {
+    background: #fff; border: 1px solid #e3e3e0; color: #444;
+    font-family: inherit; font-size: 12px; font-weight: 600;
+    padding: 6px 12px; border-radius: 14px; cursor: pointer;
+  }
+  .bs-cal__today-btn:hover { border-color: #e21224; color: #e21224; }
+  .bs-cal__today-btn:active { background: #fdeaec; }
+  .bs-cal__add-btn {
+    background: #e21224; border: none; width: 32px; height: 32px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: white;
+  }
+  .bs-cal__add-btn:hover { background: #b50e1c; }
+  .bs-cal__add-btn:active { transform: scale(0.94); }
+
+  /* --- View switcher --- */
+  .bs-cal__views {
+    display: flex; gap: 6px; padding: 8px 16px 12px;
+    background: #fff; overflow-x: auto;
+    border-bottom: 1px solid #ececea;
+    scrollbar-width: none;
+  }
+  .bs-cal__views::-webkit-scrollbar { display: none; }
+  .bs-cal__view {
+    background: #fff; color: #555; border: 1px solid #e3e3e0;
+    padding: 6px 14px; border-radius: 14px;
+    font-family: inherit; font-size: 12px; font-weight: 500;
+    white-space: nowrap; cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .bs-cal__view:hover { border-color: #e21224; color: #e21224; }
+  .bs-cal__view--active {
+    background: #e21224; color: white; border-color: #e21224;
+    font-weight: 600;
+  }
+  .bs-cal__view--active:hover { background: #b50e1c; color: white; }
+
+  /* --- Filters --- */
+  .bs-cal__filters {
+    background: #fff; border-bottom: 1px solid #ececea;
+    padding: 0 16px;
+  }
+  .bs-cal__filters summary {
+    padding: 10px 0; font-size: 13px; font-weight: 500; color: #555;
+    cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px;
+  }
+  .bs-cal__filters summary::-webkit-details-marker { display: none; }
+  .bs-cal__filters summary::before {
+    content: '▸'; font-size: 10px; color: #999;
+    transition: transform 0.2s; display: inline-block;
+  }
+  .bs-cal__filters[open] summary::before { transform: rotate(90deg); }
+  .bs-cal__filter-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 6px 12px; padding: 4px 0 12px;
+  }
+  .bs-cal__filter { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #333; }
+  .bs-cal__swatch { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* --- Weekday header --- */
+  .bs-cal__weekdays {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    background: #fff; border-bottom: 1px solid #ececea;
+  }
+  .bs-cal__weekday {
+    text-align: center; font-size: 10px; font-weight: 700; color: #999;
+    padding: 8px 0; letter-spacing: 0.6px; text-transform: uppercase;
+  }
+
+  /* --- Grid --- */
+  .bs-cal__grid {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    background: #fff;
+  }
+  .bs-cal__cell {
+    min-height: 78px; padding: 4px 3px;
+    border-right: 1px solid #f4f3f0; border-bottom: 1px solid #f4f3f0;
+    overflow: hidden; cursor: pointer;
+    transition: background 0.15s;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .bs-cal__cell:hover { background: #fafaf8; }
+  .bs-cal__cell:nth-child(7n) { border-right: none; }
+  .bs-cal__cell--other { background: #fafaf8; cursor: default; }
+  .bs-cal__cell--today { background: #fdeaec; }
+
+  .bs-cal__date {
+    font-size: 11px; color: #555; font-weight: 600;
+    padding: 0 2px; line-height: 1;
+    display: flex; align-items: center;
+    min-height: 18px;
+  }
+  .bs-cal__cell--other .bs-cal__date { color: #bbb; font-weight: 500; }
+  .bs-cal__date--today {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; background: #e21224; color: white;
+    border-radius: 50%; font-size: 10.5px; font-weight: 700;
+    padding: 0;
+  }
+
+  /* --- MODERN EVENT CHIPS --- */
+  /* Soft pill with inline dot. No thick left border. */
+  .bs-cal__event {
+    display: flex; align-items: center; gap: 4px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-size: 10px; font-weight: 600;
+    line-height: 1.35;
+    cursor: pointer;
+    font-family: inherit;
+    width: 100%; text-align: left;
+    border: none;
+    overflow: hidden;
+    transition: filter 0.15s, transform 0.1s;
+  }
+  .bs-cal__event:hover { filter: brightness(0.96); }
+  .bs-cal__event:active { transform: scale(0.97); }
+  .bs-cal__event-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .bs-cal__event-title {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    flex: 1; min-width: 0;
+  }
+
+  /* Color variants — pale tint + saturated dot + dark-on-tint text */
+  .bs-cal__event--practice  { background: #eaf2fd; color: #1e40af; }
+  .bs-cal__event--practice .bs-cal__event-dot  { background: #3b82f6; }
+
+  .bs-cal__event--skills    { background: #fdf4d7; color: #854d0e; }
+  .bs-cal__event--skills .bs-cal__event-dot    { background: #eab308; }
+
+  .bs-cal__event--training  { background: #e5f3fb; color: #075985; }
+  .bs-cal__event--training .bs-cal__event-dot  { background: #0ea5e9; }
+
+  .bs-cal__event--other     { background: #f1f1ee; color: #3f3f3f; }
+  .bs-cal__event--other .bs-cal__event-dot     { background: #8a8a82; }
+
+  .bs-cal__more {
+    font-size: 9.5px; color: #999; font-weight: 500;
+    padding: 0 4px; line-height: 1.4; cursor: pointer;
+  }
+  .bs-cal__more:hover { color: #e21224; }
+
+  /* --- Today detail strip --- */
+  .bs-cal__today-strip {
+    background: #fff; padding: 14px 16px 16px;
+    border-top: 4px solid #f6f6f4;
+  }
+  .bs-cal__today-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .bs-cal__today-label {
+    font-size: 11px; font-weight: 700; color: #1a1a1a;
+    letter-spacing: 0.4px; text-transform: uppercase;
+  }
+  .bs-cal__today-count { font-size: 11px; color: #e21224; font-weight: 600; }
+  .bs-cal__today-list { display: flex; flex-direction: column; gap: 6px; }
+  .bs-cal__today-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px 10px 24px;
+    background: #f6f6f4;
+    border-radius: 10px;
+    position: relative;
+  }
+  .bs-cal__today-item::before {
+    content: ''; position: absolute; left: 10px; top: 50%;
+    transform: translateY(-50%);
+    width: 6px; height: 6px; border-radius: 50%;
+  }
+  .bs-cal__today-item--practice::before { background: #3b82f6; }
+  .bs-cal__today-item--skills::before   { background: #eab308; }
+  .bs-cal__today-item--training::before { background: #0ea5e9; }
+  .bs-cal__today-item--other::before    { background: #8a8a82; }
+
+  .bs-cal__today-time {
+    font-size: 11px; font-weight: 600; color: #666; min-width: 52px;
+  }
+  .bs-cal__today-title { flex: 1; font-size: 13px; font-weight: 600; color: #1a1a1a; }
+
+  .bs-cal__empty {
+    padding: 32px 24px; text-align: center;
+    font-size: 13px; color: #888;
+  }
+</style>
+
+<div class="bs-cal" id="bsCal">
+
+  <!-- Month header -->
+  <div class="bs-cal__header">
+    <div class="bs-cal__month-group">
+      <button class="bs-cal__navbtn" data-testid="button-prev-month" aria-label="Previous month" data-nav="prev">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <div class="bs-cal__month-text">
+        <div class="bs-cal__month" id="bsCalMonth">April 2026</div>
+        <div class="bs-cal__count" id="bsCalCount">23 events this month</div>
+      </div>
+      <button class="bs-cal__navbtn" data-testid="button-next-month" aria-label="Next month" data-nav="next">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+    </div>
+    <div class="bs-cal__actions">
+      <button class="bs-cal__today-btn" data-testid="button-today" data-nav="today">Today</button>
+      <button class="bs-cal__add-btn" data-testid="button-create-event" aria-label="Create event">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- View switcher -->
+  <div class="bs-cal__views">
+    <button class="bs-cal__view bs-cal__view--active" data-view="month">Month</button>
+    <button class="bs-cal__view" data-view="week">Week</button>
+    <button class="bs-cal__view" data-view="agenda">Agenda</button>
+    <button class="bs-cal__view" data-view="day">Day</button>
+  </div>
+
+  <!-- Filters -->
+  <details class="bs-cal__filters">
+    <summary>Event filters</summary>
+    <div class="bs-cal__filter-grid">
+      <label class="bs-cal__filter"><span class="bs-cal__swatch" style="background:#3b82f6;"></span>Practice</label>
+      <label class="bs-cal__filter"><span class="bs-cal__swatch" style="background:#eab308;"></span>Skills</label>
+      <label class="bs-cal__filter"><span class="bs-cal__swatch" style="background:#0ea5e9;"></span>Training</label>
+      <label class="bs-cal__filter"><span class="bs-cal__swatch" style="background:#8a8a82;"></span>Other</label>
+    </div>
+  </details>
+
+  <!-- Weekday header -->
+  <div class="bs-cal__weekdays">
+    <div class="bs-cal__weekday">Sun</div>
+    <div class="bs-cal__weekday">Mon</div>
+    <div class="bs-cal__weekday">Tue</div>
+    <div class="bs-cal__weekday">Wed</div>
+    <div class="bs-cal__weekday">Thu</div>
+    <div class="bs-cal__weekday">Fri</div>
+    <div class="bs-cal__weekday">Sat</div>
+  </div>
+
+  <!-- Calendar grid (rendered by JS) -->
+  <div class="bs-cal__grid" id="bsCalGrid"></div>
+
+  <!-- Today detail strip (rendered by JS) -->
+  <div class="bs-cal__today-strip" id="bsCalTodayStrip"></div>
+
+</div>
+
+<script>
+(function() {
+  // ---- Sample event data keyed by ISO date ----
+  // In production, replace this with your app's event fetch.
+  var EVENTS = {
+    '2026-04-01': [
+      { id: 421, title: 'Rookie Skills', time: '6:00 AM', type: 'skills' },
+      { id: 426, title: 'Rookies MW',    time: '5:00 PM', type: 'other' }
+    ],
+    '2026-04-02': [
+      { id: 261, title: 'YG Black',   time: '5:30 PM', type: 'other' },
+      { id: 364, title: '14U White',  time: '7:00 PM', type: 'practice' }
+    ],
+    '2026-04-06': [
+      { id: 422, title: 'Rookie Skills', time: '6:00 AM', type: 'skills' },
+      { id: 427, title: 'Rookies MW',    time: '5:00 PM', type: 'other' }
+    ],
+    '2026-04-07': [
+      { id: 262, title: 'YG Black',  time: '5:30 PM', type: 'other' },
+      { id: 365, title: '14U White', time: '7:00 PM', type: 'practice' }
+    ],
+    '2026-04-08': [
+      { id: 423, title: 'Rookie Skills', time: '6:00 AM', type: 'skills' },
+      { id: 428, title: 'Rookies MW',    time: '5:00 PM', type: 'other' }
+    ],
+    '2026-04-09': [
+      { id: 263, title: 'YG Black',  time: '5:30 PM', type: 'other' },
+      { id: 366, title: '14U White', time: '7:00 PM', type: 'practice' }
+    ],
+    '2026-04-13': [
+      { id: 424, title: 'Rookie Skills', time: '6:00 AM', type: 'skills' },
+      { id: 429, title: 'Rookies MW',    time: '5:00 PM', type: 'other' }
+    ],
+    '2026-04-14': [
+      { id: 264, title: 'YG Black',  time: '5:30 PM', type: 'other' },
+      { id: 367, title: '14U White', time: '7:00 PM', type: 'practice' },
+      { id: 512, title: '12U Gray',  time: '6:30 PM', type: 'practice' },
+      { id: 513, title: 'Training',  time: '8:00 PM', type: 'training' }
+    ],
+    '2026-04-15': [
+      { id: 430, title: 'Rookies MW', time: '5:00 PM', type: 'other' }
+    ],
+    '2026-04-16': [
+      { id: 265, title: 'YG Black',     time: '5:30 PM', type: 'other' },
+      { id: 461, title: '12U Gray',     time: '6:30 PM', type: 'practice' },
+      { id: 368, title: '14U White',    time: '7:00 PM', type: 'practice' },
+      { id: 601, title: 'Skills Clinic',time: '8:00 PM', type: 'skills' },
+      { id: 602, title: 'Team Meeting', time: '9:00 PM', type: 'other' }
+    ],
+    '2026-04-20': [
+      { id: 431, title: 'Rookies MW', time: '5:00 PM', type: 'other' }
+    ],
+    '2026-04-21': [
+      { id: 266, title: 'YG Black',  time: '5:30 PM', type: 'other' },
+      { id: 369, title: '14U White', time: '7:00 PM', type: 'practice' },
+      { id: 728, title: '12U Gray',  time: '6:30 PM', type: 'practice' }
+    ],
+    '2026-04-22': [
+      { id: 432, title: 'Rookies MW', time: '5:00 PM', type: 'other' }
+    ],
+    '2026-04-23': [
+      { id: 267, title: 'YG Black',     time: '5:30 PM', type: 'other' },
+      { id: 370, title: '14U White',    time: '7:00 PM', type: 'practice' },
+      { id: 463, title: '12U Gray',     time: '6:30 PM', type: 'practice' },
+      { id: 610, title: 'Skills Clinic',time: '8:00 PM', type: 'skills' },
+      { id: 611, title: 'Training',     time: '8:30 PM', type: 'training' }
+    ],
+    '2026-04-27': [
+      { id: 433, title: 'Rookies MW', time: '5:00 PM', type: 'other' }
+    ],
+    '2026-04-28': [
+      { id: 268, title: 'YG Black',     time: '5:30 PM', type: 'other' },
+      { id: 371, title: '14U White',    time: '7:00 PM', type: 'practice' },
+      { id: 464, title: '12U Gray',     time: '6:30 PM', type: 'practice' },
+      { id: 620, title: 'Skills Clinic',time: '8:00 PM', type: 'skills' }
+    ],
+    '2026-04-29': [
+      { id: 434, title: 'Rookies MW', time: '5:00 PM', type: 'other' }
+    ],
+    '2026-04-30': [
+      { id: 269, title: 'YG Black',     time: '5:30 PM', type: 'other' },
+      { id: 372, title: '14U White',    time: '7:00 PM', type: 'practice' },
+      { id: 465, title: '12U Gray',     time: '6:30 PM', type: 'practice' },
+      { id: 625, title: 'Skills Clinic',time: '8:00 PM', type: 'skills' }
+    ]
+  };
+
+  var TODAY = new Date(2026, 3, 16); // Apr 16, 2026
+  var MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var DOW_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var DOW_LONG  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+  var state = {
+    view: 'month',
+    year: TODAY.getFullYear(),
+    month: TODAY.getMonth()
+  };
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function iso(y, m, d) { return y + '-' + pad(m + 1) + '-' + pad(d); }
+  function sameDay(a, b) {
+    return a.getFullYear() === b.getFullYear()
+        && a.getMonth()    === b.getMonth()
+        && a.getDate()     === b.getDate();
+  }
+
+  function eventChipHtml(ev) {
+    return '<button class="bs-cal__event bs-cal__event--' + ev.type + '" data-testid="calendar-event-' + ev.id + '">'
+         +   '<span class="bs-cal__event-dot"></span>'
+         +   '<span class="bs-cal__event-title">' + ev.title + '</span>'
+         + '</button>';
+  }
+
+  function agendaItemHtml(ev) {
+    return '<div class="bs-cal__today-item bs-cal__today-item--' + ev.type + '">'
+         +   '<div class="bs-cal__today-time">' + ev.time + '</div>'
+         +   '<div class="bs-cal__today-title">' + ev.title + '</div>'
+         + '</div>';
+  }
+
+  function renderMonth() {
+    var grid = document.getElementById('bsCalGrid');
+
+    // Count events this month
+    var monthEventCount = 0;
+    Object.keys(EVENTS).forEach(function(k) {
+      var parts = k.split('-');
+      if (parseInt(parts[0], 10) === state.year && parseInt(parts[1], 10) === state.month + 1) {
+        monthEventCount += EVENTS[k].length;
+      }
+    });
+    document.getElementById('bsCalMonth').textContent = MONTH_NAMES[state.month] + ' ' + state.year;
+    document.getElementById('bsCalCount').textContent = monthEventCount + ' event' + (monthEventCount === 1 ? '' : 's') + ' this month';
+
+    var firstDay = new Date(state.year, state.month, 1);
+    var startDow = firstDay.getDay();
+    var daysInMonth = new Date(state.year, state.month + 1, 0).getDate();
+    var daysInPrev  = new Date(state.year, state.month, 0).getDate();
+
+    var cells = [];
+    for (var i = startDow - 1; i >= 0; i--) {
+      cells.push({ day: daysInPrev - i, other: true });
+    }
+    for (var d = 1; d <= daysInMonth; d++) {
+      cells.push({
+        day: d, other: false,
+        date: new Date(state.year, state.month, d),
+        isoDate: iso(state.year, state.month, d)
+      });
+    }
+    var totalNeeded = cells.length <= 35 ? 35 : 42;
+    var nextDay = 1;
+    while (cells.length < totalNeeded) {
+      cells.push({ day: nextDay++, other: true });
+    }
+
+    grid.innerHTML = cells.map(function(c) {
+      if (c.other) {
+        return '<div class="bs-cal__cell bs-cal__cell--other"><div class="bs-cal__date">' + c.day + '</div></div>';
+      }
+      var isToday = sameDay(c.date, TODAY);
+      var events = EVENTS[c.isoDate] || [];
+      var MAX_VISIBLE = 3;
+      var visible = events.slice(0, MAX_VISIBLE);
+      var overflow = events.length - visible.length;
+      var eventsHtml = visible.map(eventChipHtml).join('');
+      if (overflow > 0) {
+        eventsHtml += '<div class="bs-cal__more">+' + overflow + ' more</div>';
+      }
+      var cellClass = 'bs-cal__cell' + (isToday ? ' bs-cal__cell--today' : '');
+      var dateClass = 'bs-cal__date' + (isToday ? ' bs-cal__date--today' : '');
+      return '<div class="' + cellClass + '" data-testid="calendar-day-' + c.isoDate + '">'
+           +   '<div class="' + dateClass + '">' + c.day + '</div>'
+           +   eventsHtml
+           + '</div>';
+    }).join('');
+  }
+
+  function renderTodayStrip() {
+    var strip = document.getElementById('bsCalTodayStrip');
+    var key = iso(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
+    var events = EVENTS[key] || [];
+    var html = '<div class="bs-cal__today-head">'
+             +   '<div class="bs-cal__today-label">Today · ' + DOW_SHORT[TODAY.getDay()] + ' ' + TODAY.getDate() + '</div>'
+             +   '<div class="bs-cal__today-count">' + events.length + ' event' + (events.length === 1 ? '' : 's') + '</div>'
+             + '</div>';
+    if (events.length === 0) {
+      html += '<div class="bs-cal__empty">No events today.</div>';
+    } else {
+      html += '<div class="bs-cal__today-list">' + events.map(agendaItemHtml).join('') + '</div>';
+    }
+    strip.innerHTML = html;
+  }
+
+  function renderWeek() {
+    document.getElementById('bsCalMonth').textContent = MONTH_NAMES[state.month] + ' ' + state.year;
+    document.getElementById('bsCalCount').textContent = 'Week view';
+    var grid = document.getElementById('bsCalGrid');
+    grid.style.display = 'grid';
+
+    var anchor;
+    if (state.year === TODAY.getFullYear() && state.month === TODAY.getMonth()) {
+      anchor = new Date(TODAY);
+    } else {
+      anchor = new Date(state.year, state.month, 1);
+    }
+    var startOfWeek = new Date(anchor);
+    startOfWeek.setDate(anchor.getDate() - anchor.getDay());
+
+    var html = '';
+    for (var i = 0; i < 7; i++) {
+      var d = new Date(startOfWeek);
+      d.setDate(startOfWeek.getDate() + i);
+      var inMonth = d.getMonth() === state.month;
+      var key = iso(d.getFullYear(), d.getMonth(), d.getDate());
+      var events = EVENTS[key] || [];
+      var isToday = sameDay(d, TODAY);
+      var cellClass = 'bs-cal__cell'
+                    + (isToday ? ' bs-cal__cell--today' : '')
+                    + (!inMonth ? ' bs-cal__cell--other' : '');
+      var dateClass = 'bs-cal__date' + (isToday ? ' bs-cal__date--today' : '');
+      html += '<div class="' + cellClass + '" style="min-height: 200px;">'
+           +    '<div class="' + dateClass + '">' + d.getDate() + '</div>'
+           +    events.map(eventChipHtml).join('')
+           + '</div>';
+    }
+    grid.innerHTML = html;
+  }
+
+  function renderAgenda() {
+    document.getElementById('bsCalMonth').textContent = MONTH_NAMES[state.month] + ' ' + state.year;
+    document.getElementById('bsCalCount').textContent = 'Agenda view';
+    var grid = document.getElementById('bsCalGrid');
+    grid.style.display = 'block';
+
+    var groups = {};
+    Object.keys(EVENTS).sort().forEach(function(k) {
+      var parts = k.split('-');
+      if (parseInt(parts[0], 10) === state.year && parseInt(parts[1], 10) === state.month + 1) {
+        groups[k] = { day: parseInt(parts[2], 10), events: EVENTS[k] };
+      }
+    });
+
+    var html = '<div style="padding: 4px 16px 16px;">';
+    if (Object.keys(groups).length === 0) {
+      html += '<div class="bs-cal__empty">No events this month.</div>';
+    } else {
+      Object.keys(groups).forEach(function(key) {
+        var g = groups[key];
+        var dateObj = new Date(state.year, state.month, g.day);
+        html += '<div style="margin-top: 16px;">'
+             +   '<div style="font-size: 11px; font-weight: 700; color: #1a1a1a; letter-spacing: 0.4px; text-transform: uppercase; margin-bottom: 8px;">'
+             +     DOW_SHORT[dateObj.getDay()] + ' ' + g.day + '</div>'
+             +   '<div style="display: flex; flex-direction: column; gap: 6px;">'
+             +     g.events.map(agendaItemHtml).join('')
+             +   '</div>'
+             + '</div>';
+      });
+    }
+    html += '</div>';
+    grid.innerHTML = html;
+  }
+
+  function renderDay() {
+    document.getElementById('bsCalMonth').textContent = MONTH_NAMES[state.month] + ' ' + state.year;
+    document.getElementById('bsCalCount').textContent = 'Day view';
+    var grid = document.getElementById('bsCalGrid');
+    grid.style.display = 'block';
+
+    var d = (state.year === TODAY.getFullYear() && state.month === TODAY.getMonth())
+          ? new Date(TODAY)
+          : new Date(state.year, state.month, 1);
+    var key = iso(d.getFullYear(), d.getMonth(), d.getDate());
+    var events = EVENTS[key] || [];
+
+    var html = '<div style="padding: 16px;">'
+             +   '<div style="font-size: 14px; font-weight: 700; color: #1a1a1a; margin-bottom: 12px;">'
+             +     DOW_LONG[d.getDay()] + ', ' + MONTH_NAMES[d.getMonth()] + ' ' + d.getDate() + '</div>';
+    if (events.length === 0) {
+      html += '<div class="bs-cal__empty" style="padding: 20px 0;">No events scheduled.</div>';
+    } else {
+      html += '<div style="display: flex; flex-direction: column; gap: 6px;">'
+           +    events.map(agendaItemHtml).join('')
+           + '</div>';
+    }
+    html += '</div>';
+    grid.innerHTML = html;
+  }
+
+  function render() {
+    var grid = document.getElementById('bsCalGrid');
+    var strip = document.getElementById('bsCalTodayStrip');
+    grid.style.display = 'grid';
+    strip.style.display = 'block';
+
+    if (state.view === 'month') {
+      renderMonth();
+      renderTodayStrip();
+    } else if (state.view === 'week') {
+      renderWeek();
+      renderTodayStrip();
+    } else if (state.view === 'agenda') {
+      renderAgenda();
+      strip.style.display = 'none';
+    } else if (state.view === 'day') {
+      renderDay();
+      strip.style.display = 'none';
+    }
+  }
+
+  // ---- Event wiring (delegation) ----
+  var root = document.getElementById('bsCal');
+
+  root.addEventListener('click', function(e) {
+    var navBtn = e.target.closest('[data-nav]');
+    if (navBtn) {
+      var action = navBtn.getAttribute('data-nav');
+      if (action === 'prev') {
+        state.month--;
+        if (state.month < 0) { state.month = 11; state.year--; }
+      } else if (action === 'next') {
+        state.month++;
+        if (state.month > 11) { state.month = 0; state.year++; }
+      } else if (action === 'today') {
+        state.year = TODAY.getFullYear();
+        state.month = TODAY.getMonth();
+        // Also snap the view back to Month so Today is always visible
+        state.view = 'month';
+        root.querySelectorAll('.bs-cal__view').forEach(function(b) {
+          b.classList.toggle('bs-cal__view--active', b.getAttribute('data-view') === 'month');
+        });
+        // Visible feedback: briefly flash the today cell even if already on it
+        render();
+        setTimeout(function() {
+          var todayCell = root.querySelector('.bs-cal__cell--today');
+          if (todayCell) {
+            todayCell.style.transition = 'background 0.3s';
+            todayCell.style.background = '#fac7cc';
+            setTimeout(function() {
+              todayCell.style.background = '';
+            }, 350);
+          }
+        }, 0);
+        return;
+      }
+      render();
+      return;
+    }
+
+    var viewBtn = e.target.closest('[data-view]');
+    if (viewBtn) {
+      state.view = viewBtn.getAttribute('data-view');
+      root.querySelectorAll('.bs-cal__view').forEach(function(b) {
+        b.classList.toggle('bs-cal__view--active', b === viewBtn);
+      });
+      render();
+      return;
+    }
+  });
+
+  render();
+})();
+</script>

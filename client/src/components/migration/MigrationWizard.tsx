@@ -561,12 +561,12 @@ function PlayersStep({
   const anyPlayerHasProgram = players.some((k) => k.programId);
   const subEndDateRequired = anyPlayerHasProgram;
 
-  const SUB_END_DATE_TOOLTIP = "This is the date their subscription to this program ends. The customer will be enrolled in the selected program. BoxStat has a 3 month grace period before the customer must re-enrol through BoxStat. They will be reminded of this date.";
+  const SUB_END_DATE_TOOLTIP = "The expiry date of their current subscription to this program, up to 2 months from today. The customer will be enrolled in the selected program until this date, then prompted to re-enrol through BoxStat.";
 
   return (
     <div className="space-y-4">
       <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-lg p-3 text-sm text-blue-800">
-        Link each player to their parent and enter when their current subscription ends. Boxstat honors this date — the parent won't be asked to pay again until then.
+        Link each player to their parent and enter the expiry date of their current subscription (up to a <strong>2-month maximum</strong> from today). Boxstat honors this date — the parent won't be asked to pay again until then.
       </div>
 
       <Tabs defaultValue="manual">

@@ -15194,6 +15194,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid payload', details: parseResult.error.flatten() });
       }
       const { parents, players, staff: migrationStaff, program: migrationProgramLegacy, programs: migrationPrograms, teams: migrationTeams } = parseResult.data;
+
+      // Enforce 2-month max on subscription expiry dates before any DB writes.
+      // Matches the manual team-assign cap (see /api/teams/:teamId/players/:playerId).
+      // Past or empty dates are allowed here and handled later (no enrollment created).
+      {
+        const maxDate = new Date();
+        maxDate.setMonth(maxDate.getMonth() + 2);
+        maxDate.setHours(23, 59, 59, 999);
+        const offenders: string[] = [];
+        for (const p of (players || [])) {
+          if (!p.subscriptionEndDate) continue;
+          const parts = p.subscriptionEndDate.split('/');
+          if (parts.length !== 3) continue;
+          const iso = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+          const parsed = new Date(iso + 'T23:59:59Z');
+          if (isNaN(parsed.getTime())) continue;
+          if (parsed > maxDate) {
+            const name = `${p.firstName || ''} ${p.lastName || ''}`.trim() || '(unnamed player)';
+            offenders.push(`${name} (${p.subscriptionEndDate})`);
+          }
+        }
+        if (offenders.length > 0) {
+          return res.status(400).json({
+            error: 'Subscription end date cannot be more than 2 months from today',
+            message: `The following player(s) have a subscription end date beyond the 2-month maximum: ${offenders.join(', ')}. Please adjust and re-submit.`,
+            offenders,
+          });
+        }
+      }
+
       // Normalize: support both legacy single-program and new multi-program payloads
       const allMigrationPrograms = migrationPrograms.length > 0
         ? migrationPrograms

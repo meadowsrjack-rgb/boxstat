@@ -2563,6 +2563,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     const hasExpired = uniqueEnrollments.some((e: any) =>
       e.status === 'expired' || e.status === 'cancelled'
     );
+    const hasGracePeriod = uniqueEnrollments.some((e: any) => e.status === 'grace_period');
     if (hasPaymentFailed) return "Payment Failed";
     if (hasLowBalance) return "Low Balance";
     const hasUnpaidEnrollment = (() => {
@@ -2608,6 +2609,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     if (hasActiveEnrollmentOnTeam) return "Active";
     if (hasActiveSubscriber) return "Active";
     if (hasActiveOneTime) return "Active";
+    if (hasGracePeriod) return "Grace Period";
     if (hasExpired) return "Expired";
     return "No Enrollment";
   };
@@ -4089,6 +4091,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                         "Needs Team",
                         "Payment Failed",
                         "Low Balance",
+                        "Grace Period",
                         "Expired",
                         "No Enrollment",
                       ].map((status) => (
@@ -4240,10 +4243,12 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   const hasActiveSubscriber = playerEnrollments.some((e: any) => e.status === 'active' && e.stripeSubscriptionId);
                   const hasActiveOneTime = playerEnrollments.some((e: any) => e.status === 'active' && !e.stripeSubscriptionId);
                   const hasExpired = playerEnrollments.some((e: any) => e.status === 'expired' || e.status === 'cancelled');
+                  const hasGrace = playerEnrollments.some((e: any) => e.status === 'grace_period');
                   if (hasPaymentFailed) return "text-red-600";
                   if (hasActiveWithoutTeam) return "text-amber-500";
                   if (hasLowBalance) return "text-yellow-600";
                   if (hasActiveOnTeam || hasActiveSubscriber || hasActiveOneTime) return "text-green-600";
+                  if (hasGrace) return "text-amber-600";
                   if (hasExpired) return "text-gray-500";
                   return "text-gray-600";
                 };
@@ -4276,6 +4281,8 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   if (hasPaymentFailedStatus) return { label: "Payment Failed", cls: "bg-red-600 text-white" };
                   const activeEnrollments = allEnrollments.filter((e: any) => e.status === 'active');
                   if (activeEnrollments.length === 0) {
+                    const hasGrace = allEnrollments.some((e: any) => e.status === 'grace_period');
+                    if (hasGrace) return { label: "Grace Period", cls: "bg-amber-400 text-amber-900" };
                     const hasExpired = allEnrollments.some((e: any) => e.status === 'expired' || e.status === 'cancelled');
                     if (hasExpired) return { label: "Expired", cls: "bg-gray-500 text-white" };
                     return { label: "No Enrollment", cls: "bg-gray-200 text-gray-600" };
@@ -12660,7 +12667,6 @@ function SettingsTab({ organization }: any) {
     updateOrganization.mutate({
       name: cleanData.name,
       sportType: cleanData.sportType,
-      gracePeriodDays: Number(cleanData.gracePeriodDays) || 14,
     });
   };
 
@@ -12796,22 +12802,6 @@ function SettingsTab({ organization }: any) {
                 />
               </div>
 
-              <div>
-                <Label htmlFor="gracePeriodDays">Enrollment Grace Period (days)</Label>
-                <Input
-                  id="gracePeriodDays"
-                  type="number"
-                  min={0}
-                  max={90}
-                  value={formData.gracePeriodDays ?? 14}
-                  onChange={(e) => setFormData({ ...formData, gracePeriodDays: parseInt(e.target.value, 10) || 0 })}
-                  placeholder="14"
-                  data-testid="input-grace-period-days"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Number of days players retain limited access after their enrollment expires before team memberships are removed. Default: 14.
-                </p>
-              </div>
             </div>
 
             <Button type="submit" disabled={updateOrganization.isPending} data-testid="button-save-settings">

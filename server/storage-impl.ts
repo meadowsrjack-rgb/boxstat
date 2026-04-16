@@ -3194,7 +3194,7 @@ class DatabaseStorage implements IStorage {
       if ((updates as any).platformPlan !== undefined) updateData.platformPlan = (updates as any).platformPlan;
       if ((updates as any).platformSubscriptionId !== undefined) updateData.platformSubscriptionId = (updates as any).platformSubscriptionId;
       if ((updates as any).platformSubscriptionStatus !== undefined) updateData.platformSubscriptionStatus = (updates as any).platformSubscriptionStatus;
-      if (updates.gracePeriodDays !== undefined) updateData.gracePeriodDays = updates.gracePeriodDays;
+      // gracePeriodDays is deprecated (fixed at 14 days platform-wide). Ignore any incoming value.
       
       await db.update(schema.organizations)
         .set(updateData)

@@ -81,6 +81,8 @@ export const organizations = pgTable("organizations", {
   platformPlan: varchar("platform_plan"),
   platformSubscriptionId: varchar("platform_subscription_id"),
   platformSubscriptionStatus: varchar("platform_subscription_status").default("inactive"),
+  // DEPRECATED: No longer read. Post-expiry grace is hardcoded to 14 days platform-wide.
+  // Column retained to avoid a destructive schema change.
   gracePeriodDays: integer("grace_period_days").default(14),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),

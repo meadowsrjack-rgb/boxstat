@@ -8,6 +8,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { db } from "./db";
 import { notificationScheduler } from "./services/notificationScheduler";
 import { ensureAuxTables } from "./boot";
+import { runMigrationExpiryBackfill } from "./migrationExpiryBackfill";
 
 const app = express();
 
@@ -197,5 +198,11 @@ app.use((req, res, next) => {
     
     // Start the notification scheduler for automatic reminders
     notificationScheduler.start();
+
+    // One-shot idempotent backfill: clamp migration enrollments with endDate
+    // more than 2 months after createdAt. Safe to run on every boot.
+    runMigrationExpiryBackfill().catch(err => {
+      console.error('[Migration Expiry Backfill] Unhandled error:', err);
+    });
   });
 })();

@@ -5,7 +5,7 @@ import { pushNotifications, resolveEventParticipants } from './pushNotificationH
 import { analyzePlayerAttendance, getOrgPlayers, getTeamCoachIds, getOrgAdminIds } from './attendanceTracker';
 import type { Event } from '@shared/schema';
 import { db } from '../db';
-import { notifications, notificationRecipients, productEnrollments, products, users, teamMemberships, teams, organizations } from '@shared/schema';
+import { notifications, notificationRecipients, productEnrollments, products, users, teamMemberships, teams } from '@shared/schema';
 import { eq, and, sql, lte, gte, gt, lt, inArray } from 'drizzle-orm';
 import { adminNotificationService } from './adminNotificationService';
 
@@ -745,12 +745,10 @@ export class NotificationScheduler {
         profileFirstName: users.firstName,
         profileLastName: users.lastName,
         profileEmail: users.email,
-        orgGracePeriodDays: organizations.gracePeriodDays,
       })
         .from(productEnrollments)
         .leftJoin(products, eq(productEnrollments.programId, products.id))
         .leftJoin(users, eq(productEnrollments.profileId, users.id))
-        .leftJoin(organizations, eq(productEnrollments.organizationId, organizations.id))
         .where(
           and(
             eq(productEnrollments.status, 'active'),
@@ -766,7 +764,9 @@ export class NotificationScheduler {
           const programName = row.programName || 'Unknown Program';
           const userName = `${row.profileFirstName || ''} ${row.profileLastName || ''}`.trim() || 'A member';
           const profileId = row.enrollment.profileId;
-          const gracePeriodDays = row.orgGracePeriodDays ?? 14;
+          // Post-expiry grace window is fixed at 14 days platform-wide.
+          // The organizations.gracePeriodDays column is deprecated and no longer read.
+          const gracePeriodDays = 14;
 
           // Transition to grace_period instead of expired
           const gracePeriodEndDate = new Date(now.getTime() + gracePeriodDays * 24 * 60 * 60 * 1000);

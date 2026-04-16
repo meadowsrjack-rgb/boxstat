@@ -48,7 +48,7 @@ import { notificationService } from "./services/notificationService";
 import { analyzePlayerAttendance, getTeamCoachIds, getOrgAdminIds, triggerRealTimeAttendanceNotifications } from "./services/attendanceTracker";
 import { db } from "./db";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
-import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards, platformSettings, organizations, attendances, rsvpResponses, contactManagementMessages, payments, messages as messagesTable } from "@shared/schema";
+import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards, platformSettings, organizations, attendances, rsvpResponses, contactManagementMessages, payments, messages as messagesTable, gameSessions, gamePlayerStats, events } from "@shared/schema";
 import { eq, and, or, sql, desc, inArray, gte, count, isNull } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;
@@ -9348,6 +9348,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const events = await storage.getEventsByTeam(req.params.teamId);
     res.json(events);
   });
+
+  app.get('/api/events/:eventId', requireAuth, async (req: any, res) => {
+    try {
+      const event = await storage.getEvent(req.params.eventId);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+      res.json(event);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
   
   app.get('/api/events/:eventId/participants', requireAuth, async (req: any, res) => {
     const { role: userRole, organizationId, id: userId } = req.user;
@@ -18131,6 +18141,172 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   }
+
+  // =============================================
+  // GAME SESSIONS & SCORING
+  // =============================================
+
+  app.get("/api/game-sessions/roster/:eventId", requireAuth, async (req, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      const eventRows = await db.select().from(events).where(eq(events.id, eventId));
+      const event = eventRows[0];
+      if (!event) return res.status(404).json({ message: "Event not found" });
+
+      let rosterPlayers: any[] = [];
+      if (event.teamId) {
+        const memberships = await db.select({
+          profileId: teamMemberships.profileId,
+        }).from(teamMemberships).where(
+          and(eq(teamMemberships.teamId, event.teamId), eq(teamMemberships.status, "active"))
+        );
+        const playerIds = memberships.map((m: any) => m.profileId).filter(Boolean);
+        if (playerIds.length > 0) {
+          rosterPlayers = await db.select().from(users).where(inArray(users.id, playerIds));
+        }
+      }
+      res.json(rosterPlayers);
+    } catch (error: any) {
+      console.error("Error fetching roster:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/game-sessions/event/:eventId", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const orgId = user?.organizationId || "default-org";
+      const eventId = parseInt(req.params.eventId);
+      const sessions = await db.select().from(gameSessions).where(
+        and(eq(gameSessions.eventId, eventId), eq(gameSessions.organizationId, orgId))
+      );
+      if (sessions.length === 0) return res.json(null);
+      const session = sessions[0];
+      const playerStats = await db.select().from(gamePlayerStats).where(eq(gamePlayerStats.gameSessionId, session.id));
+      res.json({ session, playerStats });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/game-sessions/:id", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const orgId = user?.organizationId || "default-org";
+      const id = parseInt(req.params.id);
+      const sessions = await db.select().from(gameSessions).where(
+        and(eq(gameSessions.id, id), eq(gameSessions.organizationId, orgId))
+      );
+      if (sessions.length === 0) return res.status(404).json({ message: "Session not found" });
+      const session = sessions[0];
+      const playerStats = await db.select().from(gamePlayerStats).where(eq(gamePlayerStats.gameSessionId, session.id));
+      res.json({ session, playerStats });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/game-sessions", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const orgId = user?.organizationId || "default-org";
+      const sessions = await db.select().from(gameSessions).where(eq(gameSessions.organizationId, orgId));
+      res.json(sessions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/game-sessions", requireAuth, isCoachOrAdmin, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const { eventId, teamId, opponentName, teamScore, opponentScore, gameFormat,
+        periodLength, otLength, finalPeriod, otCount, playerStats: playerStatsData } = req.body;
+
+      if (!eventId) return res.status(400).json({ message: "eventId is required" });
+
+      const existingSessions = await db.select().from(gameSessions).where(eq(gameSessions.eventId, eventId));
+      let sessionId: number;
+
+      if (existingSessions.length > 0) {
+        sessionId = existingSessions[0].id;
+        await db.update(gameSessions).set({
+          opponentName, teamScore, opponentScore, gameFormat,
+          periodLength, otLength, finalPeriod, otCount,
+          status: "submitted", updatedAt: new Date().toISOString(),
+        }).where(eq(gameSessions.id, sessionId));
+        await db.delete(gamePlayerStats).where(eq(gamePlayerStats.gameSessionId, sessionId));
+      } else {
+        const inserted = await db.insert(gameSessions).values({
+          eventId, organizationId: user?.organizationId || "default-org",
+          teamId, opponentName, teamScore, opponentScore, gameFormat,
+          periodLength, otLength, finalPeriod, otCount,
+          status: "submitted", scoredByUserId: user?.id,
+        }).returning();
+        sessionId = inserted[0].id;
+      }
+
+      if (playerStatsData?.length > 0) {
+        const statsToInsert = playerStatsData.map((ps: any) => ({
+          gameSessionId: sessionId,
+          playerId: ps.playerId,
+          playerName: ps.playerName,
+          jerseyNumber: ps.jerseyNumber,
+          fgm: ps.fgm || 0, fga: ps.fga || 0,
+          tpm: ps.tpm || 0, tpa: ps.tpa || 0,
+          ftm: ps.ftm || 0, fta: ps.fta || 0,
+          oreb: ps.oreb || 0, dreb: ps.dreb || 0,
+          ast: ps.ast || 0, stl: ps.stl || 0,
+          blk: ps.blk || 0, tov: ps.tov || 0,
+          pf: ps.pf || 0, timePlayed: ps.timePlayed || 0,
+        }));
+        await db.insert(gamePlayerStats).values(statsToInsert);
+      }
+
+      res.json({ id: sessionId, status: "submitted" });
+    } catch (error: any) {
+      console.error("Error saving game session:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/game-sessions/:id/approve", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      if (user?.role !== "admin" && user?.role !== "coach") {
+        return res.status(403).json({ message: "Only admins/coaches can approve" });
+      }
+      const id = parseInt(req.params.id);
+      await db.update(gameSessions).set({
+        status: "approved",
+        approvedByUserId: user.id,
+        approvedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }).where(eq(gameSessions.id, id));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/players/:playerId/game-stats", requireAuth, async (req, res) => {
+    try {
+      const { playerId } = req.params;
+      const playerStatsRows = await db.select().from(gamePlayerStats).where(eq(gamePlayerStats.playerId, playerId));
+      const sessionIds = [...new Set(playerStatsRows.map(s => s.gameSessionId))];
+      let sessions: any[] = [];
+      if (sessionIds.length > 0) {
+        sessions = await db.select().from(gameSessions).where(inArray(gameSessions.id, sessionIds));
+      }
+      const gamesWithStats = sessions.map((session: any) => {
+        const stats = playerStatsRows.find(s => s.gameSessionId === session.id);
+        return { ...session, playerStats: stats };
+      });
+      res.json(gamesWithStats);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   // =============================================
   // HTTP SERVER SETUP

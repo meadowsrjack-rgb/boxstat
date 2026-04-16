@@ -58,6 +58,7 @@ import AccountClaim from "@/pages/account-claim";
 import TestRoute from "@/pages/test-route";
 import TestDatePicker from "@/pages/test-datepicker";
 import NotFound from "@/pages/not-found";
+import GameScoring from "@/pages/game-scoring";
 import CreateProfile from "@/pages/create-profile";
 import SelectProfileType from "@/pages/select-profile-type";
 import PaymentsTab from "@/pages/payments";
@@ -232,6 +233,7 @@ const ProtectedChat = () => <ProtectedRoute component={Chat} />;
 const ProtectedTraining = () => <ProtectedRoute component={Training} />;
 const ProtectedTrainingLibrary = () => <ProtectedRoute component={TrainingLibrary} />;
 const ProtectedTestRoute = () => <ProtectedRoute component={TestRoute} />;
+const ProtectedGameScoring = () => <ProtectedRoute component={GameScoring} />;
 const ProtectedTrophiesBadges = () => <ProtectedRoute component={TrophiesBadges} />;
 const ProtectedSkills = () => <ProtectedRoute component={Skills} />;
 
@@ -512,6 +514,7 @@ function AppRouter() {
       <Route path="/admin/programs/:programId" component={ProtectedAdminProgramDetail} />
       <Route path="/coach-dashboard" component={ProtectedCoachDashboard} />
       <Route path="/admin" component={ProtectedAdminDashboard} />
+      <Route path="/game-scoring" component={ProtectedGameScoring} />
       
       {/* Player/Team search and detail routes */}
       <Route path="/search" component={SearchPage} />

@@ -9,8 +9,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { 
   MapPin, Check, Building2,
   CheckCircle2, XCircle, Circle, Navigation,
-  MapPinOff, QrCode, Locate, Users, Loader2, Settings, RefreshCw, HelpCircle, ClipboardList, ChevronLeft
+  MapPinOff, QrCode, Locate, Users, Loader2, Settings, RefreshCw, HelpCircle, ClipboardList, ChevronLeft, Target
 } from 'lucide-react';
+import { useLocation } from 'wouter';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RSVPWheel, CheckInWheel, RsvpData, CheckInData } from '@/components/RSVPCheckInWheels';
 import { formatDateTime, offsetFromStart } from '@/lib/time';
@@ -79,6 +80,7 @@ export default function EventDetailModal({
   // Coach roster check-in state
   const [selectedRosterPlayers, setSelectedRosterPlayers] = useState<Set<string>>(new Set());
   
+  const [, setLocation] = useLocation();
   const isAdminOrCoach = userRole === 'admin' || userRole === 'coach';
   const isParent = userRole === 'parent';
   
@@ -1132,6 +1134,26 @@ export default function EventDetailModal({
                     </Button>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Score Game Button for game events */}
+            {isAdminOrCoach && event?.eventType?.toLowerCase() === 'game' && (
+              <div className="rounded-xl p-4 flex items-center justify-between" style={{ background: '#1a1f2e' }}>
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-orange-400" />
+                  <span className="text-white text-sm font-semibold">Live Scoring</span>
+                </div>
+                <Button
+                  size="sm"
+                  className="bg-orange-500 hover:bg-orange-600 text-white"
+                  onClick={() => {
+                    onOpenChange(false);
+                    setLocation(`/game-scoring?eventId=${event.id}`);
+                  }}
+                >
+                  Score Game
+                </Button>
               </div>
             )}
 

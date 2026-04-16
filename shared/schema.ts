@@ -2648,3 +2648,64 @@ export const insertProgramAvailabilitySlotSchema = createInsertSchema(programAva
 });
 export type InsertProgramAvailabilitySlot = z.infer<typeof insertProgramAvailabilitySlotSchema>;
 export type ProgramAvailabilitySlot = typeof programAvailabilitySlots.$inferSelect;
+
+// =============================================
+// Game Sessions & Player Stats Schema
+// =============================================
+
+export const gameSessions = pgTable("game_sessions", {
+  id: serial().primaryKey().notNull(),
+  eventId: integer("event_id").notNull(),
+  organizationId: varchar("organization_id").default("default-org"),
+  teamId: integer("team_id"),
+  opponentName: varchar("opponent_name").default("OPP"),
+  teamScore: integer("team_score").default(0),
+  opponentScore: integer("opponent_score").default(0),
+  gameFormat: varchar("game_format").default("quarters"),
+  periodLength: integer("period_length").default(600),
+  otLength: integer("ot_length").default(300),
+  finalPeriod: integer("final_period").default(1),
+  otCount: integer("ot_count").default(0),
+  status: varchar().default("in_progress"),
+  scoredByUserId: varchar("scored_by_user_id"),
+  approvedByUserId: varchar("approved_by_user_id"),
+  approvedAt: timestamp("approved_at", { mode: 'string' }),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+});
+
+export const gamePlayerStats = pgTable("game_player_stats", {
+  id: serial().primaryKey().notNull(),
+  gameSessionId: integer("game_session_id").notNull(),
+  playerId: varchar("player_id").notNull(),
+  playerName: varchar("player_name"),
+  jerseyNumber: varchar("jersey_number"),
+  fgm: integer().default(0),
+  fga: integer().default(0),
+  tpm: integer().default(0),
+  tpa: integer().default(0),
+  ftm: integer().default(0),
+  fta: integer().default(0),
+  oreb: integer().default(0),
+  dreb: integer().default(0),
+  ast: integer().default(0),
+  stl: integer().default(0),
+  blk: integer().default(0),
+  tov: integer().default(0),
+  pf: integer().default(0),
+  timePlayed: integer("time_played").default(0),
+});
+
+export const insertGameSessionSchema = createInsertSchema(gameSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertGameSession = z.infer<typeof insertGameSessionSchema>;
+export type GameSession = typeof gameSessions.$inferSelect;
+
+export const insertGamePlayerStatSchema = createInsertSchema(gamePlayerStats).omit({
+  id: true,
+});
+export type InsertGamePlayerStat = z.infer<typeof insertGamePlayerStatSchema>;
+export type GamePlayerStat = typeof gamePlayerStats.$inferSelect;

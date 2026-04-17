@@ -18,6 +18,10 @@ export function buildRegistrationStep3Path(
  * Mirrors the logic used by `verify-email.tsx` so that the email-verify flow
  * and the account-claim flow drop the user in the exact same place.
  */
+const APP_STORE_URL = "https://apps.apple.com/us/app/boxstat/id6754899159";
+const PLAY_STORE_URL =
+  "https://play.google.com/store/apps/details?id=com.boxstat.app&hl=en_US";
+
 export function redirectToRegistrationStep3(
   email: string,
   organizationId?: string | null,
@@ -32,16 +36,23 @@ export function redirectToRegistrationStep3(
   const isAndroid = /android/i.test(ua);
   const isIOS = /iPhone|iPad|iPod/i.test(ua);
 
-  const absoluteUrl = window.location.origin + redirectPath;
   const customSchemeUrl = `boxstat://boxstat.app${redirectPath}`;
 
   if (isIOS) {
+    // Try the custom scheme to hand off to the installed app. If the page is
+    // still visible ~1.5s later, the app isn't installed (or the user
+    // dismissed the prompt) — send them to the App Store instead.
+    const startedAt = Date.now();
     window.location.href = customSchemeUrl;
     setTimeout(() => {
-      window.location.href = absoluteUrl;
+      if (document.visibilityState === "visible" && Date.now() - startedAt < 3000) {
+        window.location.href = APP_STORE_URL;
+      }
     }, 1500);
   } else if (isAndroid) {
-    window.location.href = `intent://boxstat.app${redirectPath}#Intent;scheme=boxstat;package=com.boxstat.app;S.browser_fallback_url=${encodeURIComponent(absoluteUrl)};end`;
+    // Android intent URL: opens the app if installed, otherwise falls back
+    // to the Play Store listing via S.browser_fallback_url.
+    window.location.href = `intent://boxstat.app${redirectPath}#Intent;scheme=boxstat;package=com.boxstat.app;S.browser_fallback_url=${encodeURIComponent(PLAY_STORE_URL)};end`;
   } else {
     fallback();
   }

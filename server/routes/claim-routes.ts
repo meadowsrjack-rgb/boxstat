@@ -332,8 +332,16 @@ export function registerClaimRoutes(app: Express): void {
         magicLinkExpires
       });
 
-      // Generate the claim link
-      const baseUrl = process.env.APP_URL || process.env.REPL_URL || 'http://localhost:5000';
+      // Generate the claim link against the canonical app domain so it
+      // triggers the installed app's iOS Universal Link / Android App Link
+      // handler for `/claim-verify` instead of always opening the browser.
+      // `CLAIM_LINK_BASE_URL` lets staging/test environments override the
+      // host while still preserving deep-link correctness in prod.
+      const baseUrl = process.env.CLAIM_LINK_BASE_URL
+        ? process.env.CLAIM_LINK_BASE_URL.replace(/\/$/, '')
+        : (process.env.NODE_ENV === 'development' && process.env.REPLIT_DEV_DOMAIN
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : 'https://boxstat.app');
       const claimLink = `${baseUrl}/claim-verify?token=${magicLinkToken}`;
       
       // Audit logging

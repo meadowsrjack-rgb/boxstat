@@ -30,6 +30,25 @@ const requestAccountClaimSchema = z.object({
   email: z.string().email(),
 });
 
+// Build claim links against the canonical app domain so they trigger the
+// installed app's iOS Universal Link / Android App Link handler for
+// `/claim-verify` (registered in apple-app-site-association and
+// AndroidManifest.xml). Falling back to APP_URL/REPL_URL would resolve to
+// hostnames that aren't claimed by the app and would always open the
+// browser first. `CLAIM_LINK_BASE_URL` lets staging/test environments
+// override the host while still preserving deep-link correctness in prod.
+// In dev we keep using the Replit dev domain since the route
+// short-circuits and never sends an email anyway.
+function getClaimLinkBaseUrl(): string {
+  if (process.env.CLAIM_LINK_BASE_URL) {
+    return process.env.CLAIM_LINK_BASE_URL.replace(/\/$/, "");
+  }
+  if (process.env.NODE_ENV === "development" && process.env.REPLIT_DEV_DOMAIN) {
+    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  }
+  return "https://boxstat.app";
+}
+
 type AccountLookupStorage = IStorage & {
   getUserByEmailAnyOrg: (email: string) => Promise<User | undefined>;
   updateUser: (id: string, updates: Partial<User>) => Promise<User | undefined>;
@@ -82,9 +101,7 @@ export function registerRequestClaimRoute(app: Express): void {
         magicLinkExpiry,
       } as Partial<User>);
 
-      const baseUrl =
-        process.env.APP_URL || process.env.REPL_URL || "http://localhost:5000";
-      const claimLink = `${baseUrl}/claim-verify?token=${magicLinkToken}`;
+      const claimLink = `${getClaimLinkBaseUrl()}/claim-verify?token=${magicLinkToken}`;
 
       try {
         if (process.env.NODE_ENV === "development") {

@@ -3,7 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
@@ -72,7 +72,7 @@ import QuoteCheckout from "@/pages/QuoteCheckout";
 import StoreBuy, { StoreCheckoutSuccess, StoreCheckoutCancel } from "@/pages/store-buy";
 import { useQuery } from "@tanstack/react-query";
 import { initPushNotifications, registerPushNotifications } from "@/services/pushNotificationService";
-import { initDeepLinks, setDeepLinkCallback, markDeepLinkServiceReady } from "@/services/deepLinkService";
+import { initDeepLinks, setDeepLinkCallback, markDeepLinkServiceReady, hasPendingOrUnconsumedLaunchUrl } from "@/services/deepLinkService";
 import { UpdatePrompt } from "@/components/UpdatePrompt";
 
 type Profile = {
@@ -243,37 +243,75 @@ const ProtectedSkills = () => <ProtectedRoute component={Skills} />;
 function PlatformAwareLanding() {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
-  
+
   const capacitor = (window as any).Capacitor;
   const isNativePlatform = capacitor?.isNativePlatform?.() === true;
   const platform = capacitor?.getPlatform?.();
   const isNativeByPlatform = platform === 'ios' || platform === 'android';
   const isNativeApp = isNativePlatform || (isNativeByPlatform && platform !== 'web');
-  
+
+  // On a cold-start that originated from a deep link (Universal Link, magic
+  // link, claim-verify, Stripe in-app browser return, …), the deep-link
+  // service may still be probing `App.getLaunchUrl()` or holding a queued URL
+  // when this component first mounts. If we let the auth-driven redirect or
+  // the Landing render fire first, it can clobber the deep-link navigation
+  // and the user lands on the wrong screen.
+  //
+  // Wait briefly while a deep link is pending, then fall through to the
+  // normal logic so a cold-launch with no link still resolves quickly.
+  const [deepLinkPending, setDeepLinkPending] = useState(
+    () => isNativeApp && hasPendingOrUnconsumedLaunchUrl(),
+  );
+
   useEffect(() => {
+    if (!isNativeApp || !deepLinkPending) return;
+    let cancelled = false;
+    const interval = setInterval(() => {
+      if (cancelled) return;
+      if (!hasPendingOrUnconsumedLaunchUrl()) {
+        setDeepLinkPending(false);
+      }
+    }, 50);
+    // Hard cap so a stuck launch-URL probe never permanently blocks the
+    // home route.
+    const timeout = setTimeout(() => {
+      if (!cancelled) setDeepLinkPending(false);
+    }, 1500);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [isNativeApp, deepLinkPending]);
+
+  useEffect(() => {
+    if (deepLinkPending) return;
     if (!isLoading && user) {
       setLocation("/home");
     }
-  }, [isLoading, user, setLocation]);
-  
-  if (!isLoading && user) {
-    return null;
-  }
-  
-  // Show loading state while checking auth
-  if (isLoading && isNativeApp) {
+  }, [isLoading, user, setLocation, deepLinkPending]);
+
+  // Hold on a loader while either auth is still resolving on native, or a
+  // deep link is queued/being probed. This is the key fix for the iOS
+  // cold-start race where /claim-verify (and friends) could be clobbered by
+  // the home route's own redirect/render.
+  if (isNativeApp && (isLoading || deepLinkPending)) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <BanterLoader />
       </div>
     );
   }
-  
+
+  if (!isLoading && user) {
+    return null;
+  }
+
   // For iOS/Android app users, show the original app landing page
   if (isNativeApp) {
     return <Landing />;
   }
-  
+
   // For web browser users, show the marketing landing page
   return <MarketingLanding />;
 }

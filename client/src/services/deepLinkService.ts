@@ -8,6 +8,12 @@ let isReady = false;
 const pendingUrls: string[] = [];
 let listenerAttached = false;
 let launchUrlConsumed = false;
+// True once we've successfully queried `App.getLaunchUrl()` at least once and
+// can confidently say whether the cold-start carried a deep link or not.
+// Used by `hasPendingOrUnconsumedLaunchUrl()` so UI surfaces (e.g. the home
+// route's PlatformAwareLanding) can briefly wait instead of racing a deep-link
+// navigation with their own redirect.
+let launchUrlChecked = false;
 
 // Short-lived dedupe: avoid double-handling the same cold-start URL when it
 // arrives via both `appUrlOpen` and `App.getLaunchUrl()` (Capacitor on iOS
@@ -106,17 +112,38 @@ export async function registerEarlyDeepLinkCapture(): Promise<void> {
   if (!launchUrlConsumed) {
     try {
       const launchUrl = await App.getLaunchUrl();
+      // Mark that the launch-URL probe has completed (success path), even if
+      // the result was empty. This lets `hasPendingOrUnconsumedLaunchUrl()`
+      // stop blocking the home route once we know there was no cold-start
+      // deep link.
+      launchUrlChecked = true;
       if (launchUrl && launchUrl.url) {
         launchUrlConsumed = true;
         console.log('[DeepLink early] Cold-start launch URL detected:', launchUrl.url);
         enqueueOrHandle(launchUrl.url);
       } else {
-        console.log('[DeepLink early] No cold-start launch URL (will recheck on next call)');
+        console.log('[DeepLink early] No cold-start launch URL');
       }
     } catch (error) {
       console.error('[DeepLink early] Failed to read launch URL (will retry on next call):', error);
     }
   }
+}
+
+/**
+ * Returns true when the deep-link service either has a queued URL waiting to
+ * be flushed, or hasn't yet finished probing for a cold-start launch URL.
+ *
+ * UI that conditionally redirects on mount (e.g. the home route deciding
+ * between Landing and /home based on auth state) can use this to render a
+ * brief loader instead of racing the deep-link navigation. On non-native
+ * platforms there's never a launch URL, so this always returns false.
+ */
+export function hasPendingOrUnconsumedLaunchUrl(): boolean {
+  if (!Capacitor.isNativePlatform()) return false;
+  if (pendingUrls.length > 0) return true;
+  if (!launchUrlChecked) return true;
+  return false;
 }
 
 export async function initDeepLinks(): Promise<void> {

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -76,7 +76,8 @@ interface Player extends PlayerInfo {
 }
 
 export default function RegistrationFlow() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const search = useSearch();
   const { toast } = useToast();
 
   const { data: organizations = [] } = useQuery<Array<{ id: string; name: string; logoUrl?: string; sportType: string; primaryColor: string; secondaryColor: string }>>({
@@ -107,6 +108,28 @@ export default function RegistrationFlow() {
     players: [],
   });
   
+  // Watch URL for verified=true (e.g., from deep-link verification while
+  // sitting on step 2 "Waiting for verification..."). When the deep link
+  // handler navigates the in-app router to /registration?email=...&verified=true,
+  // the component is already mounted, so the useState initializer above does
+  // not re-run. This effect picks up the new URL and advances to step 3.
+  useEffect(() => {
+    const params = new URLSearchParams(search || window.location.search);
+    const emailFromUrl = params.get('email');
+    const verifiedFromUrl = params.get('verified') === 'true';
+    const orgFromUrl = params.get('organizationId');
+
+    if (verifiedFromUrl && emailFromUrl) {
+      setCurrentStep((prev) => (prev < 3 ? 3 : prev));
+      setRegistrationData((prev) => ({
+        ...prev,
+        email: prev.email || emailFromUrl,
+        organizationId: prev.organizationId || orgFromUrl || undefined,
+      }));
+      setIsPollingVerification(false);
+    }
+  }, [location, search]);
+
   // Poll for email verification status when waiting for user to verify
   useEffect(() => {
     if (!emailSent || !registrationData.email || currentStep !== 2) return;

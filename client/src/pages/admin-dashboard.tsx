@@ -12141,15 +12141,152 @@ const STRIPE_REQUIREMENT_LABELS: Record<string, string> = {
   "owners_provided": "Confirm beneficial owners",
   "directors_provided": "Confirm company directors",
   "executives_provided": "Confirm company executives",
+  "company.owners_provided": "Confirm beneficial owners",
+  "company.directors_provided": "Confirm company directors",
+  "company.executives_provided": "Confirm company executives",
+  "company.ownership_declaration": "Sign the beneficial ownership declaration",
+  "company.ownership_declaration.date": "Sign the beneficial ownership declaration",
+  "company.ownership_declaration.ip": "Sign the beneficial ownership declaration",
+  "company.ownership_declaration_shown_and_signed": "Sign the beneficial ownership declaration",
+  "company.structure": "Company legal structure",
+  "company.registration_number": "Company registration number",
+  "company.vat_id": "Company VAT ID",
+  "company.tax_id_registrar": "Tax ID registrar (the agency that issued your tax ID)",
+  "company.address.line2": "Company address (apt, suite, etc.)",
+  "company.address.country": "Company country",
+  "company.name_kana": "Company name (kana)",
+  "company.name_kanji": "Company name (kanji)",
+  "company.phone_number": "Company phone number",
+  "company.address_kana.line1": "Company address (kana)",
+  "company.address_kana.line2": "Company address (kana)",
+  "company.address_kana.city": "Company city (kana)",
+  "company.address_kana.state": "Company state (kana)",
+  "company.address_kana.postal_code": "Company postal code (kana)",
+  "company.address_kana.town": "Company town (kana)",
+  "company.address_kanji.line1": "Company address (kanji)",
+  "company.address_kanji.line2": "Company address (kanji)",
+  "company.address_kanji.city": "Company city (kanji)",
+  "company.address_kanji.state": "Company state (kanji)",
+  "company.address_kanji.postal_code": "Company postal code (kanji)",
+  "company.address_kanji.town": "Company town (kanji)",
+  "company.verification.document.front": "Front of company verification document",
+  "company.verification.document.back": "Back of company verification document",
+  "individual.address.line2": "Your address (apt, suite, etc.)",
+  "individual.address.country": "Your country",
+  "individual.first_name_kana": "Your first name (kana)",
+  "individual.last_name_kana": "Your last name (kana)",
+  "individual.first_name_kanji": "Your first name (kanji)",
+  "individual.last_name_kanji": "Your last name (kanji)",
+  "individual.address_kana.line1": "Your address (kana)",
+  "individual.address_kana.city": "Your city (kana)",
+  "individual.address_kana.state": "Your state (kana)",
+  "individual.address_kana.postal_code": "Your postal code (kana)",
+  "individual.address_kana.town": "Your town (kana)",
+  "individual.address_kanji.line1": "Your address (kanji)",
+  "individual.address_kanji.city": "Your city (kanji)",
+  "individual.address_kanji.state": "Your state (kanji)",
+  "individual.address_kanji.postal_code": "Your postal code (kanji)",
+  "individual.address_kanji.town": "Your town (kanji)",
+  "individual.gender": "Your gender",
+  "individual.political_exposure": "Whether you are a politically exposed person",
+  "individual.full_name_aliases": "Other names you've gone by",
+  "individual.maiden_name": "Your maiden name",
+  "individual.nationality": "Your nationality",
+  "individual.metadata": "Additional personal details",
+  "individual.relationship.title": "Your job title at the company",
+  "individual.relationship.director": "Whether you're a company director",
+  "individual.relationship.executive": "Whether you're a company executive",
+  "individual.relationship.owner": "Whether you're a company owner",
+  "individual.relationship.percent_ownership": "Your percent ownership of the company",
+  "individual.verification.additional_document.front": "Front of additional ID document",
+  "individual.verification.additional_document.back": "Back of additional ID document",
+  "individual.verification.document.front": "Front of your photo ID",
+  "individual.verification.document.back": "Back of your photo ID",
+  "representative.address.line1": "Representative's street address",
+  "representative.address.city": "Representative's city",
+  "representative.address.state": "Representative's state",
+  "representative.address.postal_code": "Representative's postal code",
+  "representative.address.country": "Representative's country",
+  "representative.dob.month": "Representative's date of birth",
+  "representative.dob.year": "Representative's date of birth",
+  "representative.email": "Representative's email address",
+  "representative.phone": "Representative's phone number",
+  "representative.ssn_last_4": "Last 4 of representative's SSN",
+  "representative.id_number": "Representative's full SSN or tax ID",
+  "representative.relationship.title": "Representative's job title",
+  "representative.relationship.executive": "Confirm representative is an executive",
+  "representative.verification.document": "Representative's photo ID",
+  "representative.verification.additional_document": "Representative's additional ID document",
+  "settings.payments.statement_descriptor": "Statement descriptor (how charges show on customer statements)",
+  "settings.card_payments.statement_descriptor_prefix": "Statement descriptor prefix for card payments",
+  "settings.payouts.statement_descriptor": "Statement descriptor for payouts",
+  "documents.bank_account_ownership_verification": "Proof you own the bank account",
+  "documents.company_license": "Company business license",
+  "documents.company_memorandum_of_association": "Company memorandum of association",
+  "documents.company_ministerial_decree": "Company ministerial decree",
+  "documents.company_registration_verification": "Proof of company registration",
+  "documents.company_tax_id_verification": "Proof of company tax ID",
+  "documents.proof_of_registration": "Proof of business registration",
+  "documents.proof_of_address": "Proof of address",
+  "documents.proof_of_liveness": "Proof of liveness (selfie verification)",
+};
+
+const PERSON_FIELD_LABELS: Record<string, string> = {
+  "first_name": "first name",
+  "last_name": "last name",
+  "first_name_kana": "first name (kana)",
+  "last_name_kana": "last name (kana)",
+  "first_name_kanji": "first name (kanji)",
+  "last_name_kanji": "last name (kanji)",
+  "email": "email address",
+  "phone": "phone number",
+  "id_number": "full SSN or tax ID",
+  "ssn_last_4": "last 4 of SSN",
+  "gender": "gender",
+  "nationality": "nationality",
+  "maiden_name": "maiden name",
+  "political_exposure": "politically exposed person status",
+  "full_name_aliases": "other names",
+  "verification.document": "photo ID",
+  "verification.document.front": "front of photo ID",
+  "verification.document.back": "back of photo ID",
+  "verification.additional_document": "additional ID document",
+  "verification.additional_document.front": "front of additional ID document",
+  "verification.additional_document.back": "back of additional ID document",
+  "relationship.title": "job title",
+  "relationship.owner": "owner status",
+  "relationship.director": "director status",
+  "relationship.executive": "executive status",
+  "relationship.representative": "representative status",
+  "relationship.percent_ownership": "percent ownership",
 };
 
 function humanizeStripeRequirement(key: string): string {
   if (STRIPE_REQUIREMENT_LABELS[key]) return STRIPE_REQUIREMENT_LABELS[key];
   if (key.startsWith("individual.dob.")) return "Your date of birth";
+  if (key.startsWith("representative.dob.")) return "Representative's date of birth";
+  if (key.startsWith("company.address_kana.")) return "Company address (kana)";
+  if (key.startsWith("company.address_kanji.")) return "Company address (kanji)";
+  if (key.startsWith("individual.address_kana.")) return "Your address (kana)";
+  if (key.startsWith("individual.address_kanji.")) return "Your address (kanji)";
   if (key.startsWith("company.address.")) return "Company address details";
   if (key.startsWith("individual.address.")) return "Your address details";
+  if (key.startsWith("representative.address.")) return "Representative's address details";
   if (key.startsWith("representative.")) return "Representative information";
+  const personMatch = key.match(/^person_[^.]+\.(.+)$/);
+  if (personMatch) {
+    const field = personMatch[1];
+    if (field.startsWith("dob.")) return "An account person's date of birth";
+    if (field.startsWith("address_kana.")) return "An account person's address (kana)";
+    if (field.startsWith("address_kanji.")) return "An account person's address (kanji)";
+    if (field.startsWith("address.")) return "An account person's address details";
+    const friendly = PERSON_FIELD_LABELS[field];
+    if (friendly) return `An account person's ${friendly}`;
+    return "Information about an account person";
+  }
   if (key.startsWith("person_")) return "Information about an account person";
+  if (key.startsWith("documents.")) return "Supporting document for verification";
+  if (key.startsWith("settings.")) return "Account settings update";
   return key.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 

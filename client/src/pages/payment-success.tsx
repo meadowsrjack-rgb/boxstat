@@ -1,4 +1,4 @@
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 
@@ -9,6 +9,8 @@ export default function PaymentSuccess() {
   const isNative = urlParams.get('native') === 'true';
   const [countdown, setCountdown] = useState(3);
   const [verified, setVerified] = useState(false);
+  const [handoffTarget, setHandoffTarget] = useState<string | null>(null);
+  const [showFallback, setShowFallback] = useState(false);
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -24,9 +26,11 @@ export default function PaymentSuccess() {
         // canceled so the user lands on a recoverable state instead of a
         // misleading "Payment Successful!" screen.
         if (!isCanceled && !sessionId) {
+          const target = 'boxstat://payment-canceled';
           setVerified(true);
+          setHandoffTarget(target);
           setTimeout(() => {
-            window.location.href = 'boxstat://payment-canceled';
+            window.location.href = target;
           }, 400);
           return;
         }
@@ -53,24 +57,32 @@ export default function PaymentSuccess() {
         // off to the app (the Stripe webhook will reconcile entitlements),
         // but we tag the URL so /unified-account can show a "confirming
         // payment…" state instead of a definite success.
-        let handoffTarget: string;
+        let target: string;
         if (isCanceled) {
-          handoffTarget = 'boxstat://payment-canceled';
+          target = 'boxstat://payment-canceled';
         } else if (!verifyOk) {
-          handoffTarget = `boxstat://payment-success?session_id=${encodeURIComponent(sessionId || '')}&pending=1`;
+          target = `boxstat://payment-success?session_id=${encodeURIComponent(sessionId || '')}&pending=1`;
         } else {
-          handoffTarget = `boxstat://payment-success?session_id=${encodeURIComponent(sessionId || '')}`;
+          target = `boxstat://payment-success?session_id=${encodeURIComponent(sessionId || '')}`;
         }
+        setHandoffTarget(target);
 
         // Brief pause so the user sees the confirmation, then trigger the
         // custom-scheme deep link to bounce back into the native app.
         setTimeout(() => {
-          window.location.href = handoffTarget;
+          window.location.href = target;
         }, 800);
       };
 
       doHandoff();
-      return;
+
+      // If the handoff hasn't carried us back into the native app within
+      // 5 seconds, surface a manual "Open BoxStat" button as a fallback.
+      const fallbackTimer = setTimeout(() => {
+        setShowFallback(true);
+      }, 5000);
+
+      return () => clearTimeout(fallbackTimer);
     }
 
     if (isCanceled) return;
@@ -108,6 +120,43 @@ export default function PaymentSuccess() {
     return () => clearInterval(interval);
   }, [isCanceled, sessionId, isNative]);
 
+  if (isNative) {
+    const title = isCanceled ? 'Returning to BoxStat…' : 'Confirming your payment…';
+    const subtitle = isCanceled
+      ? 'Taking you back to the app.'
+      : verified
+        ? 'Returning to BoxStat…'
+        : 'Hang tight while we finalize your payment.';
+
+    const fallbackTarget =
+      handoffTarget ?? (isCanceled ? 'boxstat://payment-canceled' : 'boxstat://payment-success');
+
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center p-6 safe-top">
+        <div className="text-center max-w-md md:max-w-lg">
+          <div className="mx-auto w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6">
+            <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">
+            {title}
+          </h1>
+          <p className="text-gray-600 mb-6">
+            {subtitle}
+          </p>
+          {showFallback && (
+            <a
+              href={fallbackTarget}
+              className="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
+              data-testid="button-open-boxstat"
+            >
+              Open BoxStat
+            </a>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (isCanceled) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center p-6 safe-top">
@@ -141,15 +190,9 @@ export default function PaymentSuccess() {
         <p className="text-gray-600 mb-6">
           Thank you for your payment. A receipt has been sent to your email.
         </p>
-        {isNative ? (
-          <p className="text-sm text-gray-400">
-            Tap the <strong>✕</strong> button above to return to the app.
-          </p>
-        ) : (
-          <p className="text-sm text-gray-400">
-            Redirecting you back to the app{countdown > 0 ? ` in ${countdown}...` : "..."}
-          </p>
-        )}
+        <p className="text-sm text-gray-400">
+          Redirecting you back to the app{countdown > 0 ? ` in ${countdown}...` : "..."}
+        </p>
       </div>
     </div>
   );

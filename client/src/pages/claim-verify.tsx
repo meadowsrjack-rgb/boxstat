@@ -5,13 +5,17 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import BoxStatLogo from "@/components/boxstat-logo";
+import { redirectToRegistrationStep3, buildRegistrationStep3Path } from "@/lib/registrationHandoff";
 interface VerifyResponse {
   success: boolean;
+  autoLogin?: boolean;
+  redirectUrl?: string;
   account: {
     id: string;
     email: string;
     primaryAccountType: string;
     registrationStatus: string;
+    organizationId?: string;
   };
   profiles: Array<{
     id: string;
@@ -58,14 +62,21 @@ export default function ClaimVerify() {
           description: `Welcome to BoxStat, ${data.account.email}!`,
         });
 
-        // In development mode with autoLogin, redirect to profile selection
-        // Otherwise redirect to login to complete the auth flow
+        // In development mode with autoLogin, the server returns a
+        // redirectUrl (e.g. /profile-selection) and we honor it.
+        // In production, hand the user off to registration step 3 the same
+        // way the verify-email flow does — preferring the native app via
+        // Universal Link / App Link / boxstat:// when installed.
         setTimeout(() => {
           if (data.autoLogin && data.redirectUrl) {
             window.location.href = data.redirectUrl;
-          } else {
-            window.location.href = "/api/login";
+            return;
           }
+          const email = data.account?.email || "";
+          const orgId = data.account?.organizationId || null;
+          redirectToRegistrationStep3(email, orgId, () => {
+            setLocation(buildRegistrationStep3Path(email, orgId));
+          });
         }, 2000);
 
       } catch (error: any) {

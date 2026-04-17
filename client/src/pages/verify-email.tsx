@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Loader2, CreditCard } from "lucide-react";
+import { redirectToRegistrationStep3 } from "@/lib/registrationHandoff";
 export default function VerifyEmail() {
   const [, setLocation] = useLocation();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
@@ -45,48 +46,14 @@ export default function VerifyEmail() {
           setMessage(data.message);
           setStripeDataFound(data.stripeDataFound || false);
 
-          const userEmail = data.email || params.get("email");
+          const userEmail = data.email || params.get("email") || "";
           const orgId = organizationId || "";
-          let redirectPath = `/registration?email=${encodeURIComponent(userEmail || "")}&verified=true`;
-          if (orgId) {
-            redirectPath += `&organizationId=${encodeURIComponent(orgId)}`;
-          }
           setTimeout(() => {
-            const fallback = () => setLocation(redirectPath);
-
-            const ua = navigator.userAgent || "";
-            const isAndroid = /android/i.test(ua);
-            const isIOS = /iPhone|iPad|iPod/i.test(ua);
-
-            // Universal Links (iOS) / App Links (Android): navigating to the
-            // https URL will be intercepted by the installed app. If the app
-            // isn't installed, the browser simply continues to the same URL,
-            // which serves the registration page as a normal web fallback.
-            const absoluteUrl = window.location.origin + redirectPath;
-            // Build the in-app custom scheme deep link the app's handler
-            // recognizes (host=boxstat.app preserves the /registration
-            // pathname inside the boxstat:// URL so deepLinkService routes
-            // correctly).
-            const customSchemeUrl = `boxstat://boxstat.app${redirectPath}`;
-
-            if (isIOS) {
-              // Same-domain JS navigation to an https URL does not reliably
-              // trigger Universal Link handoff in Safari. Try the custom
-              // `boxstat://` scheme first (opens the installed app), then
-              // fall back to the absolute https URL after a short delay so
-              // users without the app land on the web registration page.
-              window.location.href = customSchemeUrl;
-              setTimeout(() => {
-                window.location.href = absoluteUrl;
-              }, 1500);
-            } else if (isAndroid) {
-              // Use an intent URL targeting the in-app `boxstat://` deep
-              // link the app actually handles. browser_fallback_url drops
-              // users without the app on the web registration page.
-              window.location.href = `intent://boxstat.app${redirectPath}#Intent;scheme=boxstat;package=com.boxstat.app;S.browser_fallback_url=${encodeURIComponent(absoluteUrl)};end`;
-            } else {
-              fallback();
-            }
+            redirectToRegistrationStep3(userEmail, orgId, () =>
+              setLocation(
+                `/registration?email=${encodeURIComponent(userEmail)}&verified=true${orgId ? `&organizationId=${encodeURIComponent(orgId)}` : ""}`,
+              ),
+            );
           }, 2000);
         } else {
           setStatus("error");

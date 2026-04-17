@@ -10,18 +10,18 @@ export function buildRegistrationStep3Path(
 }
 
 /**
- * Hand off to the registration step 3 (player list / skill-level selection),
- * preferring the installed BoxStat native app via Universal Links / App Links
- * / `boxstat://` custom scheme. If the app isn't installed the user lands on
- * the same registration step in the browser as a normal web fallback.
+ * Hand off to registration step 3 (player list / skill-level selection).
  *
- * Mirrors the logic used by `verify-email.tsx` so that the email-verify flow
- * and the account-claim flow drop the user in the exact same place.
+ * Behavior is intentionally browser-only on the web: both the email-verify
+ * flow and the account-claim flow continue registration in whatever browser
+ * the user clicked the email link from. The user is only invited to open or
+ * download the native app once they reach the profile gateway page (see
+ * `client/src/pages/profile-gateway.tsx`).
+ *
+ * The only special case is when the caller is already running INSIDE the
+ * Capacitor native app — in that case we skip the URL navigation and use
+ * the in-app router fallback so wouter can transition without a page load.
  */
-const APP_STORE_URL = "https://apps.apple.com/us/app/boxstat/id6754899159";
-const PLAY_STORE_URL =
-  "https://play.google.com/store/apps/details?id=com.boxstat.app&hl=en_US";
-
 function isNativeApp(): boolean {
   try {
     const cap = (window as any).Capacitor;
@@ -97,52 +97,23 @@ export function redirectToRegistrationStep3(
   email: string,
   organizationId?: string | null,
   webFallback?: () => void,
-  options?: { handoffCode?: string | null },
+  _options?: { handoffCode?: string | null },
 ): void {
   const redirectPath = buildRegistrationStep3Path(email, organizationId);
   const fallback = webFallback ?? (() => {
     window.location.href = redirectPath;
   });
 
-  // When we're already inside the native app, skip the custom-scheme/App
-  // Store dance entirely — just navigate in-app via the provided fallback
-  // (which is wired to wouter's setLocation by the caller).
-  if (isNativeApp()) {
-    fallback();
-    return;
-  }
-
-  const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
-  const isAndroid = /android/i.test(ua);
-  const isIOS = /iPhone|iPad|iPod/i.test(ua);
-
-  // Prefer the SHORT custom-scheme URL when we have a handoff code. This
-  // reduces the payload that has to survive the iOS browser → boxstat://
-  // → Capacitor handoff (the long token URL is what was getting dropped).
-  const handoffCode = options?.handoffCode || null;
-  const claimResumePath = handoffCode
-    ? `/claim-resume?code=${encodeURIComponent(handoffCode)}&email=${encodeURIComponent(email)}`
-    : redirectPath;
-  const customSchemeUrl = handoffCode
-    ? `boxstat://boxstat.app${claimResumePath}`
-    : `boxstat://boxstat.app${redirectPath}`;
-
-  if (isIOS) {
-    // Try the custom scheme to hand off to the installed app. If the page is
-    // still visible ~1.5s later, the app isn't installed (or the user
-    // dismissed the prompt) — send them to the App Store instead.
-    const startedAt = Date.now();
-    window.location.href = customSchemeUrl;
-    setTimeout(() => {
-      if (document.visibilityState === "visible" && Date.now() - startedAt < 3000) {
-        window.location.href = APP_STORE_URL;
-      }
-    }, 1500);
-  } else if (isAndroid) {
-    // Android intent URL: opens the app if installed, otherwise falls back
-    // to the Play Store listing via S.browser_fallback_url.
-    window.location.href = `intent://boxstat.app${claimResumePath}#Intent;scheme=boxstat;package=com.boxstat.app;S.browser_fallback_url=${encodeURIComponent(PLAY_STORE_URL)};end`;
-  } else {
-    fallback();
-  }
+  // Always continue in the current browser. This applies to BOTH the
+  // email-verify flow and the account-claim flow on every platform —
+  // mobile users finish registration in their mobile browser and only
+  // get the open-in-app / download prompt when they reach the profile
+  // gateway. The previous iOS custom-scheme + Android intent handoff
+  // attempts were intentionally removed because they caused brittle
+  // double-redirects and silent black-screens when the app wasn't
+  // installed or the OS suppressed the scheme prompt.
+  //
+  // Inside the native app the caller already provides a wouter-aware
+  // fallback, so the same call path works there too.
+  fallback();
 }

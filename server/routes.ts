@@ -856,156 +856,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // ---------------------------------------------------------------------
-  // Mobile bounce page for /verify-email
-  //
-  // The "Verify Email Address" button in the registration confirmation
-  // email used to rely on iOS Universal Links to deliver the URL to the
-  // BoxStat app via Capacitor's `appUrlOpen`. In practice that delivery
-  // is unreliable — iOS aggressively caches the apple-app-site-association
-  // file, and some in-app browsers (Gmail, etc.) bypass Universal Links
-  // entirely. When the URL never reaches the app, /api/auth/verify-email
-  // is never called, the email is never marked verified, and the in-app
-  // polling on registration step 2 stays stuck forever.
-  //
-  // This route fixes that by intercepting the link tap on mobile browsers
-  // BEFORE the SPA serves the React verify page. It does three things:
-  //   1. Marks the email verified server-side immediately, so the in-app
-  //      polling sees verified=true within ~3s no matter what happens
-  //      next.
-  //   2. Returns a tiny HTML page that auto-redirects to
-  //      `boxstat://verify-email?...` — custom-scheme URLs reliably
-  //      open the installed app and fire `appUrlOpen`.
-  //   3. Renders a visible "Open BoxStat" button as a manual escape
-  //      hatch in case the auto-redirect is blocked.
-  // Desktop browsers and requests without a token fall through to the
-  // existing SPA-served React page (`client/src/pages/verify-email.tsx`).
+  // /verify-email is intentionally NOT registered as an Express route —
+  // every platform (mobile and desktop) is served the SPA verify page
+  // (`client/src/pages/verify-email.tsx`), which calls
+  // /api/auth/verify-email and then continues registration in the
+  // browser. The user is only invited to open or download the native
+  // app once they reach the profile gateway. The previous mobile bounce
+  // into `boxstat://verify-email?...` was removed because the browser-
+  // only flow is more reliable than Universal Link / custom-scheme
+  // handoff.
   // ---------------------------------------------------------------------
-  app.get('/verify-email', async (req: any, res, next) => {
-    const ua = String(req.headers['user-agent'] || '');
-    // Standard mobile UA detection, plus a fallback for iPadOS 13+ which
-    // by default reports as "Macintosh" but is a touch device — sniff via
-    // the secCh-ua-mobile hint when the browser sends it, or accept any
-    // Mac UA that also looks like Safari Mobile.
-    const isStandardMobile = /iPhone|iPad|iPod|Android/i.test(ua);
-    const secChMobile = String(req.headers['sec-ch-ua-mobile'] || '');
-    const isIpadOSDesktopUA =
-      /Macintosh/.test(ua) && /Safari/.test(ua) && /Mobile|Touch/i.test(ua);
-    const isMobile = isStandardMobile || secChMobile === '?1' || isIpadOSDesktopUA;
-    const token = typeof req.query.token === 'string' ? req.query.token : '';
-    if (!isMobile || !token) return next();
-
-    const email = typeof req.query.email === 'string' ? req.query.email : '';
-    const organizationId =
-      typeof req.query.organizationId === 'string' ? req.query.organizationId : '';
-
-    let verifiedNow = false;
-    let alreadyVerified = false;
-    let verifyError: 'expired' | 'invalid' | null = null;
-    try {
-      let pendingReg: any = null;
-      if (email && organizationId) {
-        pendingReg = await storage.getPendingRegistration(email, organizationId);
-        if (pendingReg && pendingReg.verificationToken !== token) pendingReg = null;
-      }
-      if (!pendingReg && organizationId) {
-        pendingReg = await storage.getPendingRegistrationByToken(token, organizationId);
-      }
-      if (!pendingReg) {
-        pendingReg = await storage.getPendingRegistrationByTokenAnyOrg(token);
-      }
-      if (!pendingReg) {
-        verifyError = 'invalid';
-      } else if (new Date() > new Date(pendingReg.verificationExpiry)) {
-        verifyError = 'expired';
-      } else if (pendingReg.verified) {
-        alreadyVerified = true;
-      } else {
-        await storage.updatePendingRegistration(
-          pendingReg.email,
-          pendingReg.organizationId,
-          true,
-        );
-        verifiedNow = true;
-      }
-      console.log('[verify-email bounce]', {
-        ua: ua.slice(0, 80),
-        email,
-        organizationId,
-        verifiedNow,
-        alreadyVerified,
-        verifyError,
-      });
-    } catch (err) {
-      console.error('[verify-email bounce] server-side verify failed (non-fatal):', err);
-    }
-
-    const qp = new URLSearchParams();
-    qp.set('token', token);
-    if (email) qp.set('email', email);
-    if (organizationId) qp.set('organizationId', organizationId);
-    const customSchemeUrl = `boxstat://verify-email?${qp.toString()}`;
-    const escapeHtml = (s: string) =>
-      s.replace(/[&<>"']/g, (c) =>
-        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!),
-      );
-    const safeUrl = escapeHtml(customSchemeUrl);
-
-    const headline = verifyError === 'expired'
-      ? 'Link Expired'
-      : verifyError === 'invalid'
-      ? "Link Doesn't Match"
-      : (verifiedNow || alreadyVerified)
-      ? 'Email Verified!'
-      : 'Opening BoxStat\u2026';
-    const subtext = verifyError === 'expired'
-      ? 'This verification link has expired. Open BoxStat and request a new one.'
-      : verifyError === 'invalid'
-      ? "We couldn't find a pending registration for this link. Open BoxStat to request a new verification email."
-      : (verifiedNow || alreadyVerified)
-      ? 'Returning you to the BoxStat app to finish signing up.'
-      : 'Hold tight while we open the app for you.';
-    const badge = verifyError ? '!' : (verifiedNow || alreadyVerified ? '\u2713' : '\u2709');
-    const badgeColor = verifyError ? 'rgba(239,68,68,.18)' : 'rgba(34,197,94,.18)';
-
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(`<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#111827" />
-<title>${escapeHtml(headline)}</title>
-<style>
-html,body{margin:0;padding:0;background:linear-gradient(to bottom right,#111827,#1f2937,#000);color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh;}
-.wrap{max-width:420px;margin:0 auto;padding:48px 24px;text-align:center;}
-.badge{width:80px;height:80px;border-radius:50%;background:${badgeColor};display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:40px;}
-h1{font-size:22px;font-weight:600;margin:0 0 12px;}
-p{color:#9ca3af;font-size:15px;line-height:1.5;margin:0 0 8px;}
-a.btn{display:inline-block;margin-top:24px;padding:14px 28px;background:#ef4444;color:#fff;text-decoration:none;border-radius:10px;font-weight:600;font-size:16px;-webkit-tap-highlight-color:transparent;}
-a.btn:active{background:#dc2626;}
-.muted{color:#6b7280;font-size:13px;margin-top:24px;}
-</style>
-</head>
-<body>
-<div class="wrap">
-<div class="badge">${badge}</div>
-<h1>${escapeHtml(headline)}</h1>
-<p>${escapeHtml(subtext)}</p>
-<a class="btn" id="open" href="${safeUrl}">Open BoxStat</a>
-<p class="muted">If the app doesn't open, tap the button above. Make sure BoxStat is installed.</p>
-</div>
-<script>
-(function(){
-  var url = ${JSON.stringify(customSchemeUrl)};
-  var autoOpen = ${JSON.stringify(verifyError === null)};
-  if (autoOpen) {
-    setTimeout(function(){ try { window.location.replace(url); } catch (e) { window.location.href = url; } }, 50);
-  }
-})();
-</script>
-</body>
-</html>`);
-  });
 
   // Serve BoxStat logo for emails
   app.get('/assets/logo', (req, res) => {

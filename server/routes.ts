@@ -6125,7 +6125,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if ((org.stripeConnectType ?? 'express') === 'standard') {
         return res.status(400).json({
           error: 'standard_account',
-          message: 'Login links are only available for Express accounts. Use the Stripe Dashboard directly.',
+          message: 'Login links are only available for Express accounts. Open the Stripe Dashboard directly to manage this account.',
+          dashboardUrl: 'https://dashboard.stripe.com/',
         });
       }
 
@@ -6153,6 +6154,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: 'stripe_error',
           code,
           message: stripeMsg || 'Stripe rejected the request.',
+        });
+      }
+
+      if ((account as any).type === 'standard') {
+        if ((org.stripeConnectType ?? 'express') !== 'standard') {
+          try {
+            await storage.updateOrganization(organizationId, { stripeConnectType: 'standard' });
+          } catch (updateErr: any) {
+            console.error(
+              `[Stripe Connect] Failed to self-heal stripeConnectType to standard for org ${organizationId}:`,
+              updateErr?.message || updateErr,
+            );
+          }
+        }
+        return res.status(400).json({
+          error: 'standard_account',
+          message: 'Login links are only available for Express accounts. Open the Stripe Dashboard directly to manage this account.',
+          dashboardUrl: 'https://dashboard.stripe.com/',
         });
       }
 
@@ -6203,6 +6222,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(409).json({
             error: 'account_missing',
             message: 'The connected Stripe account no longer exists. Please reconnect a payment account.',
+          });
+        }
+        if (typeof stripeMsg === 'string' && /does not have access to the Express Dashboard/i.test(stripeMsg)) {
+          if ((org.stripeConnectType ?? 'express') !== 'standard') {
+            try {
+              await storage.updateOrganization(organizationId, { stripeConnectType: 'standard' });
+            } catch (updateErr: any) {
+              console.error(
+                `[Stripe Connect] Failed to self-heal stripeConnectType to standard for org ${organizationId}:`,
+                updateErr?.message || updateErr,
+              );
+            }
+          }
+          return res.status(400).json({
+            error: 'standard_account',
+            message: 'Login links are only available for Express accounts. Open the Stripe Dashboard directly to manage this account.',
+            dashboardUrl: 'https://dashboard.stripe.com/',
           });
         }
         return res.status(502).json({

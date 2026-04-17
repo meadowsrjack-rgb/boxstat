@@ -12485,11 +12485,21 @@ function StripeSettingsSection() {
       }
 
       if (code === "standard_account") {
+        const dashboardUrl = parsed?.dashboardUrl || "https://dashboard.stripe.com/";
         toast({
           title: "Use the Stripe Dashboard",
           description: parsed?.message || "Login links are only available for Express accounts.",
           variant: "destructive",
+          action: (
+            <ToastAction
+              altText="Open Stripe Dashboard"
+              onClick={() => window.open(dashboardUrl, "_blank", "noopener,noreferrer")}
+            >
+              Open Stripe Dashboard
+            </ToastAction>
+          ),
         });
+        queryClient.invalidateQueries({ queryKey: ["/api/stripe-connect/status"] });
         return;
       }
 

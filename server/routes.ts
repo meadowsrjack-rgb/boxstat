@@ -1364,15 +1364,7 @@ a.btn:active{background:#dc2626;}
           success: true, 
           message: "Verification email re-sent. Please check your inbox.",
           exists: true,
-          sessionId, // Return session ID so frontend can poll for verification status
-          // Return the verification token to the same browser session that
-          // requested it. The frontend uses this in its polling fallback so
-          // that even if the iOS deep-link handoff (and the server-side
-          // bounce-page verify) both fail, the next poll will idempotently
-          // mark the email verified and unblock step 2. Exposing the token
-          // here adds no new attack surface — anyone with JS access to this
-          // session already has access to every API the server exposes to it.
-          verificationToken,
+          sessionId // Return session ID so frontend can poll for verification status
         });
       }
       
@@ -1390,8 +1382,7 @@ a.btn:active{background:#dc2626;}
         success: true, 
         message: "Verification email sent! Please check your inbox.",
         exists: false,
-        sessionId, // Return session ID so frontend can poll for verification status
-        verificationToken, // See note above
+        sessionId // Return session ID so frontend can poll for verification status
       });
     } catch (error: any) {
       console.error("Send verification error:", error);
@@ -1463,18 +1454,16 @@ a.btn:active{background:#dc2626;}
     }
   });
   
-  // Poll for verification status (used by original session to detect when email is verified)
-  //
-  // Accepts an optional `token` query param. When the caller passes the
-  // verification token (returned to the same browser session by
-  // /api/auth/send-verification), the server idempotently marks the email
-  // verified before reporting status. This is a belt-and-suspenders
-  // fallback: if both the iOS Universal Link deep-link handoff AND the
-  // new /verify-email server bounce page fail to trigger verification,
-  // the next polling tick still self-heals and step 2 advances.
+  // Poll for verification status (used by original session to detect when email is verified).
+  // READ-ONLY by design: this endpoint must never mutate verification
+  // state. Mutation can only occur via proof-of-email-link-possession
+  // paths (`/api/auth/verify-email` hit from the email link, or the
+  // server-side bounce at `/verify-email`). Accepting a token here
+  // would allow any unauthenticated caller to trigger send-verification
+  // for a victim email and then self-verify — breaking email ownership.
   app.get('/api/auth/check-verification-status', async (req: any, res) => {
     try {
-      const { email, organizationId, token } = req.query;
+      const { email, organizationId } = req.query;
       
       if (!email) {
         return res.status(400).json({ success: false, message: "Email is required" });

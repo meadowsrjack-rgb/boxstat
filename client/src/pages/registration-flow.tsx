@@ -93,12 +93,6 @@ export default function RegistrationFlow() {
   const [emailSent, setEmailSent] = useState(false);
   const [isPollingVerification, setIsPollingVerification] = useState(false);
   const [verificationSessionId, setVerificationSessionId] = useState<string | null>(null);
-  // Verification token returned by /api/auth/send-verification. Cached
-  // here so the step-2 polling can pass it back to
-  // /api/auth/check-verification-status as a self-heal fallback — even
-  // if both the iOS Universal Link deep-link handoff AND the server
-  // bounce page fail, the next poll will idempotently mark verified.
-  const [verificationToken, setVerificationToken] = useState<string | null>(null);
   const [registrationData, setRegistrationData] = useState<{
     organizationId?: string;
     email?: string;
@@ -152,9 +146,6 @@ export default function RegistrationFlow() {
         }
         if (verificationSessionId) {
           params.append('sessionId', verificationSessionId);
-        }
-        if (verificationToken) {
-          params.append('token', verificationToken);
         }
         
         const response = await fetch(`/api/auth/check-verification-status?${params.toString()}`);
@@ -390,7 +381,6 @@ export default function RegistrationFlow() {
             {currentStep === 2 && !emailSent && (
               <EmailEntryStep
                 organizationId={registrationData.organizationId || "default-org"}
-                onVerificationToken={(t) => setVerificationToken(t)}
                 onSubmit={(data, emailCheckData, sessionId) => {
                   setRegistrationData({ 
                     ...registrationData, 
@@ -589,11 +579,9 @@ function OrganizationSelectionStep({
 
 function EmailEntryStep({ 
   onSubmit,
-  onVerificationToken,
   organizationId,
 }: { 
   onSubmit: (data: { email: string }, emailCheckData: any, sessionId?: string) => void;
-  onVerificationToken?: (token: string) => void;
   organizationId: string;
 }) {
   const { toast } = useToast();

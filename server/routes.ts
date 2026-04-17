@@ -765,8 +765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerObjectStorageRoutes(app);
 
   // Register the minimal /api/auth/request-claim endpoint used by the
-  // "Claim Your Account" page. Scoped to just this handler on purpose —
-  // the legacy claim-routes module contains unrelated endpoints.
+  // "Claim Your Account" page.
   registerRequestClaimRoute(app);
   const objectStorageService = new ObjectStorageService();
   

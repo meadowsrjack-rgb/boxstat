@@ -12105,8 +12105,17 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
 function StripeSettingsSection() {
   const { toast } = useToast();
 
-  const { data: connectStatus, isLoading: connectLoading, refetch: refetchConnect } = useQuery<any>({
+  type StripeConnectStatus = {
+    connectedAccountId: string | null;
+    status: "not_started" | "pending" | "pending_verification" | "active" | string;
+    isConnected: boolean;
+    connectType: "express" | "standard" | string;
+  };
+
+  const { data: connectStatus, isLoading: connectLoading, refetch: refetchConnect } = useQuery<StripeConnectStatus>({
     queryKey: ["/api/stripe-connect/status"],
+    refetchOnWindowFocus: (query) => query.state.data?.status !== "active",
+    refetchInterval: (query) => (query.state.data?.status !== "active" ? 15000 : false),
   });
 
   useEffect(() => {

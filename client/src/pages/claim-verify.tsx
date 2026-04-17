@@ -5,7 +5,12 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import BoxStatLogo from "@/components/boxstat-logo";
-import { redirectToRegistrationStep3, buildRegistrationStep3Path } from "@/lib/registrationHandoff";
+import {
+  redirectToRegistrationStep3,
+  buildRegistrationStep3Path,
+  mintClaimHandoffCode,
+  rememberPendingClaimCode,
+} from "@/lib/registrationHandoff";
 interface VerifyResponse {
   success: boolean;
   autoLogin?: boolean;
@@ -94,6 +99,31 @@ export default function ClaimVerify() {
           description: `Welcome to BoxStat, ${data.account.email}!`,
         });
 
+        // Mint a short-lived handoff code on the server BEFORE we attempt the
+        // custom-scheme/Universal-Link launch. The native app will resume
+        // against this code on cold-start even if the deep-link URL is lost
+        // in the browser → boxstat:// → Capacitor handoff. See task #190.
+        const email = data.account?.email || "";
+        const orgId = data.account?.organizationId || null;
+        const accountId = data.account?.id || null;
+        let handoffCode: string | null = null;
+        try {
+          handoffCode = await mintClaimHandoffCode({
+            email,
+            organizationId: orgId,
+            accountId,
+          });
+          if (handoffCode) {
+            // Stash it in localStorage too so the WebView (same origin) can
+            // probe for a pending claim on next cold-launch as a backup
+            // channel even if the deep-link URL never arrives.
+            rememberPendingClaimCode(handoffCode);
+            console.log("[ClaimResume] handoff code minted", handoffCode);
+          }
+        } catch (mintErr) {
+          console.warn("[ClaimResume] handoff mint failed (continuing with legacy hand-off)", mintErr);
+        }
+
         // In development mode with autoLogin, the server returns a
         // redirectUrl (e.g. /profile-selection) and we honor it.
         // In production, hand the user off to registration step 3 the same
@@ -104,11 +134,9 @@ export default function ClaimVerify() {
             window.location.href = data.redirectUrl;
             return;
           }
-          const email = data.account?.email || "";
-          const orgId = data.account?.organizationId || null;
           redirectToRegistrationStep3(email, orgId, () => {
             setLocation(buildRegistrationStep3Path(email, orgId));
-          });
+          }, { handoffCode });
         }, 2000);
 
       } catch (error: any) {

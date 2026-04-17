@@ -33,10 +33,71 @@ function isNativeApp(): boolean {
   }
 }
 
+export const PENDING_CLAIM_CODE_KEY = "pendingClaimCode";
+export const PENDING_CLAIM_CODE_AT_KEY = "pendingClaimCodeAt";
+const PENDING_CLAIM_TTL_MS = 10 * 60 * 1000;
+
+export async function mintClaimHandoffCode(input: {
+  email: string;
+  organizationId?: string | null;
+  accountId?: string | null;
+}): Promise<string | null> {
+  try {
+    const res = await fetch("/api/auth/claim/handoff", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: input.email,
+        organizationId: input.organizationId ?? null,
+        accountId: input.accountId ?? null,
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return typeof data?.handoffCode === "string" ? data.handoffCode : null;
+  } catch {
+    return null;
+  }
+}
+
+export function rememberPendingClaimCode(code: string): void {
+  try {
+    localStorage.setItem(PENDING_CLAIM_CODE_KEY, code);
+    localStorage.setItem(PENDING_CLAIM_CODE_AT_KEY, String(Date.now()));
+  } catch {
+    /* localStorage may be unavailable (private mode); non-fatal */
+  }
+}
+
+export function readRecentPendingClaimCode(): string | null {
+  try {
+    const code = localStorage.getItem(PENDING_CLAIM_CODE_KEY);
+    const at = Number(localStorage.getItem(PENDING_CLAIM_CODE_AT_KEY) || "0");
+    if (!code) return null;
+    if (!at || Date.now() - at > PENDING_CLAIM_TTL_MS) {
+      clearPendingClaimCode();
+      return null;
+    }
+    return code;
+  } catch {
+    return null;
+  }
+}
+
+export function clearPendingClaimCode(): void {
+  try {
+    localStorage.removeItem(PENDING_CLAIM_CODE_KEY);
+    localStorage.removeItem(PENDING_CLAIM_CODE_AT_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function redirectToRegistrationStep3(
   email: string,
   organizationId?: string | null,
   webFallback?: () => void,
+  options?: { handoffCode?: string | null },
 ): void {
   const redirectPath = buildRegistrationStep3Path(email, organizationId);
   const fallback = webFallback ?? (() => {
@@ -55,7 +116,16 @@ export function redirectToRegistrationStep3(
   const isAndroid = /android/i.test(ua);
   const isIOS = /iPhone|iPad|iPod/i.test(ua);
 
-  const customSchemeUrl = `boxstat://boxstat.app${redirectPath}`;
+  // Prefer the SHORT custom-scheme URL when we have a handoff code. This
+  // reduces the payload that has to survive the iOS browser → boxstat://
+  // → Capacitor handoff (the long token URL is what was getting dropped).
+  const handoffCode = options?.handoffCode || null;
+  const claimResumePath = handoffCode
+    ? `/claim-resume?code=${encodeURIComponent(handoffCode)}&email=${encodeURIComponent(email)}`
+    : redirectPath;
+  const customSchemeUrl = handoffCode
+    ? `boxstat://boxstat.app${claimResumePath}`
+    : `boxstat://boxstat.app${redirectPath}`;
 
   if (isIOS) {
     // Try the custom scheme to hand off to the installed app. If the page is
@@ -71,7 +141,7 @@ export function redirectToRegistrationStep3(
   } else if (isAndroid) {
     // Android intent URL: opens the app if installed, otherwise falls back
     // to the Play Store listing via S.browser_fallback_url.
-    window.location.href = `intent://boxstat.app${redirectPath}#Intent;scheme=boxstat;package=com.boxstat.app;S.browser_fallback_url=${encodeURIComponent(PLAY_STORE_URL)};end`;
+    window.location.href = `intent://boxstat.app${claimResumePath}#Intent;scheme=boxstat;package=com.boxstat.app;S.browser_fallback_url=${encodeURIComponent(PLAY_STORE_URL)};end`;
   } else {
     fallback();
   }

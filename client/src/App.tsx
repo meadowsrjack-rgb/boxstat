@@ -73,7 +73,7 @@ import QuoteCheckout from "@/pages/QuoteCheckout";
 import StoreBuy, { StoreCheckoutSuccess, StoreCheckoutCancel } from "@/pages/store-buy";
 import { useQuery } from "@tanstack/react-query";
 import { initPushNotifications, registerPushNotifications } from "@/services/pushNotificationService";
-import { initDeepLinks, setDeepLinkCallback, markDeepLinkServiceReady, hasPendingOrUnconsumedLaunchUrl } from "@/services/deepLinkService";
+import { initDeepLinks, setDeepLinkCallback, markDeepLinkServiceReady, hasPendingOrUnconsumedLaunchUrl, probeColdStartPendingClaim } from "@/services/deepLinkService";
 import { UpdatePrompt } from "@/components/UpdatePrompt";
 
 type Profile = {
@@ -435,6 +435,36 @@ function AppRouter() {
   useEffect(() => {
     if (!isLoading) {
       markDeepLinkServiceReady();
+
+      // Cold-start backup for the Claim Account flow: if no deep link
+      // surfaced (or it was lost in transit) but the WebView still has a
+      // recently-stashed handoff code from the web /claim-verify page,
+      // resume the claim flow from that. The dedupe layer in the deep-link
+      // service collapses this with the listener path if both fire.
+      // See task #190.
+      const isNativeApp = !!(window as any).Capacitor?.isNativePlatform?.();
+      if (isNativeApp) {
+        // Wait a tick so the deep-link listener gets first crack. Only run
+        // the cold-start probe if no deep link was queued/handled and the
+        // user hasn't already been routed off the home/landing path —
+        // otherwise we'd risk hijacking a launch where the deep link
+        // already delivered the user somewhere correct.
+        setTimeout(() => {
+          if (hasPendingOrUnconsumedLaunchUrl()) {
+            console.log('[ClaimResume] skipping cold-start probe — deep link still pending');
+            return;
+          }
+          const path = window.location.pathname;
+          const onLandingOrRoot = path === '/' || path === '/app' || path === '';
+          if (!onLandingOrRoot) {
+            console.log('[ClaimResume] skipping cold-start probe — already routed to', path);
+            return;
+          }
+          probeColdStartPendingClaim().catch((err) => {
+            console.warn('[ClaimResume] cold-start probe error', err);
+          });
+        }, 800);
+      }
     }
   }, [isLoading]);
 

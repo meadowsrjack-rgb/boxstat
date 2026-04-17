@@ -13,6 +13,7 @@ import privacyRoutes from "./routes/privacy";
 import { setupNotificationRoutes } from "./routes/notifications";
 import { setupAdminNotificationRoutes } from "./routes/adminNotifications";
 import { registerRequestClaimRoute } from "./routes/request-claim";
+import { registerClaimHandoffRoutes } from "./routes/claim-handoff";
 import { adminNotificationService } from "./services/adminNotificationService";
 import { requireAuth, optionalAuth, isAdmin, isCoachOrAdmin, setAuthStorage } from "./auth";
 import multer from "multer";
@@ -767,6 +768,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register the minimal /api/auth/request-claim endpoint used by the
   // "Claim Your Account" page.
   registerRequestClaimRoute(app);
+
+  // Pending-claim handoff store: lets the web /claim-verify page mint a short
+  // opaque code that the native app can resume against on cold-start, so the
+  // claim flow doesn't depend solely on the deep-link URL surviving the
+  // browser → custom-scheme → Capacitor handoff. See task #190.
+  registerClaimHandoffRoutes(app);
   const objectStorageService = new ObjectStorageService();
   
   // Initialize organizations (always, not just dev)

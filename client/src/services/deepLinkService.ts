@@ -156,6 +156,55 @@ export async function initDeepLinks(): Promise<void> {
   // listener, this is a no-op; otherwise this call still wires it up.
   await registerEarlyDeepLinkCapture();
   console.log('[DeepLink] Deep link listener initialized');
+
+  // Belt-and-suspenders: retry the launch-URL probe a couple more times over
+  // the first ~1.5s of launch in case the App plugin wasn't ready when the
+  // first call ran. The dedupe layer in `enqueueOrHandle` keeps repeats from
+  // double-handling.
+  const retryDelays = [250, 750, 1500];
+  for (const delay of retryDelays) {
+    setTimeout(() => {
+      if (launchUrlConsumed) return;
+      App.getLaunchUrl()
+        .then((launchUrl) => {
+          launchUrlChecked = true;
+          if (launchUrl?.url && !launchUrlConsumed) {
+            launchUrlConsumed = true;
+            console.log(`[DeepLink] Late launch URL detected (+${delay}ms):`, launchUrl.url);
+            enqueueOrHandle(launchUrl.url);
+          }
+        })
+        .catch((err) => console.warn(`[DeepLink] Late launch-URL probe (+${delay}ms) failed:`, err));
+    }, delay);
+  }
+
+  // For the first 5 seconds after launch, also re-probe whenever the app
+  // becomes active. iOS occasionally delivers a Universal Link slightly
+  // after launch — without this it would be silently dropped.
+  const launchedAt = Date.now();
+  let stateListener: { remove: () => Promise<void> } | null = null;
+  try {
+    stateListener = await App.addListener('appStateChange', async (state) => {
+      if (!state.isActive) return;
+      if (Date.now() - launchedAt > 5000) {
+        try { await stateListener?.remove(); } catch { /* ignore */ }
+        return;
+      }
+      if (launchUrlConsumed) return;
+      try {
+        const launchUrl = await App.getLaunchUrl();
+        if (launchUrl?.url && !launchUrlConsumed) {
+          launchUrlConsumed = true;
+          console.log('[DeepLink] Launch URL recovered on appStateChange→active:', launchUrl.url);
+          enqueueOrHandle(launchUrl.url);
+        }
+      } catch (err) {
+        console.warn('[DeepLink] appStateChange launch-URL probe failed:', err);
+      }
+    });
+  } catch (err) {
+    console.warn('[DeepLink] appStateChange listener registration failed:', err);
+  }
 }
 
 /**
@@ -284,6 +333,163 @@ async function handleMagicLinkDirectly(magicToken: string): Promise<void> {
     console.error('[DeepLink] Error processing magic link:', error);
     navigateInApp(buildLinkErrorPath('magic-link', 'network', { message: error?.message }));
   }
+}
+
+async function resumeFromHandoffCode(code: string): Promise<{ email: string; organizationId: string | null } | null> {
+  try {
+    const res = await fetch(`https://boxstat.app/api/auth/claim/pending?code=${encodeURIComponent(code)}`);
+    if (!res.ok) {
+      console.log('[ClaimResume] pending lookup failed', res.status);
+      return null;
+    }
+    const data = await res.json();
+    if (!data?.success || !data?.pending?.email) return null;
+    return {
+      email: data.pending.email,
+      organizationId: data.pending.organizationId || null,
+    };
+  } catch (err) {
+    console.error('[ClaimResume] pending lookup network error', err);
+    return null;
+  }
+}
+
+async function resumeFromEmail(email: string): Promise<{ email: string; organizationId: string | null } | null> {
+  try {
+    const res = await fetch(`https://boxstat.app/api/auth/claim/pending-by-email?email=${encodeURIComponent(email)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data?.success || !data?.pending?.email) return null;
+    return {
+      email: data.pending.email,
+      organizationId: data.pending.organizationId || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Set after a successful claim-resume (either via deep link or cold-start
+// probe) so a slightly-later-delivered duplicate claim-resume URL whose
+// single-use code has already been consumed doesn't bounce the user to
+// /claim and clobber the successful step-3 navigation.
+let recentClaimResumeSuccessAt = 0;
+const RECENT_CLAIM_RESUME_WINDOW_MS = 30000;
+function markClaimResumeSuccess(): void {
+  recentClaimResumeSuccessAt = Date.now();
+}
+function recentlyResumedClaim(): boolean {
+  return Date.now() - recentClaimResumeSuccessAt < RECENT_CLAIM_RESUME_WINDOW_MS;
+}
+
+function clearLocalPendingClaim(): void {
+  try {
+    localStorage.removeItem('pendingClaimCode');
+    localStorage.removeItem('pendingClaimCodeAt');
+    localStorage.removeItem('pendingClaimCodeRetried');
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Resolve a claim-resume payload that arrived via deep link. On miss,
+ * routes the user to /claim so they can request a fresh link instead of
+ * being stranded on Landing — appropriate here because the user
+ * explicitly tapped a claim email.
+ */
+export async function handleClaimResume(code: string | null, fallbackEmail: string | null): Promise<boolean> {
+  let resumed: { email: string; organizationId: string | null } | null = null;
+  if (code) {
+    resumed = await resumeFromHandoffCode(code);
+    if (resumed) console.log('[ClaimResume] resolved via code', code, resumed.email);
+  }
+  if (!resumed && fallbackEmail) {
+    resumed = await resumeFromEmail(fallbackEmail);
+    if (resumed) console.log('[ClaimResume] resolved via email fallback', resumed.email);
+  }
+  if (!resumed) {
+    if (recentlyResumedClaim()) {
+      console.log('[ClaimResume] miss within recent-success window; ignoring duplicate claim-resume');
+      return false;
+    }
+    console.warn('[ClaimResume] no pending claim found; routing to claim landing');
+    clearLocalPendingClaim();
+    navigateInApp('/claim');
+    return false;
+  }
+  clearLocalPendingClaim();
+  markClaimResumeSuccess();
+  navigateInApp(buildRegistrationStep3Path(resumed.email, resumed.organizationId));
+  return true;
+}
+
+/**
+ * Cold-start backup: if the deep link was lost in transit but the WebView
+ * (which loads the same origin as the web /claim-verify page) still has a
+ * recently-stashed handoff code in localStorage, recover the claim flow
+ * from that.
+ *
+ * Unlike `handleClaimResume`, this is a silent best-effort probe — on miss
+ * or network failure it does NOT navigate anywhere. We only get one retry:
+ * if the first probe attempt comes up empty, we clear the local backup so
+ * we never repeatedly hijack future cold-launches.
+ *
+ * Returns true only if we successfully resumed the claim flow.
+ */
+export async function probeColdStartPendingClaim(): Promise<boolean> {
+  let code: string | null = null;
+  try {
+    code = localStorage.getItem('pendingClaimCode');
+    const at = Number(localStorage.getItem('pendingClaimCodeAt') || '0');
+    if (!code || !at) return false;
+    if (Date.now() - at > 10 * 60 * 1000) {
+      clearLocalPendingClaim();
+      return false;
+    }
+  } catch {
+    return false;
+  }
+
+  const previouslyRetried = (() => {
+    try {
+      return localStorage.getItem('pendingClaimCodeRetried') === '1';
+    } catch {
+      return false;
+    }
+  })();
+
+  console.log('[ClaimResume] cold-start probe found localStorage code', code);
+  let resumed: { email: string; organizationId: string | null } | null = null;
+  try {
+    resumed = await resumeFromHandoffCode(code);
+  } catch {
+    resumed = null;
+  }
+
+  if (resumed) {
+    console.log('[ClaimResume] cold-start probe resolved', resumed.email);
+    clearLocalPendingClaim();
+    markClaimResumeSuccess();
+    navigateInApp(buildRegistrationStep3Path(resumed.email, resumed.organizationId));
+    return true;
+  }
+
+  // Miss/network error: silently fall through to normal startup. After the
+  // first retry, drop the local backup so subsequent launches aren't
+  // affected.
+  if (previouslyRetried) {
+    console.log('[ClaimResume] cold-start probe missed twice; clearing local backup');
+    clearLocalPendingClaim();
+  } else {
+    try {
+      localStorage.setItem('pendingClaimCodeRetried', '1');
+    } catch {
+      /* ignore */
+    }
+    console.log('[ClaimResume] cold-start probe missed; will retry once on next launch');
+  }
+  return false;
 }
 
 function buildRegistrationStep3Path(email: string, organizationId: string | null): string {
@@ -450,6 +656,11 @@ export function handleDeepLink(url: string): void {
         console.warn('[DeepLink] /claim-verify deep link missing token; navigating to claim page anyway');
         navigateInApp('/claim-verify');
       }
+    } else if (matches('claim-resume')) {
+      const code = searchParams.get('code');
+      const emailParam = searchParams.get('email');
+      console.log('[ClaimResume] claim-resume deep link received', { code, email: emailParam });
+      handleClaimResume(code, emailParam);
     } else if (matches('verify-email')) {
       const token = searchParams.get('token');
       const emailParam = searchParams.get('email');

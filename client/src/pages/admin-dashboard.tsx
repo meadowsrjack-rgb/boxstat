@@ -12102,6 +12102,98 @@ function NotificationsTab({ notifications: allNotifications, users, teams, divis
   );
 }
 
+const STRIPE_REQUIREMENT_LABELS: Record<string, string> = {
+  "external_account": "Bank account or debit card for payouts",
+  "tos_acceptance.date": "Accept Stripe's terms of service",
+  "tos_acceptance.ip": "Accept Stripe's terms of service",
+  "business_profile.url": "Business website URL",
+  "business_profile.mcc": "Business category (merchant code)",
+  "business_profile.product_description": "Description of your products or services",
+  "business_profile.support_phone": "Customer support phone number",
+  "business_profile.support_email": "Customer support email address",
+  "business_type": "Business type (individual, company, etc.)",
+  "company.name": "Legal company name",
+  "company.tax_id": "Company tax ID (EIN)",
+  "company.address.line1": "Company street address",
+  "company.address.city": "Company city",
+  "company.address.state": "Company state",
+  "company.address.postal_code": "Company postal code",
+  "company.phone": "Company phone number",
+  "company.verification.document": "Company verification document",
+  "individual.first_name": "Your first name",
+  "individual.last_name": "Your last name",
+  "individual.dob.day": "Your date of birth",
+  "individual.dob.month": "Your date of birth",
+  "individual.dob.year": "Your date of birth",
+  "individual.ssn_last_4": "Last 4 of your SSN",
+  "individual.id_number": "Your full SSN or tax ID",
+  "individual.address.line1": "Your street address",
+  "individual.address.city": "Your city",
+  "individual.address.state": "Your state",
+  "individual.address.postal_code": "Your postal code",
+  "individual.phone": "Your phone number",
+  "individual.email": "Your email address",
+  "individual.verification.document": "Photo ID for identity verification",
+  "individual.verification.additional_document": "Additional ID document",
+  "representative.first_name": "Representative's first name",
+  "representative.last_name": "Representative's last name",
+  "representative.dob.day": "Representative's date of birth",
+  "owners_provided": "Confirm beneficial owners",
+  "directors_provided": "Confirm company directors",
+  "executives_provided": "Confirm company executives",
+};
+
+function humanizeStripeRequirement(key: string): string {
+  if (STRIPE_REQUIREMENT_LABELS[key]) return STRIPE_REQUIREMENT_LABELS[key];
+  if (key.startsWith("individual.dob.")) return "Your date of birth";
+  if (key.startsWith("company.address.")) return "Company address details";
+  if (key.startsWith("individual.address.")) return "Your address details";
+  if (key.startsWith("representative.")) return "Representative information";
+  if (key.startsWith("person_")) return "Information about an account person";
+  return key.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function buildRequirementItems(requirements: any): string[] {
+  if (!requirements) return [];
+  const seen = new Set<string>();
+  const items: string[] = [];
+  const push = (key: string) => {
+    const label = humanizeStripeRequirement(key);
+    if (!seen.has(label)) {
+      seen.add(label);
+      items.push(label);
+    }
+  };
+  (requirements.pastDue || []).forEach(push);
+  (requirements.currentlyDue || []).forEach(push);
+  return items;
+}
+
+function StripeRequirementsList({ requirements, title }: { requirements: any; title?: string }) {
+  const items = buildRequirementItems(requirements);
+  if (items.length === 0 && !requirements?.disabledReason) return null;
+  return (
+    <div className="text-xs border rounded-lg p-3 bg-muted/40 space-y-2">
+      <p className="font-medium text-foreground">{title || "Still needed by Stripe:"}</p>
+      {items.length > 0 && (
+        <ul className="list-disc pl-5 space-y-0.5 text-muted-foreground">
+          {items.slice(0, 8).map((label) => (
+            <li key={label}>{label}</li>
+          ))}
+          {items.length > 8 && (
+            <li>+{items.length - 8} more — finish in Stripe</li>
+          )}
+        </ul>
+      )}
+      {requirements?.disabledReason && (
+        <p className="text-muted-foreground">
+          Reason: <span className="font-mono">{String(requirements.disabledReason).replace(/_/g, " ")}</span>
+        </p>
+      )}
+    </div>
+  );
+}
+
 function StripeSettingsSection() {
   const { toast } = useToast();
 
@@ -12177,9 +12269,13 @@ function StripeSettingsSection() {
       const code = parsed?.error;
 
       if (code === "onboarding_incomplete") {
+        const reqItems = buildRequirementItems(parsed?.requirements);
+        const baseMsg = parsed?.message || "Your Stripe account hasn't finished onboarding yet.";
         toast({
           title: "Finish Stripe onboarding first",
-          description: parsed?.message || "Your Stripe account hasn't finished onboarding yet.",
+          description: reqItems.length > 0
+            ? `${baseMsg} Still needed: ${reqItems.slice(0, 3).join(", ")}${reqItems.length > 3 ? `, +${reqItems.length - 3} more` : ""}.`
+            : baseMsg,
           variant: "destructive",
           action: (
             <ToastAction
@@ -12190,6 +12286,7 @@ function StripeSettingsSection() {
             </ToastAction>
           ),
         });
+        queryClient.invalidateQueries({ queryKey: ["/api/stripe-connect/status"] });
         return;
       }
 
@@ -12317,13 +12414,16 @@ function StripeSettingsSection() {
               </Button>
             </div>
           </div>
-        ) : status === "pending" ? (
+        ) : status === "pending" || status === "pending_verification" ? (
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm text-yellow-700 bg-yellow-50 dark:bg-yellow-950 dark:text-yellow-400 p-3 rounded-lg">
               <AlertTriangle className="w-4 h-4" />
-              <span className="font-medium">Express setup in progress</span>
+              <span className="font-medium">
+                {status === "pending_verification" ? "Stripe is verifying your account" : "Express setup in progress"}
+              </span>
             </div>
             <p className="text-sm text-muted-foreground">Your Express payment account setup is not yet complete. Click below to continue where you left off.</p>
+            <StripeRequirementsList requirements={connectStatus?.requirements} />
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 size="sm"
@@ -12351,6 +12451,7 @@ function StripeSettingsSection() {
               <span className="font-medium">Account needs attention</span>
             </div>
             <p className="text-sm text-muted-foreground">Additional information is required before you can accept payments. Click below to resolve.</p>
+            <StripeRequirementsList requirements={connectStatus?.requirements} />
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 size="sm"

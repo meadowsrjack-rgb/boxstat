@@ -5813,6 +5813,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!org) return res.status(404).json({ error: 'Organization not found' });
 
       let connectStatus = org.stripeConnectStatus || 'not_started';
+      let requirements: any = null;
+      let flags: any = null;
 
       if (stripe && org.stripeConnectedId && connectStatus !== 'active') {
         try {
@@ -5826,6 +5828,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else if (account.details_submitted) {
             connectStatus = 'pending_verification';
           }
+          if (connectStatus !== 'active') {
+            const req = (account as any).requirements || {};
+            requirements = {
+              currentlyDue: Array.isArray(req.currently_due) ? req.currently_due : [],
+              pastDue: Array.isArray(req.past_due) ? req.past_due : [],
+              eventuallyDue: Array.isArray(req.eventually_due) ? req.eventually_due : [],
+              disabledReason: req.disabled_reason || null,
+            };
+            flags = {
+              detailsSubmitted: !!account.details_submitted,
+              chargesEnabled: !!account.charges_enabled,
+              payoutsEnabled: !!account.payouts_enabled,
+            };
+          }
         } catch (err: any) {
           console.error('[Stripe Connect] Error checking account status:', err.message);
         }
@@ -5836,6 +5852,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: connectStatus,
         isConnected: connectStatus === 'active',
         connectType: org.stripeConnectType ?? 'express',
+        requirements,
+        flags,
       });
     } catch (error: any) {
       console.error('Error fetching Connect status:', error);
@@ -6138,6 +6156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             stripeConnectStatus: account.details_submitted ? 'pending_verification' : 'pending',
           });
         }
+        const reqs = (account as any).requirements || {};
         return res.status(409).json({
           error: 'onboarding_incomplete',
           message: "Your Stripe account hasn't finished onboarding yet — finish setup to access the payout dashboard.",
@@ -6145,6 +6164,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             detailsSubmitted: !!account.details_submitted,
             chargesEnabled: !!account.charges_enabled,
             payoutsEnabled: !!account.payouts_enabled,
+          },
+          requirements: {
+            currentlyDue: Array.isArray(reqs.currently_due) ? reqs.currently_due : [],
+            pastDue: Array.isArray(reqs.past_due) ? reqs.past_due : [],
+            eventuallyDue: Array.isArray(reqs.eventually_due) ? reqs.eventually_due : [],
+            disabledReason: reqs.disabled_reason || null,
           },
         });
       }

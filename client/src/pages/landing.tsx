@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import BoxStatLogo from "@/components/boxstat-logo";
 import darkThemeLogo from "@assets/darkthemefinal_1774474125499.png";
+import VerifyLinkResume from "@/components/verify-link-resume";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
@@ -105,6 +106,8 @@ export default function Landing() {
               SIGN IN
             </button>
           </p>
+
+          <VerifyLinkResume />
         </div>
       </div>
     </div>

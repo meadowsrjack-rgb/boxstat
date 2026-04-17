@@ -3,6 +3,7 @@ import { useAppMode } from "@/hooks/useAppMode";
 import UypTrophyRings from "@/components/UypTrophyRings";
 import PlayerCalendar from "@/components/PlayerCalendar";
 import EventDetailModal from "@/components/EventDetailModal";
+import { ApprovedSeasonStats } from "@/components/ApprovedSeasonStats";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -1731,32 +1732,8 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
               {/* Stats + Highlights: side-by-side on md+ */}
               <div className="md:grid md:grid-cols-2 md:gap-6 md:px-6">
-                {/* Season Stats (Coming Soon) */}
-                <div className="px-4 md:px-0 mt-2">
-                  <div className="border-t border-gray-100 pt-3">
-                    <div className="flex items-center gap-2 px-1 mb-1">
-                      <span className="text-sm font-medium text-gray-700">Season Stats</span>
-                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-red-100 text-red-600">Coming Soon</span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-0 px-2 pb-2">
-                      {[
-                        { label: "PPG", value: "—" },
-                        { label: "RPG", value: "—" },
-                        { label: "APG", value: "—" },
-                        { label: "FG%", value: "—" },
-                      ].map((stat) => (
-                        <div key={stat.label} className="flex flex-col items-center py-2">
-                          <span className="text-xl md:text-2xl font-bold text-gray-900">{stat.value}</span>
-                          <span className="text-[11px] md:text-xs font-medium text-gray-500">{stat.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-center gap-1 pb-2">
-                      <span className="text-[10px] text-gray-400">2025-26</span>
-                      <ChevronDown className="h-3 w-3 text-gray-400" />
-                    </div>
-                  </div>
-                </div>
+                {/* Season Stats from approved games */}
+                <ApprovedSeasonStats playerId={displayProfile?.id} />
 
                 {/* Highlights (Coming Soon) */}
                 <div className="px-4 md:px-0 mt-2 pb-4">

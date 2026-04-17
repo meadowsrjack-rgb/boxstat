@@ -18330,6 +18330,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GAME SESSIONS & SCORING
   // =============================================
 
+  // Helper: collect all user IDs invited to an event (team members + explicitly invited users)
+  async function getInvitedUserIdsForEvent(eventRow: any): Promise<Set<string>> {
+    const ids = new Set<string>();
+    if (!eventRow) return ids;
+    if (eventRow.teamId) {
+      const teamUsers = await storage.getUsersByTeam(String(eventRow.teamId));
+      teamUsers.forEach((u: any) => ids.add(u.id));
+    }
+    const assignTo: any = (eventRow as any).assignTo || {};
+    const visibility: any = (eventRow as any).visibility || {};
+    const explicitTeams: any[] = [
+      ...(Array.isArray(assignTo.teams) ? assignTo.teams : []),
+      ...(Array.isArray(visibility.teams) ? visibility.teams : []),
+    ];
+    for (const tid of explicitTeams) {
+      const teamUsers = await storage.getUsersByTeam(String(tid));
+      teamUsers.forEach((u: any) => ids.add(u.id));
+    }
+    const explicitUserIds: string[] = [
+      ...(Array.isArray(assignTo.users) ? assignTo.users : []),
+      ...(Array.isArray(visibility.users) ? visibility.users : []),
+    ];
+    explicitUserIds.forEach((uid) => uid && ids.add(uid));
+    return ids;
+  }
+
   app.get("/api/game-sessions/roster/:eventId", requireAuth, async (req, res) => {
     try {
       const eventId = parseInt(req.params.eventId);
@@ -18337,16 +18363,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const event = eventRows[0];
       if (!event) return res.status(404).json({ message: "Event not found" });
 
-      let rosterPlayers: any[] = [];
-      const attendingRsvps = await db.select({
-        userId: rsvpResponses.userId,
-      }).from(rsvpResponses).where(
-        and(eq(rsvpResponses.eventId, eventId), eq(rsvpResponses.response, "attending"))
-      );
-      const attendingIds = attendingRsvps.map((r: any) => r.userId).filter(Boolean);
-      if (attendingIds.length > 0) {
-        rosterPlayers = await db.select().from(users).where(inArray(users.id, attendingIds));
-      }
+      const invitedIds = await getInvitedUserIdsForEvent(event);
+      if (invitedIds.size === 0) return res.json([]);
+
+      const allInvited = await db.select().from(users).where(inArray(users.id, [...invitedIds]));
+      const rosterPlayers = allInvited.filter((u: any) => u.role === 'player');
       res.json(rosterPlayers);
     } catch (error: any) {
       console.error("Error fetching roster:", error);
@@ -18362,10 +18383,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessions = await db.select().from(gameSessions).where(
         and(eq(gameSessions.eventId, eventId), eq(gameSessions.organizationId, orgId))
       );
-      if (sessions.length === 0) return res.json(null);
+      const canReview = await canReviewEventStats(user?.id, user?.role, eventId);
+      if (sessions.length === 0) return res.json({ session: null, playerStats: [], canReview });
       const session = sessions[0];
       const playerStats = await db.select().from(gamePlayerStats).where(eq(gamePlayerStats.gameSessionId, session.id));
-      res.json({ session, playerStats });
+      res.json({ session, playerStats, canReview });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -18440,7 +18462,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let sessionId: number;
 
       if (existingSessions.length > 0) {
-        sessionId = existingSessions[0].id;
+        const existing = existingSessions[0];
+        // Approved games are immutable.
+        if (existing.status === "approved") {
+          return res.status(409).json({ message: "This game has been approved and is locked." });
+        }
+        // Only the original scorer can edit/resubmit. Reviewers (coach/admin)
+        // must use the approve/reject endpoints instead of editing the session.
+        // If there is no original scorer recorded yet (legacy/in_progress with null),
+        // allow any scorer-eligible user (admin/coach) to claim it.
+        const isOriginalScorer = !!existing.scoredByUserId && existing.scoredByUserId === user?.id;
+        const canClaimUnowned = !existing.scoredByUserId && (role === "admin" || role === "coach");
+        if (!isOriginalScorer && !canClaimUnowned) {
+          return res.status(403).json({
+            message: "Only the original scorer can edit these stats. Reviewers should approve or reject instead.",
+          });
+        }
+        sessionId = existing.id;
         await db.update(gameSessions).set({
           opponentName, teamScore, opponentScore, gameFormat,
           periodLength, otLength, finalPeriod, otCount,
@@ -18474,12 +18512,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await db.insert(gamePlayerStats).values(statsToInsert);
       }
 
+      // Notify coaches/admins invited to the event that stats are ready for review
+      try {
+        const eventRow = (await db.select().from(events).where(eq(events.id, eventId)))[0];
+        if (eventRow) {
+          const invitedIds = await getInvitedUserIdsForEvent(eventRow);
+          if (invitedIds.size > 0) {
+            const invitedUsers = await db.select().from(users).where(inArray(users.id, [...invitedIds]));
+            const coachIds = invitedUsers
+              .filter((u: any) => (u.role === 'coach' || u.role === 'admin') && u.id !== user?.id)
+              .map((u: any) => u.id);
+            if (coachIds.length > 0) {
+              const orgId = user?.organizationId || "default-org";
+              const [created] = await db.insert(notifications).values({
+                organizationId: orgId,
+                types: ['notification', 'game_review'],
+                title: 'Game stats ready for review',
+                message: `Stats for "${eventRow.title || 'a game'}" have been submitted and need your approval.`,
+                recipientTarget: 'users',
+                recipientUserIds: coachIds,
+                deliveryChannels: ['in_app'],
+                sentBy: user?.id || 'system',
+                relatedEventId: eventId,
+                status: 'sent',
+                sentAt: new Date().toISOString(),
+              }).returning();
+              await db.insert(notificationRecipients).values(coachIds.map((uid: string) => ({
+                notificationId: created.id,
+                userId: uid,
+                isRead: false,
+                deliveryStatus: { in_app: 'sent' },
+              })));
+            }
+          }
+        }
+      } catch (notifyErr) {
+        console.error("Error notifying coaches of game submission:", notifyErr);
+      }
+
       res.json({ id: sessionId, status: "submitted" });
     } catch (error: any) {
       console.error("Error saving game session:", error);
       res.status(500).json({ message: error.message });
     }
   });
+
+  // Helper: check if user is allowed to approve/reject a game session for an event
+  async function canReviewEventStats(userId: string, role: string, eventId: number): Promise<boolean> {
+    if (role !== 'admin' && role !== 'coach') return false;
+    const eventRow = (await db.select().from(events).where(eq(events.id, eventId)))[0];
+    if (!eventRow) return false;
+    const invitedIds = await getInvitedUserIdsForEvent(eventRow);
+    return invitedIds.has(userId);
+  }
 
   app.patch("/api/game-sessions/:id/approve", requireAuth, async (req, res) => {
     try {
@@ -18488,12 +18573,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only admins/coaches can approve" });
       }
       const id = parseInt(req.params.id);
+      const sessionRow = (await db.select().from(gameSessions).where(eq(gameSessions.id, id)))[0];
+      if (!sessionRow) return res.status(404).json({ message: "Session not found" });
+      const allowed = await canReviewEventStats(user.id, user.role, sessionRow.eventId);
+      if (!allowed) return res.status(403).json({ message: "Not authorized to approve this game" });
+      if (sessionRow.status !== "submitted") {
+        return res.status(409).json({ message: `Cannot approve a game in status '${sessionRow.status}'.` });
+      }
       await db.update(gameSessions).set({
         status: "approved",
         approvedByUserId: user.id,
         approvedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }).where(eq(gameSessions.id, id));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/game-sessions/:id/reject", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      if (user?.role !== "admin" && user?.role !== "coach") {
+        return res.status(403).json({ message: "Only admins/coaches can reject" });
+      }
+      const id = parseInt(req.params.id);
+      const sessionRow = (await db.select().from(gameSessions).where(eq(gameSessions.id, id)))[0];
+      if (!sessionRow) return res.status(404).json({ message: "Session not found" });
+      const allowed = await canReviewEventStats(user.id, user.role, sessionRow.eventId);
+      if (!allowed) return res.status(403).json({ message: "Not authorized to reject this game" });
+      if (sessionRow.status !== "submitted") {
+        return res.status(409).json({ message: `Cannot reject a game in status '${sessionRow.status}'.` });
+      }
+      await db.update(gameSessions).set({
+        status: "in_progress",
+        approvedByUserId: null,
+        approvedAt: null,
+        updatedAt: new Date().toISOString(),
+      }).where(eq(gameSessions.id, id));
+      // Notify the original scorer that their submission was rejected and needs edits
+      if (sessionRow.scoredByUserId && sessionRow.scoredByUserId !== user.id) {
+        try {
+          const eventRow = (await db.select().from(events).where(eq(events.id, sessionRow.eventId)))[0];
+          const orgId = user?.organizationId || sessionRow.organizationId || "default-org";
+          const [created] = await db.insert(notifications).values({
+            organizationId: orgId,
+            types: ['notification', 'game_review'],
+            title: 'Game stats sent back for edits',
+            message: `Your stats for "${eventRow?.title || 'a game'}" were sent back. Please review and resubmit.`,
+            recipientTarget: 'users',
+            recipientUserIds: [sessionRow.scoredByUserId],
+            deliveryChannels: ['in_app'],
+            sentBy: user.id,
+            relatedEventId: sessionRow.eventId,
+            status: 'sent',
+            sentAt: new Date().toISOString(),
+          }).returning();
+          await db.insert(notificationRecipients).values({
+            notificationId: created.id,
+            userId: sessionRow.scoredByUserId,
+            isRead: false,
+            deliveryStatus: { in_app: 'sent' },
+          });
+        } catch (notifyErr) {
+          console.error("Error notifying scorer of rejection:", notifyErr);
+        }
+      }
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -18507,11 +18653,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessionIds = [...new Set(playerStatsRows.map(s => s.gameSessionId))];
       let sessions: any[] = [];
       if (sessionIds.length > 0) {
-        sessions = await db.select().from(gameSessions).where(inArray(gameSessions.id, sessionIds));
+        sessions = await db.select().from(gameSessions).where(
+          and(inArray(gameSessions.id, sessionIds), eq(gameSessions.status, "approved"))
+        );
+      }
+      // Pull event titles/dates for display
+      const eventIds = [...new Set(sessions.map((s: any) => s.eventId).filter(Boolean))];
+      let eventsById: Record<number, any> = {};
+      if (eventIds.length > 0) {
+        const eventRows = await db.select().from(events).where(inArray(events.id, eventIds));
+        eventRows.forEach((e: any) => { eventsById[e.id] = e; });
       }
       const gamesWithStats = sessions.map((session: any) => {
         const stats = playerStatsRows.find(s => s.gameSessionId === session.id);
-        return { ...session, playerStats: stats };
+        const ev = eventsById[session.eventId];
+        return {
+          ...session,
+          playerStats: stats,
+          eventTitle: ev?.title || null,
+          eventDate: ev?.startTime || null,
+        };
       });
       res.json(gamesWithStats);
     } catch (error: any) {

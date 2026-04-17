@@ -348,6 +348,26 @@ export default function EventDetailModal({
     return allLinkedPlayers.some(p => teamPlayerIds.has(p.id));
   }, [isParent, event?.teamId, allLinkedPlayers, eventTeamMembers]);
 
+  // Game session for this event (drives Live Scoring / Review / Final Score UI)
+  type GameSessionResp = {
+    session: {
+      id: number;
+      status: 'in_progress' | 'submitted' | 'approved' | string;
+      teamScore?: number | null;
+      opponentScore?: number | null;
+      opponentName?: string | null;
+      scoredByUserId?: string | null;
+    } | null;
+    playerStats?: any[];
+    canReview?: boolean;
+  } | null;
+  const { data: gameSessionData } = useQuery<GameSessionResp>({
+    queryKey: ['/api/game-sessions/event', event?.id],
+    enabled: open && !!event?.id,
+  });
+  const gameSession = gameSessionData?.session ?? null;
+  const gameStatus: string | null = gameSession?.status ?? null;
+
   const rsvpMutation = useMutation({
     mutationFn: (response: 'attending' | 'not_attending') => {
       return apiRequest('POST', '/api/rsvp', {
@@ -1163,26 +1183,6 @@ export default function EventDetailModal({
               </div>
             )}
 
-            {/* Score Game Button for all event types */}
-            {(isAdminOrCoach || parentCanScore) && (
-              <div className="rounded-xl p-4 flex items-center justify-between" style={{ background: '#1a1f2e' }}>
-                <div className="flex items-center gap-2">
-                  <Target className="h-4 w-4 text-orange-400" />
-                  <span className="text-white text-sm font-semibold">Live Scoring</span>
-                </div>
-                <Button
-                  size="sm"
-                  className="bg-orange-500 hover:bg-orange-600 text-white"
-                  onClick={() => {
-                    onOpenChange(false);
-                    setLocation(`/game-scoring?eventId=${event.id}`);
-                  }}
-                >
-                  Score Game
-                </Button>
-              </div>
-            )}
-
             {/* Check-In Section */}
             <CheckInWheel
               data={checkInData}
@@ -1302,6 +1302,87 @@ export default function EventDetailModal({
                     );
                   })}
                 </div>
+              </div>
+            )}
+
+            {/* Live Scoring / Review / Final Score (visible to all viewers) */}
+            {gameStatus === 'approved' ? (
+              <div className="rounded-xl p-4" style={{ background: '#1a1f2e' }} data-testid="card-final-score">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="h-4 w-4 text-orange-400" />
+                  <span className="text-white text-sm font-semibold">Final Score</span>
+                </div>
+                {(() => {
+                  const ts = gameSession?.teamScore ?? 0;
+                  const os = gameSession?.opponentScore ?? 0;
+                  const opp = gameSession?.opponentName || 'OPP';
+                  const result = ts > os ? 'W' : ts < os ? 'L' : 'T';
+                  const resultColor = ts > os ? 'text-green-400' : ts < os ? 'text-red-400' : 'text-gray-400';
+                  return (
+                    <div className="flex items-center justify-between">
+                      <div className="text-white">
+                        <span className="font-bold text-lg">{ts}</span>
+                        <span className="text-gray-400 mx-2">–</span>
+                        <span className="font-bold text-lg">{os}</span>
+                        <span className="text-gray-400 ml-2 text-sm">vs {opp}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`font-extrabold ${resultColor}`}>{result}</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-orange-400 hover:text-orange-300 hover:bg-orange-900/20"
+                          onClick={() => {
+                            onOpenChange(false);
+                            setLocation(`/game-scoring?eventId=${event.id}`);
+                          }}
+                          data-testid="button-view-final-stats"
+                        >
+                          View Stats
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : gameStatus === 'submitted' && isAdminOrCoach && gameSessionData?.canReview ? (
+              <div className="rounded-xl p-4 flex items-center justify-between" style={{ background: '#1a1f2e' }} data-testid="card-review-stats">
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-yellow-400" />
+                  <div>
+                    <div className="text-white text-sm font-semibold">Review submitted stats</div>
+                    <div className="text-gray-400 text-xs">Approve or reject the game stats.</div>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  className="bg-yellow-600 hover:bg-yellow-500 text-white"
+                  onClick={() => {
+                    onOpenChange(false);
+                    setLocation(`/game-scoring?eventId=${event.id}&review=1`);
+                  }}
+                  data-testid="button-review-stats"
+                >
+                  Review
+                </Button>
+              </div>
+            ) : (
+              <div className="rounded-xl p-4 flex items-center justify-between" style={{ background: '#1a1f2e' }} data-testid="card-live-scoring">
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-orange-400" />
+                  <span className="text-white text-sm font-semibold">Live Scoring</span>
+                </div>
+                <Button
+                  size="sm"
+                  className="bg-orange-500 hover:bg-orange-600 text-white"
+                  onClick={() => {
+                    onOpenChange(false);
+                    setLocation(`/game-scoring?eventId=${event.id}`);
+                  }}
+                  data-testid="button-score-game"
+                >
+                  Score Game
+                </Button>
               </div>
             )}
 

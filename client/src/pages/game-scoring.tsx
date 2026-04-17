@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft } from "lucide-react";
 
 const HOLD_DELAY = 450;
@@ -351,7 +352,23 @@ export default function GameScoring() {
   const [gameOver, setGameOver] = useState(false);
   const [showSubmit, setShowSubmit] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [approved, setApproved] = useState(false);
   const [initialized, setInitialized] = useState(false);
+
+  const { user: currentUser } = useAuth();
+  const isCoachOrAdmin = currentUser?.role === 'coach' || currentUser?.role === 'admin';
+  const sessionResp = existingSession as { session?: { id?: number; status?: string; scoredByUserId?: string | null }; canReview?: boolean } | null | undefined;
+  const sessionMeta = sessionResp?.session;
+  const sessionScorerId: string | null = sessionMeta?.scoredByUserId ?? null;
+  const sessionStatus: string | null = sessionMeta?.status ?? null;
+  const existingSessionId: number | null = sessionMeta?.id ?? null;
+  const reviewModeRequested = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('review') === '1';
+  // Server determines who is an authorized reviewer (invited coach/admin).
+  const canReview = !!sessionResp?.canReview && sessionStatus === 'submitted';
+  const reviewMode = canReview && reviewModeRequested;
+  const isOriginalScorerOrNew = !sessionScorerId || currentUser?.id === sessionScorerId;
+  // Editable when: not approved, not in review mode, and either no submission yet or current user is original scorer.
+  const locked = approved || reviewMode || (sessionStatus === 'submitted' && !isOriginalScorerOrNew);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -365,8 +382,12 @@ export default function GameScoring() {
       setPeriodTime(existingSession.session.periodLength || 600);
       setOtTime(existingSession.session.otLength || 300);
       setClock(existingSession.session.periodLength || 600);
-      if (existingSession.session.status === "submitted" || existingSession.session.status === "approved") {
+      if (existingSession.session.status === "submitted") {
         setSubmitted(true);
+      }
+      if (existingSession.session.status === "approved") {
+        setSubmitted(true);
+        setApproved(true);
         setGameOver(true);
       }
       if (existingSession.playerStats?.length > 0) {
@@ -432,7 +453,7 @@ export default function GameScoring() {
   const atPeriodEnd = clock === 0 && !gameOver;
 
   useEffect(() => {
-    if (running && !gameOver && !submitted) {
+    if (running && !gameOver && !locked) {
       intervalRef.current = setInterval(() => {
         setClock((prev) => {
           if (prev <= 1) { setRunning(false); return 0; }
@@ -448,10 +469,10 @@ export default function GameScoring() {
       }, 1000);
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [running, gameOver, submitted]);
+  }, [running, gameOver, locked]);
 
   const toggleClock = () => {
-    if (gameOver || submitted || atPeriodEnd) return;
+    if (gameOver || locked || atPeriodEnd) return;
     setRunning((r) => !r);
   };
 
@@ -542,7 +563,7 @@ export default function GameScoring() {
         }),
       };
       const res = await apiRequest("POST", "/api/game-sessions", payload);
-      return res.json();
+      return res;
     },
     onSuccess: () => {
       setSubmitted(true);
@@ -557,6 +578,40 @@ export default function GameScoring() {
   const handleSubmit = () => {
     submitMutation.mutate();
   };
+
+  const approveMutation = useMutation({
+    mutationFn: async () => {
+      if (!existingSessionId) throw new Error("No game session to approve");
+      return await apiRequest("PATCH", `/api/game-sessions/${existingSessionId}/approve`, {});
+    },
+    onSuccess: () => {
+      setApproved(true);
+      setSubmitted(true);
+      setGameOver(true);
+      queryClient.invalidateQueries({ queryKey: ["/api/game-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/game-sessions/event", eventId] });
+      toast({ title: "Approved", description: "Game stats are locked and live." });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message || "Failed to approve", variant: "destructive" });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async () => {
+      if (!existingSessionId) throw new Error("No game session to reject");
+      return await apiRequest("PATCH", `/api/game-sessions/${existingSessionId}/reject`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/game-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/game-sessions/event", eventId] });
+      toast({ title: "Sent back", description: "Stats sent back to the scorer for edits." });
+      setLocation("/admin?tab=events");
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message || "Failed to reject", variant: "destructive" });
+    },
+  });
 
   const teamPts = players.reduce((sum, p) => sum + pts(stats[p.id] || initStats()), 0);
   const team = players.reduce((acc, p) => {
@@ -575,8 +630,8 @@ export default function GameScoring() {
   const bench = players.filter((p) => !stats[p.id]?.onCourt);
 
   const oppH = useHold(
-    () => { if (!submitted) setOppScore((s) => s + 1); },
-    () => { if (!submitted) setOppScore((s) => Math.max(0, s - 1)); }
+    () => { if (!locked) setOppScore((s) => s + 1); },
+    () => { if (!locked) setOppScore((s) => Math.max(0, s - 1)); }
   );
 
   const periodLabel = inOT ? otLabel(otNumber) : format === "quarters" ? `Q${period}` : `H${period}`;
@@ -608,7 +663,7 @@ export default function GameScoring() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <button onClick={() => {
-              if (submitted || (!running && teamPts === 0 && oppScore === 0)) {
+              if (locked || (!running && teamPts === 0 && oppScore === 0)) {
                 setLocation("/admin?tab=events");
               } else if (window.confirm("Leave scoring? Unsaved stats will be lost.")) {
                 setLocation("/admin?tab=events");
@@ -626,23 +681,23 @@ export default function GameScoring() {
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <div style={{ display: "flex", gap: 2, background: "rgba(255,255,255,0.04)", borderRadius: 6, padding: 2 }}>
               {["quarters", "halves"].map((f) => (
-                <button key={f} onClick={() => !submitted && changeFormat(f)} style={{
+                <button key={f} onClick={() => !locked && changeFormat(f)} style={{
                   padding: "3px 8px", borderRadius: 5, fontSize: 10, fontWeight: 700, border: "none",
                   background: format === f ? O : "transparent", color: format === f ? "#fff" : "rgba(255,255,255,0.35)",
-                  cursor: submitted ? "default" : "pointer", letterSpacing: 0.3, textTransform: "uppercase",
+                  cursor: locked ? "default" : "pointer", letterSpacing: 0.3, textTransform: "uppercase",
                 }}>{f === "quarters" ? "4Q" : "2H"}</button>
               ))}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <button onClick={() => !submitted && changePeriodTime(periodTime / 60 - 1)} disabled={submitted} style={{
+              <button onClick={() => !locked && changePeriodTime(periodTime / 60 - 1)} disabled={locked} style={{
                 width: 20, height: 20, borderRadius: 5, border: "1px solid rgba(255,255,255,0.08)",
-                background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.3)", cursor: submitted ? "default" : "pointer",
+                background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.3)", cursor: locked ? "default" : "pointer",
                 fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center",
               }}>−</button>
               <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", minWidth: 24, textAlign: "center", fontFamily: "'JetBrains Mono', monospace" }}>{periodTime / 60}m</span>
-              <button onClick={() => !submitted && changePeriodTime(periodTime / 60 + 1)} disabled={submitted} style={{
+              <button onClick={() => !locked && changePeriodTime(periodTime / 60 + 1)} disabled={locked} style={{
                 width: 20, height: 20, borderRadius: 5, border: "1px solid rgba(255,255,255,0.08)",
-                background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.3)", cursor: submitted ? "default" : "pointer",
+                background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.3)", cursor: locked ? "default" : "pointer",
                 fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center",
               }}>+</button>
             </div>
@@ -651,12 +706,12 @@ export default function GameScoring() {
 
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 10, fontWeight: 800, color: inOT ? "#ffd54f" : "rgba(255,255,255,0.3)", letterSpacing: 1.5 }}>
-            {gameOver ? (submitted ? "✓ SUBMITTED" : "FINAL") : periodLabel}
+            {gameOver ? (approved ? "✓ APPROVED" : submitted ? "✓ SUBMITTED" : "FINAL") : periodLabel}
           </div>
-          <button onClick={toggleClock} disabled={gameOver || submitted || atPeriodEnd} style={{
+          <button onClick={toggleClock} disabled={gameOver || locked || atPeriodEnd} style={{
             fontSize: 48, fontWeight: 900, fontFamily: "'JetBrains Mono', monospace", lineHeight: 1,
             color: running ? "#4CAF50" : (gameOver ? "rgba(255,255,255,0.2)" : "#fff"),
-            background: "none", border: "none", cursor: gameOver || submitted ? "default" : "pointer",
+            background: "none", border: "none", cursor: gameOver || locked ? "default" : "pointer",
             transition: "color 0.2s", letterSpacing: 2,
             textShadow: running ? "0 0 20px rgba(76,175,80,0.3)" : inOT && !gameOver ? "0 0 20px rgba(255,213,79,0.25)" : "none",
           }}>
@@ -704,7 +759,7 @@ export default function GameScoring() {
             </div>
           )}
 
-          {gameOver && !submitted && (
+          {gameOver && !locked && (
             <div style={{ marginTop: 8, display: "flex", gap: 6, justifyContent: "center" }}>
               <button onClick={startOT} style={{
                 padding: "6px 14px", borderRadius: 8, fontSize: 11, fontWeight: 800,
@@ -722,7 +777,7 @@ export default function GameScoring() {
                 onBlur={() => setEditingTeam(false)} onKeyDown={(e) => e.key === "Enter" && setEditingTeam(false)} autoFocus
                 style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, color: "#fff", padding: "2px 8px", fontSize: 12, fontWeight: 700, textAlign: "center", width: 90 }} />
             ) : (
-              <div onClick={() => !submitted && setEditingTeam(true)} style={{ fontSize: 11, fontWeight: 800, color: O, letterSpacing: 1, cursor: submitted ? "default" : "pointer", textTransform: "uppercase" }}>{teamName}</div>
+              <div onClick={() => !locked && setEditingTeam(true)} style={{ fontSize: 11, fontWeight: 800, color: O, letterSpacing: 1, cursor: locked ? "default" : "pointer", textTransform: "uppercase" }}>{teamName}</div>
             )}
             <div style={{ fontSize: 44, fontWeight: 900, color: "#fff", fontFamily: "'JetBrains Mono', monospace", lineHeight: 1.1 }}>{teamPts}</div>
           </div>
@@ -745,13 +800,13 @@ export default function GameScoring() {
                 onBlur={() => setEditingOpp(false)} onKeyDown={(e) => e.key === "Enter" && setEditingOpp(false)} autoFocus
                 style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, color: "#fff", padding: "2px 8px", fontSize: 12, fontWeight: 700, textAlign: "center", width: 90 }} />
             ) : (
-              <div onClick={() => !submitted && setEditingOpp(true)} style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", letterSpacing: 1, cursor: submitted ? "default" : "pointer", textTransform: "uppercase" }}>{oppName}</div>
+              <div onClick={() => !locked && setEditingOpp(true)} style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.45)", letterSpacing: 1, cursor: locked ? "default" : "pointer", textTransform: "uppercase" }}>{oppName}</div>
             )}
-            <button {...oppH} disabled={submitted} style={{
+            <button {...oppH} disabled={locked} style={{
               fontSize: 44, fontWeight: 900, color: "rgba(255,255,255,0.7)", fontFamily: "'JetBrains Mono', monospace",
-              lineHeight: 1.1, background: "none", border: "none", cursor: submitted ? "default" : "pointer", width: "100%",
+              lineHeight: 1.1, background: "none", border: "none", cursor: locked ? "default" : "pointer", width: "100%",
               userSelect: "none", WebkitUserSelect: "none" as any, touchAction: "manipulation",
-              opacity: submitted ? 0.6 : 1,
+              opacity: locked ? 0.6 : 1,
             }}>{oppScore}</button>
             <div style={{ fontSize: 8, color: "rgba(255,255,255,0.2)", marginTop: -2 }}>tap +1 · hold −1</div>
           </div>
@@ -779,7 +834,7 @@ export default function GameScoring() {
           {onCourt.map((p) => (
             <PlayerRow key={p.id} player={p} stats={stats[p.id] || initStats()}
               onUpdate={(s) => updateStat(p.id, s)} onNameChange={(u) => updatePlayer(p.id, u)}
-              onToggleSub={() => toggleSub(p.id)} clockRunning={running} locked={submitted} />
+              onToggleSub={() => toggleSub(p.id)} clockRunning={running} locked={locked} />
           ))}
         </div>
       )}
@@ -793,39 +848,73 @@ export default function GameScoring() {
           {bench.map((p) => (
             <PlayerRow key={p.id} player={p} stats={stats[p.id] || initStats()}
               onUpdate={(s) => updateStat(p.id, s)} onNameChange={(u) => updatePlayer(p.id, u)}
-              onToggleSub={() => toggleSub(p.id)} clockRunning={running} locked={submitted} />
+              onToggleSub={() => toggleSub(p.id)} clockRunning={running} locked={locked} />
           ))}
         </div>
       )}
 
       <div style={{ display: "flex", gap: 6, padding: "8px 6px" }}>
-        <button onClick={addPlayer} disabled={submitted} style={{
+        <button onClick={addPlayer} disabled={locked} style={{
           flex: 1, padding: "10px", borderRadius: 10,
           background: "rgba(232,127,36,0.1)", border: "1px dashed rgba(232,127,36,0.3)",
-          color: O, fontWeight: 700, fontSize: 12, cursor: submitted ? "default" : "pointer",
-          opacity: submitted ? 0.4 : 1,
+          color: O, fontWeight: 700, fontSize: 12, cursor: locked ? "default" : "pointer",
+          opacity: locked ? 0.4 : 1,
         }}>+ ADD PLAYER</button>
-        <button onClick={resetAll} style={{
+        <button onClick={resetAll} disabled={locked} style={{
           padding: "10px 16px", borderRadius: 10,
           background: "rgba(255,60,60,0.07)", border: "1px solid rgba(255,60,60,0.18)",
-          color: "#ff4444", fontWeight: 700, fontSize: 12, cursor: "pointer",
+          color: "#ff4444", fontWeight: 700, fontSize: 12, cursor: locked ? "default" : "pointer",
+          opacity: locked ? 0.4 : 1,
         }}>RESET</button>
       </div>
 
       <div style={{ padding: "2px 6px 8px" }}>
-        <button onClick={() => setShowSubmit(true)} disabled={submitted || submitMutation.isPending} style={{
-          width: "100%", padding: "14px", borderRadius: 12, fontSize: 13, fontWeight: 800,
-          background: submitted
-            ? "rgba(76,175,80,0.12)"
-            : gameOver ? "linear-gradient(135deg, #E87F24 0%, #c06a15 100%)" : "rgba(232,127,36,0.08)",
-          border: submitted ? "1px solid rgba(76,175,80,0.3)" : gameOver ? "none" : "1.5px solid rgba(232,127,36,0.25)",
-          color: submitted ? "#4CAF50" : gameOver ? "#fff" : O, cursor: submitted ? "default" : "pointer",
-          letterSpacing: 1, textTransform: "uppercase",
-          boxShadow: gameOver && !submitted ? "0 4px 20px rgba(232,127,36,0.25)" : "none",
-          transition: "all 0.2s",
-        }}>
-          {submitted ? "✓ SUBMITTED FOR REVIEW" : submitMutation.isPending ? "SUBMITTING..." : "Submit for Review"}
-        </button>
+        {reviewMode ? (
+          <div style={{ width: "100%", display: "flex", gap: 8 }}>
+            <button onClick={() => rejectMutation.mutate()} disabled={rejectMutation.isPending || approveMutation.isPending} style={{
+              flex: 1, padding: "14px", borderRadius: 12, fontSize: 13, fontWeight: 800,
+              background: "rgba(244,67,54,0.1)", border: "1.5px solid rgba(244,67,54,0.35)",
+              color: "#f44336", cursor: "pointer", letterSpacing: 1, textTransform: "uppercase",
+            }} data-testid="button-reject-stats">
+              {rejectMutation.isPending ? "Rejecting..." : "Reject"}
+            </button>
+            <button onClick={() => approveMutation.mutate()} disabled={approveMutation.isPending || rejectMutation.isPending} style={{
+              flex: 1, padding: "14px", borderRadius: 12, fontSize: 13, fontWeight: 800,
+              background: "linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)", border: "none",
+              color: "#fff", cursor: "pointer", letterSpacing: 1, textTransform: "uppercase",
+              boxShadow: "0 4px 20px rgba(76,175,80,0.25)",
+            }} data-testid="button-approve-stats">
+              {approveMutation.isPending ? "Approving..." : "Approve & Lock"}
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => setShowSubmit(true)} disabled={locked || submitMutation.isPending} style={{
+            width: "100%", padding: "14px", borderRadius: 12, fontSize: 13, fontWeight: 800,
+            background: approved
+              ? "rgba(76,175,80,0.18)"
+              : submitted
+                ? "rgba(255,193,7,0.12)"
+                : gameOver ? "linear-gradient(135deg, #E87F24 0%, #c06a15 100%)" : "rgba(232,127,36,0.08)",
+            border: approved
+              ? "1px solid rgba(76,175,80,0.4)"
+              : submitted
+                ? "1px solid rgba(255,193,7,0.4)"
+                : gameOver ? "none" : "1.5px solid rgba(232,127,36,0.25)",
+            color: approved ? "#4CAF50" : submitted ? "#FFC107" : gameOver ? "#fff" : O,
+            cursor: approved ? "default" : "pointer",
+            letterSpacing: 1, textTransform: "uppercase",
+            boxShadow: gameOver && !submitted && !approved ? "0 4px 20px rgba(232,127,36,0.25)" : "none",
+            transition: "all 0.2s",
+          }} data-testid="button-submit-stats">
+            {approved
+              ? "✓ APPROVED & LOCKED"
+              : submitMutation.isPending
+                ? "SUBMITTING..."
+                : submitted
+                  ? "✓ Submitted — Update & Resubmit"
+                  : "Submit for Review"}
+          </button>
+        )}
       </div>
 
       <div style={{

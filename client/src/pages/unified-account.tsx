@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import AbandonedCartBanner from "@/components/AbandonedCartBanner";
+import { ApprovedSeasonStats } from "@/components/ApprovedSeasonStats";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BanterLoader } from "@/components/BanterLoader";
 import { Button } from "@/components/ui/button";
@@ -956,6 +957,9 @@ function PlayerProfileCard({ player, onCoachClick, onNavigateToPayments }: { pla
           
           <CollapsibleContent className="mt-3">
             <div className="space-y-4 pt-2 border-t">
+              {/* Approved Season Stats */}
+              <ApprovedSeasonStats playerId={player.id} compact />
+
               {/* Basic Info Grid */}
               <div className="grid grid-cols-2 gap-4">
                 {player.dateOfBirth && (

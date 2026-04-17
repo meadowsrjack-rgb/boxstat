@@ -32,6 +32,17 @@ const fmtMins = (sec: number) => {
 };
 const otLabel = (n: number) => (n === 1 ? "OT" : `${n}OT`);
 
+function parseApiError(err: any, fallback: string): string {
+  const raw = err?.message || "";
+  const m = raw.match(/^\d+:\s*(.*)$/s);
+  const body = m ? m[1] : raw;
+  try {
+    const parsed = JSON.parse(body);
+    if (parsed && typeof parsed.message === "string") return parsed.message;
+  } catch {}
+  return body || fallback;
+}
+
 function useHold(onTap: () => void, onHold: () => void) {
   const t = useRef<ReturnType<typeof setTimeout> | null>(null);
   const f = useRef(false);
@@ -357,7 +368,7 @@ export default function GameScoring() {
 
   const { user: currentUser } = useAuth();
   const isCoachOrAdmin = currentUser?.role === 'coach' || currentUser?.role === 'admin';
-  const sessionResp = existingSession as { session?: { id?: number; status?: string; scoredByUserId?: string | null }; canReview?: boolean } | null | undefined;
+  const sessionResp = existingSession as { session?: { id?: number; status?: string; scoredByUserId?: string | null }; canReview?: boolean; canSubmit?: boolean; submitBlockReason?: string | null } | null | undefined;
   const sessionMeta = sessionResp?.session;
   const sessionScorerId: string | null = sessionMeta?.scoredByUserId ?? null;
   const sessionStatus: string | null = sessionMeta?.status ?? null;
@@ -367,8 +378,16 @@ export default function GameScoring() {
   const canReview = !!sessionResp?.canReview && sessionStatus === 'submitted';
   const reviewMode = canReview && reviewModeRequested;
   const isOriginalScorerOrNew = !sessionScorerId || currentUser?.id === sessionScorerId;
-  // Editable when: not approved, not in review mode, and either no submission yet or current user is original scorer.
-  const locked = approved || reviewMode || (sessionStatus === 'submitted' && !isOriginalScorerOrNew);
+  // Server-computed eligibility for the current user. Defaults to true while
+  // the session response is still loading so we don't flash the blocked UI.
+  const canSubmit = sessionResp ? (sessionResp.canSubmit !== false) : true;
+  const submitBlockReason: string | null = sessionResp?.submitBlockReason ?? null;
+  // Admins and coaches can take over a scoresheet that was started by someone
+  // else (e.g. to fix or finish stats), matching the backend rule. Parents are
+  // still bound to the session they originally started.
+  const canEditAsScorer = isOriginalScorerOrNew || isCoachOrAdmin;
+  // Editable when: not approved, not in review mode, and either no submission yet or current user is the (effective) scorer.
+  const locked = approved || reviewMode || (sessionStatus === 'submitted' && !canEditAsScorer);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -571,7 +590,7 @@ export default function GameScoring() {
       toast({ title: "Game stats submitted", description: "Stats sent for review." });
     },
     onError: (err: any) => {
-      toast({ title: "Error", description: err.message || "Failed to submit", variant: "destructive" });
+      toast({ title: "Couldn\u2019t submit stats", description: parseApiError(err, "Failed to submit"), variant: "destructive" });
     },
   });
 
@@ -593,7 +612,7 @@ export default function GameScoring() {
       toast({ title: "Approved", description: "Game stats are locked and live." });
     },
     onError: (err: any) => {
-      toast({ title: "Error", description: err.message || "Failed to approve", variant: "destructive" });
+      toast({ title: "Couldn\u2019t approve", description: parseApiError(err, "Failed to approve"), variant: "destructive" });
     },
   });
 
@@ -609,7 +628,7 @@ export default function GameScoring() {
       setLocation("/admin?tab=events");
     },
     onError: (err: any) => {
-      toast({ title: "Error", description: err.message || "Failed to reject", variant: "destructive" });
+      toast({ title: "Couldn\u2019t reject", description: parseApiError(err, "Failed to reject"), variant: "destructive" });
     },
   });
 
@@ -886,6 +905,14 @@ export default function GameScoring() {
             }} data-testid="button-approve-stats">
               {approveMutation.isPending ? "Approving..." : "Approve & Lock"}
             </button>
+          </div>
+        ) : !canSubmit && !approved ? (
+          <div style={{
+            width: "100%", padding: "14px", borderRadius: 12, fontSize: 12, fontWeight: 600,
+            background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+            color: "rgba(255,255,255,0.7)", textAlign: "center", lineHeight: 1.4,
+          }} data-testid="text-submit-blocked">
+            {submitBlockReason || "You can’t submit stats for this game."}
           </div>
         ) : (
           <button onClick={() => setShowSubmit(true)} disabled={locked || submitMutation.isPending} style={{

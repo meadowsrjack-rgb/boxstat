@@ -18583,10 +18583,28 @@ a.btn:active{background:#dc2626;}
         and(eq(gameSessions.eventId, eventId), eq(gameSessions.organizationId, orgId))
       );
       const canReview = await canReviewEventStats(user?.id, user?.role, eventId);
-      if (sessions.length === 0) return res.json({ session: null, playerStats: [], canReview });
-      const session = sessions[0];
+      const eligibility = await canScoreEvent(user, eventId);
+      const session = sessions[0] ?? null;
+      let canSubmit = eligibility.ok;
+      let submitBlockReason: string | null = eligibility.ok ? null : (eligibility.reason ?? null);
+      if (canSubmit && session) {
+        if (session.status === "approved") {
+          canSubmit = false;
+          submitBlockReason = "These stats are already approved and locked.";
+        } else if (
+          session.scoredByUserId &&
+          session.scoredByUserId !== user?.id &&
+          !(user?.role === "admin" || user?.role === "coach")
+        ) {
+          canSubmit = false;
+          submitBlockReason = "Another user already started this scoresheet. Only they can edit it.";
+        }
+      }
+      if (!session) {
+        return res.json({ session: null, playerStats: [], canReview, canSubmit, submitBlockReason });
+      }
       const playerStats = await db.select().from(gamePlayerStats).where(eq(gamePlayerStats.gameSessionId, session.id));
-      res.json({ session, playerStats, canReview });
+      res.json({ session, playerStats, canReview, canSubmit, submitBlockReason });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -18603,7 +18621,27 @@ a.btn:active{background:#dc2626;}
       if (sessions.length === 0) return res.status(404).json({ message: "Session not found" });
       const session = sessions[0];
       const playerStats = await db.select().from(gamePlayerStats).where(eq(gamePlayerStats.gameSessionId, session.id));
-      res.json({ session, playerStats });
+      // Mirror the by-event endpoint so the scoresheet UI gets the same
+      // canSubmit / submitBlockReason / canReview fields regardless of which
+      // URL it loaded the session from.
+      const canReview = await canReviewEventStats(user?.id, user?.role, session.eventId);
+      const eligibility = await canScoreEvent(user, session.eventId);
+      let canSubmit = eligibility.ok;
+      let submitBlockReason: string | null = eligibility.ok ? null : (eligibility.reason ?? null);
+      if (canSubmit) {
+        if (session.status === "approved") {
+          canSubmit = false;
+          submitBlockReason = "These stats are already approved and locked.";
+        } else if (
+          session.scoredByUserId &&
+          session.scoredByUserId !== user?.id &&
+          !(user?.role === "admin" || user?.role === "coach")
+        ) {
+          canSubmit = false;
+          submitBlockReason = "Another user already started this scoresheet. Only they can edit it.";
+        }
+      }
+      res.json({ session, playerStats, canReview, canSubmit, submitBlockReason });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -18629,35 +18667,18 @@ a.btn:active{background:#dc2626;}
       if (!eventId) return res.status(400).json({ message: "eventId is required" });
 
       // Authorization: admins/coaches always allowed; parents allowed only if
-      // they have at least one linked player on the event's team.
-      const role = user?.role;
-      if (role !== "admin" && role !== "coach") {
-        if (role === "parent") {
-          const eventRow = (await db.select().from(events).where(eq(events.id, eventId)))[0];
-          if (!eventRow?.teamId) {
-            return res.status(403).json({ message: "Not authorized to score this game" });
-          }
-          const linked = await storage.getPlayersByParent(user.id);
-          if (!linked?.length) {
-            return res.status(403).json({ message: "Not authorized to score this game" });
-          }
-          const linkedIds = linked.map((p: any) => p.id);
-          const teamMatches = await db.select({ profileId: teamMemberships.profileId }).from(teamMemberships).where(
-            and(
-              eq(teamMemberships.teamId, eventRow.teamId),
-              eq(teamMemberships.status, "active"),
-              inArray(teamMemberships.profileId, linkedIds),
-            )
-          );
-          if (teamMatches.length === 0) {
-            return res.status(403).json({ message: "Not authorized to score this game" });
-          }
-        } else {
-          return res.status(403).json({ message: "Not authorized to score this game" });
-        }
+      // they have at least one linked player on the event's team. Errors return
+      // a plain-English reason so the scoresheet can show why submission failed.
+      const eligibility = await canScoreEvent(user, eventId);
+      if (!eligibility.ok) {
+        return res.status(403).json({ message: eligibility.reason || "Not authorized to score this game" });
       }
+      const role = user?.role;
 
-      const existingSessions = await db.select().from(gameSessions).where(eq(gameSessions.eventId, eventId));
+      const orgIdForLookup = user?.organizationId || "default-org";
+      const existingSessions = await db.select().from(gameSessions).where(
+        and(eq(gameSessions.eventId, eventId), eq(gameSessions.organizationId, orgIdForLookup))
+      );
       let sessionId: number;
 
       if (existingSessions.length > 0) {
@@ -18671,17 +18692,22 @@ a.btn:active{background:#dc2626;}
         // If there is no original scorer recorded yet (legacy/in_progress with null),
         // allow any scorer-eligible user (admin/coach) to claim it.
         const isOriginalScorer = !!existing.scoredByUserId && existing.scoredByUserId === user?.id;
-        const canClaimUnowned = !existing.scoredByUserId && (role === "admin" || role === "coach");
-        if (!isOriginalScorer && !canClaimUnowned) {
+        const canTakeOverAsReviewer = role === "admin" || role === "coach";
+        if (!isOriginalScorer && !canTakeOverAsReviewer) {
           return res.status(403).json({
-            message: "Only the original scorer can edit these stats. Reviewers should approve or reject instead.",
+            message: "Another user already started this scoresheet. Only they can edit and resubmit.",
           });
         }
         sessionId = existing.id;
+        // When a reviewer takes over an existing scoresheet, record them as the
+        // current scorer so subsequent edits/UI state stay consistent.
+        const updatedScorer = isOriginalScorer ? existing.scoredByUserId : user?.id;
         await db.update(gameSessions).set({
           opponentName, teamScore, opponentScore, gameFormat,
           periodLength, otLength, finalPeriod, otCount,
-          status: "submitted", updatedAt: new Date().toISOString(),
+          status: "submitted",
+          scoredByUserId: updatedScorer,
+          updatedAt: new Date().toISOString(),
         }).where(eq(gameSessions.id, sessionId));
         await db.delete(gamePlayerStats).where(eq(gamePlayerStats.gameSessionId, sessionId));
       } else {
@@ -18763,6 +18789,34 @@ a.btn:active{background:#dc2626;}
     if (!eventRow) return false;
     const invitedIds = await getInvitedUserIdsForEvent(eventRow);
     return invitedIds.has(userId);
+  }
+
+  // Helper: check if a user is allowed to submit/score this event, returning a
+  // plain-English reason when they aren't. Mirrors the eligibility logic the
+  // scoresheet UI uses to decide whether to show the Submit button.
+  async function canScoreEvent(user: any, eventId: number): Promise<{ ok: boolean; reason?: string }> {
+    const role = user?.role;
+    if (!role) return { ok: false, reason: "You need to be signed in to submit scores." };
+    if (role === 'admin' || role === 'coach') return { ok: true };
+    if (role !== 'parent') {
+      return { ok: false, reason: "Only coaches, admins, or team parents can submit scores for this game." };
+    }
+    const eventRow = (await db.select().from(events).where(eq(events.id, eventId)))[0];
+    if (!eventRow) return { ok: false, reason: "This game can\u2019t be found anymore." };
+    if (!eventRow.teamId) {
+      return { ok: false, reason: "This game isn\u2019t tied to a team yet, so stats can\u2019t be submitted." };
+    }
+    const linked = await storage.getPlayersByParent(user.id);
+    if (!linked?.length) {
+      return { ok: false, reason: "You don\u2019t have any players linked to your account, so you can\u2019t score this game." };
+    }
+    const teamUsers = await storage.getUsersByTeam(String(eventRow.teamId));
+    const teamUserIds = new Set(teamUsers.map((u: any) => u.id));
+    const onTeam = linked.some((p: any) => teamUserIds.has(p.id));
+    if (!onTeam) {
+      return { ok: false, reason: "None of your linked players are on the team for this game." };
+    }
+    return { ok: true };
   }
 
   app.patch("/api/game-sessions/:id/approve", requireAuth, async (req, res) => {

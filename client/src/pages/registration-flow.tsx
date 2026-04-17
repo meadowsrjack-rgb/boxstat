@@ -596,6 +596,7 @@ function EmailEntryStep({
   organizationId: string;
 }) {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [emailCheckData, setEmailCheckData] = useState<any>(null);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   
@@ -621,16 +622,8 @@ function EmailEntryStep({
       
       if (response.exists && response.stripeCustomer) {
         setEmailCheckData(response);
-        toast({
-          title: "Welcome Back!",
-          description: "We found your account and payment history.",
-        });
       } else if (response.exists) {
         setEmailCheckData({ exists: true, hasRegistered: response.hasRegistered });
-        toast({
-          title: "Account Found",
-          description: response.hasRegistered ? "We found your account." : "Email exists in our system.",
-        });
       } else {
         setEmailCheckData(null);
       }
@@ -671,13 +664,14 @@ function EmailEntryStep({
         });
       }
     } catch (error: any) {
-      // If email already exists and is verified, show error and don't proceed
+      // If email already exists and is verified, route the user to login
       if (error.message?.includes("already registered")) {
         toast({
           title: "Email Already Registered",
-          description: "This email is already verified. Please login instead.",
+          description: "This email is already verified. Redirecting you to login.",
           variant: "destructive",
         });
+        setLocation("/login");
         return;
       }
       console.error("Error sending verification:", error);
@@ -713,36 +707,6 @@ function EmailEntryStep({
             </FormItem>
           )}
         />
-
-        {/* Show existing user info if found */}
-        {emailCheckData?.exists && (
-          <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-            <h4 className="font-semibold text-blue-400 mb-2">Account Found</h4>
-            {emailCheckData.hasRegistered && (
-              <p className="text-sm text-blue-300">
-                This email is already registered in our system.
-              </p>
-            )}
-            
-            {emailCheckData.stripeCustomer && (
-              <div className="mt-3 space-y-2">
-                <h5 className="font-medium text-blue-300 text-sm">Payment History:</h5>
-                {emailCheckData.activeSubscriptions?.length > 0 && (
-                  <div className="text-sm">
-                    <p className="font-medium text-green-400">Active Subscriptions:</p>
-                    <ul className="list-disc list-inside ml-2 text-gray-300">
-                      {emailCheckData.activeSubscriptions.map((sub: any, idx: number) => (
-                        <li key={idx}>
-                          {sub.product} - ${(sub.amount / 100).toFixed(2)}/{sub.interval}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
 
         <Button 
           type="submit" 
@@ -783,16 +747,6 @@ function RegistrationIntentStep({
           </div>
         )}
 
-        {emailCheckData?.exists && (
-          <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-            <p className="text-sm text-blue-300">
-              {emailCheckData.hasRegistered 
-                ? "We found your existing account. Continue to add a new registration."
-                : "Email found in our system. Continue to complete your registration."}
-            </p>
-          </div>
-        )}
-        
         <FormField
           control={form.control}
           name="registrationType"

@@ -87,7 +87,7 @@ app.use(session({
 
 // Apple App Site Association for Universal Links (must be before static files)
 app.get('/.well-known/apple-app-site-association', (req, res) => {
-  const teamId = process.env.APNS_TEAM_ID || 'TEAMID';
+  const teamId = process.env.APNS_TEAM_ID || '679Y46BZUP';
   const bundleId = 'boxstat.app'; // Must match iOS app bundle ID exactly
   
   const aasa = {

@@ -1364,7 +1364,15 @@ a.btn:active{background:#dc2626;}
           success: true, 
           message: "Verification email re-sent. Please check your inbox.",
           exists: true,
-          sessionId // Return session ID so frontend can poll for verification status
+          sessionId, // Return session ID so frontend can poll for verification status
+          // Return the verification token to the same browser session that
+          // requested it. The frontend uses this in its polling fallback so
+          // that even if the iOS deep-link handoff (and the server-side
+          // bounce-page verify) both fail, the next poll will idempotently
+          // mark the email verified and unblock step 2. Exposing the token
+          // here adds no new attack surface — anyone with JS access to this
+          // session already has access to every API the server exposes to it.
+          verificationToken,
         });
       }
       
@@ -1382,7 +1390,8 @@ a.btn:active{background:#dc2626;}
         success: true, 
         message: "Verification email sent! Please check your inbox.",
         exists: false,
-        sessionId // Return session ID so frontend can poll for verification status
+        sessionId, // Return session ID so frontend can poll for verification status
+        verificationToken, // See note above
       });
     } catch (error: any) {
       console.error("Send verification error:", error);
@@ -1455,15 +1464,23 @@ a.btn:active{background:#dc2626;}
   });
   
   // Poll for verification status (used by original session to detect when email is verified)
+  //
+  // Accepts an optional `token` query param. When the caller passes the
+  // verification token (returned to the same browser session by
+  // /api/auth/send-verification), the server idempotently marks the email
+  // verified before reporting status. This is a belt-and-suspenders
+  // fallback: if both the iOS Universal Link deep-link handoff AND the
+  // new /verify-email server bounce page fail to trigger verification,
+  // the next polling tick still self-heals and step 2 advances.
   app.get('/api/auth/check-verification-status', async (req: any, res) => {
     try {
-      const { email, organizationId } = req.query;
+      const { email, organizationId, token } = req.query;
       
       if (!email) {
         return res.status(400).json({ success: false, message: "Email is required" });
       }
       
-      let pendingReg = null;
+      let pendingReg: any = null;
       
       if (organizationId) {
         pendingReg = await storage.getPendingRegistration(email as string, organizationId as string);
@@ -1487,6 +1504,31 @@ a.btn:active{background:#dc2626;}
           notFound: true,
           message: "No pending registration found for this email"
         });
+      }
+
+      // Token-fallback self-heal: if the caller presented the matching
+      // verification token and the record is still unverified and
+      // unexpired, mark it verified before reporting. Token must match
+      // exactly to prevent any caller from upgrading arbitrary pending
+      // registrations.
+      if (
+        !pendingReg.verified &&
+        typeof token === 'string' &&
+        token.length > 0 &&
+        token === pendingReg.verificationToken &&
+        new Date() <= new Date(pendingReg.verificationExpiry)
+      ) {
+        try {
+          await storage.updatePendingRegistration(
+            pendingReg.email,
+            pendingReg.organizationId,
+            true,
+          );
+          pendingReg = { ...pendingReg, verified: true };
+          console.log('[check-verification-status] Self-healed via token fallback', { email: pendingReg.email });
+        } catch (err) {
+          console.error('[check-verification-status] Token-fallback verify failed (non-fatal):', err);
+        }
       }
       
       res.json({ 

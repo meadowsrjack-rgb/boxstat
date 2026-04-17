@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { celebrate } from "@/lib/haptics";
 
 interface EvaluationPopupProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ export function EvaluationPopup({ isOpen, oldOvr, newOvr, onClose }: EvaluationP
 
     const delay = setTimeout(() => {
       setHasAnimated(true);
+      celebrate();
 
       const duration = 1200;
       const startTime = Date.now();

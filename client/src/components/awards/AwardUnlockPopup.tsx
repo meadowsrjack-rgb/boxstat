@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Sparkles } from "lucide-react";
 import { AwardBadge } from "./AwardBadge";
+import { celebrate } from "@/lib/haptics";
 
 interface AwardUnlockPopupProps {
   isOpen: boolean;
@@ -52,7 +53,10 @@ export function AwardUnlockPopup({
 
     setPhase("locked");
 
-    const t1 = setTimeout(() => setPhase("unlocking"), 600);
+    const t1 = setTimeout(() => {
+      setPhase("unlocking");
+      celebrate();
+    }, 600);
     const t2 = setTimeout(() => setPhase("unlocked"), 1400);
     const autoDismiss = setTimeout(() => onCloseRef.current(), 7000);
 

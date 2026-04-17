@@ -73,7 +73,7 @@ import QuoteCheckout from "@/pages/QuoteCheckout";
 import StoreBuy, { StoreCheckoutSuccess, StoreCheckoutCancel } from "@/pages/store-buy";
 import { useQuery } from "@tanstack/react-query";
 import { initPushNotifications, registerPushNotifications } from "@/services/pushNotificationService";
-import { initDeepLinks, setDeepLinkCallback, markDeepLinkServiceReady, hasPendingOrUnconsumedLaunchUrl, probeColdStartPendingClaim } from "@/services/deepLinkService";
+import { initDeepLinks, setDeepLinkCallback, markDeepLinkServiceReady, hasPendingOrUnconsumedLaunchUrl, probeColdStartPendingClaim, probeColdStartPendingInvite, probeColdStartPendingMagicLink } from "@/services/deepLinkService";
 import { UpdatePrompt } from "@/components/UpdatePrompt";
 
 type Profile = {
@@ -460,9 +460,22 @@ function AppRouter() {
             console.log('[ClaimResume] skipping cold-start probe — already routed to', path);
             return;
           }
-          probeColdStartPendingClaim().catch((err) => {
-            console.warn('[ClaimResume] cold-start probe error', err);
-          });
+          // Try each cold-start recovery probe in priority order. Each
+          // probe is gated by a short-TTL stash from the in-app handler
+          // for that flow, with single-retry semantics, so a stash can't
+          // hijack a normal launch outside the second-tap window. See
+          // task #200.
+          probeColdStartPendingClaim()
+            .then((claimed) => {
+              if (claimed) return;
+              return probeColdStartPendingInvite().then((invited) => {
+                if (invited) return;
+                return probeColdStartPendingMagicLink();
+              });
+            })
+            .catch((err) => {
+              console.warn('[DeepLinkResume] cold-start probe error', err);
+            });
         }, 800);
       }
     }

@@ -290,7 +290,18 @@ function buildLinkErrorPath(
   return `/link-error?${params.toString()}`;
 }
 
-async function handleMagicLinkDirectly(magicToken: string): Promise<void> {
+async function handleMagicLinkDirectly(
+  magicToken: string,
+  opts: { fromProbe?: boolean } = {},
+): Promise<void> {
+  // Stash for cold-start recovery: if a future launch loses the deep link
+  // in transit we can re-attempt this exact token. The probe has
+  // single-retry semantics so a stale stash can't hijack later launches.
+  // A freshly-delivered deep link gets a clean retry budget; the probe
+  // path passes fromProbe so the single-retry marker (already set by the
+  // probe before it called us) survives even if this attempt fails on
+  // the network. See task #200.
+  rememberPendingMagicLinkToken(magicToken, { resetRetried: !opts.fromProbe });
   try {
     console.log('[DeepLink] Processing magic link token directly in app...');
     const response = await fetch(`https://boxstat.app/api/auth/magic-link-login?token=${magicToken}`, {
@@ -300,6 +311,7 @@ async function handleMagicLinkDirectly(magicToken: string): Promise<void> {
 
     if (response.ok && data.success) {
       console.log('[DeepLink] Magic link login successful!');
+      clearPendingMagicLinkToken();
 
       if (data.token) {
         await authPersistence.setToken(data.token);
@@ -326,11 +338,15 @@ async function handleMagicLinkDirectly(magicToken: string): Promise<void> {
       navigateInApp(redirectPath);
     } else {
       console.error('[DeepLink] Magic link login failed:', data.message);
+      clearPendingMagicLinkToken();
       const reason = classifyDeepLinkError(response.status, data?.message);
       navigateInApp(buildLinkErrorPath('magic-link', reason, { message: data?.message }));
     }
   } catch (error: any) {
     console.error('[DeepLink] Error processing magic link:', error);
+    // Keep the stash on transient network errors so a quick relaunch can
+    // retry; the single-retry semantics in the cold-start probe still cap
+    // the blast radius. The stash naturally expires after PENDING_MAGIC_LINK_TTL_MS.
     navigateInApp(buildLinkErrorPath('magic-link', 'network', { message: error?.message }));
   }
 }
@@ -387,6 +403,70 @@ function clearLocalPendingClaim(): void {
     localStorage.removeItem('pendingClaimCode');
     localStorage.removeItem('pendingClaimCodeAt');
     localStorage.removeItem('pendingClaimCodeRetried');
+  } catch {
+    /* ignore */
+  }
+}
+
+// Cold-start recovery for the /invite/:token email flow. When the InviteClaim
+// page mounts (via a delivered deep link) it stashes its token here so a
+// subsequent cold-start that loses the deep link in transit can still re-route
+// the user to the invite flow instead of being stranded on /app.
+const PENDING_INVITE_TOKEN_KEY = 'pendingInviteToken';
+const PENDING_INVITE_TOKEN_AT_KEY = 'pendingInviteTokenAt';
+const PENDING_INVITE_TOKEN_RETRIED_KEY = 'pendingInviteTokenRetried';
+// Short TTL: the second-tap race we're fixing happens within seconds of the
+// first tap. A long window risks hijacking a normal launch shortly after a
+// legitimate invite visit.
+const PENDING_INVITE_TTL_MS = 2 * 60 * 1000;
+
+const PENDING_MAGIC_LINK_TOKEN_KEY = 'pendingMagicLinkToken';
+const PENDING_MAGIC_LINK_TOKEN_AT_KEY = 'pendingMagicLinkTokenAt';
+const PENDING_MAGIC_LINK_TOKEN_RETRIED_KEY = 'pendingMagicLinkTokenRetried';
+const PENDING_MAGIC_LINK_TTL_MS = 2 * 60 * 1000;
+
+function rememberPendingMagicLinkToken(token: string, opts: { resetRetried?: boolean } = {}): void {
+  try {
+    localStorage.setItem(PENDING_MAGIC_LINK_TOKEN_KEY, token);
+    localStorage.setItem(PENDING_MAGIC_LINK_TOKEN_AT_KEY, String(Date.now()));
+    // Only clear the retried marker on a fresh deep-link arrival. The
+    // cold-start probe re-invokes handleMagicLinkDirectly and must NOT
+    // wipe the marker, otherwise a network failure on the retry would
+    // allow another cold-start to retry again, breaking the single-retry
+    // guarantee.
+    if (opts.resetRetried) {
+      localStorage.removeItem(PENDING_MAGIC_LINK_TOKEN_RETRIED_KEY);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+function clearPendingMagicLinkToken(): void {
+  try {
+    localStorage.removeItem(PENDING_MAGIC_LINK_TOKEN_KEY);
+    localStorage.removeItem(PENDING_MAGIC_LINK_TOKEN_AT_KEY);
+    localStorage.removeItem(PENDING_MAGIC_LINK_TOKEN_RETRIED_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function rememberPendingInviteToken(token: string): void {
+  try {
+    localStorage.setItem(PENDING_INVITE_TOKEN_KEY, token);
+    localStorage.setItem(PENDING_INVITE_TOKEN_AT_KEY, String(Date.now()));
+    localStorage.removeItem(PENDING_INVITE_TOKEN_RETRIED_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearPendingInviteToken(): void {
+  try {
+    localStorage.removeItem(PENDING_INVITE_TOKEN_KEY);
+    localStorage.removeItem(PENDING_INVITE_TOKEN_AT_KEY);
+    localStorage.removeItem(PENDING_INVITE_TOKEN_RETRIED_KEY);
   } catch {
     /* ignore */
   }
@@ -490,6 +570,112 @@ export async function probeColdStartPendingClaim(): Promise<boolean> {
     console.log('[ClaimResume] cold-start probe missed; will retry once on next launch');
   }
   return false;
+}
+
+/**
+ * Cold-start backup for the /invite/:token email flow. If the deep link was
+ * lost in transit on a second tap but the InviteClaim page recently stashed
+ * its token in localStorage, route the user back to /invite/:token instead
+ * of stranding them on /app. Single-retry semantics — after a miss, the
+ * stashed token is cleared so it can't hijack later launches.
+ *
+ * Returns true when a navigation was performed.
+ */
+export async function probeColdStartPendingInvite(): Promise<boolean> {
+  let token: string | null = null;
+  try {
+    token = localStorage.getItem(PENDING_INVITE_TOKEN_KEY);
+    const at = Number(localStorage.getItem(PENDING_INVITE_TOKEN_AT_KEY) || '0');
+    if (!token || !at) return false;
+    if (Date.now() - at > PENDING_INVITE_TTL_MS) {
+      clearPendingInviteToken();
+      return false;
+    }
+  } catch {
+    return false;
+  }
+
+  const previouslyRetried = (() => {
+    try {
+      return localStorage.getItem(PENDING_INVITE_TOKEN_RETRIED_KEY) === '1';
+    } catch {
+      return false;
+    }
+  })();
+
+  if (previouslyRetried) {
+    console.log('[InviteResume] cold-start probe already retried once; clearing stash');
+    clearPendingInviteToken();
+    return false;
+  }
+
+  try {
+    localStorage.setItem(PENDING_INVITE_TOKEN_RETRIED_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+
+  console.log('[InviteResume] cold-start probe routing to /invite/', token);
+  navigateInApp(`/invite/${encodeURIComponent(token)}`);
+  return true;
+}
+
+/**
+ * Cold-start backup for the /magic-link-login email flow. Mirrors the
+ * /invite/:token probe — if a previous in-app handler stashed a magic
+ * link token (because handleMagicLinkDirectly was invoked from a delivered
+ * deep link) and a subsequent cold-start lost the deep link in transit,
+ * re-attempt the same token. The server will either log the user in (if
+ * still valid) or surface "already used" / "expired" — both of which
+ * route through buildLinkErrorPath inside handleMagicLinkDirectly. Either
+ * way the user lands somewhere actionable instead of /app.
+ *
+ * Single-retry semantics — after one attempt the stash is cleared so it
+ * can't hijack later launches.
+ *
+ * Returns true when a navigation/handler was kicked off.
+ */
+export async function probeColdStartPendingMagicLink(): Promise<boolean> {
+  let token: string | null = null;
+  try {
+    token = localStorage.getItem(PENDING_MAGIC_LINK_TOKEN_KEY);
+    const at = Number(localStorage.getItem(PENDING_MAGIC_LINK_TOKEN_AT_KEY) || '0');
+    if (!token || !at) return false;
+    if (Date.now() - at > PENDING_MAGIC_LINK_TTL_MS) {
+      clearPendingMagicLinkToken();
+      return false;
+    }
+  } catch {
+    return false;
+  }
+
+  const previouslyRetried = (() => {
+    try {
+      return localStorage.getItem(PENDING_MAGIC_LINK_TOKEN_RETRIED_KEY) === '1';
+    } catch {
+      return false;
+    }
+  })();
+
+  if (previouslyRetried) {
+    console.log('[MagicLinkResume] cold-start probe already retried once; clearing stash');
+    clearPendingMagicLinkToken();
+    return false;
+  }
+
+  try {
+    localStorage.setItem(PENDING_MAGIC_LINK_TOKEN_RETRIED_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+
+  console.log('[MagicLinkResume] cold-start probe re-attempting magic link token');
+  // Fire-and-forget: handleMagicLinkDirectly handles its own navigation
+  // (success → dashboard, failure → /link-error). Pass fromProbe so the
+  // single-retry marker we just set above is preserved even if the
+  // network attempt fails.
+  void handleMagicLinkDirectly(token, { fromProbe: true });
+  return true;
 }
 
 function buildRegistrationStep3Path(email: string, organizationId: string | null): string {
@@ -698,5 +884,13 @@ export function handleDeepLink(url: string): void {
     }
   } catch (error) {
     console.error('[DeepLink] Error handling deep link:', error);
+    // Last-resort: never silently strand the user on /app. Send them to
+    // /link-error so they have a clear next action (resend / back to login).
+    try {
+      const message = error instanceof Error ? error.message : String(error);
+      navigateInApp(buildLinkErrorPath('auth', 'unknown', { message }));
+    } catch {
+      /* ignore */
+    }
   }
 }

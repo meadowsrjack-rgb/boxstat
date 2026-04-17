@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient } from "@/lib/queryClient";
 import { authPersistence } from "@/services/authPersistence";
+import { rememberPendingInviteToken, clearPendingInviteToken } from "@/services/deepLinkService";
 import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, ChevronLeft, Users, MapPin, User } from "lucide-react";
 import BoxStatLogo from "@/components/boxstat-logo";
 
@@ -72,6 +73,42 @@ export default function InviteClaim() {
       setLastName(inviteInfo.lastName || "");
     }
   }, [inviteInfo]);
+
+  // Stash the invite token for cold-start recovery so a second tap on the
+  // claim email that loses its deep link in transit can still re-route the
+  // user back to /invite/:token instead of being stranded on /app. See
+  // task #200.
+  useEffect(() => {
+    if (!token) return;
+    rememberPendingInviteToken(token);
+  }, [token]);
+
+  // If the invite link is no longer usable (token consumed by an earlier
+  // successful claim, expired, etc.) redirect to /link-error so the user
+  // gets a clear "Send a fresh claim link" action instead of being
+  // stranded on a dead-end error screen — and never on /app. Mirrors the
+  // classifier used by /claim-verify and /magic-link-login so error copy
+  // matches reality (used vs expired vs invalid vs network).
+  useEffect(() => {
+    if (!error) return;
+    if (authLoading || isLoading || loggingOut) return;
+    clearPendingInviteToken();
+    const message = (error as Error)?.message ?? "";
+    const lower = message.toLowerCase();
+    const statusMatch = message.match(/^(\d{3})\s*:/);
+    const status = statusMatch ? Number(statusMatch[1]) : 0;
+    let reason: "expired" | "used" | "invalid" | "network" | "unknown" = "unknown";
+    if (/expired/.test(lower)) reason = "expired";
+    else if (/already.*(used|claimed)|already used|already claimed/.test(lower)) reason = "used";
+    else if (/invalid|not\s+found/.test(lower)) reason = "invalid";
+    else if (status === 404) reason = "invalid";
+    else if (status === 410 || status === 401) reason = "expired";
+    else if (status === 409) reason = "used";
+    else if (status >= 500 || /network|fetch|failed to fetch/.test(lower)) reason = "network";
+    const params = new URLSearchParams({ type: "claim-verify", reason });
+    if (message) params.set("message", message);
+    setLocation(`/link-error?${params.toString()}`);
+  }, [error, authLoading, isLoading, loggingOut, setLocation]);
 
   useEffect(() => {
     if (authLoading || !inviteInfo || loggingOut) return;
@@ -141,6 +178,7 @@ export default function InviteClaim() {
 
       setClaimed(true);
       setAutoLoggedIn(autoLoginSuccess);
+      clearPendingInviteToken();
       toast({ title: "Account activated!", description: "Welcome to BoxStat." });
       if (autoLoginSuccess) {
         setTimeout(() => {

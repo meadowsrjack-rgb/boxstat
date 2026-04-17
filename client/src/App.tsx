@@ -72,7 +72,7 @@ import QuoteCheckout from "@/pages/QuoteCheckout";
 import StoreBuy, { StoreCheckoutSuccess, StoreCheckoutCancel } from "@/pages/store-buy";
 import { useQuery } from "@tanstack/react-query";
 import { initPushNotifications, registerPushNotifications } from "@/services/pushNotificationService";
-import { initDeepLinks } from "@/services/deepLinkService";
+import { initDeepLinks, setDeepLinkCallback, markDeepLinkServiceReady } from "@/services/deepLinkService";
 import { UpdatePrompt } from "@/components/UpdatePrompt";
 
 type Profile = {
@@ -390,6 +390,15 @@ function AppRouter() {
     return () => clearTimeout(timeoutId);
   }, [isLoading]);
 
+  // Once the initial auth check has completed, the app is ready to receive
+  // deep-link navigations. Flush any URLs that arrived during the cold-start
+  // race so they win over the default initial route.
+  useEffect(() => {
+    if (!isLoading) {
+      markDeepLinkServiceReady();
+    }
+  }, [isLoading]);
+
   // Handle Splash Screen Handoff
   useEffect(() => {
     if (!isLoading) {
@@ -420,6 +429,14 @@ function AppRouter() {
 
   // Initialize deep links and error handlers
   useEffect(() => {
+    // Wire wouter navigation into the deep link service so handlers navigate
+    // through React state instead of hard window.location changes (which
+    // would race the initial route render).
+    setDeepLinkCallback((path: string) => {
+      console.log('[AppRouter] Deep link navigating via wouter to:', path);
+      setLocation(path);
+    });
+
     // Initialize deep links for Universal Links (magic link handling)
     initDeepLinks().then(() => {
       console.log('Deep link listeners initialized');

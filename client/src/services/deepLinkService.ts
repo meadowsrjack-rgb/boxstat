@@ -3,10 +3,29 @@ import { App, URLOpenListenerEvent } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { authPersistence } from './authPersistence';
 
-let deepLinkCallback: ((url: string) => void) | null = null;
+let deepLinkCallback: ((path: string) => void) | null = null;
+let isReady = false;
+const pendingUrls: string[] = [];
 
-export function setDeepLinkCallback(callback: (url: string) => void) {
+export function setDeepLinkCallback(callback: (path: string) => void) {
   deepLinkCallback = callback;
+}
+
+/**
+ * Signal that the app has finished its initial mount + auth check and is
+ * ready to receive deep-link navigations. Any URLs received before this point
+ * (e.g. from a cold-start launch URL) are queued and flushed in arrival order.
+ */
+export function markDeepLinkServiceReady() {
+  if (isReady) return;
+  isReady = true;
+  if (pendingUrls.length > 0) {
+    console.log('[DeepLink] App ready, flushing', pendingUrls.length, 'queued deep link(s)');
+    const queued = pendingUrls.splice(0, pendingUrls.length);
+    for (const url of queued) {
+      handleDeepLink(url);
+    }
+  }
 }
 
 export async function initDeepLinks(): Promise<void> {
@@ -17,12 +36,12 @@ export async function initDeepLinks(): Promise<void> {
   try {
     App.addListener('appUrlOpen', (event: URLOpenListenerEvent) => {
       console.log('[DeepLink] App opened with URL:', event.url);
-      
-      if (deepLinkCallback) {
-        deepLinkCallback(event.url);
-      } else {
-        handleDeepLink(event.url);
+      if (!isReady) {
+        console.log('[DeepLink] App not ready yet, queueing URL');
+        pendingUrls.push(event.url);
+        return;
       }
+      handleDeepLink(event.url);
     });
 
     console.log('[DeepLink] Deep link listener initialized');
@@ -30,11 +49,33 @@ export async function initDeepLinks(): Promise<void> {
     const launchUrl = await App.getLaunchUrl();
     if (launchUrl && launchUrl.url) {
       console.log('[DeepLink] Cold start launch URL detected:', launchUrl.url);
-      handleDeepLink(launchUrl.url);
+      if (!isReady) {
+        console.log('[DeepLink] App not ready yet, queueing cold-start URL');
+        pendingUrls.push(launchUrl.url);
+      } else {
+        handleDeepLink(launchUrl.url);
+      }
     }
   } catch (error) {
     console.error('[DeepLink] Failed to initialize deep links:', error);
   }
+}
+
+/**
+ * Navigate within the app. Prefers the registered wouter callback (preserves
+ * React state and route guards) and only falls back to a hard navigation when
+ * the callback hasn't been wired up yet.
+ */
+function navigateInApp(path: string): void {
+  if (deepLinkCallback) {
+    try {
+      deepLinkCallback(path);
+      return;
+    } catch (err) {
+      console.error('[DeepLink] Callback navigation failed, falling back to hard navigation:', err);
+    }
+  }
+  window.location.href = path;
 }
 
 async function exchangeAuthToken(token: string): Promise<boolean> {
@@ -62,16 +103,16 @@ async function exchangeAuthToken(token: string): Promise<boolean> {
         }
       }
       
-      window.location.href = redirectPath;
+      navigateInApp(redirectPath);
       return true;
     } else {
       console.error('[DeepLink] Failed to exchange token:', data.message);
-      window.location.href = '/login?error=auth_failed';
+      navigateInApp('/login?error=auth_failed');
       return false;
     }
   } catch (error) {
     console.error('[DeepLink] Error exchanging auth token:', error);
-    window.location.href = '/login?error=auth_failed';
+    navigateInApp('/login?error=auth_failed');
     return false;
   }
 }
@@ -94,7 +135,7 @@ async function handleMagicLinkDirectly(magicToken: string): Promise<void> {
 
       if (data.needsPassword) {
         console.log('[DeepLink] User needs to set password, redirecting...');
-        window.location.href = '/set-password';
+        navigateInApp('/set-password');
         return;
       }
 
@@ -109,15 +150,23 @@ async function handleMagicLinkDirectly(magicToken: string): Promise<void> {
       }
 
       console.log('[DeepLink] Redirecting to:', redirectPath);
-      window.location.href = redirectPath;
+      navigateInApp(redirectPath);
     } else {
       console.error('[DeepLink] Magic link login failed:', data.message);
-      window.location.href = '/login?error=magic_link_failed';
+      navigateInApp('/login?error=magic_link_failed');
     }
   } catch (error) {
     console.error('[DeepLink] Error processing magic link:', error);
-    window.location.href = '/login?error=magic_link_failed';
+    navigateInApp('/login?error=magic_link_failed');
   }
+}
+
+function buildRegistrationStep3Path(email: string, organizationId: string | null): string {
+  let path = `/registration?email=${encodeURIComponent(email)}&verified=true`;
+  if (organizationId) {
+    path += `&organizationId=${encodeURIComponent(organizationId)}`;
+  }
+  return path;
 }
 
 async function handleVerifyEmailDirectly(
@@ -141,21 +190,38 @@ async function handleVerifyEmailDirectly(
     if (response.ok && data.success) {
       console.log('[DeepLink] Email verification successful in app');
       const userEmail = data.email || email || '';
-      const orgId = organizationId || '';
-      let redirectPath = `/registration?email=${encodeURIComponent(userEmail)}&verified=true`;
-      if (orgId) {
-        redirectPath += `&organizationId=${encodeURIComponent(orgId)}`;
-      }
-      window.location.href = redirectPath;
-    } else {
-      console.error('[DeepLink] Email verification failed:', data.message);
-      const errMsg = encodeURIComponent(data.message || 'Verification failed. Please try again.');
-      window.location.href = `/verify-email?error=${errMsg}`;
+      navigateInApp(buildRegistrationStep3Path(userEmail, organizationId));
+      return;
     }
+
+    // If the token was already consumed by the browser handoff (the web
+    // verify page hits /api/auth/verify-email first, then opens the app
+    // via boxstat://), the API returns 404 "Invalid or expired
+    // verification token" or 400 "Verification token has expired". When
+    // we have an email param to anchor the user, treat that specific
+    // class of failure as a successful handoff and route to step 3.
+    const message: string = (data && data.message) || '';
+    const isConsumedOrExpired =
+      response.status === 404 ||
+      response.status === 400 ||
+      /invalid|expired/i.test(message);
+
+    if (email && isConsumedOrExpired) {
+      console.warn(
+        '[DeepLink] Verify-email token appears already consumed/expired and email param is present; routing to registration step 3.',
+        { status: response.status, message },
+      );
+      navigateInApp(buildRegistrationStep3Path(email, organizationId));
+      return;
+    }
+
+    console.error('[DeepLink] Email verification failed:', message);
+    const errMsg = encodeURIComponent(message || 'Verification failed. Please try again.');
+    navigateInApp(`/verify-email?error=${errMsg}`);
   } catch (error) {
     console.error('[DeepLink] Error verifying email:', error);
     const errMsg = encodeURIComponent('An error occurred during verification. Please try again.');
-    window.location.href = `/verify-email?error=${errMsg}`;
+    navigateInApp(`/verify-email?error=${errMsg}`);
   }
 }
 
@@ -200,7 +266,7 @@ export function handleDeepLink(url: string): void {
           console.log('[DeepLink] No session token, user may need to re-login');
         }
         // Navigate regardless - the page will handle auth state
-        window.location.href = `/unified-account?payment=success&session_id=${sessionId || ''}`;
+        navigateInApp(`/unified-account?payment=success&session_id=${sessionId || ''}`);
       });
       return;
     }
@@ -217,7 +283,7 @@ export function handleDeepLink(url: string): void {
       }
       
       // Navigate to account page
-      window.location.href = '/unified-account?payment=canceled';
+      navigateInApp('/unified-account?payment=canceled');
       return;
     }
 
@@ -231,7 +297,7 @@ export function handleDeepLink(url: string): void {
       const token = searchParams.get('token');
       if (token) {
         console.log('[DeepLink] Claim verify token detected, navigating...');
-        window.location.href = `/claim-verify?token=${token}`;
+        navigateInApp(`/claim-verify?token=${token}`);
       }
     } else if (pathname === '/verify-email' || pathname.startsWith('/verify-email')) {
       const token = searchParams.get('token');
@@ -240,10 +306,23 @@ export function handleDeepLink(url: string): void {
       if (token) {
         console.log('[DeepLink] Verify-email token detected, processing in app...');
         handleVerifyEmailDirectly(token, emailParam, organizationId);
+      } else if (emailParam) {
+        // No token but verified email handed off by the browser flow — treat
+        // this just like the /registration handoff so the user lands on step 3.
+        console.log('[DeepLink] Verify-email without token but with email param; routing to registration step 3');
+        navigateInApp(buildRegistrationStep3Path(emailParam, organizationId));
       }
+    } else if (pathname === '/registration' || pathname.startsWith('/registration')) {
+      // Explicit handling for the verify-email -> app handoff URL:
+      //   boxstat://boxstat.app/registration?email=...&verified=true
+      // (and the equivalent https Universal Link). Preserve all query params
+      // so registration-flow.tsx can read `email`, `verified`, and
+      // `organizationId` and start at step 3.
+      console.log('[DeepLink] Registration deep link detected, navigating with preserved query');
+      navigateInApp(`/registration${urlObj.search}`);
     } else {
       console.log('[DeepLink] Unknown path, navigating to:', pathname);
-      window.location.href = pathname + urlObj.search;
+      navigateInApp(pathname + urlObj.search);
     }
   } catch (error) {
     console.error('[DeepLink] Error handling deep link:', error);

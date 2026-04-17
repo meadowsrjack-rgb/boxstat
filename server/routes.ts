@@ -6080,26 +6080,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/stripe-connect/login-link', requireAuth, async (req: any, res) => {
     if (!stripe) {
-      return res.status(500).json({ error: 'Platform Stripe is not configured' });
+      return res.status(500).json({ error: 'platform_not_configured', message: 'Platform Stripe is not configured' });
     }
 
     try {
       const { organizationId, role } = req.user;
       const isAdminUser = role === 'admin' || await hasAdminProfile(req.user.id, organizationId);
       if (!isAdminUser) {
-        return res.status(403).json({ error: 'Only admins can access this' });
+        return res.status(403).json({ error: 'forbidden', message: 'Only admins can access this' });
       }
 
       const org = await storage.getOrganization(organizationId);
       if (!org?.stripeConnectedId) {
-        return res.status(400).json({ error: 'No connected Stripe account found' });
+        return res.status(400).json({ error: 'not_connected', message: 'No connected Stripe account found' });
       }
 
-      const loginLink = await stripe.accounts.createLoginLink(org.stripeConnectedId);
-      res.json({ url: loginLink.url });
+      if ((org.stripeConnectType ?? 'express') === 'standard') {
+        return res.status(400).json({
+          error: 'standard_account',
+          message: 'Login links are only available for Express accounts. Use the Stripe Dashboard directly.',
+        });
+      }
+
+      let account;
+      try {
+        account = await stripe.accounts.retrieve(org.stripeConnectedId);
+      } catch (retrieveErr: any) {
+        const code = retrieveErr?.code || retrieveErr?.raw?.code;
+        const stripeMsg = retrieveErr?.message || retrieveErr?.raw?.message;
+        console.error(
+          `[Stripe Connect] Failed to retrieve account ${org.stripeConnectedId} for org ${organizationId}: code=${code} message=${stripeMsg}`,
+        );
+        if (code === 'resource_missing' || code === 'account_invalid') {
+          await storage.updateOrganization(organizationId, {
+            stripeConnectedId: null,
+            stripeConnectStatus: 'not_started',
+            stripeConnectType: 'express',
+          });
+          return res.status(409).json({
+            error: 'account_missing',
+            message: 'The connected Stripe account no longer exists. Please reconnect a payment account.',
+          });
+        }
+        return res.status(502).json({
+          error: 'stripe_error',
+          code,
+          message: stripeMsg || 'Stripe rejected the request.',
+        });
+      }
+
+      if (!account.details_submitted || !account.charges_enabled || !account.payouts_enabled) {
+        console.warn(
+          `[Stripe Connect] Login link blocked for org ${organizationId} acct ${org.stripeConnectedId}: details_submitted=${account.details_submitted} charges_enabled=${account.charges_enabled} payouts_enabled=${account.payouts_enabled}`,
+        );
+        if (org.stripeConnectStatus === 'active') {
+          await storage.updateOrganization(organizationId, {
+            stripeConnectStatus: account.details_submitted ? 'pending_verification' : 'pending',
+          });
+        }
+        return res.status(409).json({
+          error: 'onboarding_incomplete',
+          message: "Your Stripe account hasn't finished onboarding yet — finish setup to access the payout dashboard.",
+          details: {
+            detailsSubmitted: !!account.details_submitted,
+            chargesEnabled: !!account.charges_enabled,
+            payoutsEnabled: !!account.payouts_enabled,
+          },
+        });
+      }
+
+      try {
+        const loginLink = await stripe.accounts.createLoginLink(org.stripeConnectedId);
+        res.json({ url: loginLink.url });
+      } catch (linkErr: any) {
+        const code = linkErr?.code || linkErr?.raw?.code;
+        const stripeMsg = linkErr?.message || linkErr?.raw?.message;
+        console.error(
+          `[Stripe Connect] createLoginLink failed for org ${organizationId} acct ${org.stripeConnectedId}: code=${code} message=${stripeMsg}`,
+        );
+        if (code === 'resource_missing' || code === 'account_invalid') {
+          await storage.updateOrganization(organizationId, {
+            stripeConnectedId: null,
+            stripeConnectStatus: 'not_started',
+            stripeConnectType: 'express',
+          });
+          return res.status(409).json({
+            error: 'account_missing',
+            message: 'The connected Stripe account no longer exists. Please reconnect a payment account.',
+          });
+        }
+        return res.status(502).json({
+          error: 'stripe_error',
+          code,
+          message: stripeMsg || 'Stripe rejected the login-link request.',
+        });
+      }
     } catch (error: any) {
       console.error('Error creating login link:', error);
-      res.status(500).json({ error: 'Failed to create login link', message: error.message });
+      res.status(500).json({ error: 'internal_error', message: error.message });
     }
   });
 

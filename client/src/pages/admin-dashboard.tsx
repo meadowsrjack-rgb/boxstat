@@ -23,6 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import {
   Settings,
   Users,
@@ -12157,8 +12158,58 @@ function StripeSettingsSection() {
         window.open(data.url, "_blank");
       }
     },
-    onError: () => {
-      toast({ title: "Failed to open payment dashboard", variant: "destructive" });
+    onError: (err: any) => {
+      const raw: string = err?.message ?? "";
+      const match = raw.match(/^(\d{3}):\s*(.*)$/s);
+      let parsed: any = null;
+      if (match) {
+        try { parsed = JSON.parse(match[2]); } catch { /* not JSON */ }
+      }
+      const code = parsed?.error;
+
+      if (code === "onboarding_incomplete") {
+        toast({
+          title: "Finish Stripe onboarding first",
+          description: parsed?.message || "Your Stripe account hasn't finished onboarding yet.",
+          variant: "destructive",
+          action: (
+            <ToastAction
+              altText="Resume onboarding"
+              onClick={() => onboardMutation.mutate()}
+            >
+              Resume setup
+            </ToastAction>
+          ),
+        });
+        return;
+      }
+
+      if (code === "account_missing") {
+        toast({
+          title: "Stripe account no longer connected",
+          description: parsed?.message || "The connected Stripe account no longer exists. Please reconnect.",
+          variant: "destructive",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/stripe-connect/status"] });
+        refetchConnect();
+        return;
+      }
+
+      if (code === "standard_account") {
+        toast({
+          title: "Use the Stripe Dashboard",
+          description: parsed?.message || "Login links are only available for Express accounts.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const fallback = parsed?.message || (raw ? raw : "Network error. Please try again.");
+      toast({
+        title: "Failed to open payment dashboard",
+        description: fallback,
+        variant: "destructive",
+      });
     },
   });
 

@@ -38,10 +38,15 @@ export default function ClaimVerify() {
       reason: "expired" | "used" | "invalid" | "network" | "unknown",
       detail?: string,
       email?: string,
+      token?: string,
     ) => {
       const qp = new URLSearchParams({ type: "claim-verify", reason });
       if (detail) qp.set("message", detail);
       if (email) qp.set("email", email);
+      // Forward the original token so the link-error screen can resend
+      // the claim email tied to the right account even when the user
+      // doesn't remember which email they originally used.
+      if (token) qp.set("token", token);
       return `/link-error?${qp.toString()}`;
     };
 
@@ -70,7 +75,14 @@ export default function ClaimVerify() {
         const data = await response.json();
 
         if (!response.ok) {
-          setLocation(buildLinkErrorPath(classify(response.status, data?.message), data?.message));
+          setLocation(
+            buildLinkErrorPath(
+              classify(response.status, data?.message),
+              data?.message,
+              undefined,
+              token,
+            ),
+          );
           return;
         }
 
@@ -101,7 +113,7 @@ export default function ClaimVerify() {
 
       } catch (error: any) {
         console.error("Claim verification failed:", error);
-        setLocation(buildLinkErrorPath("network", error?.message));
+        setLocation(buildLinkErrorPath("network", error?.message, undefined, token));
       }
     };
 

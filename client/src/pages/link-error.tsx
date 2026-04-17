@@ -60,6 +60,16 @@ function parseReason(value: string | null): LinkReason {
   return "unknown";
 }
 
+interface RequestClaimResponse {
+  success?: boolean;
+  message?: string;
+  sentToEmail?: string;
+  sentToEmailMasked?: string;
+  sentToDifferentInbox?: boolean;
+  autoRedirect?: boolean;
+  redirectUrl?: string;
+}
+
 export default function LinkError() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -72,6 +82,9 @@ export default function LinkError() {
       email: params.get("email") || "",
       organizationId: params.get("organizationId") || "",
       message: params.get("message") || "",
+      // For claim-verify, the original (expired/used) token is forwarded
+      // so we can resend without making the user retype their email.
+      token: params.get("token") || "",
     };
   }, []);
 
@@ -81,15 +94,25 @@ export default function LinkError() {
   const [email, setEmail] = useState(initial.email);
   const [isSending, setIsSending] = useState(false);
   const [sent, setSent] = useState(false);
+  // Server-supplied success message (e.g. masked recipient inbox) so we
+  // surface the API's plain-English response instead of a generic toast.
+  const [sentMessage, setSentMessage] = useState<string | null>(null);
 
   // Reset "sent" state if the user edits their email after a send.
   useEffect(() => {
-    if (sent) setSent(false);
+    if (sent) {
+      setSent(false);
+      setSentMessage(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [email]);
 
   const isAuthOnly = initial.type === "auth";
-  const needsEmail = !isAuthOnly && !email.trim();
+  // For claim-verify with a forwarded token we can resend without the
+  // user typing anything — the backend resolves the account from the
+  // token and emails the address on file.
+  const canSendWithoutEmail = initial.type === "claim-verify" && Boolean(initial.token);
+  const needsEmail = !isAuthOnly && !canSendWithoutEmail && !email.trim();
 
   const handleSend = async () => {
     if (isAuthOnly) {
@@ -97,7 +120,7 @@ export default function LinkError() {
       return;
     }
     const trimmed = email.trim();
-    if (!trimmed) {
+    if (!canSendWithoutEmail && !trimmed) {
       toast({
         title: "Email needed",
         description: `Enter the email you used so we can send a new ${config.product}.`,
@@ -107,7 +130,11 @@ export default function LinkError() {
     }
 
     setIsSending(true);
+    setSentMessage(null);
     try {
+      let serverMessage: string | undefined;
+      let autoRedirect: { url: string; message?: string } | undefined;
+
       if (initial.type === "verify-email") {
         await apiRequest("/api/auth/send-verification", {
           method: "POST",
@@ -122,21 +149,63 @@ export default function LinkError() {
           data: { email: trimmed },
         });
       } else if (initial.type === "claim-verify") {
-        await apiRequest("/api/auth/request-claim", {
+        // Forward the token (when present) so the backend resends the
+        // claim email to the account on file even if the typed email
+        // doesn't match — and so the user can resend in one tap.
+        const payload: { email?: string; token?: string } = {};
+        if (trimmed) payload.email = trimmed;
+        if (initial.token) payload.token = initial.token;
+        const data = (await apiRequest("/api/auth/request-claim", {
           method: "POST",
-          data: { email: trimmed },
-        });
+          data: payload,
+        })) as RequestClaimResponse | undefined;
+        serverMessage = data?.message?.trim();
+        if (data?.autoRedirect && data?.redirectUrl) {
+          autoRedirect = { url: data.redirectUrl, message: serverMessage };
+        }
       }
 
+      if (autoRedirect) {
+        toast({ title: "Development mode", description: autoRedirect.message ?? "Redirecting…" });
+        setTimeout(() => setLocation(autoRedirect!.url), 600);
+        return;
+      }
+
+      const successDescription =
+        serverMessage ||
+        (trimmed
+          ? `We've sent a new ${config.product} to ${trimmed}.`
+          : `We've sent a new ${config.product} to the address on file.`);
+
       setSent(true);
+      setSentMessage(successDescription);
       toast({
         title: "Fresh link on the way",
-        description: `We've sent a new ${config.product} to ${trimmed}.`,
+        description: successDescription,
       });
     } catch (error: any) {
-      const description =
-        error?.message ||
-        `We couldn't send a new ${config.product} just now. Please try again in a moment.`;
+      // apiRequest throws errors shaped like "<status>: <body>" where
+      // body is JSON like { message: "..." }. Pull out the server's
+      // human message so the user sees something actionable instead of
+      // the raw status line.
+      const raw = String(error?.message ?? "");
+      const match = raw.match(/^(\d+):\s*(.+)$/s);
+      let description: string | undefined;
+      if (match) {
+        const body = match[2];
+        try {
+          const parsed = JSON.parse(body);
+          if (parsed && typeof parsed.message === "string") {
+            description = parsed.message;
+          }
+        } catch {
+          description = body;
+        }
+      }
+      if (!description) {
+        description =
+          raw || `We couldn't send a new ${config.product} just now. Please try again in a moment.`;
+      }
       toast({
         title: "Couldn't send link",
         description,
@@ -166,7 +235,10 @@ export default function LinkError() {
             </CardTitle>
             <CardDescription data-testid="text-link-error-description">
               {sent
-                ? `We sent a new ${config.product} to ${email.trim()}. It can take a minute to arrive — be sure to check your spam folder.`
+                ? sentMessage ??
+                  (email.trim()
+                    ? `We sent a new ${config.product} to ${email.trim()}. It can take a minute to arrive — be sure to check your spam folder.`
+                    : `We sent a new ${config.product} to the email address on file. It can take a minute to arrive — be sure to check your spam folder.`)
                 : reasonCopy}
             </CardDescription>
             {!sent && initial.message && import.meta.env.DEV && (
@@ -177,7 +249,7 @@ export default function LinkError() {
           </CardHeader>
 
           <CardContent className="flex flex-col gap-3">
-            {!sent && !isAuthOnly && (
+            {!sent && !isAuthOnly && !canSendWithoutEmail && (
               <div className="space-y-2">
                 <Label htmlFor="link-error-email">Email address</Label>
                 <Input

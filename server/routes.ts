@@ -9618,16 +9618,21 @@ a.btn:active{background:#dc2626;}
       organizationId
     );
     
-    console.log(`🔍 Coach events debug for ${effectiveUserId}:`);
-    console.log(`   Teams: [${teamIds.join(', ')}]`);
-    console.log(`   Divisions: [${divisionIds.join(', ')}]`);
-    console.log(`   Programs: [${programIds.join(', ')}]`);
-    console.log(`   Total events in org: ${allEvents.length}`);
-    
+    const debugCoachEvents = req.query.debug === '1' || process.env.DEBUG_COACH_EVENTS === '1';
+    if (debugCoachEvents) {
+      console.log(`🔍 Coach events debug for ${effectiveUserId}:`);
+      console.log(`   Teams: [${teamIds.join(', ')}]`);
+      console.log(`   Divisions: [${divisionIds.join(', ')}]`);
+      console.log(`   Programs: [${programIds.join(', ')}]`);
+      console.log(`   Total events in org: ${allEvents.length}`);
+    }
+
     // Filter events using shared helper
-    const filteredEvents = filterEventsByScope(allEvents, effectiveRole, teamIds, divisionIds, programIds, targetUserId, false);
-    
-    console.log(`   Filtered events: ${filteredEvents.length}`);
+    const filteredEvents = filterEventsByScope(allEvents, effectiveRole, teamIds, divisionIds, programIds, targetUserId, debugCoachEvents);
+
+    if (debugCoachEvents) {
+      console.log(`   Filtered events: ${filteredEvents.length}`);
+    }
     
     res.json(filteredEvents);
   });

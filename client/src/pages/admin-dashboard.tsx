@@ -13495,8 +13495,6 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
   const [editorForm, setEditorForm] = useState<any>({});
   const [isTeamUploadOpen, setIsTeamUploadOpen] = useState(false);
   const [isUploadingTeams, setIsUploadingTeams] = useState(false);
-  const [enrollDatePlayer, setEnrollDatePlayer] = useState<any>(null);
-  const [enrollEndDate, setEnrollEndDate] = useState('');
 
   const PRESET_COLORS = ['#DC2626', '#2563EB', '#16A34A', '#7C3AED', '#F59E0B', '#EC4899', '#0891B2', '#1D4ED8', '#4F46E5', '#059669'];
   const COACH_ROLES: Record<string, string> = { HC: 'Head Coach', AC: 'Assistant Coach', TM: 'Team Manager', SC: 'Strength Coach' };
@@ -14480,13 +14478,6 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
                         />
                       </div>
                       <div className="border border-gray-200 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
-                        {editingTeam?.programId && (
-                          <div className="px-4 py-2 bg-blue-50 border-b border-blue-100">
-                            <p className="text-[11px] text-blue-700">
-                              Unenrolled players can be added to the roster. You'll be asked for an optional enrollment expiry date — without one, they'll need to enroll through payments for full access.
-                            </p>
-                          </div>
-                        )}
                         {filteredPlayerSearch.length === 0 ? (
                           <p className="text-sm text-gray-500 text-center py-8">No players found</p>
                         ) : filteredPlayerSearch.map((p: any) => {
@@ -14496,16 +14487,7 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
                           return (
                             <button
                               key={p.id}
-                              onClick={() => {
-                                if (isOnTeam) {
-                                  togglePlayer(p, true);
-                                } else if (!isEnrolled && editingTeam?.programId) {
-                                  setEnrollDatePlayer(p);
-                                  setEnrollEndDate('');
-                                } else {
-                                  togglePlayer(p, false);
-                                }
-                              }}
+                              onClick={() => togglePlayer(p, isOnTeam)}
                               className={`w-full flex items-center justify-between px-4 py-2.5 text-left border-b last:border-b-0 transition-colors ${isOnTeam ? 'bg-green-50' : 'hover:bg-gray-50'}`}
                             >
                               <div className="flex items-center gap-3">
@@ -14662,46 +14644,6 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={!!enrollDatePlayer} onOpenChange={(open) => { if (!open) { setEnrollDatePlayer(null); setEnrollEndDate(''); } }}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Add Unenrolled Player</DialogTitle>
-            <DialogDescription>
-              {enrollDatePlayer?.firstName} {enrollDatePlayer?.lastName} is not enrolled in this program.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <label className="text-sm font-medium text-gray-700">Enrollment Expiry Date (optional)</label>
-            <Input
-              type="date"
-              value={enrollEndDate}
-              onChange={(e) => setEnrollEndDate(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
-              max={(() => { const d = new Date(); d.setMonth(d.getMonth() + 2); return d.toISOString().split('T')[0]; })()}
-            />
-            <p className="text-[11px] text-gray-500">
-              {enrollEndDate
-                ? "The player will have full access until this date and will be prompted to enroll through payments before it expires."
-                : "Without a date, the player will appear on the roster but won't have access to team features until they enroll and pay through the Payments tab."}
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setEnrollDatePlayer(null); setEnrollEndDate(''); }}>Cancel</Button>
-            <Button
-              onClick={async () => {
-                const player = enrollDatePlayer;
-                const dateVal = enrollEndDate || undefined;
-                setEnrollDatePlayer(null);
-                setEnrollEndDate('');
-                await togglePlayer(player, false, dateVal);
-              }}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Add to Roster
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

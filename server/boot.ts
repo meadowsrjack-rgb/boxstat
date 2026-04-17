@@ -41,6 +41,28 @@ export async function ensureAuxTables() {
         updated_at timestamp DEFAULT now()
       );
     `);
+
+    // Pending claim handoff store. See server/lib/pending-claim-store.ts and
+    // task #191. Created here (in addition to the Drizzle schema) so a fresh
+    // boot against an un-migrated database still works.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pending_claims (
+        code varchar PRIMARY KEY NOT NULL,
+        email varchar NOT NULL,
+        organization_id varchar,
+        account_id varchar,
+        created_at timestamp NOT NULL DEFAULT now(),
+        expires_at timestamp NOT NULL
+      );
+    `);
+    // Enforce one active handoff row per email so the "latest wins" replace
+    // is atomic under concurrent mints. See storePendingClaim().
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS pending_claims_email_uniq ON pending_claims (email);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS pending_claims_expires_at_idx ON pending_claims (expires_at);
+    `);
   } finally {
     client.release();
   }

@@ -1,9 +1,11 @@
 import type { Express } from "express";
 import { z } from "zod";
+import { requireAuth, isAdmin } from "../auth";
 import {
   storePendingClaim,
   consumePendingClaimByCode,
   peekPendingClaimByEmail,
+  countLivePendingClaims,
 } from "../lib/pending-claim-store";
 
 const handoffBodySchema = z.object({
@@ -38,7 +40,7 @@ export function registerClaimHandoffRoutes(app: Express): void {
   app.post("/api/auth/claim/handoff", async (req, res) => {
     try {
       const parsed = handoffBodySchema.parse(req.body);
-      const { code, record } = storePendingClaim({
+      const { code, record } = await storePendingClaim({
         email: parsed.email,
         organizationId: parsed.organizationId ?? null,
         accountId: parsed.accountId ?? null,
@@ -64,21 +66,26 @@ export function registerClaimHandoffRoutes(app: Express): void {
     if (!code) {
       return res.status(400).json({ success: false, message: "Missing code" });
     }
-    const record = consumePendingClaimByCode(code);
-    if (!record) {
-      console.log(`[ClaimResume] pending lookup MISS code=${code}`);
-      return res.status(404).json({ success: false, message: "No pending claim for that code" });
+    try {
+      const record = await consumePendingClaimByCode(code);
+      if (!record) {
+        console.log(`[ClaimResume] pending lookup MISS code=${code}`);
+        return res.status(404).json({ success: false, message: "No pending claim for that code" });
+      }
+      console.log(`[ClaimResume] pending lookup HIT code=${code} email=${record.email}`);
+      res.json({
+        success: true,
+        pending: {
+          email: record.email,
+          organizationId: record.organizationId,
+          accountId: record.accountId,
+          createdAt: record.createdAt,
+        },
+      });
+    } catch (error) {
+      console.error("[ClaimResume] pending lookup error", error);
+      res.status(500).json({ success: false, message: "Could not look up pending claim." });
     }
-    console.log(`[ClaimResume] pending lookup HIT code=${code} email=${record.email}`);
-    res.json({
-      success: true,
-      pending: {
-        email: record.email,
-        organizationId: record.organizationId,
-        accountId: record.accountId,
-        createdAt: record.createdAt,
-      },
-    });
   });
 
   // Best-effort lookup by email when the handoff code is lost. Non-destructive
@@ -94,19 +101,37 @@ export function registerClaimHandoffRoutes(app: Express): void {
     if (!email) {
       return res.status(400).json({ success: false, message: "Missing email" });
     }
-    const record = peekPendingClaimByEmail(email);
-    if (!record) {
-      return res.status(404).json({ success: false, message: "No pending claim for that email" });
+    try {
+      const record = await peekPendingClaimByEmail(email);
+      if (!record) {
+        return res.status(404).json({ success: false, message: "No pending claim for that email" });
+      }
+      console.log(`[ClaimResume] pending-by-email HIT email=${record.email}`);
+      // Minimal payload — only what the app needs to resume registration step
+      // 3. Don't expose accountId or createdAt to an unauthenticated caller.
+      res.json({
+        success: true,
+        pending: {
+          email: record.email,
+          organizationId: record.organizationId,
+        },
+      });
+    } catch (error) {
+      console.error("[ClaimResume] pending-by-email error", error);
+      res.status(500).json({ success: false, message: "Could not look up pending claim." });
     }
-    console.log(`[ClaimResume] pending-by-email HIT email=${record.email}`);
-    // Minimal payload — only what the app needs to resume registration step
-    // 3. Don't expose accountId or createdAt to an unauthenticated caller.
-    res.json({
-      success: true,
-      pending: {
-        email: record.email,
-        organizationId: record.organizationId,
-      },
-    });
+  });
+
+  // Admin observability: how many live pending-claim handoffs are sitting in
+  // the store right now. Useful as a basic metric while debugging deploy-time
+  // claim drops. Authenticated admin only.
+  app.get("/api/admin/pending-claims/stats", requireAuth, isAdmin, async (_req, res) => {
+    try {
+      const count = await countLivePendingClaims();
+      res.json({ success: true, livePendingClaims: count });
+    } catch (error) {
+      console.error("[ClaimResume] stats error", error);
+      res.status(500).json({ success: false, message: "Could not read pending-claim stats." });
+    }
   });
 }

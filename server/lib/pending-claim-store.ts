@@ -1,4 +1,7 @@
 import { randomBytes } from "crypto";
+import { and, eq, gt, lt, sql } from "drizzle-orm";
+import { db } from "../db";
+import { pendingClaims } from "@shared/schema";
 
 export interface PendingClaimRecord {
   email: string;
@@ -8,22 +11,17 @@ export interface PendingClaimRecord {
 }
 
 const TTL_MS = 10 * 60 * 1000;
+const SWEEP_INTERVAL_MS = 60 * 1000;
 
-const byCode = new Map<string, PendingClaimRecord>();
-const byEmail = new Map<string, { code: string; record: PendingClaimRecord }>();
+let sweeperHandle: ReturnType<typeof setInterval> | null = null;
 
-function isExpired(record: PendingClaimRecord): boolean {
-  return Date.now() - record.createdAt > TTL_MS;
-}
-
-function sweep(): void {
-  for (const [code, record] of byCode) {
-    if (isExpired(record)) {
-      byCode.delete(code);
-      const indexed = byEmail.get(record.email);
-      if (indexed && indexed.code === code) byEmail.delete(record.email);
-    }
-  }
+function rowToRecord(row: typeof pendingClaims.$inferSelect): PendingClaimRecord {
+  return {
+    email: row.email,
+    organizationId: row.organizationId ?? null,
+    accountId: row.accountId ?? null,
+    createdAt: row.createdAt instanceof Date ? row.createdAt.getTime() : Date.now(),
+  };
 }
 
 export function generateHandoffCode(): string {
@@ -31,39 +29,61 @@ export function generateHandoffCode(): string {
   return randomBytes(8).toString("hex").toUpperCase();
 }
 
-export function storePendingClaim(input: {
+export async function storePendingClaim(input: {
   email: string;
   organizationId?: string | null;
   accountId?: string | null;
-}): { code: string; record: PendingClaimRecord } {
-  sweep();
+}): Promise<{ code: string; record: PendingClaimRecord }> {
   const email = input.email.toLowerCase().trim();
-  const record: PendingClaimRecord = {
-    email,
-    organizationId: input.organizationId ?? null,
-    accountId: input.accountId ?? null,
-    createdAt: Date.now(),
-  };
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + TTL_MS);
   const code = generateHandoffCode();
-  byCode.set(code, record);
-  // Replace any prior code for this email so the most recent handoff wins.
-  byEmail.set(email, { code, record });
-  return { code, record };
+
+  // Atomic "latest wins" per email: a unique index on email ensures only one
+  // live row exists per address, and ON CONFLICT replaces the prior code
+  // (and all metadata) in a single statement so concurrent mints can't leave
+  // multiple live rows behind.
+  const [row] = await db
+    .insert(pendingClaims)
+    .values({
+      code,
+      email,
+      organizationId: input.organizationId ?? null,
+      accountId: input.accountId ?? null,
+      createdAt: now,
+      expiresAt,
+    })
+    .onConflictDoUpdate({
+      target: pendingClaims.email,
+      set: {
+        code,
+        organizationId: input.organizationId ?? null,
+        accountId: input.accountId ?? null,
+        createdAt: now,
+        expiresAt,
+      },
+    })
+    .returning();
+
+  return { code, record: rowToRecord(row) };
 }
 
 /**
  * Look up and consume a pending claim by its single-use handoff code.
- * The record is deleted on read so a code cannot be replayed.
+ * The record is deleted on read so a code cannot be replayed. Returns null
+ * if the code is unknown or already expired (expired rows are also deleted).
  */
-export function consumePendingClaimByCode(code: string): PendingClaimRecord | null {
-  sweep();
-  const record = byCode.get(code);
-  if (!record) return null;
-  byCode.delete(code);
-  const indexed = byEmail.get(record.email);
-  if (indexed && indexed.code === code) byEmail.delete(record.email);
-  if (isExpired(record)) return null;
-  return record;
+export async function consumePendingClaimByCode(
+  code: string,
+): Promise<PendingClaimRecord | null> {
+  const [row] = await db
+    .delete(pendingClaims)
+    .where(eq(pendingClaims.code, code))
+    .returning();
+  if (!row) return null;
+  const expiresAt = row.expiresAt instanceof Date ? row.expiresAt.getTime() : 0;
+  if (expiresAt <= Date.now()) return null;
+  return rowToRecord(row);
 }
 
 /**
@@ -71,15 +91,61 @@ export function consumePendingClaimByCode(code: string): PendingClaimRecord | nu
  * lost in transit. Does NOT consume the record so the regular code-based
  * resume path can still pick it up.
  */
-export function peekPendingClaimByEmail(email: string): PendingClaimRecord | null {
-  sweep();
-  const indexed = byEmail.get(email.toLowerCase().trim());
-  if (!indexed) return null;
-  if (isExpired(indexed.record)) return null;
-  return indexed.record;
+export async function peekPendingClaimByEmail(
+  email: string,
+): Promise<PendingClaimRecord | null> {
+  const normalized = email.toLowerCase().trim();
+  const now = new Date();
+  const [row] = await db
+    .select()
+    .from(pendingClaims)
+    .where(and(eq(pendingClaims.email, normalized), gt(pendingClaims.expiresAt, now)))
+    .limit(1);
+  if (!row) return null;
+  return rowToRecord(row);
 }
 
-export function _resetPendingClaimStoreForTests(): void {
-  byCode.clear();
-  byEmail.clear();
+/** Returns the count of currently-live (non-expired) pending claim records. */
+export async function countLivePendingClaims(): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(pendingClaims)
+    .where(gt(pendingClaims.expiresAt, new Date()));
+  return row?.count ?? 0;
+}
+
+/** Delete expired rows. Returns the number of rows removed. */
+export async function sweepExpiredPendingClaims(): Promise<number> {
+  const rows = await db
+    .delete(pendingClaims)
+    .where(lt(pendingClaims.expiresAt, new Date()))
+    .returning({ code: pendingClaims.code });
+  return rows.length;
+}
+
+/**
+ * Start the background sweeper. Idempotent: calling this more than once is a
+ * no-op. The sweeper runs every minute and removes expired pending-claim
+ * rows so reads don't have to do that work inline.
+ */
+export function startPendingClaimSweeper(): void {
+  if (sweeperHandle) return;
+  sweeperHandle = setInterval(() => {
+    sweepExpiredPendingClaims().catch((err) => {
+      console.error("[ClaimResume] sweeper error", err);
+    });
+  }, SWEEP_INTERVAL_MS);
+  // Don't keep the event loop alive solely for this timer.
+  if (typeof sweeperHandle.unref === "function") sweeperHandle.unref();
+}
+
+export function stopPendingClaimSweeper(): void {
+  if (sweeperHandle) {
+    clearInterval(sweeperHandle);
+    sweeperHandle = null;
+  }
+}
+
+export async function _resetPendingClaimStoreForTests(): Promise<void> {
+  await db.delete(pendingClaims);
 }

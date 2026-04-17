@@ -9,6 +9,7 @@ import { db } from "./db";
 import { notificationScheduler } from "./services/notificationScheduler";
 import { ensureAuxTables } from "./boot";
 import { runMigrationExpiryBackfill } from "./migrationExpiryBackfill";
+import { startPendingClaimSweeper } from "./lib/pending-claim-store";
 
 const app = express();
 
@@ -231,6 +232,10 @@ app.use((req, res, next) => {
     
     // Start the notification scheduler for automatic reminders
     notificationScheduler.start();
+
+    // Start the background sweeper that removes expired pending-claim
+    // handoff records (task #191). Runs once per minute.
+    startPendingClaimSweeper();
 
     // One-shot idempotent backfill: clamp migration enrollments with endDate
     // more than 2 months after createdAt. Safe to run on every boot.

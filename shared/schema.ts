@@ -88,6 +88,20 @@ export const organizations = pgTable("organizations", {
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 });
 
+// Pending claim handoff records: short-TTL store backing the iOS claim
+// resume flow. Persisted in Postgres so records survive API restarts within
+// their TTL window. See task #191.
+export const pendingClaims = pgTable("pending_claims", {
+  code: varchar().primaryKey().notNull(),
+  email: varchar().notNull().unique(),
+  organizationId: varchar("organization_id"),
+  accountId: varchar("account_id"),
+  createdAt: timestamp("created_at", { mode: 'date' }).defaultNow().notNull(),
+  expiresAt: timestamp("expires_at", { mode: 'date' }).notNull(),
+});
+
+export type PendingClaim = typeof pendingClaims.$inferSelect;
+
 export const platformSettings = pgTable("platform_settings", {
   id: serial().primaryKey().notNull(),
   key: varchar().notNull().unique(),

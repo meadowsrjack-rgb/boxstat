@@ -671,7 +671,7 @@ function EmailEntryStep({
           description: "This email is already verified. Redirecting you to login.",
           variant: "destructive",
         });
-        setLocation("/login");
+        setLocation(`/login?email=${encodeURIComponent(data.email)}`);
         return;
       }
       console.error("Error sending verification:", error);

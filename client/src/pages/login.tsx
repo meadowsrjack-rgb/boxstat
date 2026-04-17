@@ -12,7 +12,11 @@ import { authPersistence } from "@/services/authPersistence";
 export default function LoginPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const params = new URLSearchParams(window.location.search);
+    return params.get("email") ?? "";
+  });
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [magicLinkEmail, setMagicLinkEmail] = useState("");

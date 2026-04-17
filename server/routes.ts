@@ -5834,6 +5834,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               currentlyDue: Array.isArray(req.currently_due) ? req.currently_due : [],
               pastDue: Array.isArray(req.past_due) ? req.past_due : [],
               eventuallyDue: Array.isArray(req.eventually_due) ? req.eventually_due : [],
+              pendingVerification: Array.isArray(req.pending_verification) ? req.pending_verification : [],
+              currentDeadline: typeof req.current_deadline === 'number' ? req.current_deadline : null,
               disabledReason: req.disabled_reason || null,
             };
             flags = {
@@ -6169,6 +6171,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             currentlyDue: Array.isArray(reqs.currently_due) ? reqs.currently_due : [],
             pastDue: Array.isArray(reqs.past_due) ? reqs.past_due : [],
             eventuallyDue: Array.isArray(reqs.eventually_due) ? reqs.eventually_due : [],
+            pendingVerification: Array.isArray(reqs.pending_verification) ? reqs.pending_verification : [],
+            currentDeadline: typeof reqs.current_deadline === 'number' ? reqs.current_deadline : null,
             disabledReason: reqs.disabled_reason || null,
           },
         });

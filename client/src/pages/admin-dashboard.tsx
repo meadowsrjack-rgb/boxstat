@@ -12169,21 +12169,67 @@ function buildRequirementItems(requirements: any): string[] {
   return items;
 }
 
+function buildPendingVerificationItems(requirements: any): string[] {
+  if (!requirements) return [];
+  const seen = new Set<string>();
+  const items: string[] = [];
+  (requirements.pendingVerification || []).forEach((key: string) => {
+    const label = humanizeStripeRequirement(key);
+    if (!seen.has(label)) {
+      seen.add(label);
+      items.push(label);
+    }
+  });
+  return items;
+}
+
+function formatStripeDeadline(deadline: number | null | undefined): string | null {
+  if (!deadline || typeof deadline !== "number") return null;
+  const date = new Date(deadline * 1000);
+  if (isNaN(date.getTime())) return null;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
 function StripeRequirementsList({ requirements, title }: { requirements: any; title?: string }) {
   const items = buildRequirementItems(requirements);
-  if (items.length === 0 && !requirements?.disabledReason) return null;
+  const pendingItems = buildPendingVerificationItems(requirements);
+  const deadline = formatStripeDeadline(requirements?.currentDeadline);
+  if (items.length === 0 && pendingItems.length === 0 && !requirements?.disabledReason && !deadline) return null;
   return (
-    <div className="text-xs border rounded-lg p-3 bg-muted/40 space-y-2">
-      <p className="font-medium text-foreground">{title || "Still needed by Stripe:"}</p>
+    <div className="text-xs border rounded-lg p-3 bg-muted/40 space-y-3">
       {items.length > 0 && (
-        <ul className="list-disc pl-5 space-y-0.5 text-muted-foreground">
-          {items.slice(0, 8).map((label) => (
-            <li key={label}>{label}</li>
-          ))}
-          {items.length > 8 && (
-            <li>+{items.length - 8} more — finish in Stripe</li>
-          )}
-        </ul>
+        <div className="space-y-1">
+          <p className="font-medium text-foreground">{title || "Still needed by Stripe:"}</p>
+          <ul className="list-disc pl-5 space-y-0.5 text-muted-foreground">
+            {items.slice(0, 8).map((label) => (
+              <li key={label}>{label}</li>
+            ))}
+            {items.length > 8 && (
+              <li>+{items.length - 8} more — finish in Stripe</li>
+            )}
+          </ul>
+        </div>
+      )}
+      {pendingItems.length > 0 && (
+        <div className="space-y-1" data-testid="stripe-pending-verification">
+          <p className="font-medium text-foreground">In review by Stripe:</p>
+          <ul className="list-disc pl-5 space-y-0.5 text-muted-foreground">
+            {pendingItems.slice(0, 8).map((label) => (
+              <li key={label}>{label}</li>
+            ))}
+            {pendingItems.length > 8 && (
+              <li>+{pendingItems.length - 8} more being reviewed</li>
+            )}
+          </ul>
+          <p className="text-muted-foreground italic">
+            No action needed — Stripe is still reviewing what you submitted.
+          </p>
+        </div>
+      )}
+      {deadline && (
+        <p className="text-muted-foreground" data-testid="stripe-deadline">
+          Provide by <span className="font-medium text-foreground">{deadline}</span>
+        </p>
       )}
       {requirements?.disabledReason && (
         <p className="text-muted-foreground">

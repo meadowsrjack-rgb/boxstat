@@ -61,96 +61,9 @@ function checkRateLimit(key: string): boolean {
 }
 
 export function registerClaimRoutes(app: Express): void {
-  
-  // ========== EMAIL-BASED ACCOUNT CLAIMING ==========
-  app.post('/api/auth/request-claim', async (req, res) => {
-    try {
-      const { email } = requestAccountClaimSchema.parse(req.body);
-      const normalizedEmail = email.toLowerCase().trim();
-      
-      // Rate limiting by email
-      const rateLimitKey = `claim:${normalizedEmail}`;
-      if (!checkRateLimit(rateLimitKey)) {
-        return res.status(429).json({ 
-          message: 'Too many attempts. Please wait 5 minutes before trying again.' 
-        });
-      }
 
-      // Check if account exists in our system (generated from Notion)
-      let account = await storage.getAccountByEmail(normalizedEmail);
-      
-      if (!account) {
-        // Run a fresh sync from Notion to see if this email is now available
-        console.log(`Account not found for ${normalizedEmail}, running Notion sync...`);
-        try {
-          await notionAccountSync.syncAccountsFromNotion();
-          account = await storage.getAccountByEmail(normalizedEmail);
-        } catch (syncError) {
-          console.error('Notion sync failed during claim request:', syncError);
-        }
-      }
-      
-      if (!account) {
-        return res.status(404).json({ 
-          message: 'No account found for this email address. Please contact the academy if you believe this is an error.',
-          suggestions: [
-            'Check that you\'re using the same email address provided to the academy',
-            'Contact the academy administration to verify your registration'
-          ]
-        });
-      }
-
-      // Generate magic link token and expiry
-      const magicLinkToken = nanoid(32);
-      const magicLinkExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-
-      // Update account with magic link token
-      await storage.updateAccount(account.id, {
-        magicLinkToken,
-        magicLinkExpires
-      });
-
-      // Send claim email
-      const claimLink = `${process.env.APP_URL || process.env.REPL_URL || 'http://localhost:5000'}/claim-verify?token=${magicLinkToken}`;
-      
-      try {
-        // In development mode, provide direct access to the claim link
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`\n🎯 ACCOUNT CLAIM LINK for ${normalizedEmail}:`);
-          console.log(`${claimLink}`);
-          console.log(`🚀 Development mode: Use the link above to skip email verification\n`);
-          
-          return res.json({
-            success: true,
-            message: `Development mode: Account claim link generated for ${normalizedEmail}`,
-            autoRedirect: true,
-            redirectUrl: `/claim-verify?token=${magicLinkToken}`
-          });
-        }
-        
-        // Production mode: Send actual email
-        await emailService.sendClaimEmail(normalizedEmail, claimLink, account.primaryAccountType);
-        
-        res.json({
-          success: true,
-          message: `Account claim instructions have been sent to ${normalizedEmail}`,
-          autoRedirect: false
-        });
-      } catch (emailError) {
-        console.error('Failed to send claim email:', emailError);
-        res.status(500).json({ 
-          message: 'Failed to send claim email. Please try again or contact support.' 
-        });
-      }
-
-    } catch (error) {
-      console.error('Error requesting account claim:', error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: 'Invalid email format', errors: error.errors });
-      }
-      res.status(500).json({ message: 'Failed to process claim request' });
-    }
-  });
+  // NOTE: POST /api/auth/request-claim is registered by registerRequestClaimRoute
+  // in server/routes/request-claim.ts. Do not duplicate it here.
 
   // ========== VERIFY MAGIC LINK TOKEN ==========
   app.get('/api/auth/verify-claim/:token', async (req: any, res) => {

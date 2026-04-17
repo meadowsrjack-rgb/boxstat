@@ -322,6 +322,32 @@ export default function EventDetailModal({
     return allLinkedPlayers.filter(player => invitedPlayerIds.has(player.id));
   }, [users, allLinkedPlayers]);
 
+  // For parents: fetch event team members to determine Score Game button visibility
+  type TeamMember = { id: string };
+  type TeamMembersDetail = { players: TeamMember[]; coaches: TeamMember[] };
+  const { data: eventTeamMembers = { players: [], coaches: [] } } = useQuery<TeamMembersDetail>({
+    queryKey: ['/api/teams', event?.teamId, 'members-detail'],
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch(`/api/teams/${event?.teamId}/members-detail`, {
+        headers,
+        credentials: 'include',
+      });
+      if (!response.ok) return { players: [], coaches: [] };
+      return response.json();
+    },
+    enabled: open && isParent && !!event?.teamId && allLinkedPlayers.length > 0,
+  });
+
+  // Parent can score if any of their linked players is on the event's team roster
+  const parentCanScore = useMemo(() => {
+    if (!isParent || !event?.teamId || !allLinkedPlayers.length) return false;
+    const teamPlayerIds = new Set<string>(eventTeamMembers.players.map(p => p.id));
+    return allLinkedPlayers.some(p => teamPlayerIds.has(p.id));
+  }, [isParent, event?.teamId, allLinkedPlayers, eventTeamMembers]);
+
   const rsvpMutation = useMutation({
     mutationFn: (response: 'attending' | 'not_attending') => {
       return apiRequest('POST', '/api/rsvp', {
@@ -1138,7 +1164,7 @@ export default function EventDetailModal({
             )}
 
             {/* Score Game Button for all event types */}
-            {isAdminOrCoach && (
+            {(isAdminOrCoach || parentCanScore) && (
               <div className="rounded-xl p-4 flex items-center justify-between" style={{ background: '#1a1f2e' }}>
                 <div className="flex items-center gap-2">
                   <Target className="h-4 w-4 text-orange-400" />

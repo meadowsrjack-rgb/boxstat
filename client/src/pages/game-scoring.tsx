@@ -14,7 +14,7 @@ const initStats = () => ({
 });
 
 type PlayerStats = ReturnType<typeof initStats>;
-type PlayerInfo = { id: string; name: string; num: string };
+type PlayerInfo = { id: string; name: string; num: string; fromRsvp?: boolean };
 
 const pct = (m: number, a: number) => (a === 0 ? "—" : `${Math.round((m / a) * 100)}%`);
 const pts = (s: PlayerStats) => s.fgm * 2 + s.tpm * 3 + s.ftm;
@@ -75,6 +75,7 @@ function PlayerRow({ player, stats, onUpdate, onNameChange, onToggleSub, clockRu
   const totalPts = pts(s);
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState(s.onCourt);
+  const nameEditable = !player.fromRsvp;
 
   const incMade = (t: string) => { if (locked) return; const n = { ...s }; if (t === "fg") { n.fgm++; n.fga++; } else if (t === "tp") { n.tpm++; n.tpa++; } else if (t === "ft") { n.ftm++; n.fta++; } onUpdate(n); };
   const incMiss = (t: string) => { if (locked) return; const n = { ...s }; if (t === "fg") n.fga++; else if (t === "tp") n.tpa++; else if (t === "ft") n.fta++; onUpdate(n); };
@@ -108,7 +109,7 @@ function PlayerRow({ player, stats, onUpdate, onNameChange, onToggleSub, clockRu
             {s.onCourt ? "▼" : "▲"}
           </button>
 
-          {editing ? (
+          {editing && nameEditable ? (
             <div style={{ display: "flex", gap: 4, flex: 1, alignItems: "center" }}>
               <input type="text" value={player.num} onChange={(e) => onNameChange({ ...player, num: e.target.value })}
                 style={{ width: 30, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 5, color: "#fff", padding: "2px 4px", fontSize: 12, textAlign: "center", fontFamily: "'JetBrains Mono', monospace" }} />
@@ -117,7 +118,7 @@ function PlayerRow({ player, stats, onUpdate, onNameChange, onToggleSub, clockRu
                 style={{ flex: 1, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 5, color: "#fff", padding: "2px 6px", fontSize: 12 }} />
             </div>
           ) : (
-            <div onClick={() => !locked && setEditing(true)} style={{ display: "flex", alignItems: "center", gap: 5, cursor: locked ? "default" : "pointer", minWidth: 0 }}>
+            <div onClick={() => !locked && nameEditable && setEditing(true)} style={{ display: "flex", alignItems: "center", gap: 5, cursor: locked || !nameEditable ? "default" : "pointer", minWidth: 0 }}>
               <span style={{ background: O, color: "#1a1a1a", fontWeight: 800, fontSize: 10, width: 24, height: 24, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>{player.num}</span>
               <span style={{ fontWeight: 600, fontSize: 12, color: "#e8e6e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{player.name}</span>
             </div>
@@ -371,6 +372,7 @@ export default function GameScoring() {
       if (existingSession.playerStats?.length > 0) {
         const ps: PlayerInfo[] = existingSession.playerStats.map((s: any) => ({
           id: s.playerId, name: s.playerName || "Player", num: s.jerseyNumber || "0",
+          fromRsvp: !(typeof s.playerId === "string" && (s.playerId.startsWith("added-") || s.playerId.startsWith("default-"))),
         }));
         setPlayers(ps);
         const statsMap: Record<string, PlayerStats> = {};
@@ -391,6 +393,7 @@ export default function GameScoring() {
     if (roster.length > 0) {
       const ps: PlayerInfo[] = roster.map((r: any) => ({
         id: r.id, name: `${r.firstName || ""} ${r.lastName || ""}`.trim() || "Player", num: r.jerseyNumber?.toString() || "0",
+        fromRsvp: true,
       }));
       setPlayers(ps);
       const statsMap: Record<string, PlayerStats> = {};
@@ -398,13 +401,8 @@ export default function GameScoring() {
       setStats(statsMap);
       setInitialized(true);
     } else if (eventId) {
-      const defaultPlayers: PlayerInfo[] = Array.from({ length: 8 }, (_, i) => ({
-        id: `default-${i + 1}`, name: `Player ${i + 1}`, num: `${i + 1}`,
-      }));
-      setPlayers(defaultPlayers);
-      const statsMap: Record<string, PlayerStats> = {};
-      defaultPlayers.forEach((p, i) => { statsMap[p.id] = { ...initStats(), onCourt: i < 5 }; });
-      setStats(statsMap);
+      setPlayers([]);
+      setStats({});
       setInitialized(true);
     }
   }, [roster, existingSession, initialized, eventId, sessionLoading, rosterLoading]);
@@ -604,7 +602,8 @@ export default function GameScoring() {
     }}>
       <div style={{
         position: "sticky", top: 0, zIndex: 50, background: "#111",
-        borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "8px 10px",
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        padding: "calc(env(safe-area-inset-top, 0px) + 14px) 10px 8px",
       }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

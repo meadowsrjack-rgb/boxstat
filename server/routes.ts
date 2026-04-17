@@ -18225,16 +18225,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!event) return res.status(404).json({ message: "Event not found" });
 
       let rosterPlayers: any[] = [];
-      if (event.teamId) {
-        const memberships = await db.select({
-          profileId: teamMemberships.profileId,
-        }).from(teamMemberships).where(
-          and(eq(teamMemberships.teamId, event.teamId), eq(teamMemberships.status, "active"))
-        );
-        const playerIds = memberships.map((m: any) => m.profileId).filter(Boolean);
-        if (playerIds.length > 0) {
-          rosterPlayers = await db.select().from(users).where(inArray(users.id, playerIds));
-        }
+      const attendingRsvps = await db.select({
+        userId: rsvpResponses.userId,
+      }).from(rsvpResponses).where(
+        and(eq(rsvpResponses.eventId, eventId), eq(rsvpResponses.response, "attending"))
+      );
+      const attendingIds = attendingRsvps.map((r: any) => r.userId).filter(Boolean);
+      if (attendingIds.length > 0) {
+        rosterPlayers = await db.select().from(users).where(inArray(users.id, attendingIds));
       }
       res.json(rosterPlayers);
     } catch (error: any) {
@@ -18288,13 +18286,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/game-sessions", requireAuth, isCoachOrAdmin, async (req, res) => {
+  app.post("/api/game-sessions", requireAuth, async (req, res) => {
     try {
       const user = (req as any).user;
       const { eventId, teamId, opponentName, teamScore, opponentScore, gameFormat,
         periodLength, otLength, finalPeriod, otCount, playerStats: playerStatsData } = req.body;
 
       if (!eventId) return res.status(400).json({ message: "eventId is required" });
+
+      // Authorization: admins/coaches always allowed; parents allowed only if
+      // they have at least one linked player on the event's team.
+      const role = user?.role;
+      if (role !== "admin" && role !== "coach") {
+        if (role === "parent") {
+          const eventRow = (await db.select().from(events).where(eq(events.id, eventId)))[0];
+          if (!eventRow?.teamId) {
+            return res.status(403).json({ message: "Not authorized to score this game" });
+          }
+          const linked = await storage.getPlayersByParent(user.id);
+          if (!linked?.length) {
+            return res.status(403).json({ message: "Not authorized to score this game" });
+          }
+          const linkedIds = linked.map((p: any) => p.id);
+          const teamMatches = await db.select({ profileId: teamMemberships.profileId }).from(teamMemberships).where(
+            and(
+              eq(teamMemberships.teamId, eventRow.teamId),
+              eq(teamMemberships.status, "active"),
+              inArray(teamMemberships.profileId, linkedIds),
+            )
+          );
+          if (teamMatches.length === 0) {
+            return res.status(403).json({ message: "Not authorized to score this game" });
+          }
+        } else {
+          return res.status(403).json({ message: "Not authorized to score this game" });
+        }
+      }
 
       const existingSessions = await db.select().from(gameSessions).where(eq(gameSessions.eventId, eventId));
       let sessionId: number;

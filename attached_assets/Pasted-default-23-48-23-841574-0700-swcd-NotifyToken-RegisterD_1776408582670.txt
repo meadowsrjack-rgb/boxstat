@@ -1,0 +1,276 @@
+default	23:48:23.841574-0700	swcd	NotifyToken::RegisterDispatch(com.apple.LaunchServices.database) fired for session key <private>
+default	23:48:23.858823-0700	swcd	[0x8acd5f780] activating connection: mach=false listener=false peer=true name=com.apple.distnoted.matching.peer[32].0x8acd5f780
+default	23:48:27.536242-0700	swcd	LS database generation has changed 9548 to 9549. Synchronizing SWC database to it.
+error	23:48:27.536806-0700	swcd	Error getting enterprise-managed associated domains data. If this device is not enterprise-managed, this is normal: Error Domain=SWCErrorDomain Code=1701 "Failed to get associated domain data from ManagedConfiguration framework." UserInfo={NSDebugDescription=Failed to get associated domain data from ManagedConfiguration framework., Line=298, Function=<private>}
+default	23:48:27.537018-0700	swcd	Developer mode enabled: NO
+default	23:48:35.659730-0700	swcd	NotifyToken::RegisterDispatch(com.apple.LaunchServices.database) fired for session key <private>
+default	23:48:44.834794-0700	swcd	Domain 0.0.0.0:6932 is invalid. Will not attempt a download.
+default	23:48:45.248760-0700	swcd	LS database generation has changed 9549 to 9556. Synchronizing SWC database to it.
+error	23:48:45.254542-0700	swcd	Error getting enterprise-managed associated domains data. If this device is not enterprise-managed, this is normal: Error Domain=SWCErrorDomain Code=1701 "Failed to get associated domain data from ManagedConfiguration framework." UserInfo={NSDebugDescription=Failed to get associated domain data from ManagedConfiguration framework., Line=298, Function=<private>}
+default	23:48:45.332180-0700	swcd	Developer mode enabled: NO
+default	23:48:51.143146-0700	swcd	Beginning data task AASA-B2CB82D1-DBD5-41E1-836D-41B29D947782 { domain: bo….app, bytes: 0, route: cdn }
+default	23:48:51.143193-0700	swcd	Task <6C2C5515-43CC-4002-AC57-A48ED5740954>.<1> resuming, timeouts(60.0, 604800.0) qos(0x15) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+default	23:48:51.149821-0700	swcd	Already downloading data for domain bo….app, so skipping a second download (non-discretionary)
+default	23:48:51.432297-0700	swcd	Connection 0: creating secure tcp or quic connection
+default	23:48:51.439588-0700	swcd	Connection 14: enabling TLS
+default	23:48:51.439614-0700	swcd	Connection 14: starting, TC(0x0)
+default	23:48:51.439666-0700	swcd	[C14 C53207AC-BF7E-4C52-8702-067CFFC44A31 Hostname#92259aa4:443 quic-connection, url hash: e9d6b1d4, attribution: developer, context: com.apple.CFNetwork.NSURLSession.{B28E24DA-2FE2-4852-B318-3BA4CECD8908}{(null)}{Y}{3}{0x0} (sensitive), proc: BC3900B2-672B-3ABC-880D-768C56086EE4, delegated upid: 0] start
+default	23:48:51.441581-0700	swcd	[C14 Hostname#92259aa4:443 initial parent-flow ((null))] event: path:start @0.000s
+default	23:48:51.454781-0700	swcd	[C14 Hostname#92259aa4:443 waiting parent-flow (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: path:satisfied @0.014s, uuid: 51D6614E-E590-4BFE-9BC2-EF1C9CCDDC65
+default	23:48:51.455221-0700	swcd	[C14 Hostname#92259aa4:443 in_progress parent-flow (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:start_connect @0.014s
+default	23:48:51.455845-0700	swcd	nw_connection_report_state_with_handler_on_nw_queue [C14] reporting state preparing
+default	23:48:51.540340-0700	swcd	[C14 Hostname#92259aa4:443 in_progress parent-flow (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:start_child @0.099s
+default	23:48:51.544153-0700	swcd	[C14.1 Hostname#92259aa4:443 initial path ((null))] event: path:start @0.103s
+default	23:48:51.552583-0700	swcd	[C14.1 Hostname#92259aa4:443 waiting path (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: path:satisfied @0.111s, uuid: 51D6614E-E590-4BFE-9BC2-EF1C9CCDDC65
+default	23:48:51.553356-0700	swcd	[C14.1 Hostname#92259aa4:443 in_progress transform (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: transform:start @0.112s
+default	23:48:51.640535-0700	swcd	[C14.1.1 Hostname#92259aa4:443 initial path ((null))] event: path:start @0.199s
+default	23:48:51.653490-0700	swcd	[C14.1.1 Hostname#92259aa4:443 waiting path (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: path:satisfied @0.212s, uuid: 0DBED9AA-7E82-4F1D-ACC4-7612331DBAA7
+default	23:48:51.654613-0700	swcd	[C14.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: resolver:start_dns @0.213s
+default	23:48:51.656303-0700	swcd	Task <6C2C5515-43CC-4002-AC57-A48ED5740954>.<1> setting up Connection 14
+default	23:48:51.656800-0700	mDNSResponder	[R336] getaddrinfo start -- flags: 0xC000D000, ifindex: 0, protocols: 0, hostname: <mask.hash: 'wiKcT38RFJH9LxgMpvUfkw=='>, options: 0x8 {use-failover}, client pid: 403 (swcd)
+default	23:48:52.045859-0700	swcd	nw_endpoint_resolver_update [C14.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Adding endpoint handler for IPv4#0ee9eb96:443
+default	23:48:52.046986-0700	swcd	nw_endpoint_resolver_update [C14.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Adding endpoint handler for IPv4#8f98e8a8:443
+default	23:48:52.047022-0700	swcd	nw_endpoint_resolver_update [C14.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Adding endpoint handler for IPv4#b394fcf3:443
+default	23:48:52.047918-0700	swcd	nw_endpoint_resolver_update [C14.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Adding endpoint handler for IPv4#705ac3e7:443
+default	23:48:52.049014-0700	swcd	nw_endpoint_resolver_update [C14.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Adding endpoint handler for IPv4#8102c17e:443
+default	23:48:52.052274-0700	swcd	nw_endpoint_resolver_update [C14.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Adding endpoint handler for IPv4#534291dd:443
+default	23:48:52.052745-0700	swcd	nw_endpoint_resolver_update [C14.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Adding endpoint handler for IPv4#a7ef7cc5:443
+default	23:48:52.052798-0700	swcd	nw_endpoint_resolver_update [C14.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Adding endpoint handler for IPv4#20c96399:443
+default	23:48:52.053158-0700	swcd	[C14.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: resolver:receive_dns @0.612s
+default	23:48:52.056627-0700	swcd	[C14.1.1.1 IPv4#0ee9eb96:443 initial path ((null))] event: path:start @0.615s
+default	23:48:52.151546-0700	mDNSResponder	[R336] getaddrinfo stop -- hostname: <mask.hash: 'wiKcT38RFJH9LxgMpvUfkw=='>, client pid: 403 (swcd)
+default	23:48:52.232527-0700	swcd	[C14.1.1.1 IPv4#0ee9eb96:443 waiting path (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: path:satisfied @0.791s, uuid: 0DCA7121-1CB0-4271-A132-C2110F95656B
+default	23:48:52.240305-0700	swcd	[C14.1.1.1 IPv4#0ee9eb96:443 in_progress channel-flow (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:start_nexus @0.799s
+default	23:48:52.240453-0700	kernel	SK[0]: flow_entry_alloc               fe "0 proc swcd(403) nx_port 13 flow_uuid 3877B209-97F0-4A2E-9BA1-E1FA0B7CC45D flags 0x130<TRACK,CONNECTED,QOS_MARKING> ipver=4,src=<IPv4-redacted>.55003,dst=<IPv4-redacted>.443,proto=0x06 mask=0x0000003f,hash=0x3aaf001a tp_proto=0x06"
+default	23:48:52.339859-0700	swcd	[C14.1.1.1 IPv4#0ee9eb96:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:receive_nexus @0.899s
+default	23:48:52.343022-0700	kernel	SK[1]: __channel_open                 swcd(403) nx_port 13 fd 6 fsw_en0[13]_swcd.403
+default	23:48:52.545948-0700	swcd	[C14.1.1.1 IPv4#0ee9eb96:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:start_connect @1.105s
+default	23:48:52.900935-0700	symptomsd	Can't lookup UUID BC3900B2-672B-3ABC-880D-768C56086EE4 for procname swcd, coalition (null) nehelper (null)
+default	23:48:52.901061-0700	symptomsd	Create canonical mapping for process swcd, BC3900B2-672B-3ABC-880D-768C56086EE4 -> com.apple.swcd
+default	23:48:52.932662-0700	swcd	tcp_output [C14.1.1.1:3] flags=[SEC] seq=791214174, ack=0, win=65535 state=SYN_SENT rcv_nxt=0, snd_una=791214174
+default	23:48:53.155811-0700	swcd	tcp_input [C14.1.1.1:3] flags=[S.E] seq=4148823694, ack=791214175, win=33212 state=SYN_SENT rcv_nxt=0, snd_una=791214174
+default	23:48:53.235939-0700	swcd	nw_flow_connected [C14.1.1.1 IPv4#0ee9eb96:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Transport protocol connected (tcp)
+default	23:48:53.241091-0700	swcd	[C14.1.1.1 IPv4#0ee9eb96:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:finish_transport @1.798s
+default	23:48:53.248549-0700	swcd	boringssl_session_apply_protocol_options_for_transport_block_invoke_2(2323) [C14.1.1.1:2][0x8ad046360] TLS configured [min_version(0x0303) max_version(0x0304) name(redacted) tickets(false) false_start(false) enforce_ev(false) enforce_ats(false) ats_non_pfs_ciphersuite_allowed(false) ech(false) pqtls(true), pake(false)]
+default	23:48:53.252374-0700	swcd	boringssl_context_info_handler(2390) [C14.1.1.1:2][0x8ad046360] Client handshake started
+default	23:48:53.255564-0700	swcd	boringssl_context_info_handler(2407) [C14.1.1.1:2][0x8ad046360] Client handshake state: TLS client enter_early_data
+default	23:48:53.337466-0700	swcd	boringssl_context_info_handler(2407) [C14.1.1.1:2][0x8ad046360] Client handshake state: TLS client read_server_hello
+default	23:48:53.349390-0700	symptomsd	Data Usage for com.apple.swcd on flow 4382 - WiFi in/out: 604572150/166483931, WiFi delta_in/delta_out: 100/90, Cell in/out: 78436997/33994724, Cell delta_in/delta_out: 0/0, RNF: 0, subscriber tag: 1, total duration: 1.008
+default	23:48:53.732064-0700	swcd	boringssl_context_info_handler(2407) [C14.1.1.1:2][0x8ad046360] Client handshake state: TLS 1.3 client read_hello_retry_request
+default	23:48:53.735061-0700	swcd	boringssl_context_info_handler(2407) [C14.1.1.1:2][0x8ad046360] Client handshake state: TLS 1.3 client read_server_hello
+default	23:48:53.736105-0700	swcd	boringssl_context_info_handler(2407) [C14.1.1.1:2][0x8ad046360] Client handshake state: TLS 1.3 client read_encrypted_extensions
+default	23:48:53.740550-0700	swcd	boringssl_context_info_handler(2407) [C14.1.1.1:2][0x8ad046360] Client handshake state: TLS 1.3 client read_certificate_request
+default	23:48:53.742161-0700	swcd	boringssl_context_info_handler(2407) [C14.1.1.1:2][0x8ad046360] Client handshake state: TLS 1.3 client read_server_certificate
+default	23:48:53.743191-0700	swcd	boringssl_context_info_handler(2407) [C14.1.1.1:2][0x8ad046360] Client handshake state: TLS 1.3 client read_server_certificate_verify
+default	23:48:53.744404-0700	swcd	boringssl_context_evaluate_trust_async(1833) [C14.1.1.1:2][0x8ad046360] Performing external trust evaluation
+default	23:48:53.745626-0700	swcd	boringssl_context_evaluate_trust_async_external(1818) [C14.1.1.1:2][0x8ad046360] Asyncing for external verify block
+default	23:48:53.955668-0700	swcd	Connection 14: asked to evaluate TLS Trust
+default	23:48:54.233300-0700	swcd	[0x8ad06dcc0] activating connection: mach=true listener=false peer=false name=com.apple.trustd
+default	23:48:55.044511-0700	symptomsd	Data Usage for com.apple.swcd on flow 4382 - WiFi in/out: 604577923/166485878, WiFi delta_in/delta_out: 5773/1947, Cell in/out: 78436997/33994724, Cell delta_in/delta_out: 0/0, RNF: 0, subscriber tag: 1, total duration: 2.710
+default	23:48:55.432025-0700	swcd	[0x8ad06dcc0] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+default	23:48:56.153801-0700	swcd	[C14.1.1.2 IPv4#8f98e8a8:443 initial path ((null))] event: path:start @4.713s
+default	23:48:56.346520-0700	runningboardd	Resolved pid 403 to [osservice<com.apple.swcd>:403]
+default	23:48:56.348115-0700	runningboardd	[osservice<com.apple.swcd>:403] is not RunningBoard jetsam managed.
+default	23:48:56.348139-0700	runningboardd	[osservice<com.apple.swcd>:403] This process will not be managed.
+default	23:48:56.941997-0700	swcd	[C14.1.1.2 IPv4#8f98e8a8:443 waiting path (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: path:satisfied @5.501s, uuid: B2355600-D48A-430E-96CE-E2F7A1A09EF9
+default	23:48:56.944431-0700	swcd	[C14.1.1.2 IPv4#8f98e8a8:443 in_progress channel-flow (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:start_nexus @5.503s
+default	23:48:56.944910-0700	kernel	SK[3]: flow_entry_alloc               fe "0 proc swcd(403) nx_port 13 flow_uuid 89E87CCB-0746-43D6-9421-1B87ADAF82B9 flags 0x130<TRACK,CONNECTED,QOS_MARKING> ipver=4,src=<IPv4-redacted>.55006,dst=<IPv4-redacted>.443,proto=0x06 mask=0x0000003f,hash=0x7cefda88 tp_proto=0x06"
+default	23:48:56.947495-0700	swcd	Task <6C2C5515-43CC-4002-AC57-A48ED5740954>.<1> auth completion disp=0 cred=0x8ad021d50
+default	23:48:57.052784-0700	swcd	[C14.1.1.2 IPv4#8f98e8a8:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:receive_nexus @5.612s
+default	23:48:57.138281-0700	swcd	[C14.1.1.2 IPv4#8f98e8a8:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:start_connect @5.697s
+default	23:48:57.141932-0700	swcd	tcp_output [C14.1.1.2:3] flags=[SEC] seq=973943371, ack=0, win=65535 state=SYN_SENT rcv_nxt=0, snd_una=973943371
+default	23:48:57.351464-0700	swcd	tcp_output [C14.1.1.2:3] flags=[S] seq=973943371, ack=0, win=65535 state=SYN_SENT rcv_nxt=0, snd_una=973943371
+default	23:48:57.434911-0700	swcd	tcp_input [C14.1.1.2:3] flags=[S.E] seq=2780782216, ack=973943372, win=64980 state=SYN_SENT rcv_nxt=0, snd_una=973943371
+default	23:48:57.436243-0700	swcd	nw_flow_connected [C14.1.1.2 IPv4#8f98e8a8:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Transport protocol connected (tcp)
+default	23:48:57.438688-0700	swcd	[C14.1.1.2 IPv4#8f98e8a8:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:finish_transport @5.998s
+default	23:48:57.535339-0700	swcd	boringssl_session_apply_protocol_options_for_transport_block_invoke_2(2323) [C14.1.1.2:2][0x8ad0479e0] TLS configured [min_version(0x0303) max_version(0x0304) name(redacted) tickets(false) false_start(false) enforce_ev(false) enforce_ats(false) ats_non_pfs_ciphersuite_allowed(false) ech(false) pqtls(true), pake(false)]
+default	23:48:57.538028-0700	swcd	boringssl_context_info_handler(2390) [C14.1.1.2:2][0x8ad0479e0] Client handshake started
+default	23:48:57.541929-0700	swcd	boringssl_context_info_handler(2407) [C14.1.1.2:2][0x8ad0479e0] Client handshake state: TLS client enter_early_data
+default	23:48:57.547436-0700	swcd	boringssl_context_info_handler(2407) [C14.1.1.2:2][0x8ad0479e0] Client handshake state: TLS client read_server_hello
+default	23:48:57.552206-0700	swcd	tcp_input [C14.1.1.2:3] flags=[S.E] seq=2780782216, ack=973943372, win=64980 state=ESTABLISHED rcv_nxt=2780782217, snd_una=973943372
+default	23:48:57.938678-0700	swcd	[0x8ad06de00] activating connection: mach=true listener=false peer=false name=com.apple.trustd
+default	23:48:58.246484-0700	symptomsd	Data Usage for com.apple.swcd on flow 4397 - WiFi in/out: 604583894/166487927, WiFi delta_in/delta_out: 5971/2049, Cell in/out: 78436997/33994724, Cell delta_in/delta_out: 0/0, RNF: 0, subscriber tag: 1, total duration: 1.102
+default	23:48:59.250904-0700	swcd	[0x8ad06de00] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+default	23:48:59.850435-0700	swcd	Connection 14: TLS Trust result 0
+default	23:49:00.050123-0700	swcd	boringssl_context_evaluate_trust_async_external_block_invoke_3(1773) [C14.1.1.1:2][0x8ad046360] Returning from external verify block with result: true
+default	23:49:00.050270-0700	swcd	boringssl_context_certificate_verify_callback(2014) [C14.1.1.1:2][0x8ad046360] Certificate verification result: OK
+default	23:49:00.051698-0700	swcd	boringssl_context_info_handler(2407) [C14.1.1.1:2][0x8ad046360] Client handshake state: TLS 1.3 client read_server_finished
+default	23:49:00.051980-0700	swcd	boringssl_context_info_handler(2407) [C14.1.1.1:2][0x8ad046360] Client handshake state: TLS 1.3 client send_end_of_early_data
+default	23:49:00.052017-0700	swcd	boringssl_context_info_handler(2407) [C14.1.1.1:2][0x8ad046360] Client handshake state: TLS 1.3 client send_client_encrypted_extensions
+default	23:49:00.052289-0700	swcd	boringssl_context_info_handler(2407) [C14.1.1.1:2][0x8ad046360] Client handshake state: TLS 1.3 client send_client_certificate
+default	23:49:00.052297-0700	swcd	boringssl_context_info_handler(2407) [C14.1.1.1:2][0x8ad046360] Client handshake state: TLS 1.3 client complete_second_flight
+default	23:49:00.053433-0700	swcd	boringssl_context_info_handler(2407) [C14.1.1.1:2][0x8ad046360] Client handshake state: TLS 1.3 client done
+default	23:49:00.054882-0700	swcd	boringssl_context_info_handler(2407) [C14.1.1.1:2][0x8ad046360] Client handshake state: TLS client finish_client_handshake
+default	23:49:00.055139-0700	swcd	boringssl_context_info_handler(2407) [C14.1.1.1:2][0x8ad046360] Client handshake state: TLS client done
+default	23:49:00.055561-0700	swcd	boringssl_context_info_handler(2396) [C14.1.1.1:2][0x8ad046360] Client handshake done
+default	23:49:00.140604-0700	swcd	nw_protocol_boringssl_signal_connected(895) [C14.1.1.1:2][0x8ad046360] TLS connected [server(0) version(0x0304) ciphersuite(TLS_AES_256_GCM_SHA384) group(0x11ec) signature_alg(0x0403) alpn(http/1.1) resumed(0) offered_ticket(0) in_early_data(0) early_data_accepted(0) false_started(0) ocsp_received(1) sct_received(0) connect_time(6883ms) flight_time(408ms) rtt(401ms) write_stalls(0) read_stalls(4) pake(0x0000)]
+default	23:49:00.140676-0700	swcd	nw_flow_connected [C14.1.1.1 IPv4#0ee9eb96:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Output protocol connected (CFNetworkConnection-3017675673)
+default	23:49:00.141947-0700	swcd	[C14.1.1.1 IPv4#0ee9eb96:443 ready channel-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:child_finish_connect @8.701s
+default	23:49:00.147114-0700	swcd	[C14.1.1 Hostname#92259aa4:443 ready resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:child_finish_connect @8.706s
+default	23:49:00.148293-0700	swcd	[C14.1 Hostname#92259aa4:443 ready transform (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:child_finish_connect @8.707s
+default	23:49:00.150825-0700	swcd	nw_protocol_tcp_log_summary [C14.1.1.2:3] 
+	[89E87CCB-0746-43D6-9421-1B87ADAF82B9 <private>:55006<-><private>:443]
+	Init: 1, Conn_Time: 296.974ms, SYNs: 2, WR_T: 0/0, RD_T: 0/0, TFO: 0/0/0, ECN: 0/1/1, Accurate ECN (client/server): Disabled/Disabled, TS: 1, TSO: 0
+	rtt_cache: kernel, rtt_upd: 1, rtt: 295.000ms, rtt_var: 147.500ms rtt_nc: 295.000ms, rtt_var_nc: 147.500ms base rtt: 295ms
+	ACKs-compressed: 0, ACKs delayed: 0 delayed ACKs sent: 0
+default	23:49:00.232455-0700	swcd	[C14.1.1.1 IPv4#0ee9eb96:443 ready channel-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:changed_viability @8.792s
+default	23:49:00.232487-0700	swcd	[C14.1.1 Hostname#92259aa4:443 ready resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:changed_viability @8.792s
+default	23:49:00.232518-0700	swcd	[C14.1 Hostname#92259aa4:443 ready transform (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:changed_viability @8.792s
+default	23:49:00.232534-0700	swcd	nw_flow_connected [C14 IPv4#0ee9eb96:443 in_progress parent-flow (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Output protocol connected (endpoint_flow)
+default	23:49:00.235528-0700	swcd	[C14 IPv4#0ee9eb96:443 ready parent-flow (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:finish_connect @8.795s
+default	23:49:00.241060-0700	swcd	nw_connection_report_state_with_handler_on_nw_queue [C14] reporting state ready
+default	23:49:00.242290-0700	swcd	[C14 IPv4#0ee9eb96:443 ready parent-flow (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:changed_viability @8.800s
+default	23:49:00.242722-0700	swcd	nw_connection_send_viability_changed_on_nw_queue [C14] viability_changed_handler(true)
+error	23:49:00.244167-0700	swcd	tcp_output [C14.1.1.2:3] flags=[R.] seq=973944929, ack=2780787528, win=1972 state=CLOSED rcv_nxt=2780787528, snd_una=973944929
+default	23:49:00.347601-0700	symptomsd	Data Usage for com.apple.swcd on flow 4397 - WiFi in/out: 604586605/166489683, WiFi delta_in/delta_out: 2711/1756, Cell in/out: 78436997/33994724, Cell delta_in/delta_out: 0/0, RNF: 0, subscriber tag: 1, total duration: 3.321
+default	23:49:00.354291-0700	swcd	Connection 14: connected successfully
+default	23:49:00.354340-0700	swcd	Connection 14: TLS handshake complete
+default	23:49:00.432142-0700	swcd	Connection 14: ready C(N) E(N)
+default	23:49:00.434058-0700	swcd	Task <6C2C5515-43CC-4002-AC57-A48ED5740954>.<1> now using Connection 14
+default	23:49:00.437413-0700	swcd	Connection 14: received viability advisory(Y)
+default	23:49:00.544359-0700	swcd	Task <6C2C5515-43CC-4002-AC57-A48ED5740954>.<1> sent request, body N 0
+default	23:49:00.546068-0700	swcd	Task <6C2C5515-43CC-4002-AC57-A48ED5740954>.<1> received response, status 200 content K
+default	23:49:00.547353-0700	swcd	Task <6C2C5515-43CC-4002-AC57-A48ED5740954>.<1> response ended
+default	23:49:00.547400-0700	swcd	Connection 14: cleaning up
+default	23:49:00.548239-0700	swcd	[C14 C53207AC-BF7E-4C52-8702-067CFFC44A31 Hostname#92259aa4:443 quic-connection, url hash: e9d6b1d4, attribution: developer] cancel
+default	23:49:00.551155-0700	swcd	[C14 C53207AC-BF7E-4C52-8702-067CFFC44A31 Hostname#92259aa4:443 quic-connection, url hash: e9d6b1d4, attribution: developer] cancelled
+	[C14.1.1.1 0DCA7121-1CB0-4271-A132-C2110F95656B 192.168.0.34:55003<->IPv4#0ee9eb96:443]
+	Connected Path: satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good
+	Privacy Stance: Not Eligible
+	Duration: 9.110s, DNS @0.213s took 0.399s, TCP @1.105s took 0.693s, TLS 1.3 took 6.883s
+	bytes in/out: 7024/1953, packets in/out: 8/9, rtt: 0.470s, retransmitted bytes: 0, out-of-order bytes: 0
+	ecn packets sent/acked/marked/lost: 4/3/0/0
+default	23:49:00.938600-0700	swcd	nw_protocol_tcp_log_summary [C14.1.1.1:3] 
+	[3877B209-97F0-4A2E-9BA1-E1FA0B7CC45D <private>:55003<-><private>:443]
+	Init: 1, Conn_Time: 607.664ms, SYNs: 1, WR_T: 0/0, RD_T: 0/0, TFO: 0/0/0, ECN: 0/1/1, Accurate ECN (client/server): Disabled/Disabled, TS: 1, TSO: 0
+	rtt_cache: none, rtt_upd: 4, rtt: 470.312ms, rtt_var: 346.250ms rtt_nc: 470.312ms, rtt_var_nc: 346.250ms base rtt: 98ms
+	ACKs-compressed: 2, ACKs delayed: 0 delayed ACKs sent: 0
+default	23:49:00.951160-0700	swcd	nw_connection_report_state_with_handler_on_nw_queue [C14] reporting state cancelled
+default	23:49:00.951771-0700	swcd	Task <6C2C5515-43CC-4002-AC57-A48ED5740954>.<1> done using Connection 14
+default	23:49:00.953438-0700	swcd	tcp_output [C14.1.1.1:3] flags=[F.] seq=791216152, ack=4148830719, win=2048 state=FIN_WAIT_1 rcv_nxt=4148830719, snd_una=791216128
+default	23:49:00.956135-0700	swcd	Task <6C2C5515-43CC-4002-AC57-A48ED5740954>.<1> summary for task success {transaction_duration_ms=9722, response_status=200, connection=14, protocol="http/1.1", domain_lookup_duration_ms=399, connect_duration_ms=7690, secure_connection_duration_ms=6883, private_relay=false, request_start_ms=9205, request_duration_ms=105, response_start_ms=9312, response_duration_ms=406, request_bytes=294, request_throughput_kbps=22, response_bytes=1153, response_throughput_kbps=22, cache_hit=false}
+default	23:49:01.031970-0700	swcd	Task <6C2C5515-43CC-4002-AC57-A48ED5740954>.<1> finished successfully
+default	23:49:01.150048-0700	swcd	tcp_input [C14.1.1.1:3] flags=[F.] seq=4148830743, ack=791216152, win=63 state=CLOSED rcv_nxt=4148830719, snd_una=791216128
+default	23:49:01.151568-0700	swcd	Connection 14: done
+default	23:49:01.555289-0700	symptomsd	Data Usage for com.apple.swcd on flow 4382 - WiFi in/out: 604588984/166490691, WiFi delta_in/delta_out: 2379/1008, Cell in/out: 78436997/33994724, Cell delta_in/delta_out: 0/0, RNF: 0, subscriber tag: 1, total duration: 9.207
+default	23:49:02.452377-0700	swcd	Domain 0.0.0.0:6932 is invalid. Will not attempt a download.
+default	23:49:02.650258-0700	swcd	Beginning data task AASA-4DBB6BB9-58AE-4945-A923-B2CDCEC94FAF { domain: bo….app, bytes: 0, route: cdn }
+default	23:49:02.654337-0700	swcd	Task <272E53C0-435C-471E-810C-B98F271EBA8B>.<1> resuming, timeouts(60.0, 604800.0) qos(0x15) voucher((null)) activity(00000000-0000-0000-0000-000000000000)
+default	23:49:05.140218-0700	swcd	Already downloading data for domain bo….app, so skipping a second download (non-discretionary)
+default	23:49:05.235203-0700	swcd	Connection 0: creating secure tcp or quic connection
+default	23:49:05.237185-0700	swcd	Connection 15: enabling TLS
+default	23:49:05.246413-0700	swcd	Connection 15: starting, TC(0x0)
+default	23:49:05.333529-0700	swcd	[C15 C5A18D9D-6E3A-4B23-89F8-7768E56400EC Hostname#92259aa4:443 quic-connection, url hash: e9d6b1d4, attribution: developer, context: com.apple.CFNetwork.NSURLSession.{7BF40DF6-BCC5-4767-AFC9-D3A003F8BD04}{(null)}{Y}{3}{0x0} (sensitive), proc: BC3900B2-672B-3ABC-880D-768C56086EE4, delegated upid: 0] start
+default	23:49:05.333565-0700	swcd	[C15 Hostname#92259aa4:443 initial parent-flow ((null))] event: path:start @0.000s
+default	23:49:05.453999-0700	swcd	[C15 Hostname#92259aa4:443 waiting parent-flow (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: path:satisfied @0.119s, uuid: CA792F23-6055-47FE-9982-1733FE00BA20
+default	23:49:05.543327-0700	swcd	[C15 Hostname#92259aa4:443 in_progress parent-flow (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:start_connect @0.207s
+default	23:49:05.545229-0700	swcd	nw_connection_report_state_with_handler_on_nw_queue [C15] reporting state preparing
+default	23:49:05.639466-0700	swcd	[C15 Hostname#92259aa4:443 in_progress parent-flow (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:start_child @0.305s
+default	23:49:05.640810-0700	swcd	[C15.1 Hostname#92259aa4:443 initial path ((null))] event: path:start @0.307s
+default	23:49:05.655353-0700	swcd	[C15.1 Hostname#92259aa4:443 waiting path (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: path:satisfied @0.321s, uuid: CA792F23-6055-47FE-9982-1733FE00BA20
+default	23:49:05.731034-0700	swcd	[C15.1 Hostname#92259aa4:443 in_progress transform (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: transform:start @0.397s
+default	23:49:05.732975-0700	swcd	[C15.1.1 Hostname#92259aa4:443 initial path ((null))] event: path:start @0.399s
+default	23:49:05.738260-0700	swcd	[C15.1.1 Hostname#92259aa4:443 waiting path (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: path:satisfied @0.404s, uuid: 1E9A951D-2833-44E6-B792-9E3BCEF89889
+default	23:49:05.738928-0700	swcd	[C15.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: resolver:start_dns @0.405s
+default	23:49:05.739425-0700	swcd	Task <272E53C0-435C-471E-810C-B98F271EBA8B>.<1> setting up Connection 15
+default	23:49:05.739705-0700	mDNSResponder	[R364] getaddrinfo start -- flags: 0xC000D000, ifindex: 0, protocols: 0, hostname: <mask.hash: 'wiKcT38RFJH9LxgMpvUfkw=='>, options: 0x8 {use-failover}, client pid: 403 (swcd)
+default	23:49:06.044378-0700	swcd	nw_endpoint_resolver_update [C15.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Adding endpoint handler for IPv4#8f98e8a8:443
+default	23:49:06.045618-0700	swcd	nw_endpoint_resolver_update [C15.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Adding endpoint handler for IPv4#b394fcf3:443
+default	23:49:06.046003-0700	swcd	nw_endpoint_resolver_update [C15.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Adding endpoint handler for IPv4#705ac3e7:443
+default	23:49:06.046307-0700	swcd	nw_endpoint_resolver_update [C15.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Adding endpoint handler for IPv4#8102c17e:443
+default	23:49:06.046343-0700	swcd	nw_endpoint_resolver_update [C15.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Adding endpoint handler for IPv4#534291dd:443
+default	23:49:06.046933-0700	swcd	nw_endpoint_resolver_update [C15.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Adding endpoint handler for IPv4#a7ef7cc5:443
+default	23:49:06.046962-0700	swcd	nw_endpoint_resolver_update [C15.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Adding endpoint handler for IPv4#20c96399:443
+default	23:49:06.047008-0700	swcd	nw_endpoint_resolver_update [C15.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Adding endpoint handler for IPv4#0ee9eb96:443
+default	23:49:06.047470-0700	swcd	[C15.1.1 Hostname#92259aa4:443 in_progress resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: resolver:receive_dns @0.713s
+default	23:49:06.048196-0700	swcd	[C15.1.1.1 IPv4#8f98e8a8:443 initial path ((null))] event: path:start @0.714s
+default	23:49:06.048866-0700	mDNSResponder	[R364] getaddrinfo stop -- hostname: <mask.hash: 'wiKcT38RFJH9LxgMpvUfkw=='>, client pid: 403 (swcd)
+default	23:49:06.049818-0700	swcd	[C15.1.1.1 IPv4#8f98e8a8:443 waiting path (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: path:satisfied @0.716s, uuid: C241DD0A-FC95-4156-9586-3B6F76B6448B
+default	23:49:06.050829-0700	swcd	[C15.1.1.1 IPv4#8f98e8a8:443 in_progress channel-flow (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:start_nexus @0.717s
+default	23:49:06.051112-0700	kernel	SK[0]: flow_entry_alloc               fe "0 proc swcd(403) nx_port 13 flow_uuid 05470934-2F05-4B20-9D3D-C6568FECFE87 flags 0x130<TRACK,CONNECTED,QOS_MARKING> ipver=4,src=<IPv4-redacted>.55027,dst=<IPv4-redacted>.443,proto=0x06 mask=0x0000003f,hash=0xfcb06537 tp_proto=0x06"
+default	23:49:06.231297-0700	swcd	[C15.1.1.1 IPv4#8f98e8a8:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:receive_nexus @0.896s
+default	23:49:06.236401-0700	swcd	[C15.1.1.1 IPv4#8f98e8a8:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:start_connect @0.902s
+default	23:49:06.237025-0700	swcd	tcp_output [C15.1.1.1:3] flags=[SEC] seq=4024821731, ack=0, win=65535 state=SYN_SENT rcv_nxt=0, snd_una=4024821731
+default	23:49:06.339169-0700	swcd	tcp_input [C15.1.1.1:3] flags=[S.E] seq=1340796458, ack=4024821732, win=64980 state=SYN_SENT rcv_nxt=0, snd_una=4024821731
+default	23:49:06.339343-0700	swcd	nw_flow_connected [C15.1.1.1 IPv4#8f98e8a8:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Transport protocol connected (tcp)
+default	23:49:06.339910-0700	swcd	[C15.1.1.1 IPv4#8f98e8a8:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:finish_transport @1.006s
+default	23:49:06.342082-0700	swcd	boringssl_session_apply_protocol_options_for_transport_block_invoke_2(2323) [C15.1.1.1:2][0x8ad047760] TLS configured [min_version(0x0303) max_version(0x0304) name(redacted) tickets(false) false_start(false) enforce_ev(false) enforce_ats(false) ats_non_pfs_ciphersuite_allowed(false) ech(false) pqtls(true), pake(false)]
+default	23:49:06.342384-0700	swcd	boringssl_context_info_handler(2390) [C15.1.1.1:2][0x8ad047760] Client handshake started
+default	23:49:06.343348-0700	swcd	boringssl_context_info_handler(2407) [C15.1.1.1:2][0x8ad047760] Client handshake state: TLS client enter_early_data
+default	23:49:06.344146-0700	swcd	boringssl_context_info_handler(2407) [C15.1.1.1:2][0x8ad047760] Client handshake state: TLS client read_server_hello
+default	23:49:06.430891-0700	swcd	boringssl_context_info_handler(2407) [C15.1.1.1:2][0x8ad047760] Client handshake state: TLS 1.3 client read_hello_retry_request
+default	23:49:06.430911-0700	swcd	boringssl_context_info_handler(2407) [C15.1.1.1:2][0x8ad047760] Client handshake state: TLS 1.3 client read_server_hello
+default	23:49:06.431225-0700	swcd	boringssl_context_info_handler(2407) [C15.1.1.1:2][0x8ad047760] Client handshake state: TLS 1.3 client read_encrypted_extensions
+default	23:49:06.431370-0700	swcd	boringssl_context_info_handler(2407) [C15.1.1.1:2][0x8ad047760] Client handshake state: TLS 1.3 client read_certificate_request
+default	23:49:06.431411-0700	swcd	boringssl_context_info_handler(2407) [C15.1.1.1:2][0x8ad047760] Client handshake state: TLS 1.3 client read_server_certificate
+default	23:49:06.431469-0700	swcd	boringssl_context_info_handler(2407) [C15.1.1.1:2][0x8ad047760] Client handshake state: TLS 1.3 client read_server_certificate_verify
+default	23:49:06.432015-0700	swcd	boringssl_context_evaluate_trust_async(1833) [C15.1.1.1:2][0x8ad047760] Performing external trust evaluation
+default	23:49:06.432158-0700	swcd	boringssl_context_evaluate_trust_async_external(1818) [C15.1.1.1:2][0x8ad047760] Asyncing for external verify block
+default	23:49:06.432447-0700	swcd	Connection 15: asked to evaluate TLS Trust
+default	23:49:06.434636-0700	swcd	[0x8ad06de00] activating connection: mach=true listener=false peer=false name=com.apple.trustd
+default	23:49:06.447164-0700	swcd	[0x8ad06de00] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+default	23:49:06.456562-0700	swcd	Task <272E53C0-435C-471E-810C-B98F271EBA8B>.<1> auth completion disp=0 cred=0x8ad021ab0
+default	23:49:06.532299-0700	swcd	[0x8ad06de00] activating connection: mach=true listener=false peer=false name=com.apple.trustd
+default	23:49:06.545068-0700	swcd	[0x8ad06de00] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+default	23:49:06.639458-0700	swcd	Connection 15: TLS Trust result 0
+default	23:49:06.639604-0700	swcd	boringssl_context_evaluate_trust_async_external_block_invoke_3(1773) [C15.1.1.1:2][0x8ad047760] Returning from external verify block with result: true
+default	23:49:06.640292-0700	swcd	boringssl_context_certificate_verify_callback(2014) [C15.1.1.1:2][0x8ad047760] Certificate verification result: OK
+default	23:49:06.641372-0700	swcd	boringssl_context_info_handler(2407) [C15.1.1.1:2][0x8ad047760] Client handshake state: TLS 1.3 client read_server_finished
+default	23:49:06.642349-0700	swcd	boringssl_context_info_handler(2407) [C15.1.1.1:2][0x8ad047760] Client handshake state: TLS 1.3 client send_end_of_early_data
+default	23:49:06.642406-0700	swcd	boringssl_context_info_handler(2407) [C15.1.1.1:2][0x8ad047760] Client handshake state: TLS 1.3 client send_client_encrypted_extensions
+default	23:49:06.642467-0700	swcd	boringssl_context_info_handler(2407) [C15.1.1.1:2][0x8ad047760] Client handshake state: TLS 1.3 client send_client_certificate
+default	23:49:06.642496-0700	swcd	boringssl_context_info_handler(2407) [C15.1.1.1:2][0x8ad047760] Client handshake state: TLS 1.3 client complete_second_flight
+default	23:49:06.642580-0700	swcd	boringssl_context_info_handler(2407) [C15.1.1.1:2][0x8ad047760] Client handshake state: TLS 1.3 client done
+default	23:49:06.643347-0700	swcd	boringssl_context_info_handler(2407) [C15.1.1.1:2][0x8ad047760] Client handshake state: TLS client finish_client_handshake
+default	23:49:06.643352-0700	swcd	boringssl_context_info_handler(2407) [C15.1.1.1:2][0x8ad047760] Client handshake state: TLS client done
+default	23:49:06.643377-0700	swcd	boringssl_context_info_handler(2396) [C15.1.1.1:2][0x8ad047760] Client handshake done
+default	23:49:06.644604-0700	swcd	nw_protocol_boringssl_signal_connected(895) [C15.1.1.1:2][0x8ad047760] TLS connected [server(0) version(0x0304) ciphersuite(TLS_AES_256_GCM_SHA384) group(0x11ec) signature_alg(0x0403) alpn(http/1.1) resumed(0) offered_ticket(0) in_early_data(0) early_data_accepted(0) false_started(0) ocsp_received(1) sct_received(0) connect_time(301ms) flight_time(88ms) rtt(87ms) write_stalls(0) read_stalls(4) pake(0x0000)]
+default	23:49:06.645205-0700	swcd	nw_flow_connected [C15.1.1.1 IPv4#8f98e8a8:443 in_progress channel-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Output protocol connected (CFNetworkConnection-3017675673)
+default	23:49:06.647923-0700	swcd	[C15.1.1.1 IPv4#8f98e8a8:443 ready channel-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:child_finish_connect @1.314s
+default	23:49:06.648974-0700	swcd	[C15.1.1 Hostname#92259aa4:443 ready resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:child_finish_connect @1.315s
+default	23:49:06.649456-0700	swcd	[C15.1 Hostname#92259aa4:443 ready transform (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:child_finish_connect @1.315s
+default	23:49:06.651629-0700	swcd	[C15.1.1.1 IPv4#8f98e8a8:443 ready channel-flow (satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:changed_viability @1.318s
+default	23:49:06.651918-0700	swcd	[C15.1.1 Hostname#92259aa4:443 ready resolver (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:changed_viability @1.318s
+default	23:49:06.652434-0700	swcd	[C15.1 Hostname#92259aa4:443 ready transform (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:changed_viability @1.318s
+default	23:49:06.653831-0700	swcd	nw_flow_connected [C15 IPv4#8f98e8a8:443 in_progress parent-flow (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] Output protocol connected (endpoint_flow)
+default	23:49:06.730252-0700	swcd	[C15 IPv4#8f98e8a8:443 ready parent-flow (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:finish_connect @1.396s
+default	23:49:06.734565-0700	swcd	nw_connection_report_state_with_handler_on_nw_queue [C15] reporting state ready
+default	23:49:06.735112-0700	swcd	[C15 IPv4#8f98e8a8:443 ready parent-flow (satisfied (Path is satisfied), interface: en0[802.11], ipv4, dns, uses wifi, LQM: good)] event: flow:changed_viability @1.401s
+default	23:49:06.735455-0700	swcd	nw_connection_send_viability_changed_on_nw_queue [C15] viability_changed_handler(true)
+default	23:49:06.737237-0700	swcd	Connection 15: connected successfully
+default	23:49:06.738080-0700	swcd	Connection 15: TLS handshake complete
+default	23:49:06.740102-0700	swcd	Connection 15: ready C(N) E(N)
+default	23:49:06.741457-0700	swcd	Task <272E53C0-435C-471E-810C-B98F271EBA8B>.<1> now using Connection 15
+default	23:49:06.741641-0700	swcd	Connection 15: received viability advisory(Y)
+default	23:49:06.741976-0700	swcd	Task <272E53C0-435C-471E-810C-B98F271EBA8B>.<1> sent request, body N 0
+default	23:49:06.831634-0700	swcd	Task <272E53C0-435C-471E-810C-B98F271EBA8B>.<1> received response, status 200 content K
+default	23:49:06.836047-0700	swcd	Task <272E53C0-435C-471E-810C-B98F271EBA8B>.<1> response ended
+default	23:49:06.836061-0700	swcd	Task <272E53C0-435C-471E-810C-B98F271EBA8B>.<1> done using Connection 15
+default	23:49:06.836127-0700	swcd	[C15] event: client:connection_idle @1.502s
+default	23:49:06.837029-0700	swcd	nw_protocol_tcp_notify [C15.1.1.1:3] nw_protocol_notification_type_connection_idle is true
+default	23:49:06.838006-0700	swcd	nw_protocol_tcp_set_connection_idle [C15.1.1.1:3] os_nexus_flow_set_connection_idle returned 0
+default	23:49:06.838031-0700	swcd	[C15] event: client:connection_idle @1.504s
+default	23:49:06.839632-0700	swcd	nw_protocol_tcp_notify [C15.1.1.1:3] nw_protocol_notification_type_connection_idle is true
+default	23:49:06.840229-0700	swcd	nw_protocol_tcp_set_connection_idle [C15.1.1.1:3] os_nexus_flow_set_connection_idle returned 0
+default	23:49:06.841418-0700	swcd	Task <272E53C0-435C-471E-810C-B98F271EBA8B>.<1> summary for task success {transaction_duration_ms=1699, response_status=200, connection=15, protocol="http/1.1", domain_lookup_duration_ms=308, connect_duration_ms=494, secure_connection_duration_ms=301, private_relay=false, request_start_ms=1600, request_duration_ms=0, response_start_ms=1690, response_duration_ms=4, request_bytes=294, request_throughput_kbps=22395, response_bytes=1147, response_throughput_kbps=1999, cache_hit=false}
+default	23:49:06.841598-0700	swcd	Task <272E53C0-435C-471E-810C-B98F271EBA8B>.<1> finished successfully
+default	23:49:06.851692-0700	swcd	Connection 15: cleaning up
+default	23:49:06.851826-0700	swcd	[C15 C5A18D9D-6E3A-4B23-89F8-7768E56400EC Hostname#92259aa4:443 quic-connection, url hash: e9d6b1d4, attribution: developer] cancel
+default	23:49:06.852044-0700	swcd	[C15 C5A18D9D-6E3A-4B23-89F8-7768E56400EC Hostname#92259aa4:443 quic-connection, url hash: e9d6b1d4, attribution: developer] cancelled
+	[C15.1.1.1 C241DD0A-FC95-4156-9586-3B6F76B6448B 192.168.0.34:55027<->IPv4#8f98e8a8:443]
+	Connected Path: satisfied (Path is satisfied), viable, interface: en0[802.11], ipv4, dns, uses wifi, LQM: good
+	Privacy Stance: Not Eligible
+	Duration: 1.518s, DNS @0.405s took 0.308s, TCP @0.902s took 0.104s, TLS 1.3 took 0.301s
+	bytes in/out: 7016/1953, packets in/out: 6/9, rtt: 0.098s, retransmitted bytes: 0, out-of-order bytes: 0
+	ecn packets sent/acked/marked/lost: 4/3/0/0
+default	23:49:06.939378-0700	swcd	nw_protocol_tcp_log_summary [C15.1.1.1:3] 
+	[05470934-2F05-4B20-9D3D-C6568FECFE87 <private>:55027<-><private>:443]
+	Init: 1, Conn_Time: 102.811ms, SYNs: 1, WR_T: 0/0, RD_T: 0/0, TFO: 0/0/0, ECN: 0/1/1, Accurate ECN (client/server): Disabled/Disabled, TS: 1, TSO: 0
+	rtt_cache: kernel, rtt_upd: 4, rtt: 98.187ms, rtt_var: 27.187ms rtt_nc: 98.187ms, rtt_var_nc: 27.187ms base rtt: 87ms
+	ACKs-compressed: 0, ACKs delayed: 0 delayed ACKs sent: 0
+default	23:49:06.940541-0700	swcd	nw_connection_report_state_with_handler_on_nw_queue [C15] reporting state cancelled
+default	23:49:06.940884-0700	swcd	Connection 15: done
+default	23:49:06.940979-0700	swcd	tcp_output [C15.1.1.1:3] flags=[F.] seq=4024823709, ack=1340803475, win=2048 state=FIN_WAIT_1 rcv_nxt=1340803475, snd_una=4024823685
+default	23:49:06.946327-0700	swcd	tcp_input [C15.1.1.1:3] flags=[F.] seq=1340803499, ack=4024823709, win=137 state=CLOSED rcv_nxt=1340803475, snd_una=4024823685
+default	23:49:08.240607-0700	symptomsd	Data Usage for com.apple.swcd on flow 4498 - WiFi in/out: 604597228/166493736, WiFi delta_in/delta_out: 8244/3045, Cell in/out: 78436997/33994724, Cell delta_in/delta_out: 0/0, RNF: 0, subscriber tag: 1, total duration: 1.695
+default	23:49:11.536958-0700	swcd	[0x8acd5f480] activating connection: mach=false listener=false peer=true name=com.apple.SharedWebCredentials.peer[124].0x8acd5f480

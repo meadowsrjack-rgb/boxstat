@@ -1,0 +1,338 @@
+default	23:48:19.087929-0700	SpringBoard	[FBSystemService][0x4a7e] Trusting entitled client locationd:82.
+default	23:48:19.893254-0700	SpringBoard	[FBSystemService][0x4c6f] Trusting entitled client locationd:82.
+error	23:48:23.710424-0700	installd	Failed to check presence of active subscription marker for App.Installation, Error Domain=BiomeStorageError Code=1 "access(): Permission denied: 13" UserInfo={NSDebugDescription=access(): Permission denied: 13}
+default	23:48:26.763611-0700	rapportd	Found matching client RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:503157E5] flow_client=0xba0525b00 port=16403 >
+default	23:48:26.767493-0700	rapportd	[pid:66,id:503157E5] Removing client RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:503157E5] port=16403 >
+default	23:48:26.767618-0700	rapportd	Found matching client RPNWAgentClient[0xba0415880] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:A2A5308D] flow_client=0xba0525a00 port=16404 >
+default	23:48:26.767632-0700	rapportd	[pid:66,id:A2A5308D] Removing client RPNWAgentClient[0xba0415880] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:A2A5308D] port=16404 >
+default	23:48:32.459227-0700	SpringBoard	[FBSystemService][0x8f3b] Trusting entitled client Spotlight:316.
+error	23:48:32.565401-0700	accountsd	Unentitled access by client 'TestFlight' (selector: accountsWithAccountType:handler:)
+error	23:48:32.866194-0700	filecoordinationd	sandboxing denied subscription to progress on category <private> (bundle id <private>, <private>)
+default	23:48:33.008373-0700	securityd	TestFlight[449]/1#34 LF=0 copy_matching Error Domain=NSOSStatusErrorDomain Code=-34018 "Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight",
+    "group.com.apple.testflight"
+)" UserInfo={numberOfErrorsDeep=0, NSDescription=Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight",
+    "group.com.apple.testflight"
+)}
+default	23:48:33.103192-0700	securityd	TestFlight[449]/1#34 LF=0 copy_matching Error Domain=NSOSStatusErrorDomain Code=-34018 "Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight",
+    "group.com.apple.testflight"
+)" UserInfo={numberOfErrorsDeep=0, NSDescription=Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight",
+    "group.com.apple.testflight"
+)}
+default	23:48:33.948570-0700	securityd	TestFlight[449]/1#34 LF=0 copy_matching Error Domain=NSOSStatusErrorDomain Code=-34018 "Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight",
+    "group.com.apple.testflight"
+)" UserInfo={numberOfErrorsDeep=0, NSDescription=Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight",
+    "group.com.apple.testflight"
+)}
+default	23:48:34.956899-0700	securityd	TestFlight[449]/1#34 LF=0 copy_matching Error Domain=NSOSStatusErrorDomain Code=-34018 "Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight",
+    "group.com.apple.testflight"
+)" UserInfo={numberOfErrorsDeep=0, NSDescription=Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight",
+    "group.com.apple.testflight"
+)}
+default	23:48:35.095876-0700	appstored	[TFU347F5831/boxstat.app:6754899159]: Implicitly denied low data - over threshold, or threshold unavailable
+error	23:48:35.099001-0700	appstored	[com.apple.appstored.Scheduler] Denied start: pending optimal download window - UPACFA358CF, UPA5595EBCE, UPA4490F925, UPA9DC0F62F, UPA6A416B18, UPAF2ECC931, UPA25732497, UPA6AEED5CE, UPAA89AC8F8, UPA5534A34B, UPA7005E66B, UPA14206CAA, UPA3D3E0A, UPA56F4058C
+error	23:48:35.240917-0700	installd	Failed to check presence of active subscription marker for App.Installation, Error Domain=BiomeStorageError Code=1 "access(): Permission denied: 13" UserInfo={NSDebugDescription=access(): Permission denied: 13}
+error	23:48:35.255752-0700	filecoordinationd	sandboxing denied subscription to progress on category <private> (bundle id (null), <private>)
+error	23:48:35.304770-0700	filecoordinationd	sandboxing denied subscription to progress on category <private> (bundle id com.apple.springboard, <private>)
+error	23:48:35.304852-0700	filecoordinationd	sandboxing denied subscription to progress on category <private> (bundle id (null), <private>)
+default	23:48:35.392426-0700	rapportd	Updated RPNWAgentClient[0xba0415880] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:7E60100F] flow_client=0xba0525a00 port=16403 >
+default	23:48:35.397219-0700	rapportd	Updated RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:9C2A9CD8] flow_client=0xba0525b00 port=16404 >
+error	23:48:36.725872-0700	filecoordinationd	sandboxing denied subscription to progress on category <private> (bundle id (null), <private>)
+error	23:48:37.541244-0700	installd	Failed to check presence of active subscription marker for App.Installation, Error Domain=BiomeStorageError Code=1 "access(): Permission denied: 13" UserInfo={NSDebugDescription=access(): Permission denied: 13}
+default	23:48:38.967489-0700	securityd	TestFlightServic[506]/1#20 LF=0 copy_matching Error Domain=NSOSStatusErrorDomain Code=-34018 "Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight.ServiceExtension",
+    "group.com.apple.testflight"
+)" UserInfo={numberOfErrorsDeep=0, NSDescription=Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight.ServiceExtension",
+    "group.com.apple.testflight"
+)}
+default	23:48:38.988639-0700	securityd	TestFlightServic[506]/1#20 LF=0 copy_matching Error Domain=NSOSStatusErrorDomain Code=-34018 "Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight.ServiceExtension",
+    "group.com.apple.testflight"
+)" UserInfo={numberOfErrorsDeep=0, NSDescription=Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight.ServiceExtension",
+    "group.com.apple.testflight"
+)}
+default	23:48:39.053272-0700	securityd	TestFlightServic[506]/1#20 LF=0 copy_matching Error Domain=NSOSStatusErrorDomain Code=-34018 "Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight.ServiceExtension",
+    "group.com.apple.testflight"
+)" UserInfo={numberOfErrorsDeep=0, NSDescription=Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight.ServiceExtension",
+    "group.com.apple.testflight"
+)}
+default	23:48:39.135580-0700	securityd	TestFlightServic[506]/1#20 LF=0 copy_matching Error Domain=NSOSStatusErrorDomain Code=-34018 "Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight.ServiceExtension",
+    "group.com.apple.testflight"
+)" UserInfo={numberOfErrorsDeep=0, NSDescription=Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight.ServiceExtension",
+    "group.com.apple.testflight"
+)}
+error	23:48:39.345205-0700	filecoordinationd	sandboxing denied subscription to progress on category <private> (bundle id (null), <private>)
+default	23:48:39.388514-0700	securityd	TestFlightServic[506]/1#20 LF=0 copy_matching Error Domain=NSOSStatusErrorDomain Code=-34018 "Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight.ServiceExtension",
+    "group.com.apple.testflight"
+)" UserInfo={numberOfErrorsDeep=0, NSDescription=Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight.ServiceExtension",
+    "group.com.apple.testflight"
+)}
+error	23:48:39.443114-0700	filecoordinationd	sandboxing denied subscription to progress on category <private> (bundle id com.apple.liveactivitiesd, <private>)
+error	23:48:39.643697-0700	filecoordinationd	sandboxing denied subscription to progress on category <private> (bundle id <private>, <private>)
+error	23:48:40.454596-0700	filecoordinationd	sandboxing denied subscription to progress on category <private> (bundle id com.apple.springboard, <private>)
+error	23:48:40.635454-0700	assistant_cdmd	+[UAFCommonUtilities getDirectoryPath:trialNamespace:trialFactor:] Not including ExperimentAssetsDirectory as its trial Namespace UAF_AB_UNDERSTANDING isn't entitled
+default	23:48:40.818820-0700	backboardd	Connection: CE5B787F-CC7C-42E3-8A80-15D8B37B2DB1 not entitled to match protected service: 4294969458
+default	23:48:40.818860-0700	backboardd	Connection: CE5B787F-CC7C-42E3-8A80-15D8B37B2DB1 not entitled to match protected service: 4294969444
+error	23:48:41.543709-0700	assistant_cdmd	+[UAFCommonUtilities getDirectoryPath:trialNamespace:trialFactor:] Not including ExperimentAssetsDirectory as its trial Namespace UAF_AB_UNDERSTANDING isn't entitled
+error	23:48:42.441956-0700	assistant_cdmd	+[UAFCommonUtilities getDirectoryPath:trialNamespace:trialFactor:] Not including ExperimentAssetsDirectory as its trial Namespace UAF_AB_UNDERSTANDING isn't entitled
+error	23:48:42.754251-0700	assistant_cdmd	+[UAFCommonUtilities getDirectoryPath:trialNamespace:trialFactor:] Not including ExperimentAssetsDirectory as its trial Namespace UAF_AB_UNDERSTANDING isn't entitled
+error	23:48:43.443572-0700	assistant_cdmd	+[UAFCommonUtilities getDirectoryPath:trialNamespace:trialFactor:] Not including ExperimentAssetsDirectory as its trial Namespace UAF_AB_UNDERSTANDING isn't entitled
+error	23:48:53.156207-0700	assistant_cdmd	+[UAFCommonUtilities getDirectoryPath:trialNamespace:trialFactor:] Not including ExperimentAssetsDirectory as its trial Namespace UAF_AB_UNDERSTANDING isn't entitled
+default	23:48:54.547521-0700	bluetoothd	vseAdvStatsEvent - ver 2 duration 60 (secs) instance 0 num ADVs [total 790 NonExtended 790 Extended 0] Ch [37 265 38 265 39 260] FailedOnAllCh 0 Denied by [Coex 0 BT 0 Others 0] txPower [min 7 max 12 mode 7]
+default	23:48:54.548888-0700	bluetoothd	vseAdvStatsEvent - ver 2 duration 60 (secs) instance 1 num ADVs [total 0 NonExtended 0 Extended 0] Ch [37 0 38 0 39 0] FailedOnAllCh 0 Denied by [Coex 0 BT 0 Others 0] txPower [min 12 max 12 mode 12]
+default	23:48:55.665178-0700	SpringBoard	[FBSystemService][0x9714] Trusting entitled client lsd:124.
+default	23:48:55.737574-0700	securityd	TestFlight[449]/1#34 LF=0 copy_matching Error Domain=NSOSStatusErrorDomain Code=-34018 "Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight",
+    "group.com.apple.testflight"
+)" UserInfo={numberOfErrorsDeep=0, NSDescription=Client explicitly specifies access group apple but is only entitled for (
+    "243LU875E5.com.apple.TestFlight",
+    "243LU875E5.com.apple.TestFlight",
+    "group.com.apple.testflight"
+)}
+default	23:48:55.816996-0700	backboardd	Connection: 6837E96E-A1C0-4E8A-AA7D-051BF1FCDD5A not entitled to match protected service: 4294969458
+default	23:48:55.817008-0700	backboardd	Connection: 6837E96E-A1C0-4E8A-AA7D-051BF1FCDD5A not entitled to match protected service: 4294969444
+default	23:48:55.922168-0700	backboardd	Connection: 731D6DD6-7AD1-440B-80FD-FF14870EC035 not entitled to match protected service: 4294969458
+default	23:48:55.922174-0700	backboardd	Connection: 731D6DD6-7AD1-440B-80FD-FF14870EC035 not entitled to match protected service: 4294969444
+default	23:48:55.926749-0700	backboardd	Connection: 731D6DD6-7AD1-440B-80FD-FF14870EC035 not entitled to match protected service: 4294969458
+default	23:48:55.926754-0700	backboardd	Connection: 731D6DD6-7AD1-440B-80FD-FF14870EC035 not entitled to match protected service: 4294969444
+default	23:48:55.927160-0700	backboardd	Connection: 731D6DD6-7AD1-440B-80FD-FF14870EC035 not entitled to match protected service: 4294969458
+default	23:48:55.927165-0700	backboardd	Connection: 731D6DD6-7AD1-440B-80FD-FF14870EC035 not entitled to match protected service: 4294969444
+default	23:48:55.927170-0700	backboardd	Connection: 731D6DD6-7AD1-440B-80FD-FF14870EC035 not entitled to match protected service: 4294969458
+default	23:48:55.927212-0700	backboardd	Connection: 731D6DD6-7AD1-440B-80FD-FF14870EC035 not entitled to match protected service: 4294969444
+default	23:48:55.927226-0700	backboardd	Connection: 731D6DD6-7AD1-440B-80FD-FF14870EC035 not entitled to match protected service: 4294969458
+default	23:48:55.927275-0700	backboardd	Connection: 731D6DD6-7AD1-440B-80FD-FF14870EC035 not entitled to match protected service: 4294969444
+default	23:48:55.927289-0700	backboardd	Connection: 731D6DD6-7AD1-440B-80FD-FF14870EC035 not entitled to match protected service: 4294969458
+default	23:48:55.927401-0700	backboardd	Connection: 731D6DD6-7AD1-440B-80FD-FF14870EC035 not entitled to match protected service: 4294969444
+default	23:48:55.927407-0700	backboardd	Connection: 731D6DD6-7AD1-440B-80FD-FF14870EC035 not entitled to match protected service: 4294969458
+default	23:48:55.927412-0700	backboardd	Connection: 731D6DD6-7AD1-440B-80FD-FF14870EC035 not entitled to match protected service: 4294969444
+default	23:48:55.927422-0700	backboardd	Connection: 731D6DD6-7AD1-440B-80FD-FF14870EC035 not entitled to match protected service: 4294969458
+default	23:48:55.927427-0700	backboardd	Connection: 731D6DD6-7AD1-440B-80FD-FF14870EC035 not entitled to match protected service: 4294969444
+error	23:49:00.233128-0700	assistant_cdmd	+[UAFCommonUtilities getDirectoryPath:trialNamespace:trialFactor:] Not including ExperimentAssetsDirectory as its trial Namespace UAF_AB_UNDERSTANDING isn't entitled
+default	23:49:01.966506-0700	backboardd	Connection: 93F06170-2AD3-45C7-95CE-EBDF346B518E not entitled to match protected service: 4294969458
+default	23:49:01.966512-0700	backboardd	Connection: 93F06170-2AD3-45C7-95CE-EBDF346B518E not entitled to match protected service: 4294969444
+error	23:49:02.975251-0700	runningboardd	[app<boxstat.app(6BBB7C89-16EA-414B-8275-A49B5B179A51)>:638] client not entitled to get limitationsForInstance: <Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}>
+error	23:49:02.997426-0700	runningboardd	[app<boxstat.app(6BBB7C89-16EA-414B-8275-A49B5B179A51)>:638] client not entitled to get limitationsForInstance: <Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}>
+error	23:49:02.999197-0700	runningboardd	[app<boxstat.app(6BBB7C89-16EA-414B-8275-A49B5B179A51)>:638] client not entitled to get limitationsForInstance: <Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}>
+error	23:49:03.236201-0700	runningboardd	[app<com.google.Gmail(6BBB7C89-16EA-414B-8275-A49B5B179A51)>:644] client not entitled to get limitationsForInstance: <Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}>
+default	23:49:03.650243-0700	backboardd	Connection: 6D09A784-A20B-4241-BDD9-6414D84A0009 not entitled to match protected service: 4294969458
+default	23:49:03.650259-0700	backboardd	Connection: 6D09A784-A20B-4241-BDD9-6414D84A0009 not entitled to match protected service: 4294969444
+default	23:49:03.657325-0700	backboardd	Connection: 6D09A784-A20B-4241-BDD9-6414D84A0009 not entitled to match protected service: 4294969458
+default	23:49:03.657330-0700	backboardd	Connection: 6D09A784-A20B-4241-BDD9-6414D84A0009 not entitled to match protected service: 4294969444
+error	23:49:03.689054-0700	runningboardd	[app<com.google.Gmail(6BBB7C89-16EA-414B-8275-A49B5B179A51)>:644] client not entitled to get limitationsForInstance: <Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}>
+default	23:49:03.692289-0700	backboardd	Connection: 6D09A784-A20B-4241-BDD9-6414D84A0009 not entitled to match protected service: 4294969458
+default	23:49:03.692310-0700	backboardd	Connection: 6D09A784-A20B-4241-BDD9-6414D84A0009 not entitled to match protected service: 4294969444
+default	23:49:03.692332-0700	backboardd	Connection: 6D09A784-A20B-4241-BDD9-6414D84A0009 not entitled to match protected service: 4294969458
+default	23:49:03.692375-0700	backboardd	Connection: 6D09A784-A20B-4241-BDD9-6414D84A0009 not entitled to match protected service: 4294969444
+default	23:49:03.692387-0700	backboardd	Connection: 6D09A784-A20B-4241-BDD9-6414D84A0009 not entitled to match protected service: 4294969458
+default	23:49:03.692748-0700	backboardd	Connection: 6D09A784-A20B-4241-BDD9-6414D84A0009 not entitled to match protected service: 4294969444
+default	23:49:03.692763-0700	backboardd	Connection: 6D09A784-A20B-4241-BDD9-6414D84A0009 not entitled to match protected service: 4294969458
+default	23:49:03.692821-0700	backboardd	Connection: 6D09A784-A20B-4241-BDD9-6414D84A0009 not entitled to match protected service: 4294969444
+default	23:49:03.692835-0700	backboardd	Connection: 6D09A784-A20B-4241-BDD9-6414D84A0009 not entitled to match protected service: 4294969458
+default	23:49:03.692848-0700	backboardd	Connection: 6D09A784-A20B-4241-BDD9-6414D84A0009 not entitled to match protected service: 4294969444
+default	23:49:03.692873-0700	backboardd	Connection: 6D09A784-A20B-4241-BDD9-6414D84A0009 not entitled to match protected service: 4294969458
+default	23:49:03.692883-0700	backboardd	Connection: 6D09A784-A20B-4241-BDD9-6414D84A0009 not entitled to match protected service: 4294969444
+error	23:49:03.805039-0700	runningboardd	[app<com.google.Gmail(6BBB7C89-16EA-414B-8275-A49B5B179A51)>:644] client not entitled to get limitationsForInstance: <Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}>
+error	23:49:03.805794-0700	runningboardd	[app<com.google.Gmail(6BBB7C89-16EA-414B-8275-A49B5B179A51)>:644] client not entitled to get limitationsForInstance: <Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}>
+error	23:49:03.817749-0700	runningboardd	[app<com.google.Gmail(6BBB7C89-16EA-414B-8275-A49B5B179A51)>:644] client not entitled to get limitationsForInstance: <Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}>
+error	23:49:03.828777-0700	runningboardd	[app<com.google.Gmail(6BBB7C89-16EA-414B-8275-A49B5B179A51)>:644] client not entitled to get limitationsForInstance: <Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}>
+error	23:49:03.830015-0700	runningboardd	[app<com.google.Gmail(6BBB7C89-16EA-414B-8275-A49B5B179A51)>:644] client not entitled to get limitationsForInstance: <Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}>
+error	23:49:03.830426-0700	runningboardd	[app<com.google.Gmail(6BBB7C89-16EA-414B-8275-A49B5B179A51)>:644] client not entitled to get limitationsForInstance: <Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}>
+error	23:49:03.837321-0700	runningboardd	[app<com.google.Gmail(6BBB7C89-16EA-414B-8275-A49B5B179A51)>:644] client not entitled to get limitationsForInstance: <Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}>
+error	23:49:03.855145-0700	runningboardd	[app<com.google.Gmail(6BBB7C89-16EA-414B-8275-A49B5B179A51)>:644] client not entitled to get limitationsForInstance: <Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}>
+error	23:49:03.855633-0700	runningboardd	[app<com.google.Gmail(6BBB7C89-16EA-414B-8275-A49B5B179A51)>:644] client not entitled to get limitationsForInstance: <Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}>
+error	23:49:03.861351-0700	runningboardd	[app<com.google.Gmail(6BBB7C89-16EA-414B-8275-A49B5B179A51)>:644] client not entitled to get limitationsForInstance: <Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}>
+default	23:49:05.039357-0700	backboardd	Connection: 2D6A65A7-3343-46D6-9015-CAB895A30093 not entitled to match protected service: 4294969458
+default	23:49:05.039364-0700	backboardd	Connection: 2D6A65A7-3343-46D6-9015-CAB895A30093 not entitled to match protected service: 4294969444
+default	23:49:05.168632-0700	rapportd	Found matching client RPNWAgentClient[0xba0415880] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:7E60100F] flow_client=0xba0525a00 port=16403 >
+default	23:49:05.168648-0700	rapportd	[pid:66,id:7E60100F] Removing client RPNWAgentClient[0xba0415880] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:7E60100F] port=16403 >
+default	23:49:05.169751-0700	rapportd	Found matching client RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:9C2A9CD8] flow_client=0xba0525b00 port=16404 >
+default	23:49:05.169756-0700	rapportd	[pid:66,id:9C2A9CD8] Removing client RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:9C2A9CD8] port=16404 >
+error	23:49:07.451746-0700	powerd	Process 192 is not entitled to create assertion(remoteId:0x80010000)
+error	23:49:11.236222-0700	spindump	cannot determine if current task is entitled to user-assigned device name: (null) ([34: Result too large])
+default	23:49:13.511528-0700	rapportd	Updated RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:1D0CD944] flow_client=0xba0525b00 port=16403 >
+default	23:49:13.517726-0700	rapportd	Updated RPNWAgentClient[0xba0415880] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:EDBA3CB8] flow_client=0xba0525a00 port=16404 >
+error	23:49:16.942126-0700	assistant_cdmd	+[UAFCommonUtilities getDirectoryPath:trialNamespace:trialFactor:] Not including ExperimentAssetsDirectory as its trial Namespace UAF_AB_UNDERSTANDING isn't entitled
+default	23:49:16.942893-0700	deleted	connectionIsEntitled, signing ID: com.apple.appstored
+default	23:49:17.035248-0700	deleted	connectionIsEntitled, signing ID: com.apple.appstored
+error	23:49:17.851895-0700	runningboardd	[app<com.google.Gmail(6BBB7C89-16EA-414B-8275-A49B5B179A51)>:644] client not entitled to get limitationsForInstance: <Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}>
+default	23:49:18.241776-0700	siriknowledged	Enumerated 1 readable sets for sets-entitled process with result: Success
+error	23:49:19.641777-0700	runningboardd	[app<com.google.Gmail(6BBB7C89-16EA-414B-8275-A49B5B179A51)>:644] client not entitled to get limitationsForInstance: <Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}>
+error	23:49:19.643913-0700	runningboardd	[app<com.google.Gmail(6BBB7C89-16EA-414B-8275-A49B5B179A51)>:644] client not entitled to get limitationsForInstance: <Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}>
+error	23:49:20.550540-0700	calaccessd	A client attempted to call [<private>] and was denied due to insufficient privileges.  Client identity: [<private>]
+error	23:49:20.550580-0700	calaccessd	ERROR: access denied to perform invocation <private>. The CADXPCImplementation has the following TCC status: Reminders NO, Events 0.
+default	23:49:38.841113-0700	siriknowledged	Enumerated 68 readable sets for sets-entitled process with result: Success
+default	23:49:40.233652-0700	siriknowledged	Enumerated 1 readable sets for sets-entitled process with result: Success
+default	23:49:43.042494-0700	siriknowledged	Enumerated 68 readable sets for sets-entitled process with result: Success
+default	23:49:43.339138-0700	rapportd	Found matching client RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:1D0CD944] flow_client=0xba0525b00 port=16403 >
+default	23:49:43.339145-0700	rapportd	[pid:66,id:1D0CD944] Removing client RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:1D0CD944] port=16403 >
+default	23:49:43.340339-0700	rapportd	Found matching client RPNWAgentClient[0xba0415880] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:EDBA3CB8] flow_client=0xba0525a00 port=16404 >
+default	23:49:43.340358-0700	rapportd	[pid:66,id:EDBA3CB8] Removing client RPNWAgentClient[0xba0415880] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:EDBA3CB8] port=16404 >
+default	23:49:54.550132-0700	bluetoothd	vseAdvStatsEvent - ver 2 duration 60 (secs) instance 0 num ADVs [total 739 NonExtended 739 Extended 0] Ch [37 255 38 244 39 240] FailedOnAllCh 0 Denied by [Coex 0 BT 0 Others 0] txPower [min 7 max 12 mode 7]
+default	23:49:54.551585-0700	bluetoothd	vseAdvStatsEvent - ver 2 duration 60 (secs) instance 1 num ADVs [total 0 NonExtended 0 Extended 0] Ch [37 0 38 0 39 0] FailedOnAllCh 0 Denied by [Coex 0 BT 0 Others 0] txPower [min 12 max 12 mode 12]
+default	23:49:54.931521-0700	rapportd	Updated RPNWAgentClient[0xba0415a40] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:6E4AE9F2] flow_client=0xba0525a00 port=16403 >
+default	23:49:54.937705-0700	rapportd	Updated RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:19717856] flow_client=0xba0525380 port=16404 >
+default	23:49:58.075817-0700	MobileGestaltHelper	server_access_check denied access to question SerialNumber for pid 141
+error	23:49:59.685967-0700	NotificationService	Attempt to map database failed: permission was denied. This attempt will not be retried.
+default	23:49:59.879513-0700	modelmanagerd	Not all assets in the bundle are eligible unentitled inference for: classification.classifyMailMessage
+default	23:49:59.889909-0700	modelmanagerd	Not all assets in the bundle are eligible unentitled inference for: classification.classifyMailMessage
+default	23:49:59.909437-0700	modelmanagerd	Not all assets in the bundle are eligible unentitled inference for: classification.classifyTextMessage
+default	23:49:59.916526-0700	modelmanagerd	Not all assets in the bundle are eligible unentitled inference for: classification.classifyTextMessage
+default	23:50:00.216773-0700	biomed	ViewXPC.Delegate: entitledViewNames: <private>
+default	23:50:00.424880-0700	backboardd	Connection: E6C73C8E-8DE1-4499-A206-26C7FBDDFE1D not entitled to match protected service: 4294969458
+default	23:50:00.424899-0700	backboardd	Connection: E6C73C8E-8DE1-4499-A206-26C7FBDDFE1D not entitled to match protected service: 4294969444
+default	23:50:00.801032-0700	modelmanagerd	Not all assets in the bundle are eligible unentitled inference for: classification.classifyTextMessage
+default	23:50:00.808294-0700	modelmanagerd	Not all assets in the bundle are eligible unentitled inference for: classification.classifyTextMessage
+default	23:50:01.138597-0700	donotdisturbd	Resolving breakthrough through for configuration: <DNDMutableConfiguration: 0xc6ad49180; suppressionType: delay delivery; suppressionMode: default allowedApplicationIdentifiers: {
+}; deniedApplicationIdentifiers: {(
+)}; allowedWebApplicationIdentifiers: {(
+)}; deniedWebApplicationIdentifiers: {(
+)}; senderConfiguration: <DNDMutableSenderConfiguration: 0xc6b106b00; allowedContactTypes: {(
+)}; deniedContactTypes: {(
+)}; allowedContactGroups: {(
+)}; deniedContactGroups: {(
+)}; allowedContacts: (
+); deniedContacts: (
+); phoneCallBypassSettings: <DNDBypassSettings: 0xc6ad1eb80; immediateBypassEventSourceType: favorite; immediateBypassCNGroupIdentifier: '(null)'; repeatEventSourceBehaviorEnabledSetting: default>>; minimumBreakthroughUrgency: essential; hideApplicationBadges: enabled; allowIntelligentManagement: default; applicationConfigurationType: Exclusive; senderConfigurationType: Exclusive; compatibilityVersion: SkyF; > with event details application: com.hammerandchisel.discord, sender: <DNDMutableContactHandle: 0xc6ae626a0; contactIdentifier: (null); type: unknown; value: 0;>, urgency: <decode: missing data>, eventType: <decode: missing data>, threadIdentifier: <decode: missing data>
+default	23:50:01.142111-0700	donotdisturbd	Breakthrough is NOT allowed with reason: mode configuration type for configuration <DNDMutableConfiguration: 0xc6ad49180; suppressionType: delay delivery; suppressionMode: default allowedApplicationIdentifiers: {
+}; deniedApplicationIdentifiers: {(
+)}; allowedWebApplicationIdentifiers: {(
+)}; deniedWebApplicationIdentifiers: {(
+)}; senderConfiguration: <DNDMutableSenderConfiguration: 0xc6b106b00; allowedContactTypes: {(
+)}; deniedContactTypes: {(
+)}; allowedContactGroups: {(
+)}; deniedContactGroups: {(
+)}; allowedContacts: (
+); deniedContacts: (
+); phoneCallBypassSettings: <DNDBypassSettings: 0xc6ad1eb80; immediateBypassEventSourceType: favorite; immediateBypassCNGroupIdentifier: '(null)'; repeatEventSourceBehaviorEnabledSetting: default>>; minimumBreakthroughUrgency: essential; hideApplicationBadges: enabled; allowIntelligentManagement: default; applicationConfigurationType: Exclusive; senderConfigurationType: Exclusive; compatibilityVersion: SkyF; > with event details: <DNDMutableClientEventDetails: 0xc6b22de00; identifier: '21C68BEC-66D5-4FAA-84C5-EF.
+default	23:50:01.325133-0700	biomed	ViewXPC.Delegate: entitledViewNames: <private>
+default	23:50:24.862166-0700	rapportd	Found matching client RPNWAgentClient[0xba0415a40] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:6E4AE9F2] flow_client=0xba0525a00 port=16403 >
+default	23:50:24.862248-0700	rapportd	[pid:66,id:6E4AE9F2] Removing client RPNWAgentClient[0xba0415a40] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:6E4AE9F2] port=16403 >
+default	23:50:24.863884-0700	rapportd	Found matching client RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:19717856] flow_client=0xba0525380 port=16404 >
+default	23:50:24.863902-0700	rapportd	[pid:66,id:19717856] Removing client RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:19717856] port=16404 >
+default	23:50:42.548722-0700	rapportd	Updated RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:AB9DD4D2] flow_client=0xba0525380 port=16403 >
+default	23:50:42.554174-0700	rapportd	Updated RPNWAgentClient[0xba0415a40] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:11C0DC79] flow_client=0xba0525a00 port=16404 >
+default	23:50:54.552865-0700	bluetoothd	vseAdvStatsEvent - ver 2 duration 60 (secs) instance 0 num ADVs [total 733 NonExtended 733 Extended 0] Ch [37 244 38 244 39 245] FailedOnAllCh 0 Denied by [Coex 0 BT 0 Others 0] txPower [min 7 max 12 mode 7]
+default	23:50:54.554250-0700	bluetoothd	vseAdvStatsEvent - ver 2 duration 60 (secs) instance 1 num ADVs [total 0 NonExtended 0 Extended 0] Ch [37 0 38 0 39 0] FailedOnAllCh 0 Denied by [Coex 0 BT 0 Others 0] txPower [min 12 max 12 mode 12]
+default	23:51:00.101280-0700	backboardd	Connection: CF622D5B-C173-4975-8F79-EB850E74714C not entitled to match protected service: 4294969458
+default	23:51:00.101294-0700	backboardd	Connection: CF622D5B-C173-4975-8F79-EB850E74714C not entitled to match protected service: 4294969444
+default	23:51:02.222034-0700	backboardd	Connection: A6EE8F74-A661-4675-955E-4CDAE255EE6E not entitled to match protected service: 4294969458
+default	23:51:02.222047-0700	backboardd	Connection: A6EE8F74-A661-4675-955E-4CDAE255EE6E not entitled to match protected service: 4294969444
+default	23:51:02.398356-0700	backboardd	Connection: 3FA4E01E-0766-489E-BEB0-F9528FD8933F not entitled to match protected service: 4294969458
+default	23:51:02.398361-0700	backboardd	Connection: 3FA4E01E-0766-489E-BEB0-F9528FD8933F not entitled to match protected service: 4294969444
+default	23:51:02.399286-0700	backboardd	Connection: 3FA4E01E-0766-489E-BEB0-F9528FD8933F not entitled to match protected service: 4294969458
+default	23:51:02.399298-0700	backboardd	Connection: 3FA4E01E-0766-489E-BEB0-F9528FD8933F not entitled to match protected service: 4294969444
+default	23:51:12.472760-0700	rapportd	Found matching client RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:AB9DD4D2] flow_client=0xba0525380 port=16403 >
+default	23:51:12.472801-0700	rapportd	[pid:66,id:AB9DD4D2] Removing client RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:AB9DD4D2] port=16403 >
+default	23:51:12.474667-0700	rapportd	Found matching client RPNWAgentClient[0xba0415a40] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:11C0DC79] flow_client=0xba0525a00 port=16404 >
+default	23:51:12.474673-0700	rapportd	[pid:66,id:11C0DC79] Removing client RPNWAgentClient[0xba0415a40] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:11C0DC79] port=16404 >
+default	23:51:20.225229-0700	familycircled	NetworkStorageDB:_openDBReadConnections: failed to open read connection to DB @ /var/mobile/Library/Caches/com.apple.AppleAccount/Cache.db.  Error=23. Cause=authorization denied
+default	23:51:20.233896-0700	familycircled	NetworkStorageDB:_openDBWriteConnections: failed to open write connection to DB @ <private>.  Error=23. Cause=authorization denied
+default	23:51:20.234157-0700	securityd	webbookmarksd[241]/1#32 LF=0 copy_matching Error Domain=NSOSStatusErrorDomain Code=-34018 "Client explicitly specifies access group com.apple.password-manager.website-metadata but is only entitled for (
+    "com.apple.ProtectedCloudStorage",
+    "com.apple.cfnetwork",
+    "com.apple.cfnetwork-recently-deleted",
+    "com.apple.password-manager",
+    "com.apple.password-manager-recently-deleted",
+    "com.apple.webkit.webauthn",
+    "com.apple.webkit.webauthn-recently-deleted",
+    "com.apple.password-manager.personal",
+    "com.apple.password-manager.personal-recently-deleted",
+    "com.apple.Safari.WBSDevice",
+    "com.apple.mobilesafari",
+    "group.com.apple.safari"
+)" UserInfo={numberOfErrorsDeep=0, NSDescription=Client explicitly specifies access group com.apple.password-manager.website-metadata but is only entitled for (
+    "com.apple.ProtectedCloudStorage",
+    "com.apple.cfnetwork",
+    "com.apple.cfnetwork-recently-deleted",
+    "com.apple.password-manager",
+    "com.apple.passwo
+error	23:51:20.480865-0700	containermanagerd	Client [com.apple.webbookmarksd] is not entitled to look up container; identity = <<~~~>((2)appData);<501/501/~~/0/1000>;pf0>
+fault	23:51:20.481463-0700	webbookmarksd	_container_query_get_result_at_index: client is not entitled
+default	23:51:23.974497-0700	backboardd	Connection: ABC1C5D1-93B6-4CD7-BFAD-2E4BD84EB8AB not entitled to match protected service: 4294969458
+default	23:51:23.975414-0700	backboardd	Connection: ABC1C5D1-93B6-4CD7-BFAD-2E4BD84EB8AB not entitled to match protected service: 4294969444
+default	23:51:24.131737-0700	MobileGestaltHelper	server_access_check denied access to question UniqueDeviceID for pid 196
+default	23:51:24.307315-0700	siriknowledged	Enumerated 1 readable sets for sets-entitled process with result: Success
+default	23:51:24.369777-0700	accountsd	"<private> is entitled for all-account access. Returning Google credentials."
+default	23:51:24.393887-0700	kbd	Error opening database: authorization denied
+default	23:51:24.395752-0700	kbd	Error opening database: authorization denied
+default	23:51:24.398009-0700	kbd	Error opening database: authorization denied
+default	23:51:24.399080-0700	accountsd	"<private> is entitled for all-account access. Returning Google credentials."
+default	23:51:24.401949-0700	kbd	Error opening database: authorization denied
+default	23:51:24.408229-0700	kbd	Error opening database: authorization denied
+default	23:51:24.412615-0700	kbd	Error opening database: authorization denied
+default	23:51:24.466484-0700	accountsd	"<private> is entitled for all-account access. Returning Google credentials."
+default	23:51:24.482779-0700	accountsd	"<private> is entitled for all-account access. Returning Google credentials."
+default	23:51:24.496768-0700	accountsd	"<private> is entitled for all-account access. Returning Google credentials."
+default	23:51:24.785598-0700	SpringBoard	[FBSystemService][0x89cd] Trusting entitled client calaccessd:185.
+default	23:51:24.899648-0700	SpringBoard	[FBSystemService][0xd263] Trusting entitled client dataaccessd:704.
+error	23:51:24.908294-0700	linkd	com.apple.dataaccess.dataaccessd is not entitled to send events for com.apple.mobilecal
+default	23:51:25.553139-0700	rapportd	Updated RPNWAgentClient[0xba0415a40] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:046B4C86] flow_client=0xba0525a80 port=16403 >
+default	23:51:27.492469-0700	kbd	Error opening database: authorization denied
+default	23:51:27.495328-0700	kbd	Error opening database: authorization denied
+default	23:51:27.495975-0700	kbd	Error opening database: authorization denied
+default	23:51:28.790874-0700	kbd	Error opening database: authorization denied
+default	23:51:28.791965-0700	kbd	Error opening database: authorization denied
+default	23:51:28.792334-0700	kbd	Error opening database: authorization denied
+default	23:51:29.359124-0700	siriknowledged	Enumerated 1 readable sets for sets-entitled process with result: Success
+default	23:51:29.767975-0700	kbd	Error opening database: authorization denied
+default	23:51:29.768759-0700	kbd	Error opening database: authorization denied
+default	23:51:29.769493-0700	kbd	Error opening database: authorization denied
+default	23:51:30.652491-0700	kbd	Error opening database: authorization denied
+default	23:51:30.652684-0700	kbd	Error opening database: authorization denied
+default	23:51:30.652834-0700	kbd	Error opening database: authorization denied
+default	23:51:31.352389-0700	siriknowledged	Enumerated 1 readable sets for sets-entitled process with result: Success
+default	23:51:31.565363-0700	SpringBoard	[FBSystemService][0xd37b] Trusting entitled client calaccessd:185.
+default	23:51:31.605603-0700	kbd	Error opening database: authorization denied
+default	23:51:31.609848-0700	kbd	Error opening database: authorization denied
+default	23:51:31.614289-0700	kbd	Error opening database: authorization denied
+default	23:51:33.463129-0700	siriknowledged	Enumerated 1 readable sets for sets-entitled process with result: Success
+default	23:51:54.553858-0700	bluetoothd	vseAdvStatsEvent - ver 2 duration 60 (secs) instance 0 num ADVs [total 742 NonExtended 742 Extended 0] Ch [37 255 38 250 39 237] FailedOnAllCh 0 Denied by [Coex 0 BT 0 Others 0] txPower [min 7 max 12 mode 7]
+default	23:51:54.555011-0700	bluetoothd	vseAdvStatsEvent - ver 2 duration 60 (secs) instance 1 num ADVs [total 0 NonExtended 0 Extended 0] Ch [37 0 38 0 39 0] FailedOnAllCh 0 Denied by [Coex 0 BT 0 Others 0] txPower [min 12 max 12 mode 12]
+default	23:51:55.337220-0700	rapportd	Found matching client RPNWAgentClient[0xba0415a40] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:046B4C86] flow_client=0xba0525a80 port=16403 >
+default	23:51:55.337238-0700	rapportd	[pid:66,id:046B4C86] Removing client RPNWAgentClient[0xba0415a40] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:046B4C86] port=16403 >
+default	23:51:55.337971-0700	rapportd	Found matching client RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:7FBA9A8B] flow_client=0xba0524280 port=16404 >
+default	23:51:55.337980-0700	rapportd	[pid:66,id:7FBA9A8B] Removing client RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:7FBA9A8B] port=16404 >
+default	23:51:59.424187-0700	rapportd	Updated RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:A42C4A3F] flow_client=0xba0524280 port=16403 >
+default	23:51:59.429702-0700	rapportd	Updated RPNWAgentClient[0xba0415a40] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:96FF44DB] flow_client=0xba0525a80 port=16404 >
+default	23:52:29.336860-0700	rapportd	Found matching client RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:A42C4A3F] flow_client=0xba0524280 port=16403 >
+default	23:52:29.337317-0700	rapportd	[pid:66,id:A42C4A3F] Removing client RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:A42C4A3F] port=16403 >
+default	23:52:29.338927-0700	rapportd	Found matching client RPNWAgentClient[0xba0415a40] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:96FF44DB] flow_client=0xba0525a80 port=16404 >
+default	23:52:29.338948-0700	rapportd	[pid:66,id:96FF44DB] Removing client RPNWAgentClient[0xba0415a40] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:96FF44DB] port=16404 >
+default	23:52:54.557224-0700	bluetoothd	vseAdvStatsEvent - ver 2 duration 60 (secs) instance 0 num ADVs [total 728 NonExtended 728 Extended 0] Ch [37 252 38 231 39 245] FailedOnAllCh 0 Denied by [Coex 0 BT 0 Others 0] txPower [min 7 max 12 mode 7]
+default	23:52:54.558604-0700	bluetoothd	vseAdvStatsEvent - ver 2 duration 60 (secs) instance 1 num ADVs [total 0 NonExtended 0 Extended 0] Ch [37 0 38 0 39 0] FailedOnAllCh 0 Denied by [Coex 0 BT 0 Others 0] txPower [min 12 max 12 mode 12]
+default	23:53:22.919718-0700	rapportd	Updated RPNWAgentClient[0xba0415a40] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:EADC82AB] flow_client=0xba0525380 port=16403 >
+default	23:53:22.926069-0700	rapportd	Updated RPNWAgentClient[0xba0416840] (OTCNX): < PID:66 entitled=0 flowToken=[pid:66,id:9ACB4157] flow_client=0xba0525a80 port=16404 >

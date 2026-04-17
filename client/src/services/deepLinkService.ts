@@ -204,14 +204,41 @@ async function exchangeAuthToken(token: string): Promise<boolean> {
       return true;
     } else {
       console.error('[DeepLink] Failed to exchange token:', data.message);
-      navigateInApp('/login?error=auth_failed');
+      const reason = classifyDeepLinkError(response.status, data?.message);
+      navigateInApp(buildLinkErrorPath('auth', reason, { message: data?.message }));
       return false;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('[DeepLink] Error exchanging auth token:', error);
-    navigateInApp('/login?error=auth_failed');
+    navigateInApp(buildLinkErrorPath('auth', 'network', { message: error?.message }));
     return false;
   }
+}
+
+type LinkErrorType = 'verify-email' | 'magic-link' | 'claim-verify' | 'auth';
+type LinkErrorReason = 'expired' | 'used' | 'invalid' | 'network' | 'unknown';
+
+function classifyDeepLinkError(status: number, message?: string): LinkErrorReason {
+  const text = (message || '').toLowerCase();
+  if (/expired/.test(text)) return 'expired';
+  if (/already.*used|already.*consumed|already used/.test(text)) return 'used';
+  if (/invalid|not found/.test(text)) return 'invalid';
+  if (status === 404) return 'invalid';
+  if (status === 410 || status === 401) return 'expired';
+  if (status >= 500) return 'network';
+  return 'unknown';
+}
+
+function buildLinkErrorPath(
+  type: LinkErrorType,
+  reason: LinkErrorReason,
+  extras: { email?: string | null; organizationId?: string | null; message?: string | null } = {},
+): string {
+  const params = new URLSearchParams({ type, reason });
+  if (extras.email) params.set('email', extras.email);
+  if (extras.organizationId) params.set('organizationId', extras.organizationId);
+  if (extras.message) params.set('message', extras.message);
+  return `/link-error?${params.toString()}`;
 }
 
 async function handleMagicLinkDirectly(magicToken: string): Promise<void> {
@@ -250,11 +277,12 @@ async function handleMagicLinkDirectly(magicToken: string): Promise<void> {
       navigateInApp(redirectPath);
     } else {
       console.error('[DeepLink] Magic link login failed:', data.message);
-      navigateInApp('/login?error=magic_link_failed');
+      const reason = classifyDeepLinkError(response.status, data?.message);
+      navigateInApp(buildLinkErrorPath('magic-link', reason, { message: data?.message }));
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('[DeepLink] Error processing magic link:', error);
-    navigateInApp('/login?error=magic_link_failed');
+    navigateInApp(buildLinkErrorPath('magic-link', 'network', { message: error?.message }));
   }
 }
 
@@ -313,12 +341,23 @@ async function handleVerifyEmailDirectly(
     }
 
     console.error('[DeepLink] Email verification failed:', message);
-    const errMsg = encodeURIComponent(message || 'Verification failed. Please try again.');
-    navigateInApp(`/verify-email?error=${errMsg}`);
-  } catch (error) {
+    const reason = classifyDeepLinkError(response.status, message);
+    navigateInApp(
+      buildLinkErrorPath('verify-email', reason, {
+        email,
+        organizationId,
+        message,
+      }),
+    );
+  } catch (error: any) {
     console.error('[DeepLink] Error verifying email:', error);
-    const errMsg = encodeURIComponent('An error occurred during verification. Please try again.');
-    navigateInApp(`/verify-email?error=${errMsg}`);
+    navigateInApp(
+      buildLinkErrorPath('verify-email', 'network', {
+        email,
+        organizationId,
+        message: error?.message,
+      }),
+    );
   }
 }
 

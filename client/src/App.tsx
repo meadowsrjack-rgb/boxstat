@@ -56,6 +56,7 @@ import Skills from "@/pages/skills";
 import InviteClaim from "@/pages/invite-claim";
 import ClaimVerify from "@/pages/claim-verify";
 import AccountClaim from "@/pages/account-claim";
+import LinkError from "@/pages/link-error";
 import TestRoute from "@/pages/test-route";
 import TestDatePicker from "@/pages/test-datepicker";
 import NotFound from "@/pages/not-found";
@@ -542,6 +543,7 @@ function AppRouter() {
       <Route path="/magic-link-login" component={MagicLinkLogin} />
       <Route path="/claim-verify" component={ClaimVerify} />
       <Route path="/account-claim" component={AccountClaim} />
+      <Route path="/link-error" component={LinkError} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/set-password" component={SetPassword} />

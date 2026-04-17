@@ -34,24 +34,44 @@ export default function ClaimVerify() {
   const { toast } = useToast();
 
   useEffect(() => {
+    const buildLinkErrorPath = (
+      reason: "expired" | "used" | "invalid" | "network" | "unknown",
+      detail?: string,
+      email?: string,
+    ) => {
+      const qp = new URLSearchParams({ type: "claim-verify", reason });
+      if (detail) qp.set("message", detail);
+      if (email) qp.set("email", email);
+      return `/link-error?${qp.toString()}`;
+    };
+
+    const classify = (status: number, msg?: string) => {
+      const t = (msg || "").toLowerCase();
+      if (/expired/.test(t)) return "expired" as const;
+      if (/already.*used|already used/.test(t)) return "used" as const;
+      if (/invalid|not found/.test(t)) return "invalid" as const;
+      if (status === 404) return "invalid" as const;
+      if (status === 410 || status === 401) return "expired" as const;
+      if (status >= 500) return "network" as const;
+      return "unknown" as const;
+    };
+
     const verifyClaimToken = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get("token");
+
+      if (!token) {
+        setLocation(buildLinkErrorPath("invalid", "No claim token in link."));
+        return;
+      }
+
       try {
-        // Get token from URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get("token");
-
-        if (!token) {
-          setStatus("error");
-          setErrorMessage("No claim token provided");
-          return;
-        }
-
-        // Verify the claim token
         const response = await fetch(`/api/auth/verify-claim/${token}`);
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.message || "Failed to verify claim token");
+          setLocation(buildLinkErrorPath(classify(response.status, data?.message), data?.message));
+          return;
         }
 
         setAccountData(data);
@@ -81,19 +101,12 @@ export default function ClaimVerify() {
 
       } catch (error: any) {
         console.error("Claim verification failed:", error);
-        setStatus("error");
-        setErrorMessage(error.message || "Failed to verify claim token");
-        
-        toast({
-          title: "Verification failed",
-          description: error.message || "Failed to verify claim token",
-          variant: "destructive",
-        });
+        setLocation(buildLinkErrorPath("network", error?.message));
       }
     };
 
     verifyClaimToken();
-  }, [toast]);
+  }, [toast, setLocation]);
 
   return (
     <div className="min-h-screen-safe bg-gradient-to-br from-red-50 to-gray-100 safe-bottom flex items-center justify-center p-4">

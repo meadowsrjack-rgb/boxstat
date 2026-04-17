@@ -11,6 +11,30 @@ export default function VerifyEmail() {
   const [stripeDataFound, setStripeDataFound] = useState(false);
 
   useEffect(() => {
+    const buildLinkErrorPath = (
+      reason: "expired" | "used" | "invalid" | "network" | "unknown",
+      email: string | null,
+      organizationId: string | null,
+      detail?: string,
+    ) => {
+      const qp = new URLSearchParams({ type: "verify-email", reason });
+      if (email) qp.set("email", email);
+      if (organizationId) qp.set("organizationId", organizationId);
+      if (detail) qp.set("message", detail);
+      return `/link-error?${qp.toString()}`;
+    };
+
+    const classify = (status: number, msg?: string) => {
+      const t = (msg || "").toLowerCase();
+      if (/expired/.test(t)) return "expired" as const;
+      if (/already.*used|already used/.test(t)) return "used" as const;
+      if (/invalid|not found/.test(t)) return "invalid" as const;
+      if (status === 404) return "invalid" as const;
+      if (status === 410 || status === 401) return "expired" as const;
+      if (status >= 500) return "network" as const;
+      return "unknown" as const;
+    };
+
     const verifyEmail = async () => {
       const params = new URLSearchParams(window.location.search);
       const token = params.get("token");
@@ -19,14 +43,12 @@ export default function VerifyEmail() {
       const errorParam = params.get("error");
 
       if (errorParam) {
-        setStatus("error");
-        setMessage(errorParam);
+        setLocation(buildLinkErrorPath("unknown", email, organizationId, errorParam));
         return;
       }
 
       if (!token) {
-        setStatus("error");
-        setMessage("Invalid verification link. No token provided.");
+        setLocation(buildLinkErrorPath("invalid", email, organizationId, "No verification token in link."));
         return;
       }
 
@@ -56,12 +78,14 @@ export default function VerifyEmail() {
             );
           }, 2000);
         } else {
-          setStatus("error");
-          setMessage(data.message || "Verification failed. Please try again.");
+          setLocation(
+            buildLinkErrorPath(classify(response.status, data?.message), email, organizationId, data?.message),
+          );
         }
-      } catch (error) {
-        setStatus("error");
-        setMessage("An error occurred during verification. Please try again.");
+      } catch (error: any) {
+        setLocation(
+          buildLinkErrorPath("network", email, organizationId, error?.message),
+        );
       }
     };
 

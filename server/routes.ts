@@ -1495,31 +1495,6 @@ a.btn:active{background:#dc2626;}
         });
       }
 
-      // Token-fallback self-heal: if the caller presented the matching
-      // verification token and the record is still unverified and
-      // unexpired, mark it verified before reporting. Token must match
-      // exactly to prevent any caller from upgrading arbitrary pending
-      // registrations.
-      if (
-        !pendingReg.verified &&
-        typeof token === 'string' &&
-        token.length > 0 &&
-        token === pendingReg.verificationToken &&
-        new Date() <= new Date(pendingReg.verificationExpiry)
-      ) {
-        try {
-          await storage.updatePendingRegistration(
-            pendingReg.email,
-            pendingReg.organizationId,
-            true,
-          );
-          pendingReg = { ...pendingReg, verified: true };
-          console.log('[check-verification-status] Self-healed via token fallback', { email: pendingReg.email });
-        } catch (err) {
-          console.error('[check-verification-status] Token-fallback verify failed (non-fatal):', err);
-        }
-      }
-      
       res.json({ 
         success: true, 
         verified: pendingReg.verified,

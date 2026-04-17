@@ -654,9 +654,6 @@ function EmailEntryStep({
       
       if (verifyResponse.success) {
         sessionId = verifyResponse.sessionId;
-        if (verifyResponse.verificationToken) {
-          onVerificationToken(verifyResponse.verificationToken);
-        }
         toast({
           title: "Verification Email Sent!",
           description: "Please check your inbox and verify your email before completing registration.",

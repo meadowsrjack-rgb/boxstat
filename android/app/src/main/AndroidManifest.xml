@@ -30,17 +30,21 @@
                 <data android:scheme="boxstat" />
             </intent-filter>
 
+            <!--
+                Only /magic-link-login is registered as an Android App Link.
+                /verify-email, /registration, /claim-verify, and /invite/
+                were intentionally removed so Android no longer hijacks
+                those email links into the app — those flows must finish
+                in the browser, and the user is only invited to open or
+                download the app once they reach the profile gateway page.
+            -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" />
                 <data android:host="boxstat.app" />
-                <data android:pathPrefix="/verify-email" />
-                <data android:pathPrefix="/registration" />
                 <data android:pathPrefix="/magic-link-login" />
-                <data android:pathPrefix="/claim-verify" />
-                <data android:pathPrefix="/invite/" />
             </intent-filter>
 
         </activity>

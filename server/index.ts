@@ -98,15 +98,14 @@ app.get('/.well-known/apple-app-site-association', (req, res) => {
         {
           appID: `${teamId}.${bundleId}`,
           paths: [
+            // Only magic-link login is a Universal Link. The verify-email,
+            // registration, invite, and claim-verify paths used to be here
+            // but were removed so iOS no longer intercepts those email
+            // links — those flows must complete in the browser, and the
+            // user is only invited to open/download the native app once
+            // they reach the profile gateway page.
             "/magic-link-login",
-            "/magic-link-login/*",
-            "/claim-verify",
-            "/claim-verify/*",
-            "/invite/*",
-            "/registration",
-            "/registration/*",
-            "/verify-email",
-            "/verify-email/*"
+            "/magic-link-login/*"
           ]
         }
       ]

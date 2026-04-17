@@ -807,15 +807,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           {
             appID: `${teamId}.${bundleId}`,
             paths: [
+              // Only magic-link login is a Universal Link. See server/index.ts
+              // for the rationale — verify-email/registration/invite/claim-
+              // verify must complete in the browser.
               "/magic-link-login",
-              "/magic-link-login/*",
-              "/claim-verify",
-              "/claim-verify/*",
-              "/invite/*",
-              "/registration",
-              "/registration/*",
-              "/verify-email",
-              "/verify-email/*"
+              "/magic-link-login/*"
             ]
           }
         ]

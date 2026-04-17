@@ -97,18 +97,21 @@ export async function registerEarlyDeepLinkCapture(): Promise<void> {
     }
   }
 
-  // Read the cold-start launch URL once. The dedupe layer in
-  // `enqueueOrHandle` is what actually prevents double-handling — this flag
-  // is just an early-exit so we don't re-fetch on every retry.
+  // Read the cold-start launch URL. Only mark "consumed" once we actually
+  // see a URL — that way if the first call returns empty due to the App
+  // plugin not yet being ready, a subsequent call (e.g. from
+  // `initDeepLinks()` after React mounts) can still pick it up. The dedupe
+  // layer in `enqueueOrHandle` prevents double-handling if the listener
+  // also delivered the same URL in the interim.
   if (!launchUrlConsumed) {
     try {
       const launchUrl = await App.getLaunchUrl();
-      launchUrlConsumed = true;
       if (launchUrl && launchUrl.url) {
+        launchUrlConsumed = true;
         console.log('[DeepLink early] Cold-start launch URL detected:', launchUrl.url);
         enqueueOrHandle(launchUrl.url);
       } else {
-        console.log('[DeepLink early] No cold-start launch URL');
+        console.log('[DeepLink early] No cold-start launch URL (will recheck on next call)');
       }
     } catch (error) {
       console.error('[DeepLink early] Failed to read launch URL (will retry on next call):', error);

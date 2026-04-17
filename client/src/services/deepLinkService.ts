@@ -357,19 +357,34 @@ export function handleDeepLink(url: string): void {
       return;
     }
 
-    if (pathname === '/magic-link-login' || pathname.startsWith('/magic-link-login')) {
+    // Normalize: a custom-scheme URL like `boxstat://claim-verify?token=...`
+    // parses to host='claim-verify' and pathname='' (or '/'), while the
+    // matching Universal Link `https://boxstat.app/claim-verify?token=...`
+    // parses to pathname='/claim-verify'. Treat both shapes the same way by
+    // checking host (for boxstat: scheme) AND pathname.
+    const isCustomScheme = protocol === 'boxstat:';
+    const matches = (segment: string): boolean => {
+      if (pathname === `/${segment}` || pathname.startsWith(`/${segment}`)) return true;
+      if (isCustomScheme && host === segment) return true;
+      return false;
+    };
+
+    if (matches('magic-link-login')) {
       const token = searchParams.get('token');
       if (token) {
         console.log('[DeepLink] Magic link token detected, processing directly...');
         handleMagicLinkDirectly(token);
       }
-    } else if (pathname === '/claim-verify' || pathname.startsWith('/claim-verify')) {
+    } else if (matches('claim-verify')) {
       const token = searchParams.get('token');
       if (token) {
         console.log('[DeepLink] Claim verify token detected, navigating...');
         navigateInApp(`/claim-verify?token=${token}`);
+      } else {
+        console.warn('[DeepLink] /claim-verify deep link missing token; navigating to claim page anyway');
+        navigateInApp('/claim-verify');
       }
-    } else if (pathname === '/verify-email' || pathname.startsWith('/verify-email')) {
+    } else if (matches('verify-email')) {
       const token = searchParams.get('token');
       const emailParam = searchParams.get('email');
       const organizationId = searchParams.get('organizationId');
@@ -382,7 +397,7 @@ export function handleDeepLink(url: string): void {
         console.log('[DeepLink] Verify-email without token but with email param; routing to registration step 3');
         navigateInApp(buildRegistrationStep3Path(emailParam, organizationId));
       }
-    } else if (pathname === '/registration' || pathname.startsWith('/registration')) {
+    } else if (matches('registration')) {
       // Explicit handling for the verify-email -> app handoff URL:
       //   boxstat://boxstat.app/registration?email=...&verified=true
       // (and the equivalent https Universal Link). Preserve all query params
@@ -390,9 +405,19 @@ export function handleDeepLink(url: string): void {
       // `organizationId` and start at step 3.
       console.log('[DeepLink] Registration deep link detected, navigating with preserved query');
       navigateInApp(`/registration${urlObj.search}`);
-    } else {
-      console.log('[DeepLink] Unknown path, navigating to:', pathname);
+    } else if (matches('invite')) {
+      // Email invite acceptance: /invite/:token
+      console.log('[DeepLink] Invite deep link detected, navigating with preserved path');
       navigateInApp(pathname + urlObj.search);
+    } else {
+      // Last-resort fallback: try host-as-path for custom-scheme URLs so
+      // boxstat://something/extra still routes somewhere visible instead of
+      // silently sticking on the landing page.
+      const fallback = isCustomScheme && host
+        ? `/${host}${pathname}${urlObj.search}`
+        : pathname + urlObj.search;
+      console.log('[DeepLink] Unknown path, navigating to:', fallback);
+      navigateInApp(fallback);
     }
   } catch (error) {
     console.error('[DeepLink] Error handling deep link:', error);

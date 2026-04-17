@@ -4,6 +4,7 @@ import { Preferences } from '@capacitor/preferences';
 import App from "./App";
 import "./index.css";
 import "leaflet/dist/leaflet.css";
+import { registerEarlyDeepLinkCapture } from "./services/deepLinkService";
 
 // Wait for Capacitor to be ready (important for plugins loaded from remote server)
 async function waitForCapacitor(): Promise<boolean> {
@@ -128,6 +129,17 @@ function installStartupLoaderSafetyTimeout(maxMs: number) {
 async function initApp() {
   // Install absolute safety net: remove startup loader after 8 seconds no matter what
   installStartupLoaderSafetyTimeout(8000);
+
+  // Wait for Capacitor to be ready, then register the deep-link listener
+  // *before* React renders. iOS delivers Universal Link URLs to Capacitor
+  // very early in app launch — if no listener is attached yet, the URL is
+  // dropped and the WebView just renders the default "/" route (Landing).
+  try {
+    await waitForCapacitor();
+    await registerEarlyDeepLinkCapture();
+  } catch (e) {
+    console.error('[Init] Early deep-link capture failed, continuing:', e);
+  }
 
   // Restore session first (critical for iOS app restarts)
   try {

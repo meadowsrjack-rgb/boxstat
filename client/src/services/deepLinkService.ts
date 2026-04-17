@@ -6,6 +6,40 @@ import { authPersistence } from './authPersistence';
 let deepLinkCallback: ((path: string) => void) | null = null;
 let isReady = false;
 const pendingUrls: string[] = [];
+let listenerAttached = false;
+let launchUrlConsumed = false;
+
+// Short-lived dedupe: avoid double-handling the same cold-start URL when it
+// arrives via both `appUrlOpen` and `App.getLaunchUrl()` (Capacitor on iOS
+// can surface the same launch URL through both channels). Time-bounded so a
+// legitimate re-open with the same URL minutes later is still processed.
+const recentlySeen = new Map<string, number>();
+const DEDUPE_WINDOW_MS = 5000;
+
+function isDuplicate(url: string): boolean {
+  const now = Date.now();
+  // Sweep old entries to keep the map small.
+  for (const [u, ts] of recentlySeen) {
+    if (now - ts > DEDUPE_WINDOW_MS) recentlySeen.delete(u);
+  }
+  const last = recentlySeen.get(url);
+  if (last !== undefined && now - last <= DEDUPE_WINDOW_MS) return true;
+  recentlySeen.set(url, now);
+  return false;
+}
+
+function enqueueOrHandle(url: string): void {
+  if (isDuplicate(url)) {
+    console.log('[DeepLink] Duplicate URL ignored:', url);
+    return;
+  }
+  if (!isReady) {
+    console.log('[DeepLink] App not ready yet, queueing URL:', url);
+    pendingUrls.push(url);
+    return;
+  }
+  handleDeepLink(url);
+}
 
 export function setDeepLinkCallback(callback: (path: string) => void) {
   deepLinkCallback = callback;
@@ -28,37 +62,70 @@ export function markDeepLinkServiceReady() {
   }
 }
 
+/**
+ * Register the appUrlOpen listener and check for a cold-start launch URL as
+ * early as possible — ideally before React mounts.
+ *
+ * iOS delivers Universal Link URLs to Capacitor very early in the app
+ * launch, often *before* a useEffect-driven listener registration would
+ * run. If no listener is attached at that moment, the URL is dropped and
+ * the WebView simply renders its default `server.url` (which is the
+ * landing page in our case). Calling this from `main.tsx` before
+ * `ReactDOM.render` plugs that race.
+ *
+ * Idempotent: safe to invoke from both `main.tsx` and the React-side
+ * `initDeepLinks()` — the second call is a no-op for the listener.
+ */
+export async function registerEarlyDeepLinkCapture(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) {
+    return;
+  }
+
+  console.log('[DeepLink early] Registering early appUrlOpen capture on', Capacitor.getPlatform());
+
+  // Attach the listener at most once. If an earlier call failed to attach
+  // (e.g. App plugin not yet registered), we fall through and retry here.
+  if (!listenerAttached) {
+    try {
+      await App.addListener('appUrlOpen', (event: URLOpenListenerEvent) => {
+        console.log('[DeepLink early] appUrlOpen received:', event.url);
+        enqueueOrHandle(event.url);
+      });
+      listenerAttached = true;
+    } catch (error) {
+      console.error('[DeepLink early] Failed to add appUrlOpen listener (will retry on next call):', error);
+    }
+  }
+
+  // Read the cold-start launch URL once. The dedupe layer in
+  // `enqueueOrHandle` is what actually prevents double-handling — this flag
+  // is just an early-exit so we don't re-fetch on every retry.
+  if (!launchUrlConsumed) {
+    try {
+      const launchUrl = await App.getLaunchUrl();
+      launchUrlConsumed = true;
+      if (launchUrl && launchUrl.url) {
+        console.log('[DeepLink early] Cold-start launch URL detected:', launchUrl.url);
+        enqueueOrHandle(launchUrl.url);
+      } else {
+        console.log('[DeepLink early] No cold-start launch URL');
+      }
+    } catch (error) {
+      console.error('[DeepLink early] Failed to read launch URL (will retry on next call):', error);
+    }
+  }
+}
+
 export async function initDeepLinks(): Promise<void> {
   if (!Capacitor.isNativePlatform()) {
     return;
   }
 
-  try {
-    App.addListener('appUrlOpen', (event: URLOpenListenerEvent) => {
-      console.log('[DeepLink] App opened with URL:', event.url);
-      if (!isReady) {
-        console.log('[DeepLink] App not ready yet, queueing URL');
-        pendingUrls.push(event.url);
-        return;
-      }
-      handleDeepLink(event.url);
-    });
-
-    console.log('[DeepLink] Deep link listener initialized');
-
-    const launchUrl = await App.getLaunchUrl();
-    if (launchUrl && launchUrl.url) {
-      console.log('[DeepLink] Cold start launch URL detected:', launchUrl.url);
-      if (!isReady) {
-        console.log('[DeepLink] App not ready yet, queueing cold-start URL');
-        pendingUrls.push(launchUrl.url);
-      } else {
-        handleDeepLink(launchUrl.url);
-      }
-    }
-  } catch (error) {
-    console.error('[DeepLink] Failed to initialize deep links:', error);
-  }
+  // Delegate listener + launch-URL setup to the early-capture helper so the
+  // two entry points cannot diverge. If `main.tsx` already registered the
+  // listener, this is a no-op; otherwise this call still wires it up.
+  await registerEarlyDeepLinkCapture();
+  console.log('[DeepLink] Deep link listener initialized');
 }
 
 /**

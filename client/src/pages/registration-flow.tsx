@@ -176,6 +176,16 @@ export default function RegistrationFlow() {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // Manual re-check signal pushed by the deep-link handler when a
+    // boxstat://verify-email (or /registration?verified=true) deep link is
+    // received. Some iOS bounce-page flows do not trigger Capacitor's
+    // appStateChange, so this guarantees an instant re-check (~immediate
+    // instead of waiting up to 3s for the next poll cycle).
+    const handleVerifyEmailRecheck = () => {
+      checkVerification();
+    };
+    window.addEventListener('boxstat:verify-email-recheck', handleVerifyEmailRecheck);
+
     // Capacitor appStateChange for Android/iOS native resume
     let removeAppStateListener: (() => void) | undefined;
     let cancelled = false;
@@ -203,6 +213,7 @@ export default function RegistrationFlow() {
       clearInterval(pollInterval);
       setIsPollingVerification(false);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('boxstat:verify-email-recheck', handleVerifyEmailRecheck);
       removeAppStateListener?.();
     };
   }, [emailSent, registrationData.email, currentStep, verificationSessionId, toast]);

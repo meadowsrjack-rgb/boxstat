@@ -851,6 +851,16 @@ export function handleDeepLink(url: string): void {
       const token = searchParams.get('token');
       const emailParam = searchParams.get('email');
       const organizationId = searchParams.get('organizationId');
+      // Push an immediate re-check signal in case the registration page is
+      // already mounted on step 2 and Capacitor's appStateChange did not fire
+      // for this bounce-page flow. Safe no-op if no listener is attached.
+      try {
+        window.dispatchEvent(new CustomEvent('boxstat:verify-email-recheck', {
+          detail: { email: emailParam, organizationId },
+        }));
+      } catch (e) {
+        console.log('[DeepLink] verify-email-recheck dispatch error:', e);
+      }
       if (token) {
         console.log('[DeepLink] Verify-email token detected, processing in app...');
         handleVerifyEmailDirectly(token, emailParam, organizationId);
@@ -867,6 +877,17 @@ export function handleDeepLink(url: string): void {
       // so registration-flow.tsx can read `email`, `verified`, and
       // `organizationId` and start at step 3.
       console.log('[DeepLink] Registration deep link detected, navigating with preserved query');
+      // Same instant re-check signal for the registration handoff URL shape.
+      try {
+        window.dispatchEvent(new CustomEvent('boxstat:verify-email-recheck', {
+          detail: {
+            email: searchParams.get('email'),
+            organizationId: searchParams.get('organizationId'),
+          },
+        }));
+      } catch (e) {
+        console.log('[DeepLink] verify-email-recheck dispatch error:', e);
+      }
       navigateInApp(`/registration${urlObj.search}`);
     } else if (matches('invite')) {
       // Email invite acceptance: /invite/:token

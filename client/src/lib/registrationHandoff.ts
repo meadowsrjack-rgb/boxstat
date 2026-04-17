@@ -22,6 +22,17 @@ const APP_STORE_URL = "https://apps.apple.com/us/app/boxstat/id6754899159";
 const PLAY_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.boxstat.app&hl=en_US";
 
+function isNativeApp(): boolean {
+  try {
+    const cap = (window as any).Capacitor;
+    if (!cap) return false;
+    if (typeof cap.isNativePlatform === "function") return !!cap.isNativePlatform();
+    return cap.platform === "ios" || cap.platform === "android";
+  } catch {
+    return false;
+  }
+}
+
 export function redirectToRegistrationStep3(
   email: string,
   organizationId?: string | null,
@@ -31,6 +42,14 @@ export function redirectToRegistrationStep3(
   const fallback = webFallback ?? (() => {
     window.location.href = redirectPath;
   });
+
+  // When we're already inside the native app, skip the custom-scheme/App
+  // Store dance entirely — just navigate in-app via the provided fallback
+  // (which is wired to wouter's setLocation by the caller).
+  if (isNativeApp()) {
+    fallback();
+    return;
+  }
 
   const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
   const isAndroid = /android/i.test(ua);

@@ -9,6 +9,7 @@ import { db } from "./db";
 import { notificationScheduler } from "./services/notificationScheduler";
 import { ensureAuxTables } from "./boot";
 import { runMigrationExpiryBackfill } from "./migrationExpiryBackfill";
+import { restoreDefaultOrgStripeConnection } from "./restoreDefaultOrgStripe";
 import { startPendingClaimSweeper } from "./lib/pending-claim-store";
 
 const app = express();
@@ -240,6 +241,13 @@ app.use((req, res, next) => {
     // more than 2 months after createdAt. Safe to run on every boot.
     runMigrationExpiryBackfill().catch(err => {
       console.error('[Migration Expiry Backfill] Unhandled error:', err);
+    });
+
+    // One-shot guarded restore for the default-org Stripe Connect row that
+    // was previously wiped by the over-eager account_invalid auto-clear
+    // (task #215). No-op once the row has any connected account id set.
+    restoreDefaultOrgStripeConnection().catch(err => {
+      console.error('[Restore Default Org Stripe] Unhandled error:', err);
     });
   });
 })();

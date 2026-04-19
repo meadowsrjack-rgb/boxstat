@@ -12484,6 +12484,16 @@ function StripeSettingsSection() {
         return;
       }
 
+      if (code === "account_inaccessible") {
+        toast({
+          title: "Can't reach this Stripe account right now",
+          description: parsed?.message || "The platform's Stripe key can't access this connected account. This is usually a test vs live mode mismatch, or revoked Connect app access. Your connection is still intact on Stripe's side.",
+          variant: "destructive",
+        });
+        // Do NOT refetch/reset connect — the row is intentionally preserved.
+        return;
+      }
+
       if (code === "standard_account") {
         const dashboardUrl = parsed?.dashboardUrl || "https://dashboard.stripe.com/";
         toast({

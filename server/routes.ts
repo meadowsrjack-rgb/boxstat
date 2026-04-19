@@ -5896,22 +5896,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error(
             `[Stripe Connect] Error checking account status for ${org.stripeConnectedId} (org ${organizationId}): code=${errCode} message=${errMsg}`,
           );
-          if (errCode === 'resource_missing') {
-            // Stripe says the account truly no longer exists — safe to clear.
-            await storage.updateOrganization(organizationId, {
-              stripeConnectedId: null,
-              stripeConnectStatus: 'not_started',
-              stripeConnectType: 'express',
-            });
-            return res.status(409).json({
-              error: 'account_missing',
-              message: 'The connected Stripe account no longer exists. Please reconnect a payment account.',
-            });
-          }
-          if (errCode === 'account_invalid') {
-            // Key/account mode mismatch or revoked Connect app access — DO NOT
-            // mutate the org row. Surface a plain-English error so callers can
-            // tell the admin what to check. See task #215.
+          if (errCode === 'resource_missing' || errCode === 'account_invalid') {
+            // Could be: account deleted, key/account mode mismatch, or revoked
+            // Connect app access. We can't tell these apart safely, so NEVER
+            // auto-clear the row — that previously wiped good connections on
+            // every key swap. Surface a plain-English error instead. The admin
+            // can manually disconnect from the dashboard if truly gone.
             const inaccessible = buildAccountInaccessibleResponse(org.stripeConnectedId, errMsg);
             return res.status(409).json(inaccessible);
           }
@@ -6203,18 +6193,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error(
           `[Stripe Connect] Failed to retrieve account ${org.stripeConnectedId} for org ${organizationId}: code=${code} message=${stripeMsg}`,
         );
-        if (code === 'resource_missing') {
-          await storage.updateOrganization(organizationId, {
-            stripeConnectedId: null,
-            stripeConnectStatus: 'not_started',
-            stripeConnectType: 'express',
-          });
-          return res.status(409).json({
-            error: 'account_missing',
-            message: 'The connected Stripe account no longer exists. Please reconnect a payment account.',
-          });
-        }
-        if (code === 'account_invalid') {
+        if (code === 'resource_missing' || code === 'account_invalid') {
+          // Non-destructive: do NOT clear the row. Could be a key/mode mismatch
+          // or revoked Connect access masquerading as resource_missing.
           const inaccessible = buildAccountInaccessibleResponse(org.stripeConnectedId, stripeMsg);
           return res.status(409).json(inaccessible);
         }
@@ -6281,18 +6262,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error(
           `[Stripe Connect] createLoginLink failed for org ${organizationId} acct ${org.stripeConnectedId}: code=${code} message=${stripeMsg}`,
         );
-        if (code === 'resource_missing') {
-          await storage.updateOrganization(organizationId, {
-            stripeConnectedId: null,
-            stripeConnectStatus: 'not_started',
-            stripeConnectType: 'express',
-          });
-          return res.status(409).json({
-            error: 'account_missing',
-            message: 'The connected Stripe account no longer exists. Please reconnect a payment account.',
-          });
-        }
-        if (code === 'account_invalid') {
+        if (code === 'resource_missing' || code === 'account_invalid') {
+          // Non-destructive: see /status handler — same reasoning.
           const inaccessible = buildAccountInaccessibleResponse(org.stripeConnectedId, stripeMsg);
           return res.status(409).json(inaccessible);
         }

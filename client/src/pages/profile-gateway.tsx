@@ -344,32 +344,34 @@ export default function ProfileGateway() {
                 onClick={() => {
                   const platform = getMobilePlatform();
                   if (platform === 'ios') {
-                    const iframe = document.createElement('iframe');
-                    iframe.style.display = 'none';
-                    iframe.src = 'boxstat://';
-                    document.body.appendChild(iframe);
-                    const timer = setTimeout(() => {
-                      document.body.removeChild(iframe);
-                      window.location.href = APP_STORE_URL;
-                    }, 1500);
-                    const onBlur = () => {
-                      clearTimeout(timer);
-                      try { document.body.removeChild(iframe); } catch (_e) {}
-                      window.removeEventListener('blur', onBlur);
+                    const startedAt = Date.now();
+                    let timer: ReturnType<typeof setTimeout> | null = null;
+                    const cleanup = () => {
+                      if (timer !== null) {
+                        clearTimeout(timer);
+                        timer = null;
+                      }
+                      window.removeEventListener('pagehide', cleanup);
+                      window.removeEventListener('blur', cleanup);
                       document.removeEventListener('visibilitychange', onVisChange);
                     };
                     const onVisChange = () => {
-                      if (document.hidden) {
-                        clearTimeout(timer);
-                        try { document.body.removeChild(iframe); } catch (_e) {}
-                        document.removeEventListener('visibilitychange', onVisChange);
-                        window.removeEventListener('blur', onBlur);
-                      }
+                      if (document.hidden) cleanup();
                     };
-                    window.addEventListener('blur', onBlur);
+                    window.addEventListener('pagehide', cleanup);
+                    window.addEventListener('blur', cleanup);
                     document.addEventListener('visibilitychange', onVisChange);
+                    timer = setTimeout(() => {
+                      cleanup();
+                      // If we're still here and not hidden, the app didn't take over.
+                      if (!document.hidden && Date.now() - startedAt >= 2400) {
+                        window.location.href = APP_STORE_URL;
+                      }
+                    }, 2500);
+                    // Top-level navigation from inside the user gesture.
+                    window.location.href = 'boxstat://';
                   } else if (platform === 'android') {
-                    window.location.href = 'intent://open#Intent;scheme=boxstat;package=com.boxstat.app;S.browser_fallback_url=' + encodeURIComponent(PLAY_STORE_URL) + ';end';
+                    window.location.href = 'intent://open/#Intent;scheme=boxstat;package=com.boxstat.app;S.browser_fallback_url=' + encodeURIComponent(PLAY_STORE_URL) + ';end';
                   } else {
                     window.open(APP_STORE_URL, '_blank');
                   }

@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
 import type { MigrationParent, MigrationPlayer, MigrationStaff, MigrationResult, MigrationProgram, MigrationTeam } from "@shared/types/migration";
+import { parsePaste } from "./pasteParser";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -39,7 +40,13 @@ function initials(first: string, last: string): string {
 
 function expiryStatus(exp: string): "ok" | "soon" | "expired" | null {
   if (!exp) return null;
-  const [month, day, year] = exp.split("/").map(Number);
+  let year = 0, month = 0, day = 0;
+  let m = exp.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) { year = +m[1]; month = +m[2]; day = +m[3]; }
+  else {
+    m = exp.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) { month = +m[1]; day = +m[2]; year = +m[3]; }
+  }
   if (!month || !day || !year) return null;
   const d = new Date(year, month - 1, day);
   if (isNaN(d.getTime())) return null;
@@ -74,60 +81,6 @@ function downloadCsvTemplate(filename: string, headers: string[], examples: stri
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-}
-
-function parseCsvRow(line: string, delim: string): string[] {
-  const out: string[] = [];
-  let cur = "";
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (line[i + 1] === '"') { cur += '"'; i++; }
-        else inQuotes = false;
-      } else cur += ch;
-    } else {
-      if (ch === '"') inQuotes = true;
-      else if (ch === delim) { out.push(cur); cur = ""; }
-      else cur += ch;
-    }
-  }
-  out.push(cur);
-  return out.map((c) => c.replace(/\r$/, "").trim());
-}
-
-function parsePaste(raw: string): Record<string, string>[] {
-  const clean = raw.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").trim();
-  const lines = clean.split("\n").filter((l) => l.trim());
-  if (lines.length < 2) return [];
-  const delim = lines[0].includes("\t") ? "\t" : ",";
-  const headers = parseCsvRow(lines[0], delim).map((h) => h.trim().toLowerCase().replace(/[^a-z0-9]/g, ""));
-  const col = (...names: string[]) => {
-    for (const n of names) {
-      const i = headers.findIndex((h) => h && h === n);
-      if (i >= 0) return i;
-    }
-    for (const n of names) {
-      const i = headers.findIndex((h) => h && (h.includes(n) || n.includes(h)));
-      if (i >= 0) return i;
-    }
-    return -1;
-  };
-  return lines.slice(1).map((line) => {
-    const cells = parseCsvRow(line, delim);
-    const get = (i: number) => (i >= 0 ? cells[i] ?? "" : "");
-    return {
-      first:       get(col("firstname", "first", "fname", "givenname")),
-      last:        get(col("lastname", "last", "lname", "surname", "familyname")),
-      email:       get(col("email", "emailaddress", "mail")),
-      phone:       get(col("phone", "phonenumber", "mobile", "cell", "contact")),
-      parentEmail: get(col("parentemail", "parent", "guardian", "guardianemail", "family")),
-      expiry:      get(col("subenddate", "subscriptionenddate", "expiry", "expires", "expiration", "enddate", "subscription", "until", "end", "sub")),
-      program:     get(col("program", "programname", "programcode", "prog")),
-      team:        get(col("team", "teamname", "group")),
-    };
-  });
 }
 
 // ── Step indicator ────────────────────────────────────────────────────────────

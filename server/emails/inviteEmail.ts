@@ -249,6 +249,79 @@ export async function sendPlayerAddedNotification(
   }
 }
 
+function buildReminderEmailHtml(firstName: string, inviteUrl: string, orgName: string, reminderNumber: number): string {
+  const heading = reminderNumber === 1
+    ? `Just a friendly reminder — your ${orgName} account on BoxStat is ready to claim.`
+    : `Last call — your ${orgName} account on BoxStat is still waiting.`;
+  const body = reminderNumber === 1
+    ? `It only takes a minute to set your password and get into the app. The link below is the same one we sent before — it's still valid.`
+    : `Your invite link is still active for a little while longer. Claim your account now so you don't lose access to ${orgName} on BoxStat.`;
+
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#f8f9fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa;padding:40px 20px">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
+        <tr><td style="background:#ffffff;padding:16px 16px 8px;text-align:center">
+          <img src="${getBaseUrl()}/assets/logo-full" alt="BoxStat" style="width:160px;height:160px;display:inline-block" />
+        </td></tr>
+        <tr><td style="background:white;padding:32px">
+          <p style="font-size:16px;color:#1a202c;margin:0 0 8px;font-weight:500">Hi ${firstName || 'there'},</p>
+          <p style="font-size:14px;color:#6c757d;line-height:1.7;margin:0 0 16px">${heading}</p>
+          <p style="font-size:14px;color:#6c757d;line-height:1.7;margin:0 0 24px">${body}</p>
+          <table cellpadding="0" cellspacing="0" style="margin:0 auto 24px">
+            <tr><td style="background:#C0392B;border-radius:8px;text-align:center">
+              <a href="${inviteUrl}" style="display:inline-block;padding:12px 28px;color:white;font-size:14px;font-weight:600;text-decoration:none">
+                Claim my account
+              </a>
+            </td></tr>
+          </table>
+          <p style="font-size:12px;color:#adb5bd;text-align:center;margin:0">
+            If you've already claimed your account, you can safely ignore this email.
+          </p>
+        </td></tr>
+        <tr><td style="background:#f8f9fa;padding:20px 32px;text-align:center">
+          <p style="font-size:12px;color:#adb5bd;margin:0">
+            BoxStat · <a href="https://boxstat.app" style="color:#adb5bd">boxstat.app</a>
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+export async function sendInviteReminder(
+  toEmail: string,
+  firstName: string | null,
+  inviteToken: string,
+  orgName: string,
+  reminderNumber: number,
+): Promise<{ success: boolean; error?: string }> {
+  const inviteUrl = `${getBaseUrl()}/invite/${inviteToken}`;
+  const subject = reminderNumber === 1
+    ? `Reminder: claim your ${orgName} account on BoxStat`
+    : `Last reminder: your ${orgName} account on BoxStat is waiting`;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: `BoxStat <invites@${process.env.EMAIL_DOMAIN || "boxstat.app"}>`,
+      to: toEmail,
+      subject,
+      html: buildReminderEmailHtml(firstName || '', inviteUrl, orgName, reminderNumber),
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { success: false, error: message };
+  }
+}
+
 export async function sendMigrationInvite(
   record: InviteRecord,
   inviteToken: string,

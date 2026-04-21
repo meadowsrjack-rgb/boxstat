@@ -6,7 +6,7 @@ import { analyzePlayerAttendance, getOrgPlayers, getTeamCoachIds, getOrgAdminIds
 import type { Event } from '@shared/schema';
 import { db } from '../db';
 import { notifications, notificationRecipients, productEnrollments, products, users, teamMemberships, teams } from '@shared/schema';
-import { eq, and, sql, lte, gte, gt, lt, inArray } from 'drizzle-orm';
+import { eq, and, sql, lte, gte, gt, lt, inArray, isNotNull } from 'drizzle-orm';
 import { adminNotificationService } from './adminNotificationService';
 
 export class NotificationScheduler {
@@ -86,6 +86,13 @@ export class NotificationScheduler {
     }, {
       scheduled: false
     });
+
+    const invitedClaimRemindersJob = cron.schedule('0 10 * * *', async () => {
+      await this.processInvitedClaimReminders();
+    }, {
+      scheduled: false
+    });
+    this.jobs.set('invitedClaimReminders', invitedClaimRemindersJob);
 
     this.jobs.set('eventReminders', eventReminderJob);
     this.jobs.set('checkinAvailable', checkinAvailableJob);
@@ -1273,6 +1280,128 @@ export class NotificationScheduler {
       }
     } catch (error) {
       console.error('[Enrollment Expiry Warnings] Error:', error);
+    }
+  }
+
+  async triggerInvitedClaimReminders() {
+    await this.processInvitedClaimReminders();
+  }
+
+  private async processInvitedClaimReminders() {
+    try {
+      console.log('[Invited Claim Reminders] Scanning unclaimed invited accounts...');
+      const now = new Date();
+      const nowIso = now.toISOString();
+      const INVITE_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
+      const DAY_MS = 24 * 60 * 60 * 1000;
+      const REMINDER_DAYS = [2, 5];
+      const MAX_REMINDERS = REMINDER_DAYS.length;
+
+      const candidates = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          organizationId: users.organizationId,
+          inviteToken: users.inviteToken,
+          inviteTokenExpiry: users.inviteTokenExpiry,
+          inviteReminderCount: users.inviteReminderCount,
+          lastInviteReminderAt: users.lastInviteReminderAt,
+        })
+        .from(users)
+        .where(
+          and(
+            isNotNull(users.inviteToken),
+            isNotNull(users.inviteTokenExpiry),
+            gt(users.inviteTokenExpiry, nowIso),
+            isNotNull(users.email),
+            // Either status='invited' OR the account hasn't been registered yet.
+            // hasRegistered may be null on legacy rows, so treat null as "not registered".
+            sql`(${users.status} = 'invited' OR ${users.hasRegistered} IS NOT TRUE)`,
+          ),
+        );
+
+      console.log(`[Invited Claim Reminders] Found ${candidates.length} unclaimed invited account(s).`);
+
+      const orgNameCache = new Map<string, string>();
+      const { sendInviteReminder } = await import('../emails/inviteEmail');
+
+      let sent = 0;
+      let skipped = 0;
+
+      for (const u of candidates) {
+        try {
+          if (!u.email || !u.inviteToken || !u.inviteTokenExpiry || !u.organizationId) {
+            skipped++;
+            continue;
+          }
+          const reminderCount = u.inviteReminderCount ?? 0;
+          if (reminderCount >= MAX_REMINDERS) {
+            skipped++;
+            continue;
+          }
+
+          // Derive invite-issued time from the 7-day expiry window.
+          const expiryMs = new Date(u.inviteTokenExpiry).getTime();
+          const issuedMs = expiryMs - INVITE_LIFETIME_MS;
+          const daysSinceInvite = (now.getTime() - issuedMs) / DAY_MS;
+          const nextReminderNumber = reminderCount + 1;
+          const threshold = REMINDER_DAYS[reminderCount];
+
+          if (daysSinceInvite < threshold) {
+            skipped++;
+            continue;
+          }
+
+          // Avoid sending two reminders on the same day.
+          if (u.lastInviteReminderAt) {
+            const lastMs = new Date(u.lastInviteReminderAt).getTime();
+            if (now.getTime() - lastMs < DAY_MS) {
+              skipped++;
+              continue;
+            }
+          }
+
+          let orgName = orgNameCache.get(u.organizationId);
+          if (!orgName) {
+            const org = await storage.getOrganization(u.organizationId);
+            orgName = org?.name || 'Your organization';
+            orgNameCache.set(u.organizationId, orgName);
+          }
+
+          const result = await sendInviteReminder(
+            u.email,
+            u.firstName ?? null,
+            u.inviteToken,
+            orgName,
+            nextReminderNumber,
+          );
+
+          if (!result.success) {
+            console.error(`[Invited Claim Reminders] Failed to email ${u.email}: ${result.error}`);
+            skipped++;
+            continue;
+          }
+
+          await db
+            .update(users)
+            .set({
+              lastInviteReminderAt: nowIso,
+              inviteReminderCount: nextReminderNumber,
+            })
+            .where(eq(users.id, u.id));
+
+          sent++;
+          console.log(`[Invited Claim Reminders] Sent reminder #${nextReminderNumber} to ${u.email} (day ${daysSinceInvite.toFixed(1)} since invite).`);
+        } catch (rowErr) {
+          console.error(`[Invited Claim Reminders] Error processing user ${u.id}:`, rowErr);
+          skipped++;
+        }
+      }
+
+      console.log(`[Invited Claim Reminders] Done. Sent: ${sent}, Skipped: ${skipped}.`);
+    } catch (err) {
+      console.error('[Invited Claim Reminders] Fatal error:', err);
     }
   }
 

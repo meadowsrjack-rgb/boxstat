@@ -15652,7 +15652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             if (!isAlreadyActive) {
               inviteToken = crypto.randomBytes(32).toString('hex');
-              await storage.updateUser(parentUserId, { inviteToken, inviteTokenExpiry: newExpiry });
+              await storage.updateUser(parentUserId, { inviteToken, inviteTokenExpiry: newExpiry, inviteReminderCount: 0, lastInviteReminderAt: null });
             } else {
               inviteToken = '';
             }

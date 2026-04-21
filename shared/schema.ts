@@ -318,6 +318,8 @@ export const users = pgTable("users", {
   languages: text("languages"),
   inviteToken: varchar("invite_token", { length: 64 }),
   inviteTokenExpiry: timestamp("invite_token_expiry", { mode: 'string' }),
+  lastInviteReminderAt: timestamp("last_invite_reminder_at", { mode: 'string' }),
+  inviteReminderCount: integer("invite_reminder_count").default(0),
   status: varchar("status", { length: 20 }).default("active"),
   activatedAt: timestamp("activated_at", { mode: 'string' }),
   subscriptionEndDate: date("subscription_end_date"),

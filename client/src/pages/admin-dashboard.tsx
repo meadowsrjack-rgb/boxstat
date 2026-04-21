@@ -4379,7 +4379,11 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                         {(user.status === 'invited' || user.hasRegistered === false) && (
                           <span
                             className="inline-flex items-center text-[10px] border border-blue-300 text-blue-700 bg-blue-50 px-1.5 py-0 rounded-full cursor-help"
-                            title="Account invited but not yet claimed by the user"
+                            title={
+                              user.lastInviteReminderAt
+                                ? `Account invited but not yet claimed. Last reminder sent ${new Date(user.lastInviteReminderAt).toLocaleString()}${user.inviteReminderCount ? ` (reminder ${user.inviteReminderCount} of 2)` : ''}.`
+                                : "Account invited but not yet claimed by the user. No reminders sent yet."
+                            }
                             data-testid={`invited-indicator-${user.id}`}
                           >
                             Invited

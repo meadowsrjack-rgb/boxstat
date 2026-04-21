@@ -33,6 +33,8 @@ export async function backfillStrandedInvites(): Promise<void> {
           status: 'invited',
           inviteToken: token,
           inviteTokenExpiry: expiry,
+          inviteReminderCount: 0,
+          lastInviteReminderAt: null,
         })
         .where(
           and(

@@ -13,6 +13,15 @@ export async function ensureAuxTables() {
     await client.query(`
       ALTER TABLE product_enrollments ADD COLUMN IF NOT EXISTS grace_period_end_date timestamp;
     `);
+
+    // Invite reminder bookkeeping (task #224). Allows the daily
+    // invitedClaimReminders job to track per-user cadence and dedup.
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_invite_reminder_at timestamp;
+    `);
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS invite_reminder_count integer DEFAULT 0;
+    `);
     await client.query(`
       CREATE TABLE IF NOT EXISTS profile_privacy (
         profile_id varchar PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,

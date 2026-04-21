@@ -3735,7 +3735,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                   {/* Step 3: Expiry date (if program selected) */}
                                   {selectedProgram && (
                                     <div>
-                                      <label className="text-xs text-gray-600 mb-1 block">Expiry Date <span className="text-gray-400">(optional)</span></label>
+                                      <label className="text-xs text-gray-600 mb-1 block">Expiry Date</label>
                                       <input
                                         type="date"
                                         className="text-sm border border-gray-200 rounded px-2 py-1.5 bg-white w-full"
@@ -3745,6 +3745,14 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                         onChange={(e) => setEditingUser({ ...editingUser, addEnrollmentEndDate: e.target.value })}
                                         data-testid="input-add-enrollment-expiry"
                                       />
+                                      {!editingUser.addEnrollmentEndDate && (
+                                        <p
+                                          className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 mt-1"
+                                          data-testid="text-add-enrollment-no-expiry-warning"
+                                        >
+                                          No expiry date set — this user will need to enroll through the Payments tab immediately.
+                                        </p>
+                                      )}
                                     </div>
                                   )}
 

@@ -54,9 +54,18 @@ export function EnrollmentExpiryBanner() {
     return days >= 0 && days <= 7;
   });
 
+  const noExpiryOnFile = enrollments.filter(
+    (e) => e.status === "active" && !e.endDate,
+  );
+
   const inGracePeriod = enrollments.filter((e) => e.status === "grace_period");
 
-  if (expiringSoon.length === 0 && inGracePeriod.length === 0) return null;
+  if (
+    expiringSoon.length === 0 &&
+    noExpiryOnFile.length === 0 &&
+    inGracePeriod.length === 0
+  )
+    return null;
 
   return (
     <div className="space-y-2 mb-4">
@@ -79,6 +88,35 @@ export function EnrollmentExpiryBanner() {
                   ? `${subject} in ${programName} ends tomorrow.`
                   : `${subject} in ${programName} ends in ${days} days.`}{" "}
                 Re-enroll through the Payments tab to avoid unenrollment.
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-amber-500 text-amber-800 hover:bg-amber-100 shrink-0"
+                onClick={() => setLocation("/account?tab=payments")}
+              >
+                Payments
+              </Button>
+            </AlertDescription>
+          </Alert>
+        );
+      })}
+
+      {noExpiryOnFile.map((e) => {
+        const programName = programMap[e.programId] || "your program";
+        const playerName = e.profileId ? playerMap[e.profileId] : null;
+        const subject = playerName ? `${playerName}'s enrollment` : "Your enrollment";
+        return (
+          <Alert
+            key={`no-expiry-${e.id}`}
+            className="border-l-4 border-l-amber-500 bg-amber-50"
+            data-testid={`banner-no-expiry-${e.id}`}
+          >
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="flex items-center justify-between gap-4">
+              <span className="text-amber-800 text-sm">
+                {subject} in {programName} has no expiry date on file.{" "}
+                Enroll through the Payments tab to keep your access active.
               </span>
               <Button
                 size="sm"

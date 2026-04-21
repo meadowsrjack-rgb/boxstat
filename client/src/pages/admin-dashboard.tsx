@@ -2631,7 +2631,9 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     if (filterRoles.size > 0 && !filterRoles.has(user.role)) return false;
     if (filterStatuses.size > 0) {
       const status = deriveUserStatus(user);
-      if (!filterStatuses.has(status)) return false;
+      const isInvited = user.status === 'invited' || user.hasRegistered === false;
+      const matches = filterStatuses.has(status) || (filterStatuses.has('Invited') && isInvited);
+      if (!matches) return false;
     }
     return true;
   });
@@ -4095,6 +4097,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                     <div className="flex flex-wrap gap-1.5">
                       {[
                         "Active",
+                        "Invited",
                         "Unpaid",
                         "Needs Team",
                         "Payment Failed",
@@ -4369,6 +4372,15 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                             data-testid={`flag-indicator-${user.id}`}
                           >
                             <Flag className="w-2.5 h-2.5" /> Flagged
+                          </span>
+                        )}
+                        {(user.status === 'invited' || user.hasRegistered === false) && (
+                          <span
+                            className="inline-flex items-center text-[10px] border border-blue-300 text-blue-700 bg-blue-50 px-1.5 py-0 rounded-full cursor-help"
+                            title="Account invited but not yet claimed by the user"
+                            data-testid={`invited-indicator-${user.id}`}
+                          >
+                            Invited
                           </span>
                         )}
                       </div>

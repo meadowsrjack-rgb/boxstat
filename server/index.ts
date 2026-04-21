@@ -10,6 +10,7 @@ import { notificationScheduler } from "./services/notificationScheduler";
 import { ensureAuxTables } from "./boot";
 import { runMigrationExpiryBackfill } from "./migrationExpiryBackfill";
 import { restoreDefaultOrgStripeConnection } from "./restoreDefaultOrgStripe";
+import { backfillStrandedInvites } from "./backfillStrandedInvites";
 import { startPendingClaimSweeper } from "./lib/pending-claim-store";
 
 const app = express();
@@ -248,6 +249,14 @@ app.use((req, res, next) => {
     // (task #215). No-op once the row has any connected account id set.
     restoreDefaultOrgStripeConnection().catch(err => {
       console.error('[Restore Default Org Stripe] Unhandled error:', err);
+    });
+
+    // One-shot idempotent backfill: convert "active-but-never-claimed"
+    // accounts (no password, no invite token, hasRegistered=false) into
+    // properly-invited accounts so admins see the "Invited" pill and can
+    // resend a working invite link (task #222).
+    backfillStrandedInvites().catch(err => {
+      console.error('[Backfill Stranded Invites] Unhandled error:', err);
     });
   });
 })();

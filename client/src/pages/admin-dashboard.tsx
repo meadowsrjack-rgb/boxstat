@@ -2104,6 +2104,28 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     },
   });
 
+  const resendVerificationEmail = useMutation({
+    mutationFn: async (userId: string) => {
+      return await apiRequest("POST", `/api/admin/users/${userId}/resend-verification`, {});
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Verification email sent",
+        description: data?.message,
+      });
+    },
+    onError: (err: any) => {
+      const message = err?.message || "Failed to send verification email";
+      const cleaned = message.replace(/^\d+:\s*/, "");
+      toast({
+        title: "Couldn't send verification email",
+        description: cleaned,
+        variant: "destructive",
+      });
+    },
+  });
+
   const toggleUserSelection = (userId: string) => {
     setSelectedUserIds(prev => {
       const next = new Set(prev);
@@ -4617,6 +4639,19 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                     )}
                   </div>
                   <div className="flex items-center gap-2">
+                    {!viewingUser.verified && viewingUser.email && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => resendVerificationEmail.mutate(viewingUser.id)}
+                        disabled={resendVerificationEmail.isPending}
+                        className="flex items-center gap-2"
+                        data-testid="button-resend-verification-email"
+                      >
+                        <Mail className="w-4 h-4" />
+                        {resendVerificationEmail.isPending ? "Sending…" : "Resend verification"}
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"

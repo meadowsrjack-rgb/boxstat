@@ -1303,6 +1303,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin-initiated resend of a user's verification email. Used when a user
+  // calls support stuck on verification — admin can resend on their behalf.
+  // Reuses the same token-rotation + email send as the self-serve flow and
+  // shares the same per-email cooldown so admins can't accidentally spam.
+  app.post('/api/admin/users/:id/resend-verification', requireAuth, isAdmin, async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+      if (targetUser.verified) {
+        return res.status(400).json({ success: false, message: "User is already verified" });
+      }
+      if (!targetUser.email) {
+        return res.status(400).json({ success: false, message: "User has no email on file" });
+      }
+
+      const emailKey = targetUser.email.trim().toLowerCase();
+      const now = Date.now();
+      const lastSent = resendVerificationLastSent.get(emailKey);
+      if (lastSent && now - lastSent < resendVerificationCooldownMs) {
+        const retryAfterSec = Math.ceil((resendVerificationCooldownMs - (now - lastSent)) / 1000);
+        return res.status(429).json({
+          success: false,
+          message: `Please wait ${retryAfterSec}s before resending again.`,
+          retryAfterSec,
+        });
+      }
+
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const verificationExpiry = new Date(now + 24 * 60 * 60 * 1000);
+
+      await storage.updateUser(targetUser.id, {
+        verificationToken,
+        verificationExpiry,
+      } as any);
+
+      await emailService.sendVerificationEmail({
+        email: targetUser.email,
+        firstName: targetUser.firstName || 'there',
+        verificationToken,
+        organizationId: targetUser.organizationId,
+      });
+
+      resendVerificationLastSent.set(emailKey, now);
+      return res.json({
+        success: true,
+        message: `Verification email sent to ${targetUser.email}.`,
+      });
+    } catch (error: any) {
+      console.error("Admin resend verification error:", error);
+      res.status(500).json({ success: false, message: "Failed to send verification email" });
+    }
+  });
+
   // Email verification endpoint
   app.get('/api/auth/verify-email', async (req: any, res) => {
     try {

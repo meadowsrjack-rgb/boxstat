@@ -4431,19 +4431,6 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                             <Flag className="w-2.5 h-2.5" /> Flagged
                           </span>
                         )}
-                        {(user.status === 'invited' || user.hasRegistered === false) && (
-                          <span
-                            className="inline-flex items-center text-[10px] border border-blue-300 text-blue-700 bg-blue-50 px-1.5 py-0 rounded-full cursor-help"
-                            title={
-                              user.lastInviteReminderAt
-                                ? `Account invited but not yet claimed. Last reminder sent ${new Date(user.lastInviteReminderAt).toLocaleString()}${user.inviteReminderCount ? ` (reminder ${user.inviteReminderCount} of 2)` : ''}.`
-                                : "Account invited but not yet claimed by the user. No reminders sent yet."
-                            }
-                            data-testid={`invited-indicator-${user.id}`}
-                          >
-                            Invited
-                          </span>
-                        )}
                       </div>
                       {linkedPlayers.length > 0 && (
                         <div className="ml-3 mt-0.5 flex flex-col">
@@ -4513,7 +4500,22 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       )}
                     </TableCell>
                     <TableCell className="px-2 py-1.5" data-testid={`text-status-${user.id}`}>
-                      <Badge className={`${summaryStatus.cls} whitespace-nowrap text-[10px] px-1.5 py-0.5`}>{summaryStatus.label}</Badge>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <Badge className={`${summaryStatus.cls} whitespace-nowrap text-[10px] px-1.5 py-0.5`}>{summaryStatus.label}</Badge>
+                        {(user.status === 'invited' || user.hasRegistered === false) && (
+                          <span
+                            className="inline-flex items-center text-[10px] border border-blue-300 text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full cursor-help whitespace-nowrap"
+                            title={
+                              user.lastInviteReminderAt
+                                ? `Account invited but not yet claimed. Last reminder sent ${new Date(user.lastInviteReminderAt).toLocaleString()}${user.inviteReminderCount ? ` (reminder ${user.inviteReminderCount} of 2)` : ''}.`
+                                : "Account invited but not yet claimed by the user. No reminders sent yet."
+                            }
+                            data-testid={`invited-indicator-${user.id}`}
+                          >
+                            Invited
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="px-2 py-1.5 text-xs text-gray-500 whitespace-nowrap">
                       {user.createdAt ? new Date(user.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}

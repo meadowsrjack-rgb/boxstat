@@ -9863,14 +9863,14 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                 <Plus className="w-4 h-4" />
               </Button>
             </DialogTrigger>
-          <DialogContent className="max-w-2xl w-full p-0 gap-0 overflow-hidden">
-            <DialogHeader className="px-6 py-5 border-b border-gray-100">
+          <DialogContent className="max-w-2xl w-[calc(100%-1rem)] sm:w-full p-0 gap-0 overflow-hidden flex flex-col max-h-[calc(100dvh-2rem)] sm:max-h-[90vh]">
+            <DialogHeader className="px-6 py-5 border-b border-gray-100 shrink-0">
               <DialogTitle className="text-lg font-bold text-gray-900">{editingProgram ? "Edit Program" : "Create New Program"}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => createProgram.mutate(data))}>
+              <form onSubmit={form.handleSubmit((data) => createProgram.mutate(data))} className="flex-1 flex flex-col min-h-0">
                 {/* Scrollable body */}
-                <div className="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto">
+                <div className="px-6 py-5 space-y-4 flex-1 overflow-y-auto min-h-0">
 
                   {/* ── PROGRAM DETAILS ── */}
                   <Section icon={<Layers size={16} className="text-gray-500" />} title="Program Details" defaultOpen>
@@ -10891,7 +10891,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between gap-3 shrink-0 flex-wrap pb-[max(1rem,env(safe-area-inset-bottom))]">
                   <p className="text-xs text-gray-400">
                     {(() => {
                       const name = form.watch("name");

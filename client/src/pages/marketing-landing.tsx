@@ -725,18 +725,18 @@ const CinematicFooter = () => {
       {/* grid bg */}
       <div className="bx-grid-bg absolute inset-0 z-0 pointer-events-none opacity-60" />
 
-      {/* watermark — centered both axes, capped size, low opacity */}
+      {/* watermark — sits in the open area below the marquee, slightly opaque */}
       <motion.div
-        className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none select-none"
+        className="absolute left-0 right-0 top-48 md:top-56 flex items-center justify-center z-0 pointer-events-none select-none px-6"
         style={{ opacity: watermarkOpacity }}
       >
         <img
           src={LOGO_FULL}
           alt=""
-          className="w-[90vw] max-w-[1100px] h-auto"
+          className="w-[92vw] max-w-[1200px] h-auto"
           style={{
-            opacity: 0.1,
-            filter: "drop-shadow(0 0 80px rgba(226,18,36,0.3))",
+            opacity: 0.22,
+            filter: "drop-shadow(0 0 120px rgba(226,18,36,0.45))",
           }}
           draggable={false}
         />

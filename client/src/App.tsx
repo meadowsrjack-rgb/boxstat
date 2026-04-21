@@ -12,6 +12,10 @@ import Teams from "@/pages/teams";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import Landing from "@/pages/landing";
 import MarketingLanding from "@/pages/marketing-landing";
+import Pricing from "@/pages/pricing";
+import Demo from "@/pages/demo";
+import Terms from "@/pages/terms";
+import Migrations from "@/pages/migrations";
 import AccountSetup from "@/pages/account-setup";
 import PlayerDashboard from "@/pages/player-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
@@ -574,6 +578,11 @@ function AppRouter() {
     <Switch>
       {/* Public routes - always accessible */}
       <Route path="/privacy-policy" component={PrivacyPolicy} />
+      <Route path="/privacy" component={PrivacyPolicy} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/demo" component={Demo} />
+      <Route path="/migrations" component={Migrations} />
+      <Route path="/pricing" component={Pricing} />
       <Route path="/support" component={SupportPage} />
 
       <Route path="/teams" component={Teams} />

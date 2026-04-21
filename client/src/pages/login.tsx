@@ -22,6 +22,30 @@ export default function LoginPage() {
   const [magicLinkEmail, setMagicLinkEmail] = useState("");
   const [isSendingMagicLink, setIsSendingMagicLink] = useState(false);
   const [showMagicLink, setShowMagicLink] = useState(false);
+  const [needsVerificationEmail, setNeedsVerificationEmail] = useState<string | null>(null);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
+
+  const handleResendVerification = async () => {
+    if (!needsVerificationEmail) return;
+    setIsResendingVerification(true);
+    try {
+      await apiRequest("POST", "/api/auth/resend-verification", {
+        email: needsVerificationEmail,
+      });
+      toast({
+        title: "Verification email sent",
+        description: "Check your inbox (and spam folder) for the verification link.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Couldn't send verification email",
+        description: error?.message || "Please try again in a moment.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResendingVerification(false);
+    }
+  };
 
   const getReturnTo = (): string | null => {
     const params = new URLSearchParams(window.location.search);
@@ -111,9 +135,10 @@ export default function LoginPage() {
 
       const errMsg = error.message || "";
       if (errMsg.includes("verify your email")) {
+        setNeedsVerificationEmail(email);
         toast({
           title: "Email Verification Required",
-          description: "Please check your inbox for the verification link.",
+          description: "Tap \"Resend verification email\" below to get a fresh link.",
           variant: "destructive",
         });
       } else if (errMsg.includes("needsPassword") || errMsg.includes("Magic Link to sign in")) {
@@ -156,8 +181,15 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       const errorMsg = error.message || "";
-      // Check if the error indicates no account exists
-      if (errorMsg.includes("noAccount") || errorMsg.includes("No account found")) {
+      // Surface a one-tap resend if the user is stuck on an unverified account.
+      if (errorMsg.includes("verify your email")) {
+        setNeedsVerificationEmail(magicLinkEmail);
+        toast({
+          title: "Email Verification Required",
+          description: "Tap \"Resend verification email\" below to get a fresh link.",
+          variant: "destructive",
+        });
+      } else if (errorMsg.includes("noAccount") || errorMsg.includes("No account found")) {
         toast({
           title: "No Account Found",
           description: "No account exists with that email. Redirecting to registration...",
@@ -224,6 +256,36 @@ export default function LoginPage() {
               Login to access your account
             </p>
           </div>
+
+          {needsVerificationEmail && (
+            <div
+              className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 space-y-3"
+              data-testid="resend-verification-banner"
+            >
+              <div className="space-y-1">
+                <p className="text-amber-200 text-sm font-semibold">
+                  Verify your email to continue
+                </p>
+                <p className="text-amber-100/80 text-xs">
+                  We need to confirm{" "}
+                  <span className="font-medium">{needsVerificationEmail}</span>{" "}
+                  before you can sign in.
+                </p>
+              </div>
+              <Button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={isResendingVerification}
+                className="w-full h-10 bg-amber-500 hover:bg-amber-400 text-black font-semibold"
+                data-testid="button-resend-verification"
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                {isResendingVerification
+                  ? "Sending..."
+                  : "Resend verification email"}
+              </Button>
+            </div>
+          )}
 
           {!showMagicLink ? (
             <>

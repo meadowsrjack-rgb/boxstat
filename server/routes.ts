@@ -1247,7 +1247,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ success: false, message: "Failed to send verification email" });
     }
   });
-  
+
+  // Per-email cooldown for the existing-user resend-verification flow.
+  // Prevents mashing the button from spamming the inbox.
+  const resendVerificationCooldownMs = 60 * 1000;
+  const resendVerificationLastSent = new Map<string, number>();
+
+  app.post('/api/auth/resend-verification', async (req: any, res) => {
+    try {
+      const rawEmail = (req.body?.email || '').toString().trim().toLowerCase();
+      if (!rawEmail) {
+        return res.status(400).json({ success: false, message: "Email is required" });
+      }
+
+      // Generic success message — never leak whether an account exists or
+      // its verification state.
+      const genericResponse = {
+        success: true,
+        message: "If an unverified account exists for that email, a verification email has been sent.",
+      };
+
+      const now = Date.now();
+      const lastSent = resendVerificationLastSent.get(rawEmail);
+      if (lastSent && now - lastSent < resendVerificationCooldownMs) {
+        return res.json(genericResponse);
+      }
+
+      const user = await storage.getUserByEmailAnyOrg(rawEmail);
+      if (!user || user.verified) {
+        // Still mark cooldown so probing for existence is harder.
+        resendVerificationLastSent.set(rawEmail, now);
+        return res.json(genericResponse);
+      }
+
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const verificationExpiry = new Date(now + 24 * 60 * 60 * 1000);
+
+      await storage.updateUser(user.id, {
+        verificationToken,
+        verificationExpiry,
+      } as any);
+
+      await emailService.sendVerificationEmail({
+        email: user.email,
+        firstName: user.firstName || 'there',
+        verificationToken,
+        organizationId: user.organizationId,
+      });
+
+      resendVerificationLastSent.set(rawEmail, now);
+      return res.json(genericResponse);
+    } catch (error: any) {
+      console.error("Resend verification error:", error);
+      res.status(500).json({ success: false, message: "Failed to send verification email" });
+    }
+  });
+
   // Email verification endpoint
   app.get('/api/auth/verify-email', async (req: any, res) => {
     try {
@@ -1278,6 +1333,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (!pendingReg) {
+        // Fallback: token may live on an existing users row (e.g. an
+        // unverified account that used the resend-verification flow).
+        const userRows = await db
+          .select()
+          .from(users)
+          .where(eq(users.verificationToken, token as string))
+          .limit(1);
+        const userRow = userRows[0];
+
+        if (userRow) {
+          if (userRow.verified) {
+            return res.json({
+              success: true,
+              message: "Email already verified. You can log in now.",
+              email: userRow.email,
+              hasOriginalSession: false,
+              shouldRedirect: true,
+            });
+          }
+          if (userRow.verificationExpiry && new Date() > new Date(userRow.verificationExpiry)) {
+            await storage.updateUser(userRow.id, {
+              verificationToken: null,
+              verificationExpiry: null,
+            } as any);
+            return res.status(400).json({ success: false, message: "Verification token has expired. Please request a new one." });
+          }
+
+          await storage.updateUser(userRow.id, {
+            verified: true,
+            verificationToken: null,
+            verificationExpiry: null,
+          } as any);
+
+          return res.json({
+            success: true,
+            message: "Email verified successfully! You can log in now.",
+            email: userRow.email,
+            hasOriginalSession: false,
+            shouldRedirect: true,
+          });
+        }
+
         return res.status(404).json({ success: false, message: "Invalid or expired verification token" });
       }
       

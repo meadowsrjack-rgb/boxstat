@@ -2072,6 +2072,38 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     },
   });
 
+  const bulkResendInvites = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const data = await apiRequest("POST", "/api/users/bulk-resend-invites", { userIds: ids });
+      return data as {
+        sent: number;
+        failed: Array<{ id: string; email?: string; error: string }>;
+        skipped: Array<{ id: string; reason: string }>;
+      };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setSelectedUserIds(new Set());
+      const failedCount = data.failed?.length || 0;
+      const skippedCount = data.skipped?.length || 0;
+      const skippedNote = skippedCount > 0 ? ` (${skippedCount} skipped — already claimed or not found)` : "";
+      if (failedCount > 0) {
+        const sample = data.failed.slice(0, 3).map(f => f.email || f.id).join(", ");
+        const more = failedCount > 3 ? ` +${failedCount - 3} more` : "";
+        toast({
+          title: `Sent ${data.sent} invite(s), ${failedCount} failed${skippedNote}`,
+          description: `Failed: ${sample}${more}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: `Sent ${data.sent} invite${data.sent === 1 ? '' : 's'} successfully${skippedNote}` });
+      }
+    },
+    onError: () => {
+      toast({ title: "Failed to resend invites", variant: "destructive" });
+    },
+  });
+
   const toggleUserSelection = (userId: string) => {
     setSelectedUserIds(prev => {
       const next = new Set(prev);
@@ -4000,33 +4032,56 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
       </CardHeader>
       <CardContent>
         {/* Bulk Action Bar */}
-        {selectedUserIds.size > 0 && (
-          <div className="flex items-center gap-4 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg">
-            <span className="text-sm font-medium text-red-800">
-              {selectedUserIds.size} user{selectedUserIds.size > 1 ? 's' : ''} selected
-            </span>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => {
-                if (confirm(`Are you sure you want to delete ${selectedUserIds.size} user(s)?`)) {
-                  bulkDeleteUsers.mutate(Array.from(selectedUserIds));
-                }
-              }}
-              disabled={bulkDeleteUsers.isPending}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              {bulkDeleteUsers.isPending ? "Deleting..." : "Delete Selected"}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedUserIds(new Set())}
-            >
-              Clear Selection
-            </Button>
-          </div>
-        )}
+        {selectedUserIds.size > 0 && (() => {
+          const selectedInvitedIds = users
+            .filter((u: any) => selectedUserIds.has(u.id) && (u.status === 'invited' || u.hasRegistered === false))
+            .map((u: any) => u.id);
+          return (
+            <div className="flex items-center gap-4 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg">
+              <span className="text-sm font-medium text-red-800">
+                {selectedUserIds.size} user{selectedUserIds.size > 1 ? 's' : ''} selected
+              </span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  if (confirm(`Are you sure you want to delete ${selectedUserIds.size} user(s)?`)) {
+                    bulkDeleteUsers.mutate(Array.from(selectedUserIds));
+                  }
+                }}
+                disabled={bulkDeleteUsers.isPending}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                {bulkDeleteUsers.isPending ? "Deleting..." : "Delete Selected"}
+              </Button>
+              {selectedInvitedIds.length > 0 && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => {
+                    if (confirm(`Resend invite emails to ${selectedInvitedIds.length} unclaimed account(s)? Any previously-shared invite links will be invalidated.`)) {
+                      bulkResendInvites.mutate(selectedInvitedIds);
+                    }
+                  }}
+                  disabled={bulkResendInvites.isPending}
+                  data-testid="button-bulk-resend-invites"
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  {bulkResendInvites.isPending
+                    ? "Sending..."
+                    : `Resend Invites (${selectedInvitedIds.length})`}
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedUserIds(new Set())}
+              >
+                Clear Selection
+              </Button>
+            </div>
+          );
+        })()}
         {/* Search bar */}
         <div className="mb-4">
           <div className="flex gap-2">

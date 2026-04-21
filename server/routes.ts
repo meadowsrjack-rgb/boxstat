@@ -51,6 +51,8 @@ import { analyzePlayerAttendance, getTeamCoachIds, getOrgAdminIds, triggerRealTi
 import { db } from "./db";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards, platformSettings, organizations, attendances, rsvpResponses, contactManagementMessages, payments, messages as messagesTable, gameSessions, gamePlayerStats, events } from "@shared/schema";
+import type { User } from "@shared/schema";
+import type { InviteRecord } from "@shared/types/migration";
 import { eq, and, or, sql, desc, inArray, gte, count, isNull } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;
@@ -15347,6 +15349,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // POST /api/users/bulk-resend-invites
+  // Bulk-resends invite emails to selected unclaimed accounts.
+  // Refreshes inviteToken + inviteTokenExpiry (7 days) and sets status='invited'.
+  app.post('/api/users/bulk-resend-invites', requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can resend invites' });
+      }
+
+      const bodySchema = z.object({ userIds: z.array(z.string().min(1)).min(1).max(500) });
+      const parsed = bodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: 'Invalid payload', errors: parsed.error.flatten() });
+      }
+
+      const { userIds } = parsed.data;
+      const { organizationId } = req.user;
+      const org = await storage.getOrganization(organizationId);
+      const orgName = org?.name || 'Your organization';
+
+      const { sendMigrationInvite } = await import('./emails/inviteEmail');
+
+      let sent = 0;
+      const failed: Array<{ id: string; email?: string; error: string }> = [];
+      const skipped: Array<{ id: string; reason: string }> = [];
+
+      for (const id of userIds) {
+        try {
+          const user = await storage.getUser(id);
+          if (!user || user.organizationId !== organizationId) {
+            skipped.push({ id, reason: 'not found' });
+            continue;
+          }
+
+          const isInvited = user.status === 'invited' || user.hasRegistered === false;
+          if (!isInvited) {
+            skipped.push({ id, reason: 'already claimed' });
+            continue;
+          }
+
+          if (!user.email) {
+            failed.push({ id, error: 'No email on file' });
+            continue;
+          }
+
+          const inviteToken = crypto.randomBytes(32).toString('hex');
+          const inviteTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+          const inviteRecord: InviteRecord = {
+            parent: {
+              id: 0,
+              firstName: user.firstName || 'there',
+              lastName: user.lastName || '',
+              email: user.email,
+              phone: user.phoneNumber || '',
+            },
+            players: [],
+          };
+
+          // Send first; only rotate the stored token after a successful send so a
+          // failed delivery doesn't invalidate any previously-shared link.
+          const result = await sendMigrationInvite(inviteRecord, inviteToken, orgName);
+          if (result.success) {
+            const updates: Partial<User> = {
+              status: 'invited',
+              inviteToken,
+              inviteTokenExpiry,
+            };
+            await storage.updateUser(id, updates);
+            sent++;
+          } else {
+            failed.push({ id, email: user.email, error: result.error || 'Email send failed' });
+          }
+        } catch (err: any) {
+          failed.push({ id, error: err?.message || 'Unknown error' });
+        }
+      }
+
+      res.json({ sent, failed, skipped });
+    } catch (error: any) {
+      console.error('Error in bulk-resend-invites:', error);
+      res.status(500).json({ message: 'Failed to resend invites', error: error.message });
+    }
+  });
+
   // =============================================
   // MIGRATION INVITE ROUTES (New parent/player invite wizard)
   // =============================================

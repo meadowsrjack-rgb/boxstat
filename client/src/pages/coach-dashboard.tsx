@@ -65,6 +65,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { FiltersBar } from "@/components/FiltersBar";
 import { getUserPreferences, UserPreferences } from "@/lib/userPrefs";
 import { parseEventMeta } from "@/lib/parseEventMeta";
+import OpenBoxStatPrompt from "@/components/OpenBoxStatPrompt";
 
 /* =================== Types =================== */
 
@@ -579,6 +580,7 @@ export default function CoachDashboard() {
 
   return (
     <>
+      <OpenBoxStatPrompt />
       <div className="ios-full-bleed" style={{ backgroundColor: '#f9fafb' }} />
       <div className="scrollable-page relative z-10" style={{ backgroundColor: '#f9fafb' }}>
       {/* Top Bar */}

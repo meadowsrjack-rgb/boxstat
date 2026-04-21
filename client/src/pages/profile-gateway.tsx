@@ -4,9 +4,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Shield, ChevronRight, Settings, LogOut, Crown, Bug, ArrowDown, X } from "lucide-react";
+import { User, Shield, ChevronRight, Settings, LogOut, Crown, Bug, ArrowDown } from "lucide-react";
 import { BanterLoader } from "@/components/BanterLoader";
-import lightThemeLogo from "@assets/light_1773300199014.png";
+import OpenBoxStatPrompt from "@/components/OpenBoxStatPrompt";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,21 +39,6 @@ function prefetchQuery(queryKey: string) {
   });
 }
 
-const APP_STORE_URL = 'https://apps.apple.com/us/app/boxstat/id6754899159';
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.boxstat.app&hl=en_US';
-const DISMISS_KEY = 'boxstat_app_download_dismissed';
-
-function getMobilePlatform(): 'ios' | 'android' | null {
-  const ua = navigator.userAgent || '';
-  if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
-  if (/Android/i.test(ua)) return 'android';
-  return null;
-}
-
-function isCapacitorNative(): boolean {
-  return typeof (window as any).Capacitor !== 'undefined' && (window as any).Capacitor.isNativePlatform?.();
-}
-
 export default function ProfileGateway() {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
@@ -62,15 +47,6 @@ export default function ProfileGateway() {
   const [bugTitle, setBugTitle] = useState("");
   const [bugDescription, setBugDescription] = useState("");
   const [switching, setSwitching] = useState(false);
-  const [showAppBanner, setShowAppBanner] = useState(false);
-
-  useEffect(() => {
-    const platform = getMobilePlatform();
-    const dismissed = localStorage.getItem(DISMISS_KEY);
-    if (platform && !isCapacitorNative() && !dismissed) {
-      setShowAppBanner(true);
-    }
-  }, []);
 
   const submitBugMutation = useMutation({
     mutationFn: async (bugData: { title: string; description: string }) => {
@@ -314,86 +290,7 @@ export default function ProfileGateway() {
             <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-who-is-watching">Whose ball?</h1>
           </div>
 
-        <Dialog open={showAppBanner} onOpenChange={(open) => {
-          if (!open) {
-            localStorage.setItem(DISMISS_KEY, 'true');
-            setShowAppBanner(false);
-          }
-        }}>
-          <DialogContent hideClose className="max-w-[320px] rounded-2xl bg-white p-6 border-0 shadow-xl">
-            <button
-              onClick={() => {
-                localStorage.setItem(DISMISS_KEY, 'true');
-                setShowAppBanner(false);
-              }}
-              className="absolute right-3 top-3 p-1 text-gray-400 hover:text-gray-600 transition-colors z-10"
-              aria-label="Dismiss app download prompt"
-              data-testid="button-dismiss-app-banner"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <div className="flex flex-col items-center text-center pt-2">
-              <img src={lightThemeLogo} alt="BoxStat" className="h-14 w-auto mb-5" />
-              <DialogTitle className="text-xl font-bold text-gray-900 mb-2">
-                Get the full app experience
-              </DialogTitle>
-              <DialogDescription className="text-sm text-gray-500 mb-6">
-                Stay in the know and enjoy more great features on the app
-              </DialogDescription>
-              <button
-                onClick={() => {
-                  const platform = getMobilePlatform();
-                  if (platform === 'ios') {
-                    const startedAt = Date.now();
-                    let timer: ReturnType<typeof setTimeout> | null = null;
-                    const cleanup = () => {
-                      if (timer !== null) {
-                        clearTimeout(timer);
-                        timer = null;
-                      }
-                      window.removeEventListener('pagehide', cleanup);
-                      window.removeEventListener('blur', cleanup);
-                      document.removeEventListener('visibilitychange', onVisChange);
-                    };
-                    const onVisChange = () => {
-                      if (document.hidden) cleanup();
-                    };
-                    window.addEventListener('pagehide', cleanup);
-                    window.addEventListener('blur', cleanup);
-                    document.addEventListener('visibilitychange', onVisChange);
-                    timer = setTimeout(() => {
-                      cleanup();
-                      // If we're still here and not hidden, the app didn't take over.
-                      if (!document.hidden && Date.now() - startedAt >= 2400) {
-                        window.location.href = APP_STORE_URL;
-                      }
-                    }, 2500);
-                    // Top-level navigation from inside the user gesture.
-                    window.location.href = 'boxstat://';
-                  } else if (platform === 'android') {
-                    window.location.href = 'intent://open/#Intent;scheme=boxstat;package=com.boxstat.app;S.browser_fallback_url=' + encodeURIComponent(PLAY_STORE_URL) + ';end';
-                  } else {
-                    window.open(APP_STORE_URL, '_blank');
-                  }
-                }}
-                className="w-full py-3 rounded-full bg-[#fe2c55] hover:bg-[#e5284d] text-white font-semibold text-base transition-colors"
-                data-testid="button-open-boxstat-app"
-              >
-                Open BoxStat
-              </button>
-              <button
-                onClick={() => {
-                  localStorage.setItem(DISMISS_KEY, 'true');
-                  setShowAppBanner(false);
-                }}
-                className="mt-3 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                data-testid="button-not-now-app-banner"
-              >
-                Not now
-              </button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <OpenBoxStatPrompt />
 
         {needsOnboarding && (
           <div className="mb-4 rounded-xl bg-gradient-to-r from-red-600/20 to-red-500/10 border border-red-500/30 px-4 py-3 flex items-center gap-3" data-testid="gateway-onboarding-banner">

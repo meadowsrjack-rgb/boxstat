@@ -76,6 +76,7 @@ import UypTrophyRings from "@/components/UypTrophyRings";
 import { authPersistence } from "@/services/authPersistence";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
+import OpenBoxStatPrompt from "@/components/OpenBoxStatPrompt";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -2199,6 +2200,7 @@ export default function UnifiedAccount() {
 
   return (
     <>
+      <OpenBoxStatPrompt />
       <div className="ios-full-bleed" style={{ backgroundColor: '#f9fafb' }} />
       <div className="scrollable-page relative z-10" style={{ backgroundColor: '#f9fafb' }}>
       {/* Header */}

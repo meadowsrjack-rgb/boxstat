@@ -159,6 +159,7 @@ import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { DateScrollPicker } from "react-date-wheel-picker";
 import { MigrationWizard } from "@/components/migration/MigrationWizard";
 import { useTheme } from "@/components/ThemeProvider";
+import OpenBoxStatPrompt from "@/components/OpenBoxStatPrompt";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -645,6 +646,7 @@ export default function AdminDashboard() {
 
   return (
     <>
+      <OpenBoxStatPrompt />
       <div className="ios-full-bleed" style={{ backgroundColor: '#f9fafb' }} />
       <div className="scrollable-page relative z-10" style={{ backgroundColor: '#f9fafb' }} data-testid="admin-dashboard">
       {/* Header */}

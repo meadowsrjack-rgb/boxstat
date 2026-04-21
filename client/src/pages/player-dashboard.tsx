@@ -75,6 +75,7 @@ import CoachProfileDialog from "@/components/CoachProfileDialog";
 import { FiltersBar } from "@/components/FiltersBar";
 import { getUserPreferences, UserPreferences } from "@/lib/userPrefs";
 import { parseEventMeta } from "@/lib/parseEventMeta";
+import OpenBoxStatPrompt from "@/components/OpenBoxStatPrompt";
 
 /* ===== “Wheel” option lists ===== */
 const TEAM_OPTIONS = [
@@ -1103,6 +1104,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   /* =================== UI =================== */
   return (
     <>
+      <OpenBoxStatPrompt />
       {/* Notification deep-link popups */}
       {evalPopupData && (
         <EvaluationPopup

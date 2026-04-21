@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { db } from './db';
 import { users } from '@shared/schema';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 export async function backfillStrandedInvites(): Promise<void> {
   try {

@@ -1,0 +1,46 @@
+I'm replacing my current landing page with a new scroll-animated TSX version. Please do the following in order:
+1. Install dependencies
+bashnpm install framer-motion lucide-react
+(lucide-react may already be installed since I use shadcn — check package.json first and skip if present.)
+2. Add font preloads to the HTML head
+In client/index.html, add inside <head>:
+html<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+3. Save the three attached images into attached_assets/ with these exact filenames:
+
+Logo_Light_transparent.png
+Full_Logo_Light_transparent.png
+admin-dashboard.png
+
+4. Replace client/src/pages/Landing.tsx with the attached Landing.tsx file (verbatim — do not modify).
+5. Verify asset import paths resolve. The file imports from @assets/.... Check my vite.config.ts — if the @assets alias points somewhere other than attached_assets/, either update the alias OR update the three import paths at the top of Landing.tsx to match. Tell me which you changed.
+6. Verify these wouter routes exist in my router (probably client/src/App.tsx or client/src/router.tsx): /registration, /demo, /login, /privacy, /terms, /support, /migrations.
+For any that don't exist, create minimal placeholder page components (e.g. client/src/pages/Demo.tsx returning <div className="p-8 text-white bg-black min-h-screen">Coming soon</div>) and register them in the router. /registration and /login likely already exist.
+7. Run the dev server, confirm zero TypeScript errors and zero console errors. Report back what you see.
+Do not modify the Landing.tsx content beyond what step 5 requires. If you hit any issue, stop and ask — don't guess at fixes.
+
+What you can expect after the handoff
+Will Just Work:
+
+Full scroll-animated page, all four sections
+Dashboard screenshot reveals on scroll with 3D tilt
+Magnetic cursor-following buttons
+Cinematic footer curtain reveal with Full_Logo_Light watermark behind the diagonal marquee
+All routing hooked into wouter
+
+Things that may need your attention after:
+
+The @assets/ alias — if Replit's agent reports it doesn't resolve, they'll flag it in step 5 response
+If /demo is a new route, the placeholder will be ugly — worth building that page properly next
+App Store / Google Play buttons don't navigate anywhere yet (no store URLs until you ship the apps). When you have store links, open Landing.tsx, find AppStoreButton and GooglePlayButton, wrap each <MagneticButton> with an <a href="https://apps.apple.com/..."> — ~1 min change.
+
+Quick smoke test for yourself once Replit finishes
+
+Load / → should see hero with "The operating system for modern clubs"
+Scroll → dashboard screenshot should tilt into view
+Scroll past features → cinematic footer curtain reveal with Full_Logo watermark behind the marquee
+Click "Sign In" top-right → should go to /login
+Click "Start Your Club" hero button → should go to /registration
+
+If any of those fail, that's the first thing to debug. Good luck — ping me if anything breaks.

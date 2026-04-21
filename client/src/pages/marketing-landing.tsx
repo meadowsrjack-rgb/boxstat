@@ -17,9 +17,9 @@ import { useLocation } from "wouter";
 //   - admin-dashboard.png             (screenshot for scroll reveal)
 // Adjust the import paths to match your project's asset alias.
 // =============================================================
-import LOGO_ICON from "@assets/Logo_Light_transparent.png";
-import LOGO_FULL from "@assets/Full_Logo_Light_transparent.png";
-import ADMIN_DASHBOARD from "@assets/admin-dashboard.png";
+import LOGO_ICON from "@assets/Logo_Light_transparent_1776786045320.png";
+import LOGO_FULL from "@assets/Full_Logo_Light_transparent_1776786045319.png";
+import ADMIN_DASHBOARD from "@assets/admin-dashboard_1776786045319.png";
 
 
 // =============================================================

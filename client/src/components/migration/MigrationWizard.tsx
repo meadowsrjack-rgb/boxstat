@@ -514,26 +514,12 @@ function PlayersStep({
   const anyPlayerHasProgram = players.some((k) => k.programId);
   const subEndDateRequired = anyPlayerHasProgram;
 
-  const SUB_END_DATE_TOOLTIP = "The expiry date of their current subscription to this program, up to 2 months from today. The customer will be enrolled in the selected program until this date, then prompted to re-enrol through BoxStat.";
-
-  const maxDate = (() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() + 2);
-    return d;
-  })();
-  const fmtMaxDateInput = `${maxDate.getFullYear()}-${String(maxDate.getMonth() + 1).padStart(2, "0")}-${String(maxDate.getDate()).padStart(2, "0")}`;
-  const fmtMaxDateLabel = `${String(maxDate.getMonth() + 1).padStart(2, "0")}/${String(maxDate.getDate()).padStart(2, "0")}/${maxDate.getFullYear()}`;
-  const isOverMax = (val: string) => {
-    if (!val?.trim()) return false;
-    const d = new Date(val);
-    if (isNaN(d.getTime())) return false;
-    return d.getTime() > maxDate.getTime();
-  };
+  const SUB_END_DATE_TOOLTIP = "The expiry date of their current subscription to this program. The customer will be enrolled in the selected program until this date, then prompted to re-enrol through BoxStat.";
 
   return (
     <div className="space-y-4">
       <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-lg p-3 text-sm text-blue-800">
-        Link each player to their parent and enter the expiry date of their current subscription (up to a <strong>2-month maximum</strong> from today). Boxstat honors this date — the parent won't be asked to pay again until then.
+        Link each player to their parent and enter the expiry date of their current subscription. Boxstat honors this date — the parent won't be asked to pay again until then.
       </div>
 
       <Tabs defaultValue="manual">
@@ -671,10 +657,8 @@ function PlayersStep({
                     <Input
                       type="date"
                       value={k.subscriptionEndDate}
-                      max={fmtMaxDateInput}
                       onChange={(e) => upd(k.id, "subscriptionEndDate", e.target.value)}
-                      className={`border-0 shadow-none h-8 text-sm px-2 ${isOverMax(k.subscriptionEndDate) ? "ring-1 ring-destructive text-destructive" : ""}`}
-                      title={isOverMax(k.subscriptionEndDate) ? `Max allowed: ${fmtMaxDateLabel}` : undefined}
+                      className="border-0 shadow-none h-8 text-sm px-2"
                     />
                   </td>
                   <td className="px-1 py-1 text-center">
@@ -1317,19 +1301,6 @@ export function MigrationWizard({ organizationId, organizationName, onComplete }
     const missingSubDate = players.filter((k) => !k.subscriptionEndDate?.trim());
     if (missingSubDate.length && !noSubDateAcknowledged) {
       toast({ title: "Acknowledgment required", description: `${missingSubDate.length} player(s) have no subscription end date. Please check the acknowledgment checkbox to continue.`, variant: "destructive" });
-      return false;
-    }
-    const cap = new Date();
-    cap.setMonth(cap.getMonth() + 2);
-    const overMax = players.filter((k) => {
-      const v = k.subscriptionEndDate?.trim();
-      if (!v) return false;
-      const d = new Date(v);
-      return !isNaN(d.getTime()) && d.getTime() > cap.getTime();
-    });
-    if (overMax.length) {
-      const capLabel = `${String(cap.getMonth() + 1).padStart(2, "0")}/${String(cap.getDate()).padStart(2, "0")}/${cap.getFullYear()}`;
-      toast({ title: "Date exceeds 2-month max", description: `${overMax.length} player(s) have a sub end date past ${capLabel}. Please shorten or remove these dates.`, variant: "destructive" });
       return false;
     }
     return true;

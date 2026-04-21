@@ -8,7 +8,6 @@ import { setupVite, serveStatic, log } from "./vite";
 import { db } from "./db";
 import { notificationScheduler } from "./services/notificationScheduler";
 import { ensureAuxTables } from "./boot";
-import { runMigrationExpiryBackfill } from "./migrationExpiryBackfill";
 import { restoreDefaultOrgStripeConnection } from "./restoreDefaultOrgStripe";
 import { backfillStrandedInvites } from "./backfillStrandedInvites";
 import { startPendingClaimSweeper } from "./lib/pending-claim-store";
@@ -237,12 +236,6 @@ app.use((req, res, next) => {
     // Start the background sweeper that removes expired pending-claim
     // handoff records (task #191). Runs once per minute.
     startPendingClaimSweeper();
-
-    // One-shot idempotent backfill: clamp migration enrollments with endDate
-    // more than 2 months after createdAt. Safe to run on every boot.
-    runMigrationExpiryBackfill().catch(err => {
-      console.error('[Migration Expiry Backfill] Unhandled error:', err);
-    });
 
     // One-shot guarded restore for the default-org Stripe Connect row that
     // was previously wiped by the over-eager account_invalid auto-clear

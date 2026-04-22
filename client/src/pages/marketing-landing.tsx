@@ -251,7 +251,7 @@ const ContainerScroll = ({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const rotate = useTransform(scrollYProgress, [0.1, 0.55], [22, 0]);
+  const rotate = useTransform(scrollYProgress, [0.1, 0.55], [45, 0]);
   const scale = useTransform(
     scrollYProgress,
     [0.1, 0.55],
@@ -266,7 +266,7 @@ const ContainerScroll = ({
     >
       <div
         className="py-10 md:py-40 w-full relative"
-        style={{ perspective: "1200px" }}
+        style={{ perspective: "800px" }}
       >
         <motion.div style={{ y: translate }} className="max-w-5xl mx-auto text-center">
           {titleComponent}
@@ -543,15 +543,6 @@ const Hero = () => {
         </motion.div>
       </div>
       <div className="relative z-10 pb-10 flex flex-col items-center gap-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.7 }}
-          className="flex flex-col sm:flex-row gap-3 items-center"
-        >
-          <AppStoreButton />
-          <GooglePlayButton />
-        </motion.div>
         <span className="text-[10px] font-body font-bold tracking-[0.3em] uppercase text-white/40">
           Everything you run, on one screen
         </span>
@@ -899,6 +890,10 @@ export default function MarketingLanding() {
           draggable={false}
         />
       </ContainerScroll>
+      <div className="bg-black -mt-32 md:-mt-64 pb-20 md:pb-32 px-4 flex flex-col sm:flex-row gap-3 items-center justify-center relative z-10">
+        <AppStoreButton />
+        <GooglePlayButton />
+      </div>
       <Features />
       <TrustRow />
       <CinematicFooter scrollContainer={scrollRef} />

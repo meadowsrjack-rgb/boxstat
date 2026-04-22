@@ -890,7 +890,7 @@ export default function MarketingLanding() {
           draggable={false}
         />
       </ContainerScroll>
-      <div className="bg-black -mt-32 md:-mt-64 pb-20 md:pb-32 px-4 flex flex-col sm:flex-row gap-3 items-center justify-center relative z-10">
+      <div className="bg-black -mt-12 md:-mt-24 pb-32 md:pb-48 pt-16 md:pt-24 px-4 flex flex-col sm:flex-row gap-3 items-center justify-center relative z-10">
         <AppStoreButton />
         <GooglePlayButton />
       </div>

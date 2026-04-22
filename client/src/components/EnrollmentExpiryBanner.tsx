@@ -102,34 +102,54 @@ export function EnrollmentExpiryBanner() {
         );
       })}
 
-      {noExpiryOnFile.map((e) => {
-        const programName = programMap[e.programId] || "your program";
-        const playerName = e.profileId ? playerMap[e.profileId] : null;
-        const subject = playerName ? `${playerName}'s enrollment` : "Your enrollment";
-        return (
-          <Alert
-            key={`no-expiry-${e.id}`}
-            className="border-l-4 border-l-amber-500 bg-amber-50"
-            data-testid={`banner-no-expiry-${e.id}`}
-          >
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="flex items-center justify-between gap-4">
-              <span className="text-amber-800 text-sm">
-                {subject} in {programName} has no expiry date on file.{" "}
-                Enroll through the Payments tab to keep your access active.
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-amber-500 text-amber-800 hover:bg-amber-100 shrink-0"
-                onClick={() => setLocation("/account?tab=payments")}
-              >
-                Payments
-              </Button>
-            </AlertDescription>
-          </Alert>
-        );
-      })}
+      {noExpiryOnFile.length > 0 && (() => {
+        // Group by player so a parent with multiple kids/programs sees one
+        // consolidated banner per player instead of one per enrollment.
+        const groups = new Map<string, { subject: string; programs: string[] }>();
+        for (const e of noExpiryOnFile) {
+          const programName = programMap[e.programId] || "your program";
+          const playerName = e.profileId ? playerMap[e.profileId] : null;
+          const subject = playerName ? `${playerName}'s` : "Your";
+          const key = e.profileId || "self";
+          if (!groups.has(key)) groups.set(key, { subject, programs: [] });
+          groups.get(key)!.programs.push(programName);
+        }
+
+        const formatList = (items: string[]) => {
+          const uniq = Array.from(new Set(items));
+          if (uniq.length === 1) return uniq[0];
+          if (uniq.length === 2) return `${uniq[0]} and ${uniq[1]}`;
+          return `${uniq.slice(0, -1).join(", ")}, and ${uniq[uniq.length - 1]}`;
+        };
+
+        return Array.from(groups.entries()).map(([key, { subject, programs }]) => {
+          const programList = formatList(programs);
+          const enrollmentWord = programs.length > 1 ? "enrollments" : "enrollment";
+          return (
+            <Alert
+              key={`no-expiry-${key}`}
+              className="border-l-4 border-l-amber-500 bg-amber-50"
+              data-testid={`banner-no-expiry-${key}`}
+            >
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="flex items-center justify-between gap-4">
+                <span className="text-amber-800 text-sm">
+                  {subject} {enrollmentWord} in {programList} {programs.length > 1 ? "have" : "has"} no expiry date on file.{" "}
+                  Enroll through the Payments tab to keep your access active.
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-amber-500 text-amber-800 hover:bg-amber-100 shrink-0"
+                  onClick={() => setLocation("/unified-account?tab=payments")}
+                >
+                  Payments
+                </Button>
+              </AlertDescription>
+            </Alert>
+          );
+        });
+      })()}
 
       {inGracePeriod.map((e) => {
         const programName = programMap[e.programId] || "your program";

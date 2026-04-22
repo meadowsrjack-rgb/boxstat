@@ -478,7 +478,7 @@ const Hero = () => {
           transition={{ duration: 0.7, delay: 0.1 }}
           className="font-display text-5xl md:text-7xl lg:text-8xl leading-[0.92] max-w-5xl text-white"
         >
-          Next-gen sports operating system
+          The sports system
           <br />
           <span style={{ color: "#e21224" }}>geared for growth.</span>
         </motion.h1>

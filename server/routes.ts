@@ -91,6 +91,48 @@ async function hasCoachOrAdminProfile(userId: string, organizationId: string): P
   }
 }
 
+// Helper: build the field updates that clear the "Invited" flag for a user
+// who has just proven they are a real, registered user (magic-link login,
+// password set, etc). Returns null if the user already looks fully active or
+// is soft-deleted/inactive.
+function buildClearInvitedFlagsUpdate(user: any): Record<string, any> | null {
+  if (!user || user.isActive === false) return null;
+  const updates: Record<string, any> = {};
+  if (user.status === 'invited') updates.status = 'active';
+  if (user.hasRegistered === false) updates.hasRegistered = true;
+  if (user.inviteToken) updates.inviteToken = null;
+  if (user.inviteTokenExpiry) updates.inviteTokenExpiry = null;
+  return Object.keys(updates).length > 0 ? updates : null;
+}
+
+// Helper: mirror the "activate sibling profiles" pass that the migration
+// claim flow already performs, so that when a parent account proves itself
+// (via magic link or set-password), their linked player profiles in the same
+// org also lose the "Invited" badge.
+async function activateSameEmailSiblingProfiles(user: any): Promise<void> {
+  try {
+    if (!user?.email || !user?.organizationId) return;
+    const allOrgUsers = await storage.getUsersByOrganization(user.organizationId);
+    const targetEmail = user.email.toLowerCase();
+    const siblings = allOrgUsers.filter((u: any) =>
+      u.id !== user.id &&
+      u.isActive !== false &&
+      u.email?.toLowerCase() === targetEmail &&
+      (u.status === 'invited' || u.hasRegistered === false)
+    );
+    for (const profile of siblings) {
+      await storage.updateUser(profile.id, {
+        status: 'active',
+        hasRegistered: true,
+        inviteToken: null as any,
+        inviteTokenExpiry: null as any,
+      });
+    }
+  } catch (err) {
+    console.error('Error activating sibling profiles:', err);
+  }
+}
+
 // Helper function to create a legacy subscription notification for a user
 async function createLegacySubscriptionNotification(userId: string, subscriptionCount: number, organizationId: string = "default-org"): Promise<void> {
   try {
@@ -1674,12 +1716,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get source platform before clearing (so we know if it came from iOS app)
       const sourcePlatform = (user as any).magicLinkSourcePlatform || 'web';
       
-      // Clear magic link token
+      // Clear magic link token (atomically with the "no longer invited"
+      // flags so the admin Users tab stops showing the Invited badge).
+      const invitedCleanup = buildClearInvitedFlagsUpdate(user) || {};
       await storage.updateUser(user.id, {
         magicLinkToken: null as any,
         magicLinkExpiry: null as any,
         magicLinkSourcePlatform: null as any,
+        ...invitedCleanup,
       });
+
+      // If we just activated this account, also activate same-email sibling
+      // profiles in the same org (e.g. a parent's linked player profiles).
+      if (Object.keys(invitedCleanup).length > 0) {
+        await activateSameEmailSiblingProfiles(user);
+      }
       
       // Set session
       req.session.userId = user.id;
@@ -1860,8 +1911,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const hashedPassword = hashPassword(newPassword);
-      await storage.updateUser(user.id, { password: hashedPassword });
-      
+      const invitedCleanup = buildClearInvitedFlagsUpdate(user) || {};
+      await storage.updateUser(user.id, {
+        password: hashedPassword,
+        ...invitedCleanup,
+      });
+
+      // Mirror the migration-claim flow: also activate any same-email sibling
+      // profiles in the same org so the Invited badge clears for them too.
+      if (Object.keys(invitedCleanup).length > 0) {
+        await activateSameEmailSiblingProfiles(user);
+      }
+
       res.json({ success: true, message: "Password created successfully!" });
     } catch (error: any) {
       console.error("Set password error:", error);

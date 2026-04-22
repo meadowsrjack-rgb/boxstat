@@ -10,6 +10,7 @@ import { notificationScheduler } from "./services/notificationScheduler";
 import { ensureAuxTables } from "./boot";
 import { restoreDefaultOrgStripeConnection } from "./restoreDefaultOrgStripe";
 import { backfillStrandedInvites } from "./backfillStrandedInvites";
+import { backfillRegisteredInviteFlags } from "./backfillRegisteredInviteFlags";
 import { startPendingClaimSweeper } from "./lib/pending-claim-store";
 
 const app = express();
@@ -250,6 +251,14 @@ app.use((req, res, next) => {
     // resend a working invite link (task #222).
     backfillStrandedInvites().catch(err => {
       console.error('[Backfill Stranded Invites] Unhandled error:', err);
+    });
+
+    // One-shot idempotent backfill: clear the stale "Invited" flag on
+    // accounts that have already finished registering (have a password,
+    // are active) but whose status / hasRegistered fields were never
+    // updated by the magic-link or set-password paths (task #249).
+    backfillRegisteredInviteFlags().catch(err => {
+      console.error('[Backfill Registered Invite Flags] Unhandled error:', err);
     });
   });
 })();

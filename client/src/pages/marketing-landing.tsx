@@ -426,10 +426,20 @@ const Hero = () => {
           <BoxStatLogo className="h-9 md:h-10" />
         </div>
         <div className="hidden md:flex items-center gap-10">
-          {["Features", "Migrate", "Pricing"].map((label) => (
+          {[
+            { label: "Features", href: "#" },
+            { label: "Migrate", href: "#" },
+            { label: "Pricing", href: "/pricing" },
+          ].map(({ label, href }) => (
             <a
               key={label}
-              href="#"
+              href={href}
+              onClick={(e) => {
+                if (href !== "#") {
+                  e.preventDefault();
+                  setLocation(href);
+                }
+              }}
               className="relative text-xs font-bold tracking-widest uppercase text-white/60 hover:text-white transition-colors font-body group"
             >
               {label}
@@ -518,7 +528,7 @@ const Hero = () => {
           className="mt-12 flex flex-col sm:flex-row gap-4 items-center"
         >
           <MagneticButton
-            onClick={() => setLocation("/registration")}
+            onClick={() => setLocation("/pricing")}
             className="bx-cta font-body font-bold tracking-widest text-sm uppercase rounded-xl px-12 py-5 min-w-[260px]"
           >
             Start Your Club
@@ -769,7 +779,7 @@ const CinematicFooter = ({
         >
           <div className="flex flex-wrap justify-center gap-4 w-full">
             <MagneticButton
-              onClick={() => setLocation("/registration")}
+              onClick={() => setLocation("/pricing")}
               className="bx-cta px-10 py-5 rounded-full font-bold text-sm md:text-base tracking-widest uppercase"
             >
               Start Your Club

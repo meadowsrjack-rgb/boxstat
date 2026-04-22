@@ -421,7 +421,6 @@ const Hero = () => {
         }}
       />
       <div className="absolute inset-0 bx-grid-bg z-0 pointer-events-none opacity-60" />
-
       <nav className="relative z-10 flex items-center px-6 md:px-12 py-6">
         <div className="flex-1 flex items-center">
           <BoxStatLogo className="h-9 md:h-10" />
@@ -463,7 +462,6 @@ const Hero = () => {
           </MagneticButton>
         </div>
       </nav>
-
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 text-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -472,9 +470,7 @@ const Hero = () => {
           className="bx-badge mb-8"
         >
           <span className="bx-badge-dot" />
-          <span className="text-[11px] md:text-xs font-bold tracking-widest uppercase text-white/70 font-body">
-            Built for modern clubs
-          </span>
+          <span className="text-[11px] md:text-xs font-bold tracking-widest uppercase text-white/70 font-body">Powered by ai</span>
         </motion.div>
 
         <motion.h1
@@ -546,7 +542,6 @@ const Hero = () => {
           <span>✓ Cancel anytime</span>
         </motion.div>
       </div>
-
       <div className="relative z-10 pb-10 flex flex-col items-center gap-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

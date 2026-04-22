@@ -771,6 +771,21 @@ export class NotificationScheduler {
           const programName = row.programName || 'Unknown Program';
           const userName = `${row.profileFirstName || ''} ${row.profileLastName || ''}`.trim() || 'A member';
           const profileId = row.enrollment.profileId;
+
+          // Task #243: Unpaid admin_assignment grants skip the grace period.
+          // When their pay-by deadline passes with no payment attached, expire
+          // them directly so members-only access is revoked immediately.
+          const isUnpaidAdminGrant = row.enrollment.source === 'admin_assignment'
+            && !row.enrollment.paymentId
+            && !row.enrollment.stripeSubscriptionId;
+          if (isUnpaidAdminGrant) {
+            await db.update(productEnrollments)
+              .set({ status: 'expired', updatedAt: now.toISOString() })
+              .where(eq(productEnrollments.id, row.enrollment.id));
+            console.log(`[Enrollment Expiry] Unpaid admin_assignment enrollment ${row.enrollment.id} for ${userName} in ${programName} expired directly (skipped grace period)`);
+            continue;
+          }
+
           // Post-expiry grace window is fixed at 14 days platform-wide.
           // The organizations.gracePeriodDays column is deprecated and no longer read.
           const gracePeriodDays = 14;

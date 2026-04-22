@@ -3531,7 +3531,16 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                         )}
                                       </div>
                                       <div className="flex items-center gap-2">
-                                        <span className="text-xs text-blue-600 capitalize">{enrollment.status}</span>
+                                        {(() => {
+                                          const isUnpaidGrant = enrollment.status === 'active' && enrollment.source === 'admin_assignment' && !enrollment.paymentId && !enrollment.stripeSubscriptionId;
+                                          return isUnpaidGrant ? (
+                                            <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-medium" data-testid={`badge-unpaid-${enrollment.enrollmentId}`}>
+                                              Unpaid{enrollment.endDate ? ` · pay by ${new Date(enrollment.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}
+                                            </span>
+                                          ) : (
+                                            <span className="text-xs text-blue-600 capitalize">{enrollment.status}</span>
+                                          );
+                                        })()}
                                         <button
                                           type="button"
                                           className="text-red-500 hover:text-red-700 text-sm font-medium px-1"
@@ -3625,6 +3634,72 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                             </p>
                                           </div>
                                         )}
+                                      </div>
+                                    )}
+                                    {/* Task #243: Admin controls for active unpaid admin_assignment grants */}
+                                    {!enrollment.isNew && enrollment.status === 'active' && enrollment.source === 'admin_assignment' && !enrollment.paymentId && !enrollment.stripeSubscriptionId && (
+                                      <div className="mt-2 pt-2 border-t border-amber-100 flex flex-wrap items-end gap-2">
+                                        <div>
+                                          <label className="text-[10px] text-amber-700 uppercase block">Extend pay-by</label>
+                                          <input
+                                            type="date"
+                                            className="text-xs border border-amber-300 rounded px-1.5 py-0.5"
+                                            defaultValue={enrollment.rawEndDate ? enrollment.rawEndDate.split('T')[0] : (enrollment.endDate ? new Date(enrollment.endDate).toISOString().split('T')[0] : '')}
+                                            min={new Date().toISOString().split('T')[0]}
+                                            data-testid={`input-extend-${enrollment.enrollmentId}`}
+                                            onBlur={async (e) => {
+                                              const next = e.target.value;
+                                              const cur = enrollment.rawEndDate ? enrollment.rawEndDate.split('T')[0] : '';
+                                              if (!next || next === cur) return;
+                                              try {
+                                                await apiRequest('PATCH', `/api/enrollments/${enrollment.enrollmentId}`, { endDate: new Date(next).toISOString() });
+                                                queryClient.invalidateQueries({ queryKey: ["/api/users", editingUser?.id, "program-memberships"] });
+                                                queryClient.invalidateQueries({ queryKey: ["/api/admin/enrollments"] });
+                                                toast({ title: 'Pay-by deadline updated' });
+                                              } catch (err: any) {
+                                                toast({ title: err?.message || 'Failed to extend deadline', variant: 'destructive' });
+                                              }
+                                            }}
+                                          />
+                                        </div>
+                                        <button
+                                          type="button"
+                                          className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                                          data-testid={`button-mark-paid-${enrollment.enrollmentId}`}
+                                          onClick={async () => {
+                                            const ref = window.prompt('Mark this enrollment as paid manually. Enter an offline payment reference (check #, cash receipt, etc.) for the audit trail. Cancel to abort.');
+                                            if (ref === null) return;
+                                            const trimmed = ref.trim();
+                                            if (!trimmed) {
+                                              toast({ title: 'A reference is required to mark as paid', variant: 'destructive' });
+                                              return;
+                                            }
+                                            try {
+                                              await apiRequest('PATCH', `/api/enrollments/${enrollment.enrollmentId}`, { source: 'manual_admin', endDate: null, metadata: { ...(enrollment.metadata || {}), offlinePaymentReference: trimmed, markedPaidAt: new Date().toISOString() } });
+                                              queryClient.invalidateQueries({ queryKey: ["/api/users", editingUser?.id, "program-memberships"] });
+                                              queryClient.invalidateQueries({ queryKey: ["/api/admin/enrollments"] });
+                                              toast({ title: 'Marked as paid' });
+                                            } catch (err: any) {
+                                              toast({ title: err?.message || 'Failed to mark paid', variant: 'destructive' });
+                                            }
+                                          }}
+                                        >Mark Paid</button>
+                                        <button
+                                          type="button"
+                                          className="text-xs px-2 py-1 border border-red-300 text-red-700 rounded hover:bg-red-50"
+                                          data-testid={`button-cancel-grant-${enrollment.enrollmentId}`}
+                                          onClick={async () => {
+                                            if (!window.confirm('Cancel this unpaid grant? The player will lose member access.')) return;
+                                            try {
+                                              await apiRequest('POST', `/api/enrollments/${enrollment.enrollmentId}/cancel`, {});
+                                              queryClient.invalidateQueries({ queryKey: ["/api/users", editingUser?.id, "program-memberships"] });
+                                              queryClient.invalidateQueries({ queryKey: ["/api/admin/enrollments"] });
+                                              toast({ title: 'Grant cancelled' });
+                                            } catch (err: any) {
+                                              toast({ title: err?.message || 'Failed to cancel grant', variant: 'destructive' });
+                                            }
+                                          }}
+                                        >Cancel grant</button>
                                       </div>
                                     )}
                                     {enrollment.isNew && (
@@ -13969,6 +14044,10 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
 
   const [searchQuery, setSearchQuery] = useState('');
   const [editingTeam, setEditingTeam] = useState<any>(null);
+  // Task #243: Dialog state for capturing pay-by deadline when assigning a
+  // player to a team. Replaces the old window.prompt UX.
+  const [assignPlayerDialog, setAssignPlayerDialog] = useState<{ player: any; defaultDate: string } | null>(null);
+  const [assignPlayerDate, setAssignPlayerDate] = useState<string>('');
   const [deletingTeam, setDeletingTeam] = useState<any>(null);
   const [expandedPrograms, setExpandedPrograms] = useState<Record<string, boolean>>({});
   const [editorTab, setEditorTab] = useState<'details' | 'roster' | 'coaches'>('details');
@@ -14266,6 +14345,16 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
       if (isOnTeam) {
         await apiRequest("POST", `/api/teams/${editingTeam.id}/remove-player`, { playerId: player.id });
       } else {
+        // Task #243: When called without an explicit deadline, open the
+        // assignment dialog so the admin can pick a date with a real picker.
+        if (!enrollmentEndDate && editingTeam?.programId && !isPlayerEnrolledForTeam(player.id, editingTeam)) {
+          const def = new Date();
+          def.setDate(def.getDate() + 14);
+          const defaultStr = def.toISOString().split('T')[0];
+          setAssignPlayerDate(defaultStr);
+          setAssignPlayerDialog({ player, defaultDate: defaultStr });
+          return;
+        }
         const body: any = { playerId: player.id };
         if (enrollmentEndDate) body.enrollmentEndDate = enrollmentEndDate;
         await apiRequest("POST", `/api/teams/${editingTeam.id}/assign-player`, body);
@@ -14289,17 +14378,27 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
     );
   };
 
-  const getPlayerEnrollmentTag = (playerId: string, team: any): 'grace_period' | 'expired' | 'not_enrolled' | null => {
-    if (!team?.programId) return null;
+  // Task #243: Returns enrollment status tag including 'unpaid' for active
+  // admin_assignment grants without payment. Also surfaces the pay-by date.
+  const getPlayerEnrollmentInfo = (playerId: string, team: any): { tag: 'grace_period' | 'expired' | 'not_enrolled' | 'unpaid' | null; payByDate?: string } => {
+    if (!team?.programId) return { tag: null };
     const playerEnrollments = enrollments.filter((e: any) =>
       String(e.profileId) === String(playerId) &&
       String(e.programId) === String(team.programId)
     );
-    if (playerEnrollments.length === 0) return 'not_enrolled';
-    if (playerEnrollments.some((e: any) => e.status === 'active')) return null;
-    if (playerEnrollments.some((e: any) => e.status === 'grace_period')) return 'grace_period';
-    return 'expired';
+    if (playerEnrollments.length === 0) return { tag: 'not_enrolled' };
+    const activeUnpaid = playerEnrollments.find((e: any) =>
+      e.status === 'active' && e.source === 'admin_assignment' && !e.paymentId && !e.stripeSubscriptionId
+    );
+    if (activeUnpaid) return { tag: 'unpaid', payByDate: activeUnpaid.endDate };
+    if (playerEnrollments.some((e: any) => e.status === 'active')) return { tag: null };
+    if (playerEnrollments.some((e: any) => e.status === 'grace_period')) return { tag: 'grace_period' };
+    return { tag: 'expired' };
   };
+
+  // Backwards-compatible shim used elsewhere in the file.
+  const getPlayerEnrollmentTag = (playerId: string, team: any): 'grace_period' | 'expired' | 'not_enrolled' | 'unpaid' | null =>
+    getPlayerEnrollmentInfo(playerId, team).tag;
 
   const downloadTeamTemplate = () => {
     const csvContent = "Name,Program,Division,Season,Location,Color,Notes\nThunder U12,Youth Club,U12,Fall 2025,Main Gym,#DC2626,\nLightning U10,Skills Academy,U10,Spring 2025,East Court,#2563EB,Practice on Tuesdays";
@@ -14743,6 +14842,51 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
         </div>
       )}
 
+      {/* Task #243: Assign-player pay-by deadline dialog */}
+      <Dialog
+        open={!!assignPlayerDialog}
+        onOpenChange={(open) => { if (!open) { setAssignPlayerDialog(null); } }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle data-testid="title-assign-player-dialog">Set pay-by deadline</DialogTitle>
+            <DialogDescription>
+              {assignPlayerDialog && (
+                <>Adding <span className="font-medium">{assignPlayerDialog.player.firstName} {assignPlayerDialog.player.lastName}</span> to {editingTeam?.name}. They'll get unpaid member access until they pay. Default is 14 days from today.</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="assign-pay-by">Pay-by date</Label>
+            <Input
+              id="assign-pay-by"
+              type="date"
+              value={assignPlayerDate}
+              min={new Date().toISOString().split('T')[0]}
+              onChange={(e) => setAssignPlayerDate(e.target.value)}
+              data-testid="input-assign-pay-by"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAssignPlayerDialog(null)}
+              data-testid="button-cancel-assign-player"
+            >Cancel</Button>
+            <Button
+              onClick={async () => {
+                const player = assignPlayerDialog?.player;
+                const date = assignPlayerDate || assignPlayerDialog?.defaultDate;
+                if (!player || !date) return;
+                setAssignPlayerDialog(null);
+                await togglePlayer(player, false, date);
+              }}
+              data-testid="button-confirm-assign-player"
+            >Assign</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Team Editor Modal */}
       {editingTeam && (
         <Dialog open={!!editingTeam} onOpenChange={() => setEditingTeam(null)}>
@@ -14910,7 +15054,11 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
                           <p className="text-xs font-semibold text-green-700 mb-2">Current Roster — {editingTeamPlayers.length} player{editingTeamPlayers.length !== 1 ? 's' : ''}</p>
                           <div className="flex flex-wrap gap-1.5">
                             {editingTeamPlayers.map((p: any) => {
-                              const enrollTag = getPlayerEnrollmentTag(p.id, editingTeam);
+                              const enrollInfo = getPlayerEnrollmentInfo(p.id, editingTeam);
+                              const enrollTag = enrollInfo.tag;
+                              const payByLabel = enrollInfo.payByDate
+                                ? new Date(enrollInfo.payByDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                                : null;
                               const playerIsTryout = (p.activeTeams || []).some((t: any) => t?.teamId === editingTeam?.id && t?.isTryout);
                               return (
                                 <button
@@ -14921,6 +15069,11 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
                                   {p.firstName} {p.lastName}
                                   {playerIsTryout && (
                                     <span className="ml-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-purple-200 text-purple-800 group-hover:bg-purple-200 group-hover:text-purple-800">Tryout</span>
+                                  )}
+                                  {enrollTag === 'unpaid' && (
+                                    <span className="ml-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-amber-200 text-amber-900 group-hover:bg-amber-200 group-hover:text-amber-900">
+                                      Unpaid{payByLabel ? ` · pay by ${payByLabel}` : ''}
+                                    </span>
                                   )}
                                   {enrollTag === 'grace_period' && (
                                     <span className="ml-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-amber-200 text-amber-800 group-hover:bg-amber-200 group-hover:text-amber-800">Grace Period</span>

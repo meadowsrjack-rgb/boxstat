@@ -148,12 +148,14 @@ function ProgramCard({
   program, 
   onEnroll, 
   onTryout,
-  isEnrolled 
+  isEnrolled,
+  unpaidPayByDate,
 }: { 
   program: Program; 
   onEnroll: (program: Program) => void;
   onTryout?: (program: Program) => void;
   isEnrolled: boolean;
+  unpaidPayByDate?: string | null;
 }) {
   const isTryoutCategory = (program.displayCategory || '').toLowerCase() === 'tryout' ||
     (program.type || '').toLowerCase() === 'tryout';
@@ -208,7 +210,15 @@ function ProgramCard({
       <p className="text-white/50 text-sm line-clamp-2 flex-1">
         {program.description || "Join this program and elevate your game."}
       </p>
-      {isEnrolled ? (
+      {unpaidPayByDate ? (
+        <button
+          className="mt-4 w-full py-2 text-sm font-semibold rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 transition-colors"
+          onClick={(e) => { e.stopPropagation(); onEnroll(program); }}
+          data-testid={`button-pay-now-${program.id}`}
+        >
+          Pay by {new Date(unpaidPayByDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} — Pay Now
+        </button>
+      ) : isEnrolled ? (
         <button
           className="mt-4 w-full py-2 text-sm font-semibold rounded-lg bg-green-500/20 text-green-400 cursor-default"
           data-testid={`button-enroll-${program.id}`}
@@ -1229,6 +1239,16 @@ export default function PaymentsPage() {
   const storeItems = allProducts.filter(p => p.productCategory === 'goods' && p.isActive !== false);
   
   const enrolledProgramIds = new Set(enrollments.filter(e => e.status === 'active').map(e => e.programId));
+  // Task #243: map programId -> pay-by date for unpaid admin_assignment grants.
+  const unpaidPayByByProgram = new Map<string, string>();
+  enrollments.forEach((e: any) => {
+    if (e.status === 'active' && e.source === 'admin_assignment' && !e.paymentId && !e.stripeSubscriptionId && e.programId && e.endDate) {
+      const existing = unpaidPayByByProgram.get(e.programId);
+      if (!existing || new Date(e.endDate) < new Date(existing)) {
+        unpaidPayByByProgram.set(e.programId, e.endDate);
+      }
+    }
+  });
   const hasActiveEnrollments = enrolledProgramIds.size > 0;
 
   // Smart default tab: Store if already enrolled, Programs otherwise
@@ -1528,6 +1548,7 @@ export default function PaymentsPage() {
                     onEnroll={(p) => setSelectedProgram(p)}
                     onTryout={(p) => setSelectedTryoutProgram(p)}
                     isEnrolled={enrolledProgramIds.has(program.id)}
+                    unpaidPayByDate={unpaidPayByByProgram.get(program.id) || null}
                   />
                 ))}
               </div>

@@ -2667,9 +2667,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             // Create a payment record
+            let createdPaymentId: string | null = null;
             if (session.amount_total) {
               try {
-                await storage.createPayment({
+                const paymentRecord = await storage.createPayment({
                   organizationId: updatedPlayer.organizationId,
                   userId: playerId,
                   amount: session.amount_total,
@@ -2680,6 +2681,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   programId: packageId,
                   stripePaymentId: session.payment_intent as string,
                 });
+                createdPaymentId = paymentRecord ? String(paymentRecord.id) : null;
                 console.log(`✅ Created payment record for player ${playerId}`);
               } catch (paymentError: any) {
                 console.error("Error creating payment record:", paymentError);
@@ -2730,6 +2732,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       programId: packageId,
                       status: 'active',
                       source: 'payment',
+                      paymentId: createdPaymentId,
                       remainingCredits: program.sessionCount ?? undefined,
                       totalCredits: program.sessionCount ?? undefined,
                     });
@@ -2851,9 +2854,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const program = await storage.getProgram(packageId);
           
           // Create payment record with playerId
+          let pkgPaymentId: string | null = null;
           if (session.amount_total) {
             try {
-              await storage.createPayment({
+              const pkgPayment = await storage.createPayment({
                 organizationId: await resolveOrgId(session, userId, packageId),
                 userId: userId,
                 playerId: playerId || undefined,
@@ -2866,6 +2870,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 programId: packageId,
                 stripePaymentId: session.payment_intent as string,
               });
+              pkgPaymentId = pkgPayment ? String(pkgPayment.id) : null;
               console.log(`✅ Created payment record for user ${userId}${playerId ? ` (player: ${playerId})` : ''}`);
             } catch (paymentError: any) {
               console.error("Error creating payment record:", paymentError);
@@ -2960,15 +2965,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       programId: packageId,
                       status: 'active',
                       source: 'payment',
+                      paymentId: pkgPaymentId,
                       endDate: enrollmentEndDate,
                       remainingCredits: program.sessionCount ?? undefined,
                       totalCredits: program.sessionCount ?? undefined,
                     });
                     console.log(`✅ Created enrollment for player ${playerId} in program ${packageId}`);
                   } else {
-                    // Re-enrollment: expire old and create fresh active enrollment
+                    // Re-enrollment: expire old and create fresh active enrollment.
+                    // Task #243: skip the expire-then-recreate dance for unpaid
+                    // admin_assignment grants — let storage.createEnrollment
+                    // upgrade them in place so the audit trail is preserved.
                     const oldEnrollment = existingEnrollments.find(e => e.programId === packageId);
-                    if (oldEnrollment) {
+                    const isUnpaidAdminGrant =
+                      oldEnrollment &&
+                      (oldEnrollment as any).source === 'admin_assignment' &&
+                      !(oldEnrollment as any).paymentId &&
+                      !(oldEnrollment as any).stripeSubscriptionId;
+                    if (oldEnrollment && !isUnpaidAdminGrant) {
                       await storage.updateEnrollment(oldEnrollment.id, { status: 'expired' });
                     }
                     await storage.createEnrollment({
@@ -2978,6 +2992,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       programId: packageId,
                       status: 'active',
                       source: 'payment',
+                      paymentId: pkgPaymentId,
                       endDate: enrollmentEndDate,
                       remainingCredits: program.sessionCount ?? undefined,
                       totalCredits: program.sessionCount ?? undefined,
@@ -3396,7 +3411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const amountDollars = amountCents / 100;
             const playerName = `${updatedPlayer.firstName || ''} ${updatedPlayer.lastName || ''}`.trim();
 
-            await storage.createPayment({
+            const verifyPayment = await storage.createPayment({
               organizationId: updatedPlayer.organizationId,
               userId: playerId,
               amount: amountCents,
@@ -3407,6 +3422,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               stripePaymentId: session.payment_intent as string,
               programId: packageId,
             });
+            const verifyPaymentId: string | null = verifyPayment ? String(verifyPayment.id) : null;
             console.log(`✅ Created add_player payment record via verify-session for player ${playerId}`);
             paymentWasProcessed = true;
             
@@ -3440,6 +3456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       programId: packageId,
                       status: 'active',
                       source: 'payment',
+                      paymentId: verifyPaymentId,
                       remainingCredits: program.sessionCount ?? undefined,
                       totalCredits: program.sessionCount ?? undefined,
                     });
@@ -6733,34 +6750,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           )
         );
 
-        for (const newTeamId of newTeamIds) {
-          if (currentTeamIds.includes(newTeamId)) continue;
-          const team = await storage.getTeam(String(newTeamId));
-          if (team && team.programId) {
-            // Skip check if the enrollment is being created in this same request (unified flow)
-            if (programIdsBeingEnrolled.has(team.programId)) continue;
-
-            const existingEnrollment = await db.select({ id: productEnrollments.id })
-              .from(productEnrollments)
-              .where(
-                and(
-                  eq(productEnrollments.profileId, userId),
-                  eq(productEnrollments.programId, team.programId),
-                  eq(productEnrollments.status, 'active')
-                )
-              )
-              .limit(1);
-            
-            if (existingEnrollment.length === 0) {
-              const program = await storage.getProduct(team.programId);
-              const programName = program?.name || 'this program';
-              return res.status(400).json({ 
-                message: `Player must be enrolled in "${programName}" before being assigned to team "${team.name}". They need to complete enrollment and payment first.`,
-                code: 'ENROLLMENT_REQUIRED'
-              });
-            }
-          }
-        }
+        // Task #243: No hard enrollment block. We auto-create an unpaid
+        // admin_assignment enrollment per new team's program below if missing.
+        // Optional per-team override via updateData.teamPayByDates: { [teamId]: 'YYYY-MM-DD' }.
+        const teamPayByDates: Record<string, string> = (updateData.teamPayByDates && typeof updateData.teamPayByDates === 'object')
+          ? updateData.teamPayByDates : {};
+        delete updateData.teamPayByDates;
 
         // All enrollment checks passed — now apply team changes
         
@@ -6787,14 +6782,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 })
               );
               if (!stillInSameProgram.some(Boolean)) {
-                console.log(`[PATCH] Cancelling enrollment for player ${userId} in program ${removedTeam.programId}`);
+                // Task #243: preserve unpaid admin_assignment grants — they
+                // expire naturally on their pay-by deadline. Cancel only paid
+                // / non-admin_assignment enrollments here.
+                console.log(`[PATCH] Cancelling paid enrollments for player ${userId} in program ${removedTeam.programId} (admin_assignment unpaid grants preserved)`);
                 await db.update(productEnrollments)
                   .set({ status: 'cancelled' })
                   .where(
                     and(
                       eq(productEnrollments.profileId, userId),
                       eq(productEnrollments.programId, removedTeam.programId),
-                      eq(productEnrollments.status, 'active')
+                      eq(productEnrollments.status, 'active'),
+                      sql`(${productEnrollments.source} != 'admin_assignment' OR ${productEnrollments.paymentId} IS NOT NULL OR ${productEnrollments.stripeSubscriptionId} IS NOT NULL)`
                     )
                   );
               } else {
@@ -6810,6 +6809,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const team = await storage.getTeam(String(newTeamId));
           if (team) {
             console.log(`[PATCH] Adding player ${userId} to team ${newTeamId} (${team.name})`);
+
+            // Task #243: Auto-grant unpaid admin_assignment enrollment if missing.
+            if (team.programId && !programIdsBeingEnrolled.has(team.programId)) {
+              const existingEnrollment = await db.select({ id: productEnrollments.id })
+                .from(productEnrollments)
+                .where(and(
+                  eq(productEnrollments.profileId, userId),
+                  eq(productEnrollments.programId, team.programId),
+                  eq(productEnrollments.status, 'active'),
+                ))
+                .limit(1);
+              if (existingEnrollment.length === 0) {
+                let payByIso: string;
+                const override = teamPayByDates[String(newTeamId)];
+                if (override) {
+                  const parsed = new Date(override + 'T23:59:59Z');
+                  if (isNaN(parsed.getTime()) || parsed <= new Date()) {
+                    return res.status(400).json({ message: `Invalid pay-by date for team ${team.name} (must be a future YYYY-MM-DD)` });
+                  }
+                  payByIso = parsed.toISOString();
+                } else {
+                  const def = new Date();
+                  def.setDate(def.getDate() + 14);
+                  payByIso = def.toISOString();
+                }
+                const accountHolderId = user.accountHolderId || user.id;
+                await storage.createEnrollment({
+                  organizationId: team.organizationId,
+                  programId: team.programId,
+                  accountHolderId,
+                  profileId: userId,
+                  status: 'active',
+                  source: 'admin_assignment',
+                  endDate: payByIso,
+                  autoRenew: false,
+                  metadata: { autoGrantedOnAssignment: true, payByDate: payByIso },
+                });
+                console.log(`[PATCH] Auto-created unpaid admin_assignment enrollment for player ${userId} in program ${team.programId}, pay-by ${payByIso}`);
+              }
+            }
+
             try {
               await db.insert(teamMemberships)
                 .values({
@@ -8173,42 +8213,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Team not found' });
       }
 
-      // Enforce enrollment requirement: if the team belongs to a program,
-      // the player must already have an active enrollment in that program.
-      // Admins may pass enrollmentEndDate to create a time-limited enrollment on the spot.
+      // Task #243: Auto-grant unpaid member status. If the team belongs to a
+      // program and the player has no active enrollment, create one with
+      // source='admin_assignment' and a pay-by deadline (default 14 days from
+      // assignment, or admin-supplied override via enrollmentEndDate).
       if (team.programId) {
         const accountHolderId = player.accountHolderId || player.id;
         const existingEnrollments = await storage.getEnrollmentsByAccountHolder(accountHolderId);
         const hasActiveEnrollment = existingEnrollments.some(
           (e: any) => e.programId === team.programId && e.profileId === playerId && e.status === 'active'
         );
-        
+
         if (!hasActiveEnrollment) {
           const { enrollmentEndDate } = req.body;
+          let endDateIso: string;
           if (enrollmentEndDate) {
-            if (role !== 'admin' && !(await hasAdminProfile(req.user.id, req.user.organizationId))) {
-              return res.status(403).json({ message: 'Only admins can create enrollments when assigning unenrolled players' });
-            }
             const parsedDate = new Date(enrollmentEndDate + 'T23:59:59Z');
             if (isNaN(parsedDate.getTime()) || parsedDate <= new Date()) {
               return res.status(400).json({ message: 'Enrollment end date must be a valid future date (YYYY-MM-DD format)' });
             }
-            const endDateIso = parsedDate.toISOString();
-            await storage.createEnrollment({
-              organizationId: team.organizationId,
-              programId: team.programId,
-              accountHolderId,
-              profileId: playerId,
-              status: 'active',
-              source: 'team_assignment',
-              endDate: endDateIso,
-              autoRenew: false,
-            });
-            await storage.updateUser(playerId, { subscriptionEndDate: enrollmentEndDate } as any);
-            console.log(`[assign-player] Created team_assignment enrollment for player ${playerId} in program ${team.programId}, grace expires ${enrollmentEndDate}`);
+            endDateIso = parsedDate.toISOString();
+          } else {
+            const defaultEnd = new Date();
+            defaultEnd.setDate(defaultEnd.getDate() + 14);
+            endDateIso = defaultEnd.toISOString();
           }
-          // No enrollmentEndDate: player is added to team roster but has no enrollment.
-          // They must enroll and pay through the Payments tab to get full access.
+          await storage.createEnrollment({
+            organizationId: team.organizationId,
+            programId: team.programId,
+            accountHolderId,
+            profileId: playerId,
+            status: 'active',
+            source: 'admin_assignment',
+            endDate: endDateIso,
+            autoRenew: false,
+            metadata: { autoGrantedOnAssignment: true, payByDate: endDateIso },
+          });
+          console.log(`[assign-player] Auto-created unpaid admin_assignment enrollment for player ${playerId} in program ${team.programId}, pay-by ${endDateIso}`);
         }
       }
 
@@ -8378,15 +8419,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           )
           .limit(1);
         if (otherTeamsInProgram.length === 0) {
+          // Task #243: preserve unpaid admin_assignment grants — they expire
+          // naturally on their pay-by deadline. Cancel only paid / non-admin
+          // enrollments here.
           await db.update(productEnrollments)
             .set({ status: 'cancelled', autoRenew: false, updatedAt: new Date().toISOString() })
             .where(
               and(
                 eq(productEnrollments.programId, team.programId),
-                eq(productEnrollments.profileId, playerId)
+                eq(productEnrollments.profileId, playerId),
+                sql`(${productEnrollments.source} != 'admin_assignment' OR ${productEnrollments.paymentId} IS NOT NULL OR ${productEnrollments.stripeSubscriptionId} IS NOT NULL)`
               )
             );
-          console.log(`Cancelled enrollment for player ${playerId} in program ${team.programId}`);
+          console.log(`Cancelled paid enrollments for player ${playerId} in program ${team.programId} (admin_assignment unpaid grants preserved)`);
         } else {
           console.log(`Player ${playerId} still on another team in program ${team.programId}, keeping enrollment active`);
         }
@@ -14135,8 +14180,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           rosterVisibility: product?.rosterVisibility || 'members',
           chatMode: product?.chatMode || 'two_way',
           status: enrollment.status,
+          source: enrollment.source,
+          paymentId: enrollment.paymentId,
           startDate: enrollment.startDate,
           endDate: derivedEndDate,
+          rawEndDate: enrollment.endDate,
           autoRenew: enrollment.autoRenew,
           billingCycle: product?.billingCycle || null,
           stripeSubscriptionId: enrollment.stripeSubscriptionId,
@@ -14327,22 +14375,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(403).json({ message: 'Not authorized to create enrollment for another user' });
     }
 
-    const [enrollment] = await db.insert(productEnrollments)
-      .values({
-        organizationId: organizationId || 'default-org',
-        programId,
-        accountHolderId: accountHolderId || userId,
-        profileId,
-        status,
-        source,
-        paymentId,
-        stripeSubscriptionId,
-        startDate: startDate || new Date().toISOString(),
-        endDate,
-        autoRenew,
-        metadata,
-      })
-      .returning();
+    // Task #243: Lock down payment-related fields. Non-admin callers cannot
+    // set `source`, `paymentId`, or `stripeSubscriptionId` — those are
+    // reserved for server-side payment-completion paths and the admin
+    // override flow. Without this, a parent could submit `source: 'direct'`
+    // and trick storage.createEnrollment into upgrading an unpaid grant.
+    const safeSource = role === 'admin' ? source : 'direct';
+    const safePaymentId = role === 'admin' ? paymentId : null;
+    const safeStripeSubscriptionId = role === 'admin' ? stripeSubscriptionId : null;
+
+    // Route through storage.createEnrollment so an existing unpaid
+    // admin_assignment grant for the same profile+program is upgraded in
+    // place when payment evidence is provided, instead of creating a duplicate.
+    const enrollment = await storage.createEnrollment({
+      organizationId: organizationId || 'default-org',
+      programId,
+      accountHolderId: accountHolderId || userId,
+      profileId,
+      status,
+      source: safeSource,
+      paymentId: safePaymentId,
+      stripeSubscriptionId: safeStripeSubscriptionId,
+      startDate: startDate || new Date().toISOString(),
+      endDate,
+      autoRenew,
+      metadata,
+    });
 
     res.json(enrollment);
   });
@@ -14372,6 +14430,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (req.body.autoRenew !== undefined) updateData.autoRenew = req.body.autoRenew;
     if (req.body.endDate !== undefined) updateData.endDate = req.body.endDate;
     if (req.body.metadata !== undefined) updateData.metadata = req.body.metadata;
+    // Task #243: admin-only fields for converting an unpaid admin_assignment
+    // grant to a manually-paid enrollment.
+    if (role === 'admin') {
+      if (req.body.source !== undefined) updateData.source = req.body.source;
+      if (req.body.paymentId !== undefined) updateData.paymentId = req.body.paymentId;
+      if (req.body.stripeSubscriptionId !== undefined) updateData.stripeSubscriptionId = req.body.stripeSubscriptionId;
+    }
     updateData.updatedAt = new Date().toISOString();
 
     const [updated] = await db.update(productEnrollments)

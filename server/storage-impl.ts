@@ -5505,6 +5505,58 @@ class DatabaseStorage implements IStorage {
   
   async createEnrollment(data: InsertProductEnrollment): Promise<ProductEnrollment> {
     const now = new Date().toISOString();
+
+    // Task #243: When a payment-backed enrollment is being created, upgrade an
+    // existing unpaid admin_assignment grant in place rather than creating a
+    // duplicate row. This preserves the original assignment audit trail and
+    // keeps the player on a single active enrollment per program.
+    //
+    // Gate: hard payment evidence only — `paymentId` or
+    // `stripeSubscriptionId` must be present. The `source` field alone is
+    // not trusted because /api/enrollments accepts a client-supplied
+    // source. All payment-completion call sites pass payment evidence.
+    const hasPaymentEvidence = !!data.paymentId || !!data.stripeSubscriptionId;
+    const targetStatus = data.status ?? 'active';
+    if (
+      hasPaymentEvidence &&
+      data.profileId &&
+      data.programId &&
+      !data.isTryout &&
+      data.source !== 'admin_assignment' &&
+      targetStatus === 'active'
+    ) {
+      const existingUnpaid = await db.select().from(schema.productEnrollments)
+        .where(and(
+          eq(schema.productEnrollments.profileId, data.profileId),
+          eq(schema.productEnrollments.programId, data.programId),
+          eq(schema.productEnrollments.status, 'active'),
+          eq(schema.productEnrollments.source, 'admin_assignment'),
+          isNull(schema.productEnrollments.paymentId),
+          isNull(schema.productEnrollments.stripeSubscriptionId),
+        ))
+        .limit(1);
+      if (existingUnpaid[0]) {
+        const [upgraded] = await db.update(schema.productEnrollments)
+          .set({
+            status: targetStatus,
+            source: data.source ?? 'payment',
+            paymentId: data.paymentId ?? null,
+            stripeSubscriptionId: data.stripeSubscriptionId ?? null,
+            startDate: data.startDate ?? existingUnpaid[0].startDate ?? now,
+            endDate: data.endDate ?? existingUnpaid[0].endDate ?? null,
+            autoRenew: data.autoRenew ?? existingUnpaid[0].autoRenew ?? false,
+            totalCredits: data.totalCredits ?? existingUnpaid[0].totalCredits ?? null,
+            remainingCredits: data.remainingCredits ?? existingUnpaid[0].remainingCredits ?? null,
+            metadata: { ...(existingUnpaid[0].metadata as any || {}), ...(data.metadata as any || {}), upgradedFromAdminAssignment: true },
+            updatedAt: now,
+          })
+          .where(eq(schema.productEnrollments.id, existingUnpaid[0].id))
+          .returning();
+        console.log(`[createEnrollment] Upgraded admin_assignment enrollment ${existingUnpaid[0].id} to paid (source=${data.source})`);
+        return upgraded as ProductEnrollment;
+      }
+    }
+
     const results = await db.insert(schema.productEnrollments)
       .values({
         organizationId: data.organizationId,

@@ -93,7 +93,7 @@ export function EnrollmentExpiryBanner() {
                 size="sm"
                 variant="outline"
                 className="border-amber-500 text-amber-800 hover:bg-amber-100 shrink-0"
-                onClick={() => setLocation("/account?tab=payments")}
+                onClick={() => setLocation("/unified-account?tab=payments")}
               >
                 Payments
               </Button>
@@ -175,7 +175,7 @@ export function EnrollmentExpiryBanner() {
                 size="sm"
                 variant="outline"
                 className="border-yellow-500 text-yellow-800 hover:bg-yellow-100 shrink-0"
-                onClick={() => setLocation("/account?tab=payments")}
+                onClick={() => setLocation("/unified-account?tab=payments")}
               >
                 Re-enroll
               </Button>

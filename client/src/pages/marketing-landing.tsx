@@ -487,7 +487,7 @@ const Hero = () => {
               className="absolute left-[-4%] right-[-4%] -bottom-2 md:-bottom-3 w-[108%] h-[0.35em] pointer-events-none"
             >
               <path
-                d="M2 11 C 18 4, 38 16, 60 9 S 102 4, 118 12"
+                d="M2 10 Q 20 8.6, 40 9.4 T 80 9.2 T 118 10.2"
                 fill="none"
                 stroke="#e21224"
                 strokeWidth="3.5"

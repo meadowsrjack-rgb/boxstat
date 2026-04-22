@@ -478,7 +478,25 @@ const Hero = () => {
           transition={{ duration: 0.7, delay: 0.1 }}
           className="font-display text-5xl md:text-7xl lg:text-8xl leading-[0.92] max-w-5xl text-white"
         >
-          The sports system
+          <span className="relative inline-block">
+            The
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 120 18"
+              preserveAspectRatio="none"
+              className="absolute left-[-4%] right-[-4%] -bottom-2 md:-bottom-3 w-[108%] h-[0.35em] pointer-events-none"
+            >
+              <path
+                d="M2 11 C 18 4, 38 16, 60 9 S 102 4, 118 12"
+                fill="none"
+                stroke="#e21224"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                style={{ filter: "drop-shadow(0 2px 6px rgba(226,18,36,0.45))" }}
+              />
+            </svg>
+          </span>{" "}
+          sports system
           <br />
           <span style={{ color: "#e21224" }}>geared for growth.</span>
         </motion.h1>

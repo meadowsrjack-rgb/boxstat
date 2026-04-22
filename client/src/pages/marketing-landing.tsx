@@ -401,12 +401,17 @@ const GooglePlayButton = () => (
 const Hero = () => {
   const [, setLocation] = useLocation();
   return (
-    <section className="relative min-h-screen w-full flex flex-col overflow-hidden">
+    <section className="relative min-h-screen w-full flex flex-col overflow-visible">
       <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-br from-gray-950 via-black to-black" />
+      {/* Bottom red glow — extended past the section so it bleeds smoothly
+          into whatever sits below (the next section is bg-black). */}
       <div
-        className="absolute bottom-0 left-0 right-0 h-[60vh] z-0 pointer-events-none"
+        className="absolute left-0 right-0 z-0 pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse at center bottom, rgba(226,18,36,0.25) 0%, transparent 70%)",
+          bottom: "-40vh",
+          height: "100vh",
+          background:
+            "radial-gradient(ellipse 90% 70% at center 60%, rgba(226,18,36,0.32) 0%, rgba(226,18,36,0.18) 28%, rgba(226,18,36,0.08) 55%, rgba(226,18,36,0.02) 75%, transparent 95%)",
         }}
       />
       <div

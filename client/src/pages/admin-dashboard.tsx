@@ -284,6 +284,87 @@ function useTabCycleScroll(tabValues: string[], activeTab: string, setActiveTab:
   return ref;
 }
 
+// Task #266: Roster chip with hover- and tap-friendly access status reveal.
+// The chip body opens a Popover (controlled) on hover, focus, or tap/click,
+// and a separate X button performs the destructive remove action so that a
+// tap on the chip never accidentally removes the player.
+function RosterChip({
+  player,
+  enrollTag,
+  payByLabel,
+  playerIsTryout,
+  accessStatus,
+  onRemove,
+}: {
+  player: any;
+  enrollTag: 'grace_period' | 'expired' | 'not_enrolled' | 'unpaid' | null;
+  payByLabel: string | null;
+  playerIsTryout: boolean;
+  accessStatus: import("@shared/access-status").AccessStatus;
+  onRemove: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span
+      className="inline-flex items-stretch rounded-full bg-green-100 text-green-800 text-xs font-medium overflow-hidden"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 pl-2 pr-1.5 py-1 hover:bg-green-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+            data-testid={`chip-roster-player-${player.id}`}
+            aria-label={`Show access status for ${player.firstName} ${player.lastName}`}
+          >
+            {player.firstName} {player.lastName}
+            {playerIsTryout && (
+              <span className="ml-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-purple-200 text-purple-800">Tryout</span>
+            )}
+            {enrollTag === 'unpaid' && (
+              <span className="ml-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-amber-200 text-amber-900">
+                Unpaid{payByLabel ? ` · pay by ${payByLabel}` : ''}
+              </span>
+            )}
+            {enrollTag === 'grace_period' && (
+              <span className="ml-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-amber-200 text-amber-800">Grace Period</span>
+            )}
+            {(enrollTag === 'expired' || enrollTag === 'not_enrolled') && (
+              <span className="ml-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-red-200 text-red-800">Expired</span>
+            )}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          side="top"
+          align="start"
+          className="w-auto max-w-xs p-2"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <div className="flex flex-col gap-1">
+            <AccessUntilLine
+              status={accessStatus}
+              showTooltip={false}
+              className="text-xs"
+              testId={`access-until-roster-chip-${player.id}`}
+            />
+            <span className="text-[10px] text-gray-500">{accessStatus.sourceLabel}</span>
+          </div>
+        </PopoverContent>
+      </Popover>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="flex items-center justify-center px-1.5 hover:bg-red-200 hover:text-red-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+        aria-label={`Remove ${player.firstName} ${player.lastName} from team`}
+        data-testid={`button-remove-roster-player-${player.id}`}
+      >
+        <X className="w-2.5 h-2.5" />
+      </button>
+    </span>
+  );
+}
+
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -14585,6 +14666,25 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
   const getPlayerEnrollmentTag = (playerId: string, team: any): 'grace_period' | 'expired' | 'not_enrolled' | 'unpaid' | null =>
     getPlayerEnrollmentInfo(playerId, team).tag;
 
+  // Task #266: Unified Access-until status for a player+program, used in the
+  // team roster chip tooltip so wording matches the parent profile gateway,
+  // expiry banner and admin user editor.
+  const getPlayerAccessStatusForTeam = (playerId: string, team: any) => {
+    if (!team?.programId) return computeAccessStatus([]);
+    const playerEnrollments = enrollments.filter((e: any) =>
+      String(e.profileId) === String(playerId) &&
+      String(e.programId) === String(team.programId)
+    );
+    return computeAccessStatus(playerEnrollments.map((e: any) => ({
+      status: e.status,
+      endDate: e.endDate,
+      gracePeriodEndDate: e.gracePeriodEndDate,
+      source: e.source,
+      paymentId: e.paymentId,
+      stripeSubscriptionId: e.stripeSubscriptionId,
+    })));
+  };
+
   const downloadTeamTemplate = () => {
     const csvContent = "Name,Program,Division,Season,Location,Color,Notes\nThunder U12,Youth Club,U12,Fall 2025,Main Gym,#DC2626,\nLightning U10,Skills Academy,U10,Spring 2025,East Court,#2563EB,Practice on Tuesdays";
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -15245,29 +15345,17 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
                                 ? new Date(enrollInfo.payByDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
                                 : null;
                               const playerIsTryout = (p.activeTeams || []).some((t: any) => t?.teamId === editingTeam?.id && t?.isTryout);
+                              const accessStatus = getPlayerAccessStatusForTeam(p.id, editingTeam);
                               return (
-                                <button
+                                <RosterChip
                                   key={p.id}
-                                  onClick={() => togglePlayer(p, true)}
-                                  className="inline-flex items-center gap-1 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium hover:bg-red-100 hover:text-red-700 transition-colors group"
-                                >
-                                  {p.firstName} {p.lastName}
-                                  {playerIsTryout && (
-                                    <span className="ml-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-purple-200 text-purple-800 group-hover:bg-purple-200 group-hover:text-purple-800">Tryout</span>
-                                  )}
-                                  {enrollTag === 'unpaid' && (
-                                    <span className="ml-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-amber-200 text-amber-900 group-hover:bg-amber-200 group-hover:text-amber-900">
-                                      Unpaid{payByLabel ? ` · pay by ${payByLabel}` : ''}
-                                    </span>
-                                  )}
-                                  {enrollTag === 'grace_period' && (
-                                    <span className="ml-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-amber-200 text-amber-800 group-hover:bg-amber-200 group-hover:text-amber-800">Grace Period</span>
-                                  )}
-                                  {(enrollTag === 'expired' || enrollTag === 'not_enrolled') && (
-                                    <span className="ml-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-red-200 text-red-800 group-hover:bg-red-200 group-hover:text-red-800">Expired</span>
-                                  )}
-                                  <X className="w-2.5 h-2.5 group-hover:text-red-600" />
-                                </button>
+                                  player={p}
+                                  enrollTag={enrollTag}
+                                  payByLabel={payByLabel}
+                                  playerIsTryout={playerIsTryout}
+                                  accessStatus={accessStatus}
+                                  onRemove={() => togglePlayer(p, true)}
+                                />
                               );
                             })}
                           </div>

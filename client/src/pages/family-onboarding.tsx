@@ -7,11 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DateOfBirthPicker } from "@/components/DateOfBirthPicker";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash, ArrowLeft, Users, ChevronRight, CheckCircle2, Loader2, Calendar } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import { DateScrollPicker } from "react-date-wheel-picker";
 
 // Minimal player shape for onboarding
 type NewPlayer = {
@@ -372,44 +371,15 @@ export default function FamilyOnboarding() {
                             <Calendar className="w-4 h-4 text-white/40" />
                           </button>
                           
-                          <Dialog open={showDobPickerIdx === idx} onOpenChange={(open) => !open && setShowDobPickerIdx(null)}>
-                            <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
-                              <DialogHeader>
-                                <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
-                              </DialogHeader>
-                              <div className="py-4 flex justify-center date-wheel-picker-dark">
-                                <DateScrollPicker
-                                  defaultYear={player.dob ? new Date(player.dob).getFullYear() : 2015}
-                                  defaultMonth={(player.dob ? new Date(player.dob).getMonth() : 0) + 1}
-                                  defaultDay={player.dob ? new Date(player.dob).getDate() : 1}
-                                  startYear={1950}
-                                  endYear={new Date().getFullYear()}
-                                  dateTimeFormatOptions={{ month: 'short' }}
-                                  highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
-                                  onDateChange={(date: Date) => {
-                                    updatePlayer(idx, "dob", date.toISOString().split('T')[0]);
-                                  }}
-                                />
-                              </div>
-                              <div className="flex gap-3">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  className="flex-1 border-gray-600 text-gray-600 hover:bg-gray-800"
-                                  onClick={() => setShowDobPickerIdx(null)}
-                                >
-                                  Cancel
-                                </Button>
-                                <Button
-                                  type="button"
-                                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                                  onClick={() => setShowDobPickerIdx(null)}
-                                >
-                                  Confirm
-                                </Button>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
+                          <DateOfBirthPicker
+                            open={showDobPickerIdx === idx}
+                            onOpenChange={(open) => !open && setShowDobPickerIdx(null)}
+                            value={player.dob}
+                            onChange={(v) => updatePlayer(idx, "dob", v)}
+                            startYear={1950}
+                            endYear={new Date().getFullYear()}
+                            defaultDate={new Date(2015, 0, 1)}
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label className="text-white/80">Grade</Label>

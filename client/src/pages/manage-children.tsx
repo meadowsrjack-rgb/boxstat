@@ -31,7 +31,7 @@ import {
   Eye
 } from "lucide-react";
 import QRCode from "qrcode";
-import { DateScrollPicker } from "react-date-wheel-picker";
+import { DateOfBirthPicker } from "@/components/DateOfBirthPicker";
 import BoxStatLogo from "@/components/boxstat-logo";
 
 const childSchema = z.object({
@@ -355,44 +355,15 @@ export default function ManageChildren() {
                         </FormControl>
                         <FormMessage />
                         
-                        <Dialog open={showAddDobPicker} onOpenChange={setShowAddDobPicker}>
-                          <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
-                            <DialogHeader>
-                              <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
-                            </DialogHeader>
-                            <div className="py-4 flex justify-center date-wheel-picker-dark">
-                              <DateScrollPicker
-                                defaultYear={field.value ? new Date(field.value).getFullYear() : 2015}
-                                defaultMonth={(field.value ? new Date(field.value).getMonth() : 0) + 1}
-                                defaultDay={field.value ? new Date(field.value).getDate() : 1}
-                                startYear={1950}
-                                endYear={new Date().getFullYear()}
-                                dateTimeFormatOptions={{ month: 'short' }}
-                                highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
-                                onDateChange={(date: Date) => {
-                                  field.onChange(date.toISOString().split('T')[0]);
-                                }}
-                              />
-                            </div>
-                            <div className="flex gap-3">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="flex-1 border-gray-600 text-gray-600 hover:bg-gray-800"
-                                onClick={() => setShowAddDobPicker(false)}
-                              >
-                                Cancel
-                              </Button>
-                              <Button
-                                type="button"
-                                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                                onClick={() => setShowAddDobPicker(false)}
-                              >
-                                Confirm
-                              </Button>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+                        <DateOfBirthPicker
+                          open={showAddDobPicker}
+                          onOpenChange={setShowAddDobPicker}
+                          value={field.value}
+                          onChange={(v) => field.onChange(v)}
+                          startYear={1950}
+                          endYear={new Date().getFullYear()}
+                          defaultDate={new Date(2015, 0, 1)}
+                        />
                       </FormItem>
                     )}
                   />
@@ -615,44 +586,15 @@ export default function ManageChildren() {
                     </FormControl>
                     <FormMessage />
                     
-                    <Dialog open={showEditDobPicker} onOpenChange={setShowEditDobPicker}>
-                      <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
-                        <DialogHeader>
-                          <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
-                        </DialogHeader>
-                        <div className="py-4 flex justify-center date-wheel-picker-dark">
-                          <DateScrollPicker
-                            defaultYear={field.value ? new Date(field.value).getFullYear() : 2015}
-                            defaultMonth={(field.value ? new Date(field.value).getMonth() : 0) + 1}
-                            defaultDay={field.value ? new Date(field.value).getDate() : 1}
-                            startYear={1950}
-                            endYear={new Date().getFullYear()}
-                            dateTimeFormatOptions={{ month: 'short' }}
-                            highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
-                            onDateChange={(date: Date) => {
-                              field.onChange(date.toISOString().split('T')[0]);
-                            }}
-                          />
-                        </div>
-                        <div className="flex gap-3">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="flex-1 border-gray-600 text-gray-600 hover:bg-gray-800"
-                            onClick={() => setShowEditDobPicker(false)}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            type="button"
-                            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                            onClick={() => setShowEditDobPicker(false)}
-                          >
-                            Confirm
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <DateOfBirthPicker
+                      open={showEditDobPicker}
+                      onOpenChange={setShowEditDobPicker}
+                      value={field.value}
+                      onChange={(v) => field.onChange(v)}
+                      startYear={1950}
+                      endYear={new Date().getFullYear()}
+                      defaultDate={new Date(2015, 0, 1)}
+                    />
                   </FormItem>
                 )}
               />

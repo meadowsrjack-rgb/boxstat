@@ -14,8 +14,7 @@ import { ChevronLeft, ChevronRight, UserPlus, CreditCard, DollarSign, Loader2, C
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DateScrollPicker } from "react-date-wheel-picker";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DateOfBirthPicker } from "@/components/DateOfBirthPicker";
 
 // Step schemas
 const playerNameSchema = z.object({
@@ -590,28 +589,9 @@ function DOBStep({
     defaultValues,
   });
   const [showPicker, setShowPicker] = useState(false);
-  const [tempDate, setTempDate] = useState<Date | undefined>(undefined);
-  const [userHasSelected, setUserHasSelected] = useState(false);
-  
-  const existingDate = defaultValues.dateOfBirth ? new Date(defaultValues.dateOfBirth) : null;
-  const defaultYear = existingDate?.getFullYear() ?? 2010;
-  const defaultMonth = existingDate?.getMonth() ?? 0;
-  const defaultDay = existingDate?.getDate() ?? 1;
-  
+
   const handleOpenPicker = () => {
-    if (existingDate) {
-      setTempDate(existingDate);
-      setUserHasSelected(true);
-    } else {
-      setTempDate(undefined);
-      setUserHasSelected(false);
-    }
     setShowPicker(true);
-  };
-  
-  const handleDateChange = (date: Date) => {
-    setTempDate(date);
-    setUserHasSelected(true);
   };
 
   return (
@@ -637,55 +617,17 @@ function DOBStep({
                 </button>
               </FormControl>
               <FormMessage className="text-red-400" />
-              
-              <Dialog open={showPicker} onOpenChange={setShowPicker}>
-                <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
-                  <DialogHeader>
-                    <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
-                  </DialogHeader>
-                  <div className="py-4 flex justify-center date-wheel-picker-dark">
-                    <DateScrollPicker
-                      key={showPicker ? 'open' : 'closed'}
-                      defaultYear={defaultYear}
-                      defaultMonth={defaultMonth}
-                      defaultDay={defaultDay}
-                      startYear={1950}
-                      endYear={new Date().getFullYear()}
-                      dateTimeFormatOptions={{ month: 'short' }}
-                      highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
-                      onDateChange={handleDateChange}
-                    />
-                  </div>
-                  {!userHasSelected && (
-                    <p className="text-center text-sm text-gray-400 -mt-2">
-                      Scroll to select a date
-                    </p>
-                  )}
-                  <div className="flex gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="flex-1 border-gray-600 text-gray-600 hover:bg-gray-800"
-                      onClick={() => setShowPicker(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      className="flex-1 bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
-                      disabled={!userHasSelected}
-                      onClick={() => {
-                        if (tempDate && userHasSelected) {
-                          field.onChange(tempDate.toISOString().split('T')[0]);
-                        }
-                        setShowPicker(false);
-                      }}
-                    >
-                      Confirm
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+
+              <DateOfBirthPicker
+                open={showPicker}
+                onOpenChange={setShowPicker}
+                value={field.value}
+                onChange={(v) => field.onChange(v)}
+                startYear={1950}
+                endYear={new Date().getFullYear()}
+                defaultDate={new Date(2010, 0, 1)}
+                requireSelection
+              />
             </FormItem>
           )}
         />

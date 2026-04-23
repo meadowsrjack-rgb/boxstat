@@ -4,9 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Trash, Calendar } from "lucide-react";
-import { DateScrollPicker } from "react-date-wheel-picker";
+import { DateOfBirthPicker } from "@/components/DateOfBirthPicker";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -200,44 +199,15 @@ export default function Onboarding() {
                   <Calendar className="w-4 h-4 text-gray-400" />
                 </button>
                 
-                <Dialog open={showDobPickerIdx === idx} onOpenChange={(open) => !open && setShowDobPickerIdx(null)}>
-                  <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
-                    <DialogHeader>
-                      <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
-                    </DialogHeader>
-                    <div className="py-4 flex justify-center date-wheel-picker-dark">
-                      <DateScrollPicker
-                        defaultYear={pl.dob ? new Date(pl.dob).getFullYear() : 2015}
-                        defaultMonth={(pl.dob ? new Date(pl.dob).getMonth() : 0) + 1}
-                        defaultDay={pl.dob ? new Date(pl.dob).getDate() : 1}
-                        startYear={1950}
-                        endYear={new Date().getFullYear()}
-                        dateTimeFormatOptions={{ month: 'short' }}
-                        highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
-                        onDateChange={(date: Date) => {
-                          updatePlayer(idx, "dob", date.toISOString().split('T')[0]);
-                        }}
-                      />
-                    </div>
-                    <div className="flex gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="flex-1 border-gray-600 text-gray-600 hover:bg-gray-800"
-                        onClick={() => setShowDobPickerIdx(null)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="button"
-                        className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                        onClick={() => setShowDobPickerIdx(null)}
-                      >
-                        Confirm
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <DateOfBirthPicker
+                  open={showDobPickerIdx === idx}
+                  onOpenChange={(open) => !open && setShowDobPickerIdx(null)}
+                  value={pl.dob}
+                  onChange={(v) => updatePlayer(idx, "dob", v)}
+                  startYear={1950}
+                  endYear={new Date().getFullYear()}
+                  defaultDate={new Date(2015, 0, 1)}
+                />
               </div>
               <div>
                 <Label htmlFor={`player-${idx}-grade`}>Grade</Label>

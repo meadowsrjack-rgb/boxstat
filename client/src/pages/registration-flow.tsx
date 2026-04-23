@@ -13,8 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronLeft, ChevronRight, UserPlus, Users, Check, Mail, Loader2, Calendar } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
-import { DateScrollPicker } from "react-date-wheel-picker";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DateOfBirthPicker } from "@/components/DateOfBirthPicker";
 import { authPersistence } from "@/services/authPersistence";
 
 // Form schemas for each step
@@ -938,15 +937,8 @@ function ParentInfoStep({
           name="dateOfBirth"
           render={({ field }) => {
             const [showPicker, setShowPicker] = useState(false);
-            const [tempDate, setTempDate] = useState<Date | undefined>(undefined);
-            
-            const existingDate = field.value ? new Date(field.value) : null;
-            const defaultYear = existingDate?.getFullYear() ?? 2000;
-            const defaultMonth = existingDate?.getMonth() ?? 0;
-            const defaultDay = existingDate?.getDate() ?? 1;
-            
+
             const handleOpenPicker = () => {
-              setTempDate(existingDate ?? new Date(2000, 0, 1));
               setShowPicker(true);
             };
             
@@ -967,48 +959,15 @@ function ParentInfoStep({
                   </button>
                 </FormControl>
                 <FormMessage className="text-red-400" />
-                <Dialog open={showPicker} onOpenChange={setShowPicker}>
-                  <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
-                    <DialogHeader>
-                      <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
-                    </DialogHeader>
-                    <div className="py-4 flex justify-center date-wheel-picker-dark text-[#d9d9d9]">
-                      <DateScrollPicker
-                        key={showPicker ? 'open' : 'closed'}
-                        defaultYear={defaultYear}
-                        defaultMonth={defaultMonth}
-                        defaultDay={defaultDay}
-                        startYear={1920}
-                        endYear={new Date().getFullYear()}
-                        dateTimeFormatOptions={{ month: 'short' }}
-                        highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
-                        onDateChange={(date) => setTempDate(date)}
-                      />
-                    </div>
-                    <div className="flex gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="flex-1 border-gray-600 text-gray-500 hover:bg-gray-800"
-                        onClick={() => setShowPicker(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="button"
-                        className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                        onClick={() => {
-                          if (tempDate) {
-                            field.onChange(tempDate.toISOString().split('T')[0]);
-                          }
-                          setShowPicker(false);
-                        }}
-                      >
-                        Confirm
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <DateOfBirthPicker
+                  open={showPicker}
+                  onOpenChange={setShowPicker}
+                  value={field.value}
+                  onChange={(v) => field.onChange(v)}
+                  startYear={1920}
+                  endYear={new Date().getFullYear()}
+                  defaultDate={new Date(2000, 0, 1)}
+                />
               </FormItem>
             );
           }}
@@ -1120,15 +1079,8 @@ function PlayerInfoStep({
           name="dateOfBirth"
           render={({ field }) => {
             const [showPicker, setShowPicker] = useState(false);
-            const [tempDate, setTempDate] = useState<Date | undefined>(undefined);
-            
-            const existingDate = field.value ? new Date(field.value) : null;
-            const defaultYear = existingDate?.getFullYear() ?? 2010;
-            const defaultMonth = existingDate?.getMonth() ?? 0;
-            const defaultDay = existingDate?.getDate() ?? 1;
-            
+
             const handleOpenPicker = () => {
-              setTempDate(existingDate ?? new Date(2010, 0, 1));
               setShowPicker(true);
             };
             
@@ -1159,48 +1111,15 @@ function PlayerInfoStep({
                   </div>
                 )}
                 
-                <Dialog open={showPicker} onOpenChange={setShowPicker}>
-                  <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
-                    <DialogHeader>
-                      <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
-                    </DialogHeader>
-                    <div className="py-4 flex justify-center date-wheel-picker-dark">
-                      <DateScrollPicker
-                        key={showPicker ? 'open' : 'closed'}
-                        defaultYear={defaultYear}
-                        defaultMonth={defaultMonth}
-                        defaultDay={defaultDay}
-                        startYear={1950}
-                        endYear={new Date().getFullYear()}
-                        dateTimeFormatOptions={{ month: 'short' }}
-                        highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
-                        onDateChange={(date) => setTempDate(date)}
-                      />
-                    </div>
-                    <div className="flex gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="flex-1 border-gray-600 text-gray-500 hover:bg-gray-800"
-                        onClick={() => setShowPicker(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="button"
-                        className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                        onClick={() => {
-                          if (tempDate) {
-                            field.onChange(tempDate.toISOString().split('T')[0]);
-                          }
-                          setShowPicker(false);
-                        }}
-                      >
-                        Confirm
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <DateOfBirthPicker
+                  open={showPicker}
+                  onOpenChange={setShowPicker}
+                  value={field.value}
+                  onChange={(v) => field.onChange(v)}
+                  startYear={1950}
+                  endYear={new Date().getFullYear()}
+                  defaultDate={new Date(2010, 0, 1)}
+                />
               </FormItem>
             );
           }}

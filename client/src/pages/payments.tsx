@@ -787,6 +787,54 @@ function TryoutEnrollmentDialog({
   );
 }
 
+function SizePicker({
+  product,
+  value,
+  onChange,
+}: {
+  product: Program;
+  value?: string;
+  onChange: (size: string) => void;
+}) {
+  const sizes = product.inventorySizes || [];
+  const stock = product.sizeStock || {};
+  const lowThreshold = 3;
+  if (sizes.length === 0) return null;
+  return (
+    <div className="mt-3 pt-3 border-t border-white/10">
+      <div className="text-xs text-white/70 mb-2">Choose size</div>
+      <div className="flex flex-wrap gap-2">
+        {sizes.map((size) => {
+          const qty = stock[size];
+          const isOut = typeof qty === 'number' && qty <= 0;
+          const isLow = typeof qty === 'number' && qty > 0 && qty <= lowThreshold;
+          const selected = value === size;
+          return (
+            <button
+              key={size}
+              type="button"
+              onClick={() => onChange(size)}
+              data-testid={`size-${product.id}-${size}`}
+              className={`px-3 py-1.5 rounded border text-xs font-medium transition-colors ${
+                selected
+                  ? 'bg-red-500 border-red-500 text-white'
+                  : 'bg-white/5 border-white/20 text-white hover:border-white/40'
+              }`}
+            >
+              {size}
+              {isOut && <span className="ml-1 text-[10px] text-orange-300">(out of stock)</span>}
+              {isLow && <span className="ml-1 text-[10px] text-yellow-300">(low: {qty})</span>}
+            </button>
+          );
+        })}
+      </div>
+      {!value && (
+        <p className="text-[11px] text-yellow-400 mt-1">Size required</p>
+      )}
+    </div>
+  );
+}
+
 function EnrollmentDialog({ 
   program, 
   children, 
@@ -805,7 +853,7 @@ function EnrollmentDialog({
   storeItems: Program[];
   onClose: () => void; 
   onConfirm: (playerId: string | null) => void;
-  onConfirmWithAddOns: (playerId: string | null, addOnIds: string[]) => void;
+  onConfirmWithAddOns: (playerId: string | null, addOnIds: string[], sizes: Record<string, string>) => void;
   isLoading: boolean;
   onCouponApplied: (coupon: { id: number; code: string; discountType: string; discountValue: number } | null) => void;
   appliedCoupon: { id: number; code: string; discountType: string; discountValue: number } | null;
@@ -815,6 +863,7 @@ function EnrollmentDialog({
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+  const [selectedSizes, setSelectedSizes] = useState<Record<string, string>>({});
   const [suggestedAddOnIds, setSuggestedAddOnIds] = useState<string[]>([]);
   const [couponCode, setCouponCode] = useState("");
   const [couponError, setCouponError] = useState("");
@@ -840,6 +889,7 @@ function EnrollmentDialog({
     if (program) {
       setCurrentStep(1);
       setSelectedAddOns([]);
+      setSelectedSizes({});
       setSelectedPlayer("");
       setCouponCode("");
       setCouponError("");
@@ -850,6 +900,21 @@ function EnrollmentDialog({
   if (!program) return null;
   
   const hasSuggestedAddOns = suggestedAddOnIds.length > 0;
+  
+  // A product needs a size at checkout if it's a sized goods product.
+  const productNeedsSize = (p?: { productCategory?: string; inventorySizes?: string[] } | null) =>
+    !!p && p.productCategory === 'goods' && Array.isArray(p.inventorySizes) && p.inventorySizes.length > 0;
+  const mainNeedsSize = productNeedsSize(program);
+  
+  // Items in step 2 that require a size: main program (if applicable) + each
+  // currently selected add-on that is a sized goods product.
+  const sizedItemsNeedingSelection: Program[] = [
+    ...(mainNeedsSize ? [program] : []),
+    ...selectedAddOns
+      .map(id => storeItems.find(s => s.id === id))
+      .filter((p): p is Program => productNeedsSize(p)),
+  ];
+  const allSizesChosen = sizedItemsNeedingSelection.every(p => !!selectedSizes[p.id]);
   
   const sortedStoreItems = useMemo(() => {
     if (!hasSuggestedAddOns) return storeItems;
@@ -873,7 +938,7 @@ function EnrollmentDialog({
   
   const handleNext = () => {
     onClearError();
-    if (hasSuggestedAddOns && storeItems.length > 0) {
+    if (mainNeedsSize || (hasSuggestedAddOns && storeItems.length > 0)) {
       setCurrentStep(2);
     } else {
       onConfirm(isPerFamily ? null : selectedPlayer);
@@ -882,7 +947,12 @@ function EnrollmentDialog({
   
   const handleConfirmWithAddOns = () => {
     onClearError();
-    onConfirmWithAddOns(isPerFamily ? null : selectedPlayer, selectedAddOns);
+    // Only forward sizes for items still needing one (selected add-ons + main if applicable)
+    const sizesToSend: Record<string, string> = {};
+    for (const p of sizedItemsNeedingSelection) {
+      if (selectedSizes[p.id]) sizesToSend[p.id] = selectedSizes[p.id];
+    }
+    onConfirmWithAddOns(isPerFamily ? null : selectedPlayer, selectedAddOns, sizesToSend);
   };
   
   const toggleAddOn = (productId: string) => {
@@ -1000,6 +1070,13 @@ function EnrollmentDialog({
                 </div>
                 <span className="font-semibold">${(program.price || 0) / 100}</span>
               </div>
+              {mainNeedsSize && (
+                <SizePicker
+                  product={program}
+                  value={selectedSizes[program.id]}
+                  onChange={(size) => setSelectedSizes(prev => ({ ...prev, [program.id]: size }))}
+                />
+              )}
             </div>
             
             {suggestedAddOnIds.length > 0 && (
@@ -1054,6 +1131,15 @@ function EnrollmentDialog({
                       </div>
                       <span className="font-semibold">${(item.price || 0) / 100}</span>
                     </div>
+                    {isSelected && productNeedsSize(item) && (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <SizePicker
+                          product={item}
+                          value={selectedSizes[item.id]}
+                          onChange={(size) => setSelectedSizes(prev => ({ ...prev, [item.id]: size }))}
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1151,8 +1237,8 @@ function EnrollmentDialog({
               data-testid="button-next-enrollment"
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {hasSuggestedAddOns && storeItems.length > 0 ? "Next" : "Proceed to Payment"}
-              {hasSuggestedAddOns && storeItems.length > 0 && <ChevronRight className="h-4 w-4 ml-1" />}
+              {(mainNeedsSize || (hasSuggestedAddOns && storeItems.length > 0)) ? "Next" : "Proceed to Payment"}
+              {(mainNeedsSize || (hasSuggestedAddOns && storeItems.length > 0)) && <ChevronRight className="h-4 w-4 ml-1" />}
             </Button>
           )}
           
@@ -1160,13 +1246,15 @@ function EnrollmentDialog({
             <Button 
               className="bg-red-600 hover:bg-red-700 text-white"
               onClick={handleConfirmWithAddOns}
-              disabled={isLoading}
+              disabled={isLoading || !allSizesChosen}
               data-testid="button-confirm-enrollment"
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {selectedAddOns.length > 0 
-                ? `Pay $${(calculateTotal() / 100).toFixed(2)}`
-                : "Skip Add-ons"
+              {!allSizesChosen
+                ? "Select Size to Continue"
+                : selectedAddOns.length > 0 || mainNeedsSize
+                  ? `Pay $${(calculateTotal() / 100).toFixed(2)}`
+                  : "Skip Add-ons"
               }
             </Button>
           )}
@@ -1313,7 +1401,7 @@ export default function PaymentsPage() {
     }
   };
   
-  const handleEnrollWithAddOns = async (playerId: string | null, addOnIds: string[]) => {
+  const handleEnrollWithAddOns = async (playerId: string | null, addOnIds: string[], sizes: Record<string, string>) => {
     if (!selectedProgram) return;
     try {
       setLoading(true);
@@ -1325,6 +1413,7 @@ export default function PaymentsPage() {
           packageId: selectedProgram.id,
           playerId: playerId,
           addOnIds: addOnIds.length > 0 ? addOnIds : undefined,
+          sizes: sizes && Object.keys(sizes).length > 0 ? sizes : undefined,
           couponCode: appliedCoupon?.code || undefined,
           successUrl: `${window.location.origin}/payments?success=true&session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: `${window.location.origin}/payments?canceled=true`,

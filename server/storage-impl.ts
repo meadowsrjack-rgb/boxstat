@@ -4519,6 +4519,7 @@ class DatabaseStorage implements IStorage {
       stripePaymentId: payment.stripePaymentId,
       packageId: payment.packageId,
       programId: payment.programId,
+      selectedSize: payment.selectedSize,
       createdAt: new Date().toISOString(),
     };
 
@@ -6131,6 +6132,7 @@ class DatabaseStorage implements IStorage {
       paidAt: dbPayment.paidAt ? new Date(dbPayment.paidAt) : undefined,
       createdAt: new Date(dbPayment.createdAt),
       fulfillmentStatus: dbPayment.fulfillmentStatus || 'pending',
+      selectedSize: dbPayment.selectedSize || undefined,
     };
   }
 

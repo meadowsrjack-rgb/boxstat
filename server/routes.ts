@@ -233,6 +233,28 @@ const STRIPE_CACHE_TTL = 5 * 60 * 1000;
 // platform-wide constant.
 const DEFAULT_PAY_BY_WINDOW_DAYS = 14;
 
+// Build a human-readable size suffix (e.g. " (Size M)" or " (sizes: M, YL)") from
+// the size selections we stashed on the Stripe checkout session metadata.
+function buildSizeNote(session: any, primaryProductId?: string | null): string {
+  try {
+    const raw = session?.metadata?.sizeSelections;
+    if (!raw) return '';
+    const sizes = JSON.parse(raw) as Record<string, string>;
+    const entries = Object.entries(sizes).filter(([, v]) => !!v);
+    if (entries.length === 0) return '';
+    if (primaryProductId && sizes[primaryProductId]) {
+      const others = entries.filter(([k]) => k !== primaryProductId).length;
+      return others > 0
+        ? ` (Size ${sizes[primaryProductId]}; +${others} sized add-on${others === 1 ? '' : 's'})`
+        : ` (Size ${sizes[primaryProductId]})`;
+    }
+    if (entries.length === 1) return ` (Size ${entries[0][1]})`;
+    return ` (sizes: ${entries.map(([, v]) => v).join(', ')})`;
+  } catch {
+    return '';
+  }
+}
+
 function computePayByEndDateIso(claimedEndDate?: string | null): { endDateIso: string; storedClaimedDate: string | null } {
   const defaultEnd = new Date();
   defaultEnd.setDate(defaultEnd.getDate() + DEFAULT_PAY_BY_WINDOW_DAYS);
@@ -2182,7 +2204,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const { packageId, playerId, addOnIds, signedWaiverIds, selectedPricingOptionId, platform, couponCode } = req.body;
+      const { packageId, playerId, addOnIds, signedWaiverIds, selectedPricingOptionId, platform, couponCode, sizes } = req.body;
+      // sizes: { [productId: string]: string } — selected US size for sized goods (main package and/or add-ons)
+      const sizeSelections: Record<string, string> = (sizes && typeof sizes === 'object' && !Array.isArray(sizes)) ? sizes : {};
       const isNativeIOS = platform === 'ios';
       
       if (!packageId) {
@@ -2434,19 +2458,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate subtotal for platform fee
       let subtotal = priceToCharge;
       
+      // Validate sizes for the main package if it's a sized goods product.
+      // Size enforcement is opt-in: only callers that explicitly send a `sizes`
+      // payload (e.g. the enrollment checkout dialog) are gated. Standalone /
+      // QR store flows don't send sizes and remain functional (Task #289 scope).
+      const validatedSizes: Record<string, string> = {};
+      const sizesProvided = sizes && typeof sizes === 'object' && !Array.isArray(sizes);
+      const mainSizes = Array.isArray(program.inventorySizes) ? program.inventorySizes : [];
+      if (sizesProvided && program.productCategory === 'goods' && mainSizes.length > 0) {
+        const chosen = sizeSelections[packageId];
+        if (!chosen) {
+          return res.status(400).json({ error: `Please select a size for ${program.name}` });
+        }
+        if (!mainSizes.includes(chosen)) {
+          return res.status(400).json({ error: `Invalid size "${chosen}" for ${program.name}` });
+        }
+        validatedSizes[packageId] = chosen;
+      }
+
       // Add add-on line items (one-time purchases only, not subscriptions)
       const addOnProductIds: string[] = [];
       if (addOnIds && Array.isArray(addOnIds) && addOnIds.length > 0 && !isSubscription) {
         for (const addOnId of addOnIds) {
           const addOn = await storage.getProgram(addOnId);
           if (addOn && addOn.price) {
+            // If this add-on is a sized goods product, require a valid size
+            const addOnSizes = Array.isArray(addOn.inventorySizes) ? addOn.inventorySizes : [];
+            if (sizesProvided && addOn.productCategory === 'goods' && addOnSizes.length > 0) {
+              const chosen = sizeSelections[addOnId];
+              if (!chosen) {
+                return res.status(400).json({ error: `Please select a size for ${addOn.name}` });
+              }
+              if (!addOnSizes.includes(chosen)) {
+                return res.status(400).json({ error: `Invalid size "${chosen}" for ${addOn.name}` });
+              }
+              validatedSizes[addOnId] = chosen;
+            }
             addOnProductIds.push(addOnId);
             subtotal += addOn.price;
+            const sizeSuffix = validatedSizes[addOnId] ? ` (Size ${validatedSizes[addOnId]})` : '';
             lineItems.push({
               price_data: {
                 currency: 'usd',
                 product_data: {
-                  name: addOn.name,
+                  name: `${addOn.name}${sizeSuffix}`,
                   description: addOn.description || undefined,
                 },
                 unit_amount: addOn.price,
@@ -2455,6 +2510,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
         }
+      }
+      // Append size to main line item display name when applicable
+      if (validatedSizes[packageId]) {
+        mainLineItem.price_data.product_data.name = `${itemName} (Size ${validatedSizes[packageId]})`;
       }
       
       // Add service fee
@@ -2511,6 +2570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           playerId: playerId || '',
           type: 'package_purchase',
           addOnIds: addOnProductIds.length > 0 ? JSON.stringify(addOnProductIds) : '',
+          sizeSelections: Object.keys(validatedSizes).length > 0 ? JSON.stringify(validatedSizes) : '',
           signedWaiverIds: signedWaiverIds && signedWaiverIds.length > 0 ? JSON.stringify(signedWaiverIds) : '',
           pricingOptionId: selectedPricingOptionId || '',
           pricingOptionName: selectedPricingOption?.name || '',
@@ -2760,6 +2820,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             let createdPaymentId: string | null = null;
             if (session.amount_total) {
               try {
+                let mainSizesById: Record<string, string> = {};
+                if (session.metadata?.sizeSelections) {
+                  try { mainSizesById = JSON.parse(session.metadata.sizeSelections) as Record<string, string>; } catch {}
+                }
                 const paymentRecord = await storage.createPayment({
                   organizationId: updatedPlayer.organizationId,
                   userId: playerId,
@@ -2770,6 +2834,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   description: `Player Registration: ${updatedPlayer.firstName} ${updatedPlayer.lastName}`,
                   programId: packageId,
                   stripePaymentId: session.payment_intent as string,
+                  selectedSize: (packageId && mainSizesById[packageId]) || undefined,
                 });
                 createdPaymentId = paymentRecord ? String(paymentRecord.id) : null;
                 console.log(`✅ Created payment record for player ${playerId}`);
@@ -2780,9 +2845,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
 
             // Create individual payment records for each store add-on purchased alongside registration
+            const goodsAddOnLines: string[] = [];
             if (session.metadata?.addOnIds) {
               try {
                 const addOnIdsParsed = JSON.parse(session.metadata.addOnIds) as string[];
+                let sizesById: Record<string, string> = {};
+                if (session.metadata?.sizeSelections) {
+                  try { sizesById = JSON.parse(session.metadata.sizeSelections) as Record<string, string>; } catch {}
+                }
                 for (const addOnId of addOnIdsParsed) {
                   const addOn = await storage.getProgram(addOnId);
                   if (addOn && addOn.productCategory === 'goods' && addOn.price && addOn.price > 0) {
@@ -2796,12 +2866,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       description: addOn.name,
                       programId: addOnId,
                       stripePaymentId: session.payment_intent as string,
+                      selectedSize: sizesById[addOnId] || undefined,
                     });
-                    console.log(`✅ Created store add-on payment record for ${addOn.name} (player ${playerId})`);
+                    const sizeBit = sizesById[addOnId] ? ` (Size ${sizesById[addOnId]})` : '';
+                    goodsAddOnLines.push(`${addOn.name}${sizeBit}`);
+                    console.log(`✅ Created store add-on payment record for ${addOn.name}${sizesById[addOnId] ? ` (size ${sizesById[addOnId]})` : ''} (player ${playerId})`);
                   }
                 }
               } catch (addOnError: any) {
                 console.error('⚠️ Store add-on payment record creation failed (non-fatal):', addOnError.message);
+              }
+            }
+            // If any goods add-ons were ordered, fire a dispatch notification too —
+            // even when the main package is a service enrollment.
+            if (goodsAddOnLines.length > 0) {
+              try {
+                await pushNotifications.notifyAllAdmins(storage,
+                  '📦 New Store Order',
+                  `${playerName} ordered ${goodsAddOnLines.join(', ')} — dispatch required`,
+                  updatedPlayer.organizationId
+                );
+              } catch (notifError: any) {
+                console.error('⚠️ Add-on dispatch notification failed (non-fatal):', notifError.message);
               }
             }
             
@@ -2841,7 +2927,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       if (program.productCategory === 'goods') {
                         await pushNotifications.notifyAllAdmins(storage,
                           '📦 New Store Order',
-                          `${playerName} purchased ${program.name} — dispatch required`,
+                          `${playerName} purchased ${program.name}${buildSizeNote(session, packageId)} — dispatch required`,
                           updatedPlayer.organizationId
                         );
                       } else {
@@ -2947,6 +3033,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let pkgPaymentId: string | null = null;
           if (session.amount_total) {
             try {
+              let pkgSizesById: Record<string, string> = {};
+              if (session.metadata?.sizeSelections) {
+                try { pkgSizesById = JSON.parse(session.metadata.sizeSelections) as Record<string, string>; } catch {}
+              }
               const pkgPayment = await storage.createPayment({
                 organizationId: await resolveOrgId(session, userId, packageId),
                 userId: userId,
@@ -2959,6 +3049,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 packageId: packageId,
                 programId: packageId,
                 stripePaymentId: session.payment_intent as string,
+                selectedSize: (packageId && pkgSizesById[packageId]) || undefined,
               });
               pkgPaymentId = pkgPayment ? String(pkgPayment.id) : null;
               console.log(`✅ Created payment record for user ${userId}${playerId ? ` (player: ${playerId})` : ''}`);
@@ -2968,10 +3059,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           // Create individual payment records for each store add-on purchased alongside the package
+          const goodsAddOnLinesPkg: string[] = [];
+          let goodsAddOnOrgId: string | undefined;
           if (session.metadata?.addOnIds) {
             try {
               const addOnIdsParsed = JSON.parse(session.metadata.addOnIds) as string[];
+              let sizesById: Record<string, string> = {};
+              if (session.metadata?.sizeSelections) {
+                try { sizesById = JSON.parse(session.metadata.sizeSelections) as Record<string, string>; } catch {}
+              }
               const orgId = await resolveOrgId(session, userId, packageId);
+              goodsAddOnOrgId = orgId;
               for (const addOnId of addOnIdsParsed) {
                 const addOn = await storage.getProgram(addOnId);
                 if (addOn && addOn.productCategory === 'goods' && addOn.price && addOn.price > 0) {
@@ -2986,12 +3084,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     description: addOn.name,
                     programId: addOnId,
                     stripePaymentId: session.payment_intent as string,
+                    selectedSize: sizesById[addOnId] || undefined,
                   });
-                  console.log(`✅ Created store add-on payment record for ${addOn.name} (user ${userId})`);
+                  const sizeBit = sizesById[addOnId] ? ` (Size ${sizesById[addOnId]})` : '';
+                  goodsAddOnLinesPkg.push(`${addOn.name}${sizeBit}`);
+                  console.log(`✅ Created store add-on payment record for ${addOn.name}${sizesById[addOnId] ? ` (size ${sizesById[addOnId]})` : ''} (user ${userId})`);
                 }
               }
             } catch (addOnError: any) {
               console.error('⚠️ Store add-on payment record creation failed (non-fatal):', addOnError.message);
+            }
+          }
+          // Dispatch notification for any goods add-ons (regardless of main package category)
+          if (goodsAddOnLinesPkg.length > 0) {
+            try {
+              const buyer = await storage.getUser(userId);
+              const buyerName = buyer ? `${buyer.firstName || ''} ${buyer.lastName || ''}`.trim() : 'A customer';
+              await pushNotifications.notifyAllAdmins(storage,
+                '📦 New Store Order',
+                `${buyerName} ordered ${goodsAddOnLinesPkg.join(', ')} — dispatch required`,
+                goodsAddOnOrgId
+              );
+            } catch (notifError: any) {
+              console.error('⚠️ Add-on dispatch notification failed (non-fatal):', notifError.message);
             }
           }
 
@@ -3136,7 +3251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     if (program.productCategory === 'goods') {
                       await pushNotifications.notifyAllAdmins(storage,
                         '📦 New Store Order',
-                        `${playerName} purchased ${program.name} — dispatch required`,
+                        `${playerName} purchased ${program.name}${buildSizeNote(session, packageId)} — dispatch required`,
                         orgId
                       );
                     } else {
@@ -3501,6 +3616,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const amountDollars = amountCents / 100;
             const playerName = `${updatedPlayer.firstName || ''} ${updatedPlayer.lastName || ''}`.trim();
 
+            let addPlayerSizesById: Record<string, string> = {};
+            if (session.metadata?.sizeSelections) {
+              try { addPlayerSizesById = JSON.parse(session.metadata.sizeSelections) as Record<string, string>; } catch {}
+            }
             const verifyPayment = await storage.createPayment({
               organizationId: updatedPlayer.organizationId,
               userId: playerId,
@@ -3511,6 +3630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               description: `Player Registration: ${playerName}`,
               stripePaymentId: session.payment_intent as string,
               programId: packageId,
+              selectedSize: addPlayerSizesById[packageId] || undefined,
             });
             const verifyPaymentId: string | null = verifyPayment ? String(verifyPayment.id) : null;
             console.log(`✅ Created add_player payment record via verify-session for player ${playerId}`);
@@ -3562,7 +3682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       if (program.productCategory === 'goods') {
                         await pushNotifications.notifyAllAdmins(storage,
                           '📦 New Store Order',
-                          `${playerName} purchased ${program.name} — dispatch required`,
+                          `${playerName} purchased ${program.name}${buildSizeNote(session, packageId)} — dispatch required`,
                           updatedPlayer.organizationId
                         );
                       } else {
@@ -3605,6 +3725,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!alreadyProcessed && session.amount_total) {
           const program = await storage.getProgram(packageId);
+          let pkgSizesById: Record<string, string> = {};
+          if (session.metadata?.sizeSelections) {
+            try { pkgSizesById = JSON.parse(session.metadata.sizeSelections) as Record<string, string>; } catch {}
+          }
           const payment = await storage.createPayment({
             organizationId: await resolveOrgId(session, userId, packageId),
             userId: userId,
@@ -3617,9 +3741,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
             packageId: packageId,
             programId: packageId,
             stripePaymentId: session.payment_intent as string,
+            selectedSize: pkgSizesById[packageId] || undefined,
           });
           console.log(`✅ Created package_purchase payment record via verify-session for user ${userId}`);
           paymentWasProcessed = true;
+
+          // Mirror webhook: create individual payment records for any goods add-ons
+          // so admin order views and dispatch info don't drift if the webhook is missed.
+          if (session.metadata?.addOnIds) {
+            try {
+              const addOnIdsParsed = JSON.parse(session.metadata.addOnIds) as string[];
+              const goodsLines: string[] = [];
+              const orgIdForAddOns = await resolveOrgId(session, userId, packageId);
+              for (const addOnId of addOnIdsParsed) {
+                const addOn = await storage.getProgram(addOnId);
+                if (!addOn || addOn.productCategory !== 'goods' || !addOn.price || addOn.price <= 0) continue;
+                const dupe = existingPayments.some(p =>
+                  p.programId === addOnId && p.paymentType === 'store_addon' && p.stripePaymentId === session.payment_intent
+                );
+                if (dupe) continue;
+                await storage.createPayment({
+                  organizationId: orgIdForAddOns,
+                  userId,
+                  playerId: playerId || undefined,
+                  amount: addOn.price,
+                  currency: 'usd',
+                  paymentType: 'store_addon',
+                  status: 'completed',
+                  description: addOn.name,
+                  programId: addOnId,
+                  stripePaymentId: session.payment_intent as string,
+                  selectedSize: pkgSizesById[addOnId] || undefined,
+                });
+                const sizeBit = pkgSizesById[addOnId] ? ` (Size ${pkgSizesById[addOnId]})` : '';
+                goodsLines.push(`${addOn.name}${sizeBit}`);
+                console.log(`✅ Created store add-on payment record via verify-session for ${addOn.name}${sizeBit} (user ${userId})`);
+              }
+              if (goodsLines.length > 0) {
+                try {
+                  const buyer = await storage.getUser(userId);
+                  const buyerName = buyer ? `${buyer.firstName || ''} ${buyer.lastName || ''}`.trim() : 'A customer';
+                  await pushNotifications.notifyAllAdmins(storage,
+                    '📦 New Store Order',
+                    `${buyerName} ordered ${goodsLines.join(', ')} — dispatch required`,
+                    orgIdForAddOns
+                  );
+                } catch (notifError: any) {
+                  console.error('⚠️ Add-on dispatch notification failed via verify-session (non-fatal):', notifError.message);
+                }
+              }
+            } catch (addOnErr: any) {
+              console.error('⚠️ Add-on record creation via verify-session failed (non-fatal):', addOnErr.message);
+            }
+          }
           
           const amountCents = session.amount_total;
           const amountDollars = amountCents / 100;
@@ -3678,7 +3852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 if (program.productCategory === 'goods') {
                   await pushNotifications.notifyAllAdmins(storage,
                     '📦 New Store Order',
-                    `${enrolledPlayerName} purchased ${program.name} — dispatch required`,
+                    `${enrolledPlayerName} purchased ${program.name}${buildSizeNote(session, packageId)} — dispatch required`,
                     enrollmentUser?.organizationId
                   );
                 } else {
@@ -9381,6 +9555,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: payments.createdAt,
         status: payments.status,
         fulfillmentStatus: payments.fulfillmentStatus,
+        selectedSize: payments.selectedSize,
       })
         .from(payments)
         .innerJoin(products, eq(payments.programId, products.id))

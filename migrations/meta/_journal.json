@@ -29,6 +29,13 @@
       "when": 1776026800000,
       "tag": "0008_tryout_skill_level",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1777000000000,
+      "tag": "0014_payments_selected_size",
+      "breakpoints": true
     }
   ]
 }

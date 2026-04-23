@@ -977,6 +977,7 @@ export const payments = pgTable("payments", {
   programId: varchar("program_id"), // linked program
   organizationId: varchar("organization_id"), // organization
   fulfillmentStatus: varchar("fulfillment_status").default('pending'), // 'pending', 'delivered' — for store (goods) orders
+  selectedSize: varchar("selected_size"), // US size chosen at checkout for sized goods (e.g. "M", "YL")
 });
 
 // Refunds table
@@ -1852,6 +1853,7 @@ export interface Payment {
   paidAt?: Date;
   createdAt: Date;
   fulfillmentStatus?: string;
+  selectedSize?: string;
 }
 
 export const insertPaymentSchema = z.object({
@@ -1867,6 +1869,7 @@ export const insertPaymentSchema = z.object({
   programId: z.string().optional(),
   description: z.string().optional(),
   dueDate: z.string().optional(),
+  selectedSize: z.string().optional(),
 });
 
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;

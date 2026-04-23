@@ -1519,6 +1519,11 @@ function StoreAtAGlance({ storeStats, onNavigateToStore, programs }: { storeStat
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <p className="text-xs text-gray-500 truncate">{order.productName}</p>
+                      {order.selectedSize && (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] px-1.5 py-0">
+                          Size {order.selectedSize}
+                        </Badge>
+                      )}
                       <span className="text-xs text-gray-400">•</span>
                       <p className="text-xs text-gray-500">${((order.amount ?? 0) / 100).toFixed(2)}</p>
                       <span className="text-xs text-gray-400">•</span>

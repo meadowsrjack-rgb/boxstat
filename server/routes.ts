@@ -54,6 +54,7 @@ import { notifications, notificationRecipients, users, teamMemberships, teams, w
 import type { User } from "@shared/schema";
 import type { InviteRecord } from "@shared/types/migration";
 import { computeAccessStatus, type AccessStatusInput } from "@shared/access-status";
+import { getPlayerAccess, rejectIfNoPlayerAccess, ACCESS_DENIED_ERROR_CODE } from "./access-gate";
 import { eq, and, or, sql, desc, inArray, gte, count, isNull } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;
@@ -8374,6 +8375,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get team roster (simple version for edit dialogs)
   app.get('/api/teams/:teamId/roster', requireAuth, async (req: any, res) => {
     try {
+      // Task #263: gate roster reads behind the unified player-access guard
+      // so a blocked player can't pull the team roster directly via the API.
+      if (await rejectIfNoPlayerAccess(req, res)) return;
       const teamId = parseInt(req.params.teamId);
       if (isNaN(teamId)) {
         return res.status(400).json({ message: 'Invalid team ID' });
@@ -8591,6 +8595,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get team roster including Notion-synced players
   app.get('/api/teams/:teamId/roster-with-notion', requireAuth, async (req: any, res) => {
     try {
+      // Task #263: same unified access gate on the enriched roster route.
+      if (await rejectIfNoPlayerAccess(req, res)) return;
       const teamId = req.params.teamId;
       
       // Get the team from database
@@ -11151,38 +11157,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get user role for location bypass check
       const userRole = req.user?.role;
 
-      // Server-side grace period enforcement: players in grace period cannot check in.
-      // Scope to the specific participant to avoid blocking siblings in multi-child families.
+      // Task #263: Unified enrollment-access enforcement. The same helper is
+      // used for every gated player feature so grace-period, expired, and
+      // missing enrollments all block check-in identically. Gate on the
+      // player actually being checked in (which may be a child profile a
+      // parent is checking in for) instead of the requesting account.
       if (userRole === 'player' || userRole === 'parent') {
         const effectiveUserId = (restBody.userId || req.user.id) as string;
-        // Resolve the root account holder for the effective participant so that
-        // family-wide enrollments (profileId IS NULL, accountHolderId = parent) are enforced
-        // even when the authenticated user is the child profile itself.
-        const effectiveUserRow = await db.select({ accountHolderId: users.accountHolderId, parentId: users.parentId })
-          .from(users)
-          .where(eq(users.id, effectiveUserId))
-          .limit(1);
-        const rootAccountId = effectiveUserRow[0]?.accountHolderId || effectiveUserRow[0]?.parentId || req.user.id;
-        const gracePeriodRows = await db.select({ id: productEnrollments.id })
-          .from(productEnrollments)
-          .where(
-            and(
-              eq(productEnrollments.status, 'grace_period'),
-              or(
-                // Direct player enrollment for this specific participant
-                eq(productEnrollments.profileId, effectiveUserId),
-                // Family-wide enrollment (no profileId) owned by the root account holder
-                and(
-                  eq(productEnrollments.accountHolderId, rootAccountId),
-                  isNull(productEnrollments.profileId)
-                )
-              )
-            )
-          )
-          .limit(1);
-        if (gracePeriodRows.length > 0) {
-          return res.status(403).json({ error: 'Check-in is unavailable during the enrollment grace period.' });
-        }
+        if (await rejectIfNoPlayerAccess(req, res, { playerId: effectiveUserId, ignoreRoleBypass: true })) return;
       }
       
       // Handle QR code check-in (bypasses location check)
@@ -12398,7 +12380,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!isAuthorized) {
         return res.status(403).json({ message: 'Not authorized to view these awards' });
       }
-      
+
+      // Task #263: enforce the unified player-access guard so a player whose
+      // enrollment is grace/expired/none can't load their awards by hitting
+      // the API directly. Coaches/admins/parents continue to pass through.
+      if (await rejectIfNoPlayerAccess(req, res, { playerId: userId })) return;
+
       const userAwardRecords = await storage.getUserAwardRecords(userId);
       console.log(`[Awards API] User ${userId}: Found ${userAwardRecords.length} user award records`);
       
@@ -12574,6 +12561,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.get('/api/announcements/team/:teamId', requireAuth, async (req: any, res) => {
+    // Task #263: announcements power the team chat content surface, so a
+    // blocked player must not be able to read them via direct API calls
+    // even though the UI is paywalled.
+    if (await rejectIfNoPlayerAccess(req, res)) return;
     const announcements = await storage.getAnnouncementsByTeam(req.params.teamId);
     res.json(announcements);
   });
@@ -12653,6 +12644,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Legacy route (kept for backwards compatibility) - now supports channel query param
   app.get('/api/messages/team/:teamId', requireAuth, async (req: any, res) => {
+    // Task #263: gate team chat reads with the unified player-access guard
+    // so a blocked player cannot pull chat messages directly from the API.
+    if (await rejectIfNoPlayerAccess(req, res)) return;
     const { channel = 'players' } = req.query;
     const messages = await storage.getMessagesByTeam(req.params.teamId, channel as string);
     res.json(messages);
@@ -12660,6 +12654,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Team-scoped message routes (used by TeamChat component)
   app.get('/api/teams/:teamId/messages', requireAuth, async (req: any, res) => {
+    // Task #263: same unified guard on the team-scoped read endpoint.
+    if (await rejectIfNoPlayerAccess(req, res)) return;
     const { channel = 'players' } = req.query; // Default to players channel
     const messages = await storage.getMessagesByTeam(req.params.teamId, channel as string);
     res.json(messages);
@@ -12690,35 +12686,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
 
-    // Server-side grace period enforcement: block posting during grace period.
-    // Scope to the specific sender profile to avoid blocking siblings in multi-child families.
-    // Resolve the root account holder so family-wide enrollments (profileId IS NULL) are
-    // enforced even when the authenticated user is a child profile.
-    const senderUserRow = await db.select({ accountHolderId: users.accountHolderId, parentId: users.parentId })
-      .from(users)
-      .where(eq(users.id, validatedSenderId))
-      .limit(1);
-    const senderRootAccountId = senderUserRow[0]?.accountHolderId || senderUserRow[0]?.parentId || req.user.id;
-    const gracePeriodEnrollments = await db.select({ id: productEnrollments.id })
-      .from(productEnrollments)
-      .where(
-        and(
-          eq(productEnrollments.status, 'grace_period'),
-          or(
-            // Direct player enrollment for this specific sender
-            eq(productEnrollments.profileId, validatedSenderId),
-            // Family-wide enrollment (no profileId) owned by the root account holder
-            and(
-              eq(productEnrollments.accountHolderId, senderRootAccountId),
-              isNull(productEnrollments.profileId)
-            )
-          )
-        )
-      )
-      .limit(1);
-    if (gracePeriodEnrollments.length > 0) {
-      return res.status(403).json({ error: 'Chat participation is unavailable during the enrollment grace period.' });
-    }
+    // Task #263: Unified enrollment-access enforcement. Same shared guard
+    // covers grace, expired, and missing enrollments — the previous bespoke
+    // grace-period-only check has been removed in favour of one rule.
+    if (await rejectIfNoPlayerAccess(req, res, { playerId: validatedSenderId, ignoreRoleBypass: true })) return;
 
     // Check if the effective sender is muted in this channel
     const isMuted = await storage.isUserMuted(validatedSenderId, teamId, channel);
@@ -15053,6 +15024,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Task #263: Unified player-access decision used by every gated player
+  // feature. Coaches/admins always pass through; the player's own
+  // interactive use is gated by the same rules as the access-until display.
+  app.get('/api/access/player/:playerId?', requireAuth, async (req: any, res) => {
+    try {
+      const role = req.user?.role;
+      const callerId = req.user.id;
+      const requestedId = req.params.playerId || callerId;
+
+      // Authorization: callers can only query their own access state, or
+      // (for parents) a child profile they own, or (for coaches/admins) a
+      // player in the same organization. This prevents IDOR/cross-org leaks
+      // of another player's enrollment metadata.
+      if (requestedId !== callerId) {
+        if (role === 'admin' || role === 'coach') {
+          const targetUser = await storage.getUser(requestedId).catch(() => null);
+          if (!targetUser) return res.status(404).json({ message: 'Player not found' });
+          if (targetUser.organizationId !== req.user.organizationId) {
+            return res.status(403).json({ message: 'Not authorized to view access state for this player' });
+          }
+        } else {
+          const profiles = await storage.getAccountProfiles(callerId).catch(() => [] as any[]) || [];
+          const owns = Array.isArray(profiles) && profiles.some((p: any) => p?.id === requestedId);
+          if (!owns) {
+            return res.status(403).json({ message: 'Not authorized to view access state for this player' });
+          }
+        }
+      }
+
+      // Always evaluate the requested player using the unified helper so
+      // the response reflects the true access state. Role-based bypass is
+      // applied by the inline guards (rejectIfNoPlayerAccess) and the
+      // frontend hook, not by falsifying this read endpoint's payload.
+      const access = await getPlayerAccess(requestedId);
+      res.json(access);
+    } catch (error) {
+      console.error('Error computing player access:', error);
+      res.status(500).json({ message: 'Failed to compute player access' });
+    }
+  });
+
   // Get current user's enrollments (for parent dashboard)
   app.get('/api/enrollments', requireAuth, async (req: any, res) => {
     try {
@@ -15541,7 +15553,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { organizationId } = req.user;
       const { playerId, quarter, year } = req.query;
-      
+
+      // Task #263: when a player asks for their own evaluations (Skills page),
+      // enforce the unified access guard so grace/expired/none players are
+      // blocked at the API just like at the UI. Coaches/admins/parents bypass.
+      if (playerId && await rejectIfNoPlayerAccess(req, res, { playerId: playerId as string })) return;
+
       // If specific player/quarter/year requested, return that evaluation
       if (playerId && quarter && year) {
         const evaluation = await storage.getEvaluationByPlayerQuarter(playerId as string, quarter as string, parseInt(year as string));
@@ -19012,15 +19029,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      // Server-side grace period enforcement: block session booking during grace period.
-      // Check the specific enrollment being booked to avoid blocking siblings.
-      const scheduleGraceRows = await db.select({ id: productEnrollments.id, status: productEnrollments.status })
-        .from(productEnrollments)
-        .where(eq(productEnrollments.id, enrollmentId))
-        .limit(1);
-      if (scheduleGraceRows.length > 0 && scheduleGraceRows[0].status === 'grace_period') {
-        return res.status(403).json({ error: 'Session scheduling is unavailable during the enrollment grace period.' });
-      }
+      // Task #263: Unified enrollment-access enforcement. Same shared guard
+      // covers grace, expired, and missing — replaces the older single-status
+      // grace check so the rule matches every other gated player feature.
+      if (await rejectIfNoPlayerAccess(req, res, { playerId, ignoreRoleBypass: true })) return;
       
       // Verify enrollment exists and belongs to this user
       const enrollments = await storage.getEnrollmentsByAccountHolder(userId);
@@ -19444,6 +19456,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/game-sessions/roster/:eventId", requireAuth, async (req, res) => {
     try {
+      // Task #263: stats-entry roster reads must be gated for blocked players.
+      if (await rejectIfNoPlayerAccess(req, res)) return;
       const eventId = parseInt(req.params.eventId);
       const eventRows = await db.select().from(events).where(eq(events.id, eventId));
       const event = eventRows[0];
@@ -19463,6 +19477,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/game-sessions/event/:eventId", requireAuth, async (req, res) => {
     try {
+      // Task #263: stats-entry session reads must be gated for blocked players.
+      if (await rejectIfNoPlayerAccess(req, res)) return;
       const user = (req as any).user;
       const orgId = user?.organizationId || "default-org";
       const eventId = parseInt(req.params.eventId);
@@ -19499,6 +19515,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/game-sessions/:id", requireAuth, async (req, res) => {
     try {
+      // Task #263: single stats-entry read must be gated for blocked players.
+      if (await rejectIfNoPlayerAccess(req, res)) return;
       const user = (req as any).user;
       const orgId = user?.organizationId || "default-org";
       const id = parseInt(req.params.id);
@@ -19560,6 +19578,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!eligibility.ok) {
         return res.status(403).json({ message: eligibility.reason || "Not authorized to score this game" });
       }
+      // Task #263: stats entry is gated by the unified player-access guard
+      // for consistency. Coaches, admins, and parents pass through; only a
+      // player attempting to submit their own stats while their enrollment
+      // is grace/expired/none would be blocked.
+      if (await rejectIfNoPlayerAccess(req, res)) return;
       const role = user?.role;
 
       const orgIdForLookup = user?.organizationId || "default-org";

@@ -8,6 +8,8 @@ import { useGeo } from '@/hooks/useGeo';
 import { distanceMeters, withinWindow } from '@/utils/geo';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
+import { usePlayerAccess } from '@/hooks/usePlayerAccess';
+import { AccessPaywall } from '@/components/AccessPaywall';
 
 export type UypEvent = {
   id: string | number;
@@ -38,6 +40,11 @@ export default function CheckInButton({
   checkinOpenTime,
   checkinCloseTime 
 }: Props) {
+  // Task #263: gate check-in for the affected player. Parents acting on a
+  // child's behalf are evaluated for that child's access (not bypassed) so
+  // the UI mirrors the backend guard.
+  const { access, bypass: accessBypass } = usePlayerAccess(userId, { evaluateForParent: true });
+  const accessBlocked = !accessBypass && !!access && !access.canAccess;
   const { coords, loading, error, getOnce } = useGeo(true);
   const [distance, setDistance] = useState<number | null>(null);
   const [autoLocationAttempted, setAutoLocationAttempted] = useState(false);
@@ -203,6 +210,12 @@ export default function CheckInButton({
     }
     return 'Check-in window is open';
   };
+
+  if (accessBlocked && access) {
+    // Use the consistent paywall screen so check-in matches every other
+    // gated player feature in wording and CTA behavior.
+    return <AccessPaywall access={access} feature="Check-in" />;
+  }
 
   return (
     <div className="flex flex-col gap-3" data-testid="checkin-button-container">

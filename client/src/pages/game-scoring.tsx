@@ -4,6 +4,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { usePlayerAccess } from "@/hooks/usePlayerAccess";
+import { AccessPaywall } from "@/components/AccessPaywall";
 import { ArrowLeft } from "lucide-react";
 
 const HOLD_DELAY = 450;
@@ -368,6 +370,11 @@ export default function GameScoring() {
 
   const { user: currentUser } = useAuth();
   const isCoachOrAdmin = currentUser?.role === 'coach' || currentUser?.role === 'admin';
+  // Task #263: gate stats entry behind the shared player-access guard. Coach,
+  // admin, and parent users always pass through; only a player whose
+  // enrollment is grace/expired/none is paywalled.
+  const { access: scoringAccess, bypass: scoringBypass } = usePlayerAccess();
+  const scoringBlocked = !scoringBypass && !!scoringAccess && !scoringAccess.canAccess;
   const sessionResp = existingSession as { session?: { id?: number; status?: string; scoredByUserId?: string | null }; canReview?: boolean; canSubmit?: boolean; submitBlockReason?: string | null } | null | undefined;
   const sessionMeta = sessionResp?.session;
   const sessionScorerId: string | null = sessionMeta?.scoredByUserId ?? null;
@@ -666,6 +673,10 @@ export default function GameScoring() {
         </div>
       </div>
     );
+  }
+
+  if (scoringBlocked && scoringAccess) {
+    return <AccessPaywall access={scoringAccess} feature="Stats entry" />;
   }
 
   return (

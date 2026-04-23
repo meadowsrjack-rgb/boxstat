@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/useAuth";
+import { usePlayerAccess } from "@/hooks/usePlayerAccess";
+import { AccessPaywall } from "@/components/AccessPaywall";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { SKILL_CATEGORIES } from "@/components/CoachAwardDialogs";
@@ -46,6 +48,10 @@ export default function SkillsPage() {
 
   const selectedPlayerId = typeof window !== "undefined" ? localStorage.getItem("selectedPlayerId") : null;
   const activeProfileId = selectedPlayerId || (user as any)?.activeProfileId || (user as any)?.id;
+
+  // Task #263: shared player-access guard — bypassed for coach/admin/parent.
+  const { access: skillsAccess, bypass: skillsBypass } = usePlayerAccess(activeProfileId);
+  const skillsBlocked = !skillsBypass && !!skillsAccess && !skillsAccess.canAccess;
 
   const { data: playerProfile } = useQuery<any>({
     queryKey: ["/api/profile", activeProfileId],
@@ -191,6 +197,10 @@ export default function SkillsPage() {
       </div>
     );
   };
+
+  if (skillsBlocked && skillsAccess) {
+    return <AccessPaywall access={skillsAccess} feature="Skills" />;
+  }
 
   return (
     <div className="min-h-screen-safe bg-background safe-bottom safe-top">

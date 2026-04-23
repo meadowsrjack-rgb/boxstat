@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, Users, Clock, MapPin, CheckCircle, XCircle, AlertCircle, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { usePlayerAccess } from "@/hooks/usePlayerAccess";
+import { AccessPaywall } from "@/components/AccessPaywall";
 
 interface SportsEngineEvent {
   id: string;
@@ -68,6 +70,10 @@ interface ScheduleRequest {
 export default function RosterManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  // Task #263: shared player-access guard. Coaches/admins/parents bypass —
+  // only a player without active enrollment lands on the unified paywall.
+  const { access: rosterAccess, bypass: rosterBypass } = usePlayerAccess();
+  const rosterBlocked = !rosterBypass && !!rosterAccess && !rosterAccess.canAccess;
   const [selectedEvent, setSelectedEvent] = useState<SportsEngineEvent | null>(null);
   const [rosterNotes, setRosterNotes] = useState("");
 
@@ -147,6 +153,10 @@ export default function RosterManagement() {
         return <Badge variant="outline">{status}</Badge>;
     }
   };
+
+  if (rosterBlocked && rosterAccess) {
+    return <AccessPaywall access={rosterAccess} feature="Roster" />;
+  }
 
   if (eventsLoading || requestsLoading) {
     return (

@@ -22,6 +22,8 @@ import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import { LongPressMessage } from "@/components/ui/long-press-message";
 import { MessageReactionsDisplay } from "@/components/ui/emoji-reactions";
+import { usePlayerAccess } from "@/hooks/usePlayerAccess";
+import { AccessPaywall } from "@/components/AccessPaywall";
 
 export default function PlayerTeamChat() {
   const { user } = useAuth();
@@ -35,14 +37,12 @@ export default function PlayerTeamChat() {
     enabled: !!user?.id,
   });
 
-  // Check grace period status
-  const { data: enrollments = [] } = useQuery<any[]>({
-    queryKey: ["/api/enrollments"],
-    enabled: !!user?.id,
-  });
-  const isInGracePeriod = enrollments.some(
-    (e: any) => e.status === 'grace_period' && (!e.profileId || e.profileId === user?.id)
-  );
+  // Task #263: replaced the inline grace-period check with the shared
+  // player-access guard so team chat blocks the same states (grace, expired,
+  // none) as every other gated player feature.
+  const { access, isLoading: accessLoading, bypass: accessBypass } = usePlayerAccess();
+  const isBlocked = !accessBypass && !!access && !access.canAccess;
+  const isInGracePeriod = isBlocked && access?.reason === "grace";
 
   // Get team players
   const { data: players = [] } = useQuery<any[]>({
@@ -171,6 +171,12 @@ export default function PlayerTeamChat() {
       default: return <MessageCircle className="w-4 h-4" />;
     }
   };
+
+  // Task #263: show the unified paywall when the player can't access this
+  // feature so the wording matches every other gated screen.
+  if (isBlocked && access) {
+    return <AccessPaywall access={access} feature="Team chat" />;
+  }
 
   if (!userTeam) {
     return (

@@ -2,6 +2,8 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { usePlayerAccess } from "@/hooks/usePlayerAccess";
+import { AccessPaywall } from "@/components/AccessPaywall";
 import { useAppMode } from "@/hooks/useAppMode";
 import { ChevronLeft, Trophy, ChevronDown, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -87,6 +89,12 @@ export default function TrophiesBadgesPage() {
   const selectedPlayerId = typeof window !== "undefined" ? localStorage.getItem("selectedPlayerId") : null;
   const activeProfileId = urlPlayerId || (user as any)?.activeProfileId || selectedPlayerId;
   const viewingUserId = activeProfileId || currentChildProfile?.id || user?.id;
+
+  // Task #263: gate the awards screen behind the shared player-access
+  // helper. Parents, coaches, and admins viewing this screen are unaffected;
+  // only the affected player's own use is blocked with the unified paywall.
+  const { access: awardAccess, bypass: awardBypass } = usePlayerAccess(viewingUserId);
+  const awardBlocked = !awardBypass && !!awardAccess && !awardAccess.canAccess;
 
   const { data: awardDefinitions, isLoading: loadingDefinitions } = useQuery<AwardDefinition[]>({
     queryKey: ["/api/award-definitions"],
@@ -194,6 +202,10 @@ export default function TrophiesBadgesPage() {
   const programFilterLabel = selectedProgram === "all"
     ? "Program"
     : (programMemberships.find(p => p.programId === selectedProgram)?.programName ?? "Program");
+
+  if (awardBlocked && awardAccess) {
+    return <AccessPaywall access={awardAccess} feature="Awards" />;
+  }
 
   return (
     <div className="scrollable-page bg-white text-[#1a1a1a] safe-bottom">

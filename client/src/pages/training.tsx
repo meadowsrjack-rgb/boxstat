@@ -1,4 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
+import { usePlayerAccess } from "@/hooks/usePlayerAccess";
+import { AccessPaywall } from "@/components/AccessPaywall";
 import { useAppMode } from "@/hooks/useAppMode";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -147,8 +149,15 @@ export default function Training() {
     subscribeMutation.mutate({ programId: program.id, type });
   };
 
+  // Task #263: gate Training behind unified player-access. Coaches, admins,
+  // and parents are unaffected — only the player's own interactive use is
+  // blocked, and the message matches every other gated screen.
+  const { access: trainingAccess, bypass: trainingBypass } = usePlayerAccess();
   if (!user) {
     return <div>Loading...</div>;
+  }
+  if (!trainingBypass && trainingAccess && !trainingAccess.canAccess) {
+    return <AccessPaywall access={trainingAccess} feature="Training" />;
   }
 
   return (

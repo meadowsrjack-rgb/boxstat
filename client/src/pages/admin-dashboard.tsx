@@ -4,6 +4,8 @@ import { authPersistence } from "@/services/authPersistence";
 import CrmMessageBanner from "@/components/CrmMessageBanner";
 import StorePurchaseBanner from "@/components/StorePurchaseBanner";
 import EnrollmentAssignmentBanner from "@/components/EnrollmentAssignmentBanner";
+import { AccessUntilLine } from "@/components/AccessUntilLine";
+import { computeAccessStatus } from "@shared/access-status";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BanterLoader } from "@/components/BanterLoader";
@@ -3608,25 +3610,26 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                         </div>
                                         <div>
                                           <label className="text-[10px] text-gray-500 uppercase">Status</label>
-                                          <p className="text-xs text-gray-700">
-                                            {enrollment.pricingOptionType === 'credit_pack' ? (
-                                              enrollment.remainingCredits != null
+                                          {enrollment.pricingOptionType === 'credit_pack' ? (
+                                            <p className="text-xs text-gray-700">
+                                              {enrollment.remainingCredits != null
                                                 ? `${enrollment.remainingCredits}${enrollment.totalCredits ? ` of ${enrollment.totalCredits}` : ''} credits remaining`
-                                                : 'Credit-based'
-                                            ) : enrollment.pricingOptionType === 'subscription' || enrollment.stripeSubscriptionId ? (
-                                              enrollment.endDate
-                                                ? (enrollment.autoRenew ? `Renews ${new Date(enrollment.endDate).toLocaleDateString()}` : `Ends ${new Date(enrollment.endDate).toLocaleDateString()}`)
-                                                : (enrollment.autoRenew ? 'Auto-renewing' : 'Active')
-                                            ) : enrollment.pricingOptionType === 'one_time' ? (
-                                              enrollment.endDate
-                                                ? `Access until ${new Date(enrollment.endDate).toLocaleDateString()}`
-                                                : 'Lifetime access'
-                                            ) : enrollment.endDate ? (
-                                              `${enrollment.autoRenew ? 'Renews' : 'Expires'} ${new Date(enrollment.endDate).toLocaleDateString()}`
-                                            ) : (
-                                              'No expiration set'
-                                            )}
-                                          </p>
+                                                : 'Credit-based'}
+                                            </p>
+                                          ) : (
+                                            <AccessUntilLine
+                                              status={computeAccessStatus([{
+                                                status: enrollment.status,
+                                                endDate: enrollment.endDate,
+                                                gracePeriodEndDate: enrollment.gracePeriodEndDate,
+                                                source: enrollment.source,
+                                                paymentId: enrollment.paymentId,
+                                                stripeSubscriptionId: enrollment.stripeSubscriptionId,
+                                              }])}
+                                              className="text-xs"
+                                              testId={`access-until-enrollment-${enrollment.enrollmentId}`}
+                                            />
+                                          )}
                                         </div>
                                         {(enrollment.pricingOptionType || enrollment.pricingAmount) && (
                                           <div>

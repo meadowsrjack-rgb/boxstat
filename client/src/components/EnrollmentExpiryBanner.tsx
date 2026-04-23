@@ -3,6 +3,8 @@ import { AlertTriangle, Clock } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { computeAccessStatus, type AccessStatusInput } from "@shared/access-status";
+import { AccessUntilLine } from "@/components/AccessUntilLine";
 
 interface Enrollment {
   id: number;
@@ -18,19 +20,18 @@ interface Enrollment {
   selfClaimedEndDate?: string | null;
 }
 
-interface Program {
-  id: string;
-  name: string;
-}
-
 interface Player {
   id: string;
   firstName: string;
   lastName: string;
 }
 
-function daysUntil(dateStr: string): number {
+const SELF_KEY = "__self__";
+
+function daysUntil(dateStr: string | null): number | null {
+  if (!dateStr) return null;
   const end = new Date(dateStr);
+  if (Number.isNaN(end.getTime())) return null;
   const now = new Date();
   return Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
@@ -42,166 +43,124 @@ export function EnrollmentExpiryBanner() {
     queryKey: ["/api/enrollments"],
   });
 
-  const { data: programs = [] } = useQuery<Program[]>({
-    queryKey: ["/api/programs"],
-  });
-
   const { data: players = [] } = useQuery<Player[]>({
     queryKey: ["/api/account/players"],
   });
 
-  const programMap = Object.fromEntries(programs.map((p) => [p.id, p.name]));
-  const playerMap = Object.fromEntries(players.map((p) => [p.id, `${p.firstName} ${p.lastName}`.trim()]));
-
-  const isUnpaidGrant = (e: Enrollment) =>
-    (e.source === "self_claim" || e.source === "admin_assignment") &&
-    !e.paymentId &&
-    !e.stripeSubscriptionId;
-
-  const expiringSoon = enrollments.filter((e) => {
-    if (e.status !== "active" || !e.endDate) return false;
-    const days = daysUntil(e.endDate);
-    return days >= 0 && days <= 7;
-  });
-
-  const noExpiryOnFile = enrollments.filter(
-    (e) => e.status === "active" && !e.endDate,
+  const playerMap = Object.fromEntries(
+    players.map((p) => [p.id, `${p.firstName} ${p.lastName}`.trim()]),
   );
 
-  const inGracePeriod = enrollments.filter((e) => e.status === "grace_period");
+  // Group enrollments by profile (player). null profileId is the parent's own
+  // self-enrollment.
+  const groups = new Map<string, Enrollment[]>();
+  for (const e of enrollments) {
+    const key = e.profileId || SELF_KEY;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(e);
+  }
 
-  if (
-    expiringSoon.length === 0 &&
-    noExpiryOnFile.length === 0 &&
-    inGracePeriod.length === 0
-  )
-    return null;
+  // Compute the unified access status per player and only surface banners
+  // for states the parent should act on: grace, admin_grant (unpaid), or a
+  // paid window that's about to lapse in the next 7 days.
+  const banners = Array.from(groups.entries())
+    .map(([key, list]) => {
+      const status = computeAccessStatus(list as AccessStatusInput[]);
+      const subject = key === SELF_KEY ? "Your" : `${playerMap[key] || "Player"}'s`;
+      const days = daysUntil(status.accessUntil);
+
+      let show = false;
+      let icon: typeof AlertTriangle | typeof Clock = AlertTriangle;
+      let tone = "border-l-amber-500 bg-amber-50";
+      let iconClass = "text-amber-600";
+      let cta = "Payments";
+
+      if (status.reason === "grace") {
+        show = true;
+        icon = Clock;
+        tone = "border-l-yellow-500 bg-yellow-50";
+        iconClass = "text-yellow-600";
+        cta = "Re-enroll";
+      } else if (status.reason === "admin_grant") {
+        show = true;
+      } else if (status.reason === "paid" && days !== null && days <= 7 && days >= 0) {
+        show = true;
+      }
+
+      if (!show) return null;
+      const Icon = icon;
+      return (
+        <Alert
+          key={`access-${key}`}
+          className={`border-l-4 ${tone}`}
+          data-testid={`banner-access-${key}`}
+        >
+          <Icon className={`h-4 w-4 ${iconClass}`} />
+          <AlertDescription className="flex items-center justify-between gap-4">
+            <span className="text-sm flex items-center gap-2 text-gray-800">
+              <strong>{subject} access:</strong>
+              <AccessUntilLine status={status} className="text-sm" />
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-500 text-amber-800 hover:bg-amber-100 shrink-0"
+              onClick={() => setLocation("/unified-account?tab=payments")}
+            >
+              {cta}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      );
+    })
+    .filter(Boolean);
+
+  // Surface "no expiry on file" enrollments separately so admins/parents can
+  // backfill the date — this is a data-quality nudge that the unified line
+  // can't express on its own.
+  const noExpiryGroups = new Map<string, string[]>();
+  for (const e of enrollments) {
+    if (e.status !== "active" || e.endDate) continue;
+    const key = e.profileId || SELF_KEY;
+    const programLabel = e.programId || "your program";
+    if (!noExpiryGroups.has(key)) noExpiryGroups.set(key, []);
+    noExpiryGroups.get(key)!.push(programLabel);
+  }
+
+  const noExpiryBanners = Array.from(noExpiryGroups.entries()).map(([key]) => {
+    const subject = key === SELF_KEY ? "Your" : `${playerMap[key] || "Player"}'s`;
+    return (
+      <Alert
+        key={`no-expiry-${key}`}
+        className="border-l-4 border-l-amber-500 bg-amber-50"
+        data-testid={`banner-no-expiry-${key}`}
+      >
+        <AlertTriangle className="h-4 w-4 text-amber-600" />
+        <AlertDescription className="flex items-center justify-between gap-4">
+          <span className="text-amber-800 text-sm">
+            {subject} enrollment has no expiry date on file. Enroll through the Payments tab to keep
+            access active. If your player is on a club team, you can enter the club subscription end
+            date so we know when access should renew.
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-amber-500 text-amber-800 hover:bg-amber-100 shrink-0"
+            onClick={() => setLocation("/unified-account?tab=payments")}
+          >
+            Payments
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  });
+
+  if (banners.length === 0 && noExpiryBanners.length === 0) return null;
 
   return (
     <div className="space-y-2 mb-4">
-      {expiringSoon.map((e) => {
-        const days = daysUntil(e.endDate!);
-        const programName = programMap[e.programId] || "your program";
-        const playerName = e.profileId ? playerMap[e.profileId] : null;
-        const subject = playerName ? `${playerName}'s enrollment` : "Your enrollment";
-        const unpaid = isUnpaidGrant(e);
-        const noun = unpaid ? "trial access" : "enrollment";
-        const subjectWithNoun = playerName ? `${playerName}'s ${noun}` : `Your ${noun}`;
-        const claimNote = e.isSelfClaimed && e.selfClaimedEndDate
-          ? ` (matched to your club subscription end date of ${new Date(e.selfClaimedEndDate).toLocaleDateString()})`
-          : "";
-        return (
-          <Alert
-            key={e.id}
-            className="border-l-4 border-l-amber-500 bg-amber-50"
-          >
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="flex items-center justify-between gap-4">
-              <span className="text-amber-800 text-sm">
-                {days === 0
-                  ? `${subjectWithNoun} in ${programName} expires today${claimNote}.`
-                  : days === 1
-                  ? `${subjectWithNoun} in ${programName} ends tomorrow${claimNote}.`
-                  : `${subjectWithNoun} in ${programName} ends in ${days} days${claimNote}.`}{" "}
-                {unpaid
-                  ? "Pay through the Payments tab to keep access uninterrupted."
-                  : "Re-enroll through the Payments tab to avoid unenrollment."}
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-amber-500 text-amber-800 hover:bg-amber-100 shrink-0"
-                onClick={() => setLocation("/unified-account?tab=payments")}
-              >
-                Payments
-              </Button>
-            </AlertDescription>
-          </Alert>
-        );
-      })}
-
-      {noExpiryOnFile.length > 0 && (() => {
-        // Group by player so a parent with multiple kids/programs sees one
-        // consolidated banner per player instead of one per enrollment.
-        const groups = new Map<string, { subject: string; programs: string[] }>();
-        for (const e of noExpiryOnFile) {
-          const programName = programMap[e.programId] || "your program";
-          const playerName = e.profileId ? playerMap[e.profileId] : null;
-          const subject = playerName ? `${playerName}'s` : "Your";
-          const key = e.profileId || "self";
-          if (!groups.has(key)) groups.set(key, { subject, programs: [] });
-          groups.get(key)!.programs.push(programName);
-        }
-
-        const formatList = (items: string[]) => {
-          const uniq = Array.from(new Set(items));
-          if (uniq.length === 1) return uniq[0];
-          if (uniq.length === 2) return `${uniq[0]} and ${uniq[1]}`;
-          return `${uniq.slice(0, -1).join(", ")}, and ${uniq[uniq.length - 1]}`;
-        };
-
-        return Array.from(groups.entries()).map(([key, { subject, programs }]) => {
-          const programList = formatList(programs);
-          const enrollmentWord = programs.length > 1 ? "enrollments" : "enrollment";
-          return (
-            <Alert
-              key={`no-expiry-${key}`}
-              className="border-l-4 border-l-amber-500 bg-amber-50"
-              data-testid={`banner-no-expiry-${key}`}
-            >
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="flex items-center justify-between gap-4">
-                <span className="text-amber-800 text-sm">
-                  {subject} {enrollmentWord} in {programList} {programs.length > 1 ? "have" : "has"} no expiry date on file.{" "}
-                  Enroll through the Payments tab to keep your access active. If your player is on a club team,
-                  you can also enter the club subscription end date so we know when access should renew.
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-amber-500 text-amber-800 hover:bg-amber-100 shrink-0"
-                  onClick={() => setLocation("/unified-account?tab=payments")}
-                >
-                  Payments
-                </Button>
-              </AlertDescription>
-            </Alert>
-          );
-        });
-      })()}
-
-      {inGracePeriod.map((e) => {
-        const programName = programMap[e.programId] || "your program";
-        const playerName = e.profileId ? playerMap[e.profileId] : null;
-        const subject = playerName ? `${playerName}'s enrollment` : "Your enrollment";
-        const daysLeft = e.gracePeriodEndDate ? Math.max(0, daysUntil(e.gracePeriodEndDate)) : 0;
-        return (
-          <Alert
-            key={e.id}
-            className="border-l-4 border-l-yellow-500 bg-yellow-50"
-          >
-            <Clock className="h-4 w-4 text-yellow-600" />
-            <AlertDescription className="flex items-center justify-between gap-4">
-              <span className="text-yellow-800 text-sm">
-                <strong>Limited Access:</strong>{" "}
-                {subject} in {programName} has expired.{" "}
-                {daysLeft > 0
-                  ? `You have ${daysLeft} day${daysLeft !== 1 ? "s" : ""} of limited access remaining.`
-                  : "Your grace period ends today."}{" "}
-                You can view your roster and schedule but cannot check in to events or post in team chat.
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-yellow-500 text-yellow-800 hover:bg-yellow-100 shrink-0"
-                onClick={() => setLocation("/unified-account?tab=payments")}
-              >
-                Re-enroll
-              </Button>
-            </AlertDescription>
-          </Alert>
-        );
-      })}
+      {banners}
+      {noExpiryBanners}
     </div>
   );
 }

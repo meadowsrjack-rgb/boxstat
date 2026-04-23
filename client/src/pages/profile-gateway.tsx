@@ -29,6 +29,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { authPersistence } from "@/services/authPersistence";
+import { AccessUntilLine } from "@/components/AccessUntilLine";
 
 // Helper: fire-and-forget prefetch that won't block navigation
 function prefetchQuery(queryKey: string) {
@@ -501,11 +502,21 @@ export default function ProfileGateway() {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-sm text-gray-400">
-                      {isPending
-                        ? `Waiting on club admin${player.requestedTeamName ? ` for ${player.requestedTeamName}` : ''}`
-                        : tagConfig ? tagConfig.description : "Player dashboard"}
-                    </p>
+                    {isPending ? (
+                      <p className="text-sm text-gray-400">
+                        Waiting on club admin{player.requestedTeamName ? ` for ${player.requestedTeamName}` : ''}
+                      </p>
+                    ) : player.accessStatus ? (
+                      <AccessUntilLine
+                        status={player.accessStatus}
+                        testId={`access-until-${player.id}`}
+                        className="text-sm"
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-400">
+                        {tagConfig ? tagConfig.description : "Player dashboard"}
+                      </p>
+                    )}
                   </div>
                   {!isPending && (
                     <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />

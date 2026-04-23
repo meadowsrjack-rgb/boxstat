@@ -53,6 +53,7 @@ import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_inte
 import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards, platformSettings, organizations, attendances, rsvpResponses, contactManagementMessages, payments, messages as messagesTable, gameSessions, gamePlayerStats, events } from "@shared/schema";
 import type { User } from "@shared/schema";
 import type { InviteRecord } from "@shared/types/migration";
+import { computeAccessStatus, type AccessStatusInput } from "@shared/access-status";
 import { eq, and, or, sql, desc, inArray, gte, count, isNull } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;
@@ -4952,10 +4953,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
               statusTag: 'awaiting_approval',
               approvalStatus: 'pending',
               requestedTeamName,
+              accessStatus: computeAccessStatus([]),
             };
           }
           const subscriptions = await storage.getSubscriptionsByPlayerId(player.id);
           const statusTag = await storage.getPlayerStatusTag(player.id);
+          // Task #261: Pull every enrollment for this player (active, grace,
+          // expired) so the unified Access-until line uses the same logic
+          // everywhere it appears.
+          const playerEnrollmentRows = await db.select({
+            status: productEnrollments.status,
+            endDate: productEnrollments.endDate,
+            gracePeriodEndDate: productEnrollments.gracePeriodEndDate,
+            source: productEnrollments.source,
+            paymentId: productEnrollments.paymentId,
+            stripeSubscriptionId: productEnrollments.stripeSubscriptionId,
+          })
+            .from(productEnrollments)
+            .where(eq(productEnrollments.profileId, player.id));
+          const accessStatus = computeAccessStatus(playerEnrollmentRows as AccessStatusInput[]);
           
           // Get team memberships for this player
           const playerTeamMemberships = await storage.getTeamMembershipsByProfile(player.id);
@@ -4992,6 +5008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             statusTag: statusTag.tag,
             remainingCredits: statusTag.remainingCredits,
             lowBalance: statusTag.lowBalance,
+            accessStatus,
           };
         } catch (error) {
           console.error(`Error fetching subscriptions for player ${player.id}:`, error);
@@ -4999,6 +5016,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ...player,
             activeSubscriptions: [],
             statusTag: player.paymentStatus === 'pending' ? 'payment_due' : 'none',
+            accessStatus: computeAccessStatus([]),
           };
         }
       })
@@ -15032,7 +15050,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           )
         );
 
-      res.json(enrollments);
+      // Task #261: Attach the unified access status per enrollment so the
+      // expiry banner and any other consumer never recomputes wording.
+      const withAccess = enrollments.map((e: any) => ({
+        ...e,
+        accessStatus: computeAccessStatus([e as AccessStatusInput]),
+      }));
+
+      res.json(withAccess);
     } catch (error) {
       console.error('Error fetching enrollments:', error);
       res.status(500).json({ message: 'Failed to fetch enrollments' });

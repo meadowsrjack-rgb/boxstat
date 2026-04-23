@@ -13,6 +13,7 @@ import privacyRoutes from "./routes/privacy";
 import { setupNotificationRoutes } from "./routes/notifications";
 import { setupAdminNotificationRoutes } from "./routes/adminNotifications";
 import { registerRequestClaimRoute } from "./routes/request-claim";
+import { handleSubscriptionInvoice } from "./lib/subscription-invoice";
 import { registerClaimHandoffRoutes } from "./routes/claim-handoff";
 import { adminNotificationService } from "./services/adminNotificationService";
 import { requireAuth, optionalAuth, isAdmin, isCoachOrAdmin, setAuthStorage } from "./auth";
@@ -2621,7 +2622,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         };
         sessionParams.subscription_data.cancel_at = cancelAt;
-      } else if (isSubscription && selectedPricingOption?.durationDays && selectedPricingOption.durationDays > 0) {
+      } else if (isSubscription) {
+        // Carry the package_purchase context onto the subscription itself so
+        // future renewal invoices (`invoice.payment_succeeded`) can find the
+        // user/program/player without us inspecting the original Checkout
+        // Session. This is what makes recurring charges record proper
+        // payment rows and refresh enrollment status.
+        sessionParams.subscription_data = {
+          ...(sessionParams.subscription_data || {}),
+          metadata: {
+            ...(sessionParams.subscription_data?.metadata || {}),
+            type: 'package_purchase',
+            userId: user.id,
+            packageId,
+            playerId: playerId || '',
+            organizationId: req.user.organizationId,
+          },
+        };
+      }
+      if (isSubscription && selectedPricingOption?.durationDays && selectedPricingOption.durationDays > 0) {
         const intervalDays = selectedPricingOption.billingIntervalDays || 30;
         const durationDays = selectedPricingOption.durationDays;
         const now = new Date();
@@ -2694,6 +2713,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // For subscription-mode Checkout Sessions, `session.payment_intent` is
+  // null. Return the real payment intent id from the subscription's first
+  // invoice (falling back to the invoice id) so we still record a Stripe
+  // reference on the payment row.
+  async function resolveStripePaymentRef(session: any): Promise<string | undefined> {
+    if (session?.payment_intent) {
+      return typeof session.payment_intent === 'string'
+        ? session.payment_intent
+        : session.payment_intent.id;
+    }
+    if (session?.mode === 'subscription' && session?.subscription && stripe) {
+      const subId = typeof session.subscription === 'string'
+        ? session.subscription
+        : session.subscription.id;
+      try {
+        const sub = await stripe.subscriptions.retrieve(subId, {
+          expand: ['latest_invoice.payment_intent', 'latest_invoice.charge'],
+        });
+        const inv: any = sub.latest_invoice;
+        if (inv && typeof inv !== 'string') {
+          if (inv.payment_intent) {
+            return typeof inv.payment_intent === 'string'
+              ? inv.payment_intent
+              : inv.payment_intent.id;
+          }
+          if (inv.charge) {
+            return typeof inv.charge === 'string' ? inv.charge : inv.charge.id;
+          }
+          if (inv.id) return inv.id;
+        }
+      } catch (e: any) {
+        console.error(`resolveStripePaymentRef failed for subscription ${subId}:`, e.message);
+      }
+    }
+    return undefined;
+  }
+
   async function resolveOrgId(session: any, userId?: string, programId?: string): Promise<string> {
     if (session?.metadata?.organizationId) return session.metadata.organizationId;
     if (userId) {
@@ -3028,7 +3084,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           const program = await storage.getProgram(packageId);
-          
+
+          // For subscription-mode checkouts, session.payment_intent is null.
+          // Pull the real payment intent (or fall back to the invoice id) from
+          // the subscription's first invoice so we always store a Stripe ref.
+          const stripePaymentRef = await resolveStripePaymentRef(session);
+          const stripeSubscriptionId =
+            session.mode === 'subscription' && session.subscription
+              ? (typeof session.subscription === 'string'
+                  ? session.subscription
+                  : session.subscription.id)
+              : undefined;
+
           // Create payment record with playerId
           let pkgPaymentId: string | null = null;
           if (session.amount_total) {
@@ -3048,7 +3115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 description: program?.name || `Package Purchase`,
                 packageId: packageId,
                 programId: packageId,
-                stripePaymentId: session.payment_intent as string,
+                stripePaymentId: stripePaymentRef,
                 selectedSize: (packageId && pkgSizesById[packageId]) || undefined,
               });
               pkgPaymentId = pkgPayment ? String(pkgPayment.id) : null;
@@ -3083,7 +3150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     status: 'completed',
                     description: addOn.name,
                     programId: addOnId,
-                    stripePaymentId: session.payment_intent as string,
+                    stripePaymentId: stripePaymentRef,
                     selectedSize: sizesById[addOnId] || undefined,
                   });
                   const sizeBit = sizesById[addOnId] ? ` (Size ${sizesById[addOnId]})` : '';
@@ -3171,6 +3238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       status: 'active',
                       source: 'payment',
                       paymentId: pkgPaymentId,
+                      stripeSubscriptionId,
                       endDate: enrollmentEndDate,
                       remainingCredits: program.sessionCount ?? undefined,
                       totalCredits: program.sessionCount ?? undefined,
@@ -3198,6 +3266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       status: 'active',
                       source: 'payment',
                       paymentId: pkgPaymentId,
+                      stripeSubscriptionId,
                       endDate: enrollmentEndDate,
                       remainingCredits: program.sessionCount ?? undefined,
                       totalCredits: program.sessionCount ?? undefined,
@@ -3430,6 +3499,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ received: true });
       }
 
+      // Handle subscription invoice payments — fires both for the first
+      // invoice on a brand-new subscription AND for every renewal. Records a
+      // payment row with the real stripe payment intent and refreshes the
+      // matching enrollment so parents see "paid until ..." update without a
+      // manual reload. Dedupes against the checkout.session.completed branch.
+      if (event.type === 'invoice.payment_succeeded' || event.type === 'invoice.paid') {
+        const invoice = event.data.object as Stripe.Invoice;
+        try {
+          const result = await handleSubscriptionInvoice(invoice, {
+            storage,
+            stripe: stripe!,
+            log: (m) => console.log(`[invoice webhook] ${m}`),
+            evaluateAwards: (playerId) => evaluateAwardsForUser(playerId, storage, { category: 'store' }),
+            notifyAdmins: (title, body, orgId) => pushNotifications.notifyAllAdmins(storage, title, body, orgId),
+            notifyParentPaymentSuccessful: (accountHolderId, playerName, amountCents) =>
+              pushNotifications.parentPaymentSuccessful(storage, accountHolderId, playerName, amountCents),
+          });
+          console.log(`[invoice webhook] ${event.type} -> ${result.status}${result.reason ? ' (' + result.reason + ')' : ''}`);
+        } catch (invoiceError: any) {
+          console.error(`[invoice webhook] error processing ${event.type}:`, invoiceError);
+        }
+        return res.json({ received: true });
+      }
+
+      // Handle subscription lifecycle events. We do not duplicate the payment
+      // recording here (that lives on `invoice.payment_succeeded` so it only
+      // fires once per actual charge), but we DO refresh the matching
+      // enrollment's `endDate` and status so cancellations / pauses /
+      // period-end shifts initiated from the Stripe dashboard stay reflected
+      // in the BoxStat enrollment view.
+      if (
+        event.type === 'customer.subscription.created' ||
+        event.type === 'customer.subscription.updated' ||
+        event.type === 'customer.subscription.deleted'
+      ) {
+        const sub = event.data.object as Stripe.Subscription;
+        try {
+          const enrollment = await storage.getEnrollmentByStripeSubscriptionId(sub.id);
+          if (enrollment) {
+            const newEnd = sub.current_period_end
+              ? new Date(sub.current_period_end * 1000).toISOString()
+              : enrollment.endDate;
+            const stripeStatus = sub.status;
+            // Map Stripe status to enrollment status. We keep `active` as
+            // long as Stripe considers the sub usable (active/trialing/past_due
+            // until grace runs out). Hard cancel / unpaid expires the row.
+            let status: any = enrollment.status;
+            if (event.type === 'customer.subscription.deleted' || stripeStatus === 'canceled' || stripeStatus === 'unpaid') {
+              status = 'expired';
+            } else if (stripeStatus === 'active' || stripeStatus === 'trialing' || stripeStatus === 'past_due') {
+              status = 'active';
+            }
+            await storage.updateEnrollment(enrollment.id, {
+              status,
+              endDate: newEnd,
+            } as any);
+            console.log(`[subscription webhook] ${event.type} -> enrollment ${enrollment.id} status=${status} end=${newEnd}`);
+          } else {
+            console.log(`[subscription webhook] ${event.type}: no enrollment for sub ${sub.id}`);
+          }
+        } catch (subErr: any) {
+          console.error(`[subscription webhook] error processing ${event.type}:`, subErr);
+        }
+        return res.json({ received: true });
+      }
+
       // Handle other event types
       console.log(`ℹ️ Unhandled event type: ${event.type}`);
       res.json({ received: true });
@@ -3620,6 +3755,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (session.metadata?.sizeSelections) {
               try { addPlayerSizesById = JSON.parse(session.metadata.sizeSelections) as Record<string, string>; } catch {}
             }
+            const verifyStripePaymentRef = await resolveStripePaymentRef(session);
+            const verifyStripeSubscriptionId = session.mode === 'subscription' && session.subscription
+              ? (typeof session.subscription === 'string' ? session.subscription : session.subscription.id)
+              : undefined;
             const verifyPayment = await storage.createPayment({
               organizationId: updatedPlayer.organizationId,
               userId: playerId,
@@ -3628,7 +3767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               paymentType: 'add_player',
               status: 'completed',
               description: `Player Registration: ${playerName}`,
-              stripePaymentId: session.payment_intent as string,
+              stripePaymentId: verifyStripePaymentRef,
               programId: packageId,
               selectedSize: addPlayerSizesById[packageId] || undefined,
             });
@@ -3667,6 +3806,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       status: 'active',
                       source: 'payment',
                       paymentId: verifyPaymentId,
+                      stripeSubscriptionId: verifyStripeSubscriptionId,
                       remainingCredits: program.sessionCount ?? undefined,
                       totalCredits: program.sessionCount ?? undefined,
                     });
@@ -3719,10 +3859,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         const existingPayments = await storage.getPaymentsByUser(userId);
-        const alreadyProcessed = existingPayments.some(p => 
-          p.stripePaymentId === session.payment_intent && p.status === 'completed'
-        );
-        
+        const pkgStripePaymentRef = await resolveStripePaymentRef(session);
+        const pkgStripeSubscriptionId = session.mode === 'subscription' && session.subscription
+          ? (typeof session.subscription === 'string' ? session.subscription : session.subscription.id)
+          : undefined;
+        const alreadyProcessed = pkgStripePaymentRef
+          ? existingPayments.some(p => p.stripePaymentId === pkgStripePaymentRef && p.status === 'completed')
+          : false;
+
         if (!alreadyProcessed && session.amount_total) {
           const program = await storage.getProgram(packageId);
           let pkgSizesById: Record<string, string> = {};
@@ -3740,7 +3884,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             description: program?.name || `Package Purchase`,
             packageId: packageId,
             programId: packageId,
-            stripePaymentId: session.payment_intent as string,
+            stripePaymentId: pkgStripePaymentRef,
             selectedSize: pkgSizesById[packageId] || undefined,
           });
           console.log(`✅ Created package_purchase payment record via verify-session for user ${userId}`);
@@ -3756,9 +3900,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               for (const addOnId of addOnIdsParsed) {
                 const addOn = await storage.getProgram(addOnId);
                 if (!addOn || addOn.productCategory !== 'goods' || !addOn.price || addOn.price <= 0) continue;
-                const dupe = existingPayments.some(p =>
-                  p.programId === addOnId && p.paymentType === 'store_addon' && p.stripePaymentId === session.payment_intent
-                );
+                const dupe = pkgStripePaymentRef
+                  ? existingPayments.some(p =>
+                      p.programId === addOnId && p.paymentType === 'store_addon' && p.stripePaymentId === pkgStripePaymentRef
+                    )
+                  : false;
                 if (dupe) continue;
                 await storage.createPayment({
                   organizationId: orgIdForAddOns,
@@ -3770,7 +3916,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   status: 'completed',
                   description: addOn.name,
                   programId: addOnId,
-                  stripePaymentId: session.payment_intent as string,
+                  stripePaymentId: pkgStripePaymentRef,
                   selectedSize: pkgSizesById[addOnId] || undefined,
                 });
                 const sizeBit = pkgSizesById[addOnId] ? ` (Size ${pkgSizesById[addOnId]})` : '';
@@ -3819,7 +3965,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const isSubscription = program.type === 'Subscription';
               const isPack = program.type === 'Pack';
               const credits = isPack && program.sessionCount ? program.sessionCount : null;
-              const subscriptionId = typeof session.subscription === 'string' ? session.subscription : null;
+              const subscriptionId = pkgStripeSubscriptionId ?? null;
               const now = new Date().toISOString();
               
               const enrollmentUser = await storage.getUser(enrollmentProfileId);

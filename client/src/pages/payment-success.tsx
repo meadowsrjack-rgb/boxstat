@@ -1,6 +1,18 @@
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { queryClient } from "@/lib/queryClient";
+
+function refreshEntitlementCaches() {
+  // Drop any cached enrollment / player / profile data so the parent
+  // dashboard re-fetches "paid until ..." and player payment status the
+  // moment the user lands back on it after Stripe checkout completes.
+  queryClient.invalidateQueries({ queryKey: ["/api/enrollments"] });
+  queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
+  queryClient.invalidateQueries({ queryKey: ["/api/account/profiles"] });
+  queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
+  queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+}
 
 export default function PaymentSuccess() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -51,6 +63,7 @@ export default function PaymentSuccess() {
             verifyOk = false;
           }
         }
+        if (verifyOk) refreshEntitlementCaches();
         setVerified(true);
 
         // Build handoff URL. If the synchronous verify failed we still hand
@@ -90,7 +103,7 @@ export default function PaymentSuccess() {
     const verifySession = async () => {
       if (sessionId) {
         try {
-          await fetch('/api/payments/verify-session', {
+          const res = await fetch('/api/payments/verify-session', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -98,8 +111,11 @@ export default function PaymentSuccess() {
             },
             body: JSON.stringify({ sessionId }),
           });
+          if (res.ok) refreshEntitlementCaches();
         } catch (e) {
         }
+      } else {
+        refreshEntitlementCaches();
       }
       setVerified(true);
     };

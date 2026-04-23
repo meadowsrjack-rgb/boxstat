@@ -322,6 +322,7 @@ export interface IStorage {
   getPlayerStatusTagsBulk(playerIds: string[]): Promise<Map<string, {tag: string; remainingCredits?: number; lowBalance?: boolean}>>;
   getProductEnrollmentsByOrganization(organizationId: string): Promise<ProductEnrollment[]>;
   getEnrollmentsByAccountHolder(accountHolderId: string): Promise<ProductEnrollment[]>;
+  getEnrollmentByStripeSubscriptionId(stripeSubscriptionId: string): Promise<ProductEnrollment | undefined>;
   getEnrollmentsByProgram(programId: string): Promise<{ userId: string }[]>;
   
   // Notification Campaign operations
@@ -2600,6 +2601,7 @@ class MemStorage implements IStorage {
   
   // Enrollment update (MemStorage stub)
   async updateEnrollment(id: number, updates: Partial<ProductEnrollment>): Promise<ProductEnrollment | undefined> { return undefined; }
+  async getEnrollmentByStripeSubscriptionId(_stripeSubscriptionId: string): Promise<ProductEnrollment | undefined> { return undefined; }
   
   // Program Availability Slots (MemStorage stubs)
   async getAvailabilitySlotsByProgram(programId: string): Promise<ProgramAvailabilitySlot[]> { return []; }
@@ -5857,6 +5859,14 @@ class DatabaseStorage implements IStorage {
     const results = await db.select().from(schema.productEnrollments)
       .where(eq(schema.productEnrollments.accountHolderId, accountHolderId));
     return results as ProductEnrollment[];
+  }
+
+  async getEnrollmentByStripeSubscriptionId(stripeSubscriptionId: string): Promise<ProductEnrollment | undefined> {
+    if (!stripeSubscriptionId) return undefined;
+    const results = await db.select().from(schema.productEnrollments)
+      .where(eq(schema.productEnrollments.stripeSubscriptionId, stripeSubscriptionId))
+      .limit(1);
+    return results[0] as ProductEnrollment | undefined;
   }
 
   async getEnrollmentsByProgram(programId: string): Promise<{ userId: string }[]> {

@@ -137,6 +137,46 @@ export default function ProfileGateway() {
     enabled: !!user,
   });
 
+  // Refresh enrollment + player data when the tab becomes visible again or
+  // when the native app resumes from background. This makes "paid until ..."
+  // and player payment status update right after a Stripe checkout completes
+  // (the parent returns to this view from the success screen) without forcing
+  // them to pull-to-refresh.
+  useEffect(() => {
+    if (!userId) return;
+    const refresh = () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/enrollments", userId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/account/players", userId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/account/profiles", userId] });
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", refresh);
+    let removeResume: (() => void) | undefined;
+    const cap: any = (window as any).Capacitor;
+    if (cap?.isNativePlatform?.()) {
+      try {
+        const App = cap.Plugins?.App;
+        if (App?.addListener) {
+          const handle = App.addListener("appStateChange", (state: any) => {
+            if (state?.isActive) refresh();
+          });
+          removeResume = () => {
+            try { handle?.remove?.(); } catch {}
+            try { (handle as any)?.then?.((h: any) => h?.remove?.()); } catch {}
+          };
+        }
+      } catch {}
+    }
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", refresh);
+      removeResume?.();
+    };
+  }, [userId]);
+
   const hasActiveEnrollment = enrollments.some((e: any) => e.status === 'active' || e.status === 'grace_period');
   const needsOnboarding = !isLoading && !playersLoading && !profilesLoading && user && !hasActiveEnrollment && players.length === 0;
 

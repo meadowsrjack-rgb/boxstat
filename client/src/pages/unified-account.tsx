@@ -61,6 +61,8 @@ import {
   CalendarCheck,
   Camera,
   X,
+  Sparkles,
+  TrendingUp,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar as ShadcnCalendar } from "@/components/ui/calendar";
@@ -2269,6 +2271,10 @@ export default function UnifiedAccount() {
                 <MessageSquare className="w-4 h-4 mr-2" />
                 Messages
               </TabsTrigger>
+              <TabsTrigger value="players" data-testid="tab-players" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+                <Trophy className="w-4 h-4 mr-2" />
+                Players
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -3679,6 +3685,35 @@ export default function UnifiedAccount() {
             <ParentMessagesSection players={players} userId={user?.id} />
           </TabsContent>
 
+          <TabsContent value="players" className="space-y-6" data-testid="tab-content-players">
+            {playersLoading ? (
+              <div className="space-y-4">
+                {[0, 1].map((i) => (
+                  <Card key={i}>
+                    <CardContent className="p-6 space-y-3">
+                      <div className="h-5 w-40 bg-gray-100 rounded animate-pulse" />
+                      <div className="h-32 bg-gray-100 rounded animate-pulse" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : players.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <h3 className="text-base font-semibold mb-1">No players linked yet</h3>
+                  <p className="text-sm text-gray-500">Link a player to your account to see their progress here.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-6">
+                {players.map((p: any) => (
+                  <PlayerProgressCard key={p.id} player={p} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
         </Tabs>
 
       {/* Hidden file input for parent photo upload */}
@@ -4035,6 +4070,211 @@ function ParentTeamCard({ chatroom, onCoachSelect }: { chatroom: any; onCoachSel
         </div>
       )}
     </div>
+  );
+}
+
+function calculateOverallSkillAverage(evaluation: any): number {
+  const skillsData = evaluation?.skillsData || evaluation?.scores;
+  if (!skillsData || typeof skillsData !== 'object') return 0;
+  const allScores: number[] = [];
+  Object.values(skillsData).forEach((value: any) => {
+    if (typeof value === 'number') {
+      allScores.push(value);
+    } else if (typeof value === 'object' && value !== null) {
+      Object.values(value).forEach((subValue: any) => {
+        if (typeof subValue === 'number') allScores.push(subValue);
+      });
+    }
+  });
+  if (allScores.length === 0) return 0;
+  const average = allScores.reduce((sum, val) => sum + val, 0) / allScores.length;
+  return Math.round((average / 5) * 100);
+}
+
+function PlayerProgressCard({ player }: { player: any }) {
+  const playerId = player?.id;
+
+  const { data: awardsSummary, isLoading: awardsLoading } = useQuery<any>({
+    queryKey: ["/api/users", playerId, "awards"],
+    enabled: !!playerId,
+  });
+
+  const { data: latestEvaluation, isLoading: evalLoading } = useQuery<any>({
+    queryKey: ["/api/players/" + playerId + "/latest-evaluation"],
+    enabled: !!playerId,
+  });
+
+  const ringsData = (() => {
+    if (awardsSummary?.tierSummary) {
+      return {
+        legacy: awardsSummary.tierSummary.legacy,
+        hof: awardsSummary.tierSummary.hof,
+        superstar: awardsSummary.tierSummary.superstar,
+        allStar: awardsSummary.tierSummary.allStar,
+        starter: awardsSummary.tierSummary.starter,
+        prospect: awardsSummary.tierSummary.prospect,
+      };
+    }
+    if (awardsSummary) {
+      return {
+        legacy: { earned: awardsSummary.trophiesCount || 0, total: 1 },
+        hof: { earned: awardsSummary.hallOfFameBadgesCount || 0, total: 1 },
+        superstar: { earned: awardsSummary.superstarBadgesCount || 0, total: 1 },
+        allStar: { earned: awardsSummary.allStarBadgesCount || 0, total: 1 },
+        starter: { earned: awardsSummary.starterBadgesCount || 0, total: 1 },
+        prospect: { earned: awardsSummary.prospectBadgesCount || 0, total: 1 },
+      };
+    }
+    return null;
+  })();
+
+  const totalAwards = (() => {
+    if (!awardsSummary) return 0;
+    if (Array.isArray(awardsSummary.allAwards)) return awardsSummary.allAwards.length;
+    if (awardsSummary.tierSummary) {
+      return Object.values(awardsSummary.tierSummary).reduce(
+        (sum: number, tier: any) => sum + (tier?.earned || 0),
+        0
+      );
+    }
+    return 0;
+  })();
+
+  const overallSkillScore = calculateOverallSkillAverage(latestEvaluation);
+  const skillsData = latestEvaluation?.skillsData || latestEvaluation?.scores;
+
+  const skillCategories: { label: string; pct: number }[] = (() => {
+    if (!skillsData || typeof skillsData !== 'object') return [];
+    return Object.entries(skillsData)
+      .map(([label, value]: [string, any]) => {
+        let avg = 0;
+        if (typeof value === 'number') {
+          avg = value;
+        } else if (typeof value === 'object' && value !== null) {
+          const nums = Object.values(value).filter((v: any) => typeof v === 'number') as number[];
+          if (nums.length > 0) avg = nums.reduce((s, n) => s + n, 0) / nums.length;
+        }
+        return { label, pct: Math.round((avg / 5) * 100) };
+      })
+      .filter((c) => c.pct > 0);
+  })();
+
+  const initials = `${player?.firstName?.[0] || ''}${player?.lastName?.[0] || ''}`.toUpperCase() || '?';
+
+  return (
+    <Card data-testid={`card-player-progress-${playerId}`}>
+      <CardContent className="p-4 md:p-6 space-y-5">
+        {/* Player Header */}
+        <div className="flex items-center gap-3 pb-3 border-b">
+          <Avatar className="h-12 w-12">
+            <AvatarImage src={player?.profileImageUrl} alt={`${player?.firstName} ${player?.lastName}`} />
+            <AvatarFallback className="bg-red-600 text-white font-semibold">{initials}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-gray-900 truncate" data-testid={`text-player-name-${playerId}`}>
+              {player?.firstName} {player?.lastName}
+            </div>
+            {player?.teamName && (
+              <div className="text-xs text-gray-500 truncate">{player.teamName}</div>
+            )}
+          </div>
+        </div>
+
+        {/* Player Progress (Trophy Rings) */}
+        <div>
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <Trophy className="w-4 h-4 text-red-600" />
+            <span className="text-sm font-semibold text-gray-700">Player Progress</span>
+            {totalAwards > 0 && (
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
+                {totalAwards} {totalAwards === 1 ? 'award' : 'awards'}
+              </span>
+            )}
+          </div>
+          {awardsLoading ? (
+            <div className="h-32 bg-gray-100 rounded animate-pulse" />
+          ) : ringsData && totalAwards > 0 ? (
+            <div data-testid={`section-rings-${playerId}`}>
+              <UypTrophyRings data={ringsData} size={96} stroke={8} />
+            </div>
+          ) : (
+            <div className="text-center py-6 text-sm text-gray-500" data-testid={`empty-awards-${playerId}`}>
+              No awards earned yet — keep showing up to start filling these rings.
+            </div>
+          )}
+        </div>
+
+        {/* Skills Evaluation Summary */}
+        <div className="border-t pt-4">
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <TrendingUp className="w-4 h-4 text-red-600" />
+            <span className="text-sm font-semibold text-gray-700">Skills Evaluation</span>
+          </div>
+          {evalLoading ? (
+            <div className="h-16 bg-gray-100 rounded animate-pulse" />
+          ) : overallSkillScore > 0 ? (
+            <div className="space-y-3" data-testid={`section-evaluation-${playerId}`}>
+              <div className="flex items-baseline justify-between px-1">
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Overall</span>
+                <span className="text-2xl font-bold text-red-600" data-testid={`text-ovr-${playerId}`}>
+                  {overallSkillScore}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-red-600 h-2 rounded-full transition-all"
+                  style={{ width: `${overallSkillScore}%` }}
+                />
+              </div>
+              {skillCategories.length > 0 && (
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-2">
+                  {skillCategories.map((cat) => (
+                    <div key={cat.label} className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600 capitalize truncate">{cat.label.toLowerCase()}</span>
+                        <span className="text-gray-900 font-medium">{cat.pct}</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="bg-red-400 h-1.5 rounded-full"
+                          style={{ width: `${cat.pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-sm text-gray-500" data-testid={`empty-evaluation-${playerId}`}>
+              No skills evaluation yet. A coach will share one after the next assessment.
+            </div>
+          )}
+        </div>
+
+        {/* Approved Season Stats */}
+        <div className="border-t pt-2">
+          <ApprovedSeasonStats playerId={playerId} compact />
+        </div>
+
+        {/* AI Insights — Coming Soon placeholder */}
+        {/* TODO: Wire AI Insights backend when available. */}
+        <div className="border-t pt-4">
+          <div className="rounded-lg border border-dashed border-gray-200 bg-gradient-to-br from-gray-50 to-white p-4" data-testid={`section-ai-insights-${playerId}`}>
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="w-4 h-4 text-purple-500" />
+              <span className="text-sm font-semibold text-gray-700">AI Insights</span>
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                Coming Soon
+              </span>
+            </div>
+            <p className="text-xs text-gray-500">
+              Personalized recommendations and trend analysis for {player?.firstName || 'your player'} will appear here.
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

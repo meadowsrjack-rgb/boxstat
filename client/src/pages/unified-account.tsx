@@ -3715,12 +3715,39 @@ export default function UnifiedAccount() {
                   <p className="text-sm text-gray-500">Link a player to your account to see their progress here.</p>
                 </CardContent>
               </Card>
-            ) : (
+            ) : players.length === 1 ? (
               <div className="space-y-6">
-                {players.map((p: any) => (
-                  <PlayerProgressCard key={p.id} player={p} />
-                ))}
+                <PlayerProgressCard player={players[0]} />
               </div>
+            ) : (
+              <Tabs defaultValue={String(players[0].id)} className="space-y-4">
+                <div className="overflow-x-auto -mx-1 px-1">
+                  <TabsList className="inline-flex w-auto bg-transparent border-b border-gray-200 rounded-none p-0 h-auto gap-0">
+                    {players.map((p: any) => {
+                      const initials = `${p?.firstName?.[0] || ''}${p?.lastName?.[0] || ''}`.toUpperCase() || '?';
+                      return (
+                        <TabsTrigger
+                          key={p.id}
+                          value={String(p.id)}
+                          data-testid={`tab-player-${p.id}`}
+                          className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-4 py-2 flex items-center gap-2 whitespace-nowrap"
+                        >
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={p?.profileImageUrl} alt={`${p?.firstName} ${p?.lastName}`} />
+                            <AvatarFallback className="bg-red-600 text-white text-[10px] font-semibold">{initials}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium">{p?.firstName} {p?.lastName}</span>
+                        </TabsTrigger>
+                      );
+                    })}
+                  </TabsList>
+                </div>
+                {players.map((p: any) => (
+                  <TabsContent key={p.id} value={String(p.id)} className="space-y-6" data-testid={`tab-content-player-${p.id}`}>
+                    <PlayerProgressCard player={p} />
+                  </TabsContent>
+                ))}
+              </Tabs>
             )}
           </TabsContent>
 

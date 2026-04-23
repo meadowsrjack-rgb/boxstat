@@ -158,7 +158,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
-import { DateScrollPicker } from "react-date-wheel-picker";
+import { DateOfBirthPicker } from "@/components/DateOfBirthPicker";
 import { MigrationWizard } from "@/components/migration/MigrationWizard";
 import { useTheme } from "@/components/ThemeProvider";
 import OpenBoxStatPrompt from "@/components/OpenBoxStatPrompt";
@@ -3169,44 +3169,15 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       </FormItem>
                     )}
                   />
-                  <Dialog open={showCreateDobPicker} onOpenChange={setShowCreateDobPicker}>
-                    <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
-                      <DialogHeader>
-                        <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
-                      </DialogHeader>
-                      <div className="py-4 flex justify-center date-wheel-picker-dark">
-                        <DateScrollPicker
-                          defaultYear={form.getValues('dateOfBirth') ? new Date(form.getValues('dateOfBirth')).getFullYear() : 2010}
-                          defaultMonth={(form.getValues('dateOfBirth') ? new Date(form.getValues('dateOfBirth')).getMonth() : 0) + 1}
-                          defaultDay={form.getValues('dateOfBirth') ? new Date(form.getValues('dateOfBirth')).getDate() : 1}
-                          startYear={1950}
-                          endYear={new Date().getFullYear()}
-                          dateTimeFormatOptions={{ month: 'short' }}
-                          highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
-                          onDateChange={(date: Date) => {
-                            form.setValue('dateOfBirth', date.toISOString().split('T')[0]);
-                          }}
-                        />
-                      </div>
-                      <div className="flex gap-3">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="flex-1 border-gray-600 text-gray-600 hover:bg-gray-800"
-                          onClick={() => setShowCreateDobPicker(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="button"
-                          className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                          onClick={() => setShowCreateDobPicker(false)}
-                        >
-                          Confirm
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  <DateOfBirthPicker
+                    open={showCreateDobPicker}
+                    onOpenChange={setShowCreateDobPicker}
+                    value={form.getValues('dateOfBirth') || undefined}
+                    onChange={(value) => form.setValue('dateOfBirth', value)}
+                    startYear={1950}
+                    endYear={new Date().getFullYear()}
+                    defaultDate={new Date(2010, 0, 1)}
+                  />
 
                   {form.watch('role') !== 'coach' && (
                     <FormField
@@ -4305,44 +4276,15 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       <Calendar className="w-4 h-4 text-gray-400" />
                     </button>
                     
-                    <Dialog open={showDobPicker} onOpenChange={setShowDobPicker}>
-                      <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
-                        <DialogHeader>
-                          <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
-                        </DialogHeader>
-                        <div className="py-4 flex justify-center date-wheel-picker-dark">
-                          <DateScrollPicker
-                            defaultYear={editingUser.dateOfBirth ? new Date(editingUser.dateOfBirth).getFullYear() : 2000}
-                            defaultMonth={(editingUser.dateOfBirth ? new Date(editingUser.dateOfBirth).getMonth() : 0) + 1}
-                            defaultDay={editingUser.dateOfBirth ? new Date(editingUser.dateOfBirth).getDate() : 1}
-                            startYear={1950}
-                            endYear={new Date().getFullYear()}
-                            dateTimeFormatOptions={{ month: 'short' }}
-                            highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
-                            onDateChange={(date: Date) => {
-                              setEditingUser({...editingUser, dateOfBirth: date.toISOString().split('T')[0]});
-                            }}
-                          />
-                        </div>
-                        <div className="flex gap-3">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="flex-1 border-gray-600 text-gray-600 hover:bg-gray-800"
-                            onClick={() => setShowDobPicker(false)}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            type="button"
-                            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                            onClick={() => setShowDobPicker(false)}
-                          >
-                            Confirm
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <DateOfBirthPicker
+                      open={showDobPicker}
+                      onOpenChange={setShowDobPicker}
+                      value={editingUser.dateOfBirth || undefined}
+                      onChange={(value) => setEditingUser({ ...editingUser, dateOfBirth: value })}
+                      startYear={1950}
+                      endYear={new Date().getFullYear()}
+                      defaultDate={new Date(2000, 0, 1)}
+                    />
                   </div>
                   
                   {editingUser.role !== 'coach' && (

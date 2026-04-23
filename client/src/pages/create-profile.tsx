@@ -25,8 +25,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Link as LinkIcon, Loader2, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DateScrollPicker } from "react-date-wheel-picker";
+import { DateOfBirthPicker } from "@/components/DateOfBirthPicker";
 
 const UYP_RED = "#d82428";
 
@@ -324,44 +323,15 @@ export default function CreateProfile() {
                       </FormControl>
                       <FormMessage />
                       
-                      <Dialog open={showDobPicker} onOpenChange={setShowDobPicker}>
-                        <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
-                          <DialogHeader>
-                            <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
-                          </DialogHeader>
-                          <div className="py-4 flex justify-center date-wheel-picker-dark">
-                            <DateScrollPicker
-                              defaultYear={field.value ? new Date(field.value).getFullYear() : 2010}
-                              defaultMonth={(field.value ? new Date(field.value).getMonth() : 0) + 1}
-                              defaultDay={field.value ? new Date(field.value).getDate() : 1}
-                              startYear={1990}
-                              endYear={new Date().getFullYear()}
-                              dateTimeFormatOptions={{ month: 'short' }}
-                              highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
-                              onDateChange={(date: Date) => {
-                                field.onChange(date.toISOString().split('T')[0]);
-                              }}
-                            />
-                          </div>
-                          <div className="flex gap-3">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="flex-1 border-gray-600 text-gray-600 hover:bg-gray-800"
-                              onClick={() => setShowDobPicker(false)}
-                            >
-                              Cancel
-                            </Button>
-                            <Button
-                              type="button"
-                              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                              onClick={() => setShowDobPicker(false)}
-                            >
-                              Confirm
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                      <DateOfBirthPicker
+                        open={showDobPicker}
+                        onOpenChange={setShowDobPicker}
+                        value={field.value}
+                        onChange={field.onChange}
+                        startYear={1990}
+                        endYear={new Date().getFullYear()}
+                        defaultDate={new Date(2010, 0, 1)}
+                      />
                     </FormItem>
                   )}
                 />

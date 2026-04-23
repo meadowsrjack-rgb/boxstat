@@ -890,6 +890,10 @@ export default function MarketingLanding() {
               Revenue YTD. Active players. Event attendance. Stock alerts. All
               live. No spreadsheets.
             </p>
+            <div className="mt-8 flex flex-col sm:flex-row gap-3 items-center justify-center">
+              <AppStoreButton />
+              <GooglePlayButton />
+            </div>
           </div>
         }
       >
@@ -900,10 +904,6 @@ export default function MarketingLanding() {
           draggable={false}
         />
       </ContainerScroll>
-      <div className="bg-black -mt-32 md:-mt-56 pb-8 md:pb-12 pt-4 md:pt-6 px-4 flex flex-col sm:flex-row gap-3 items-center justify-center relative z-10">
-        <AppStoreButton />
-        <GooglePlayButton />
-      </div>
       <Features />
       <TrustRow />
       <CinematicFooter scrollContainer={scrollRef} />

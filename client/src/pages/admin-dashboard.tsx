@@ -2830,6 +2830,28 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     return 0;
   }) : users;
 
+  // Group users by email so each family stays together. The group order
+  // follows the position of the first member of that family in the already-
+  // sorted list (so newest accounts still float to the top, but their child
+  // profiles ride along with them instead of being split apart).
+  const groupedUsers = (() => {
+    const familyOrder: string[] = [];
+    const familyBuckets = new Map<string, any[]>();
+    for (const u of sortedUsers) {
+      const email = (getDisplayEmail(u) || `__nofamily_${u.id}`).toLowerCase();
+      if (!familyBuckets.has(email)) {
+        familyBuckets.set(email, []);
+        familyOrder.push(email);
+      }
+      familyBuckets.get(email)!.push(u);
+    }
+    const out: any[] = [];
+    for (const email of familyOrder) {
+      out.push(...(familyBuckets.get(email) || []));
+    }
+    return out;
+  })();
+
   // Helper: derive enrollment status label for a user
   const deriveUserStatus = (user: any): string => {
     const now = new Date();
@@ -2945,7 +2967,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   };
 
   // Filter users based on search term, role, and status filters
-  const filteredUsers = sortedUsers.filter((user: any) => {
+  const filteredUsers = groupedUsers.filter((user: any) => {
     if (userSearchTerm.trim()) {
       const searchLower = userSearchTerm.toLowerCase();
       const fullName = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase();

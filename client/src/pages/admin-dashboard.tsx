@@ -2845,24 +2845,46 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     return 0;
   }) : users;
 
-  // Group users by email so each family stays together. The group order
-  // follows the position of the first member of that family in the already-
-  // sorted list (so newest accounts still float to the top, but their child
-  // profiles ride along with them instead of being split apart).
+  // Group users into families so every account that shares a household
+  // (parent + admin/coach role variants of the same human + their child
+  // player profiles) renders contiguously. The group key is the root
+  // account-holder id (walking up accountHolderId/parentId chains), with
+  // a fallback to the resolved display email and finally the user's own id
+  // so unrelated users still sort independently. The first time a key is
+  // seen in the already-sorted list determines the family's position, so
+  // "newest at top" still holds but the whole family rides along.
   const groupedUsers = (() => {
+    const userById = new Map<string, any>(users.map((u: any) => [u.id, u]));
+    const resolveRootKey = (u: any): string => {
+      const visited = new Set<string>();
+      let cur: any = u;
+      while (cur && !visited.has(cur.id)) {
+        visited.add(cur.id);
+        const holderId = cur.accountHolderId || cur.parentId;
+        if (!holderId || holderId === cur.id) break;
+        const next = userById.get(holderId);
+        if (!next) break;
+        cur = next;
+      }
+      if (cur?.id) return `root:${cur.id}`;
+      const email = (getDisplayEmail(u) || '').toLowerCase();
+      if (email) return `email:${email}`;
+      return `self:${u.id}`;
+    };
+
     const familyOrder: string[] = [];
     const familyBuckets = new Map<string, any[]>();
     for (const u of sortedUsers) {
-      const email = (getDisplayEmail(u) || `__nofamily_${u.id}`).toLowerCase();
-      if (!familyBuckets.has(email)) {
-        familyBuckets.set(email, []);
-        familyOrder.push(email);
+      const key = resolveRootKey(u);
+      if (!familyBuckets.has(key)) {
+        familyBuckets.set(key, []);
+        familyOrder.push(key);
       }
-      familyBuckets.get(email)!.push(u);
+      familyBuckets.get(key)!.push(u);
     }
     const out: any[] = [];
-    for (const email of familyOrder) {
-      out.push(...(familyBuckets.get(email) || []));
+    for (const key of familyOrder) {
+      out.push(...(familyBuckets.get(key) || []));
     }
     return out;
   })();

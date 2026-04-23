@@ -53,6 +53,7 @@ export class AdminNotificationService {
           break;
         }
 
+        case 'specific':
         case 'users': {
           // Specific users - must validate they belong to the organization
           console.log(`[Recipient Resolution] Processing 'users' target`);

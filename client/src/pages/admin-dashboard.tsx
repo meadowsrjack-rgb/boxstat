@@ -965,6 +965,21 @@ export default function AdminDashboard() {
 
           <div className="lg:flex-1 lg:min-w-0 lg:overflow-x-hidden lg:ml-48">
 
+          {/* Always-visible pending player approvals banner (shown across all tabs) */}
+          <PendingApprovalsBanner
+            onJump={() => {
+              setActiveTab('overview');
+              setTimeout(() => {
+                const el = document.getElementById('pending-player-approvals-card');
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  el.classList.add('ring-2', 'ring-amber-400', 'rounded-lg');
+                  setTimeout(() => el.classList.remove('ring-2', 'ring-amber-400', 'rounded-lg'), 2500);
+                }
+              }, 100);
+            }}
+          />
+
           {/* Alert banners — always inside the content column so they respect lg:ml-48 */}
           <div className="mb-4">{alertBannersJSX}</div>
 
@@ -17563,5 +17578,46 @@ function PendingPlayerApprovalsCard() {
         </DialogContent>
       </Dialog>
     </Card>
+  );
+}
+
+// Task #297: Always-visible high-visibility banner for pending player approvals.
+function PendingApprovalsBanner({ onJump }: { onJump: () => void }) {
+  const { data } = useQuery<{ success: boolean; pending: any[] }>({
+    queryKey: ["/api/admin/pending-player-approvals"],
+  });
+  const pending = data?.pending || [];
+  if (pending.length === 0) return null;
+  const count = pending.length;
+  const names = pending.slice(0, 3).map((p) => `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim()).filter(Boolean);
+  const more = pending.length - names.length;
+  return (
+    <div
+      className="mb-4 rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-3 shadow-sm flex items-center gap-3"
+      role="alert"
+      data-testid="banner-pending-player-approvals"
+    >
+      <div className="shrink-0 rounded-full bg-amber-100 p-2">
+        <UserPlus className="w-5 h-5 text-amber-700" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-amber-900">
+          {count === 1 ? '1 player awaiting your approval' : `${count} players awaiting your approval`}
+        </p>
+        {names.length > 0 && (
+          <p className="text-xs text-amber-800 truncate">
+            {names.join(', ')}{more > 0 ? ` +${more} more` : ''}
+          </p>
+        )}
+      </div>
+      <Button
+        size="sm"
+        className="bg-amber-600 hover:bg-amber-700 text-white shrink-0"
+        onClick={onJump}
+        data-testid="button-jump-pending-approvals"
+      >
+        Review now
+      </Button>
+    </div>
   );
 }

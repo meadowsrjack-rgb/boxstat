@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Shield, ChevronRight, Settings, LogOut, Crown, Bug, ArrowDown, CirclePlus } from "lucide-react";
+import { User, Shield, ChevronRight, Settings, LogOut, Crown, Bug, ArrowDown, CirclePlus, CheckCircle2, XCircle, Clock, X } from "lucide-react";
 import { BanterLoader } from "@/components/BanterLoader";
 import OpenBoxStatPrompt from "@/components/OpenBoxStatPrompt";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,55 @@ function prefetchQuery(queryKey: string) {
   });
 }
 
+// Local persistence for tracking pending add-player requests so we can
+// surface in-app "approved" / "declined" indicators the next time the
+// parent's gateway loads, even if the decision happened while the app
+// was closed. Scoped per account holder.
+const PENDING_SNAPSHOT_KEY = (uid: string) => `pendingPlayerSnapshot:${uid}`;
+const RECENT_DECISIONS_KEY = (uid: string) => `pendingPlayerDecisions:${uid}`;
+const RECENT_DECISION_TTL_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+
+type PendingSnapshotEntry = {
+  firstName?: string | null;
+  lastName?: string | null;
+  requestedTeamName?: string | null;
+  requestedTeamId?: number | null;
+  submittedAt?: string | null;
+};
+type PendingSnapshotMap = Record<string, PendingSnapshotEntry>;
+
+type RecentDecision = {
+  playerId: string;
+  decision: 'approved' | 'rejected';
+  firstName?: string | null;
+  lastName?: string | null;
+  requestedTeamName?: string | null;
+  submittedAt?: string | null;
+  decidedAt: string;
+};
+
+function readJson<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+function writeJson(key: string, value: unknown) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+
+function formatDateTime(iso?: string | null): string {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch { return ''; }
+}
+
 export default function ProfileGateway() {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
@@ -48,6 +97,15 @@ export default function ProfileGateway() {
   const [bugTitle, setBugTitle] = useState("");
   const [bugDescription, setBugDescription] = useState("");
   const [switching, setSwitching] = useState(false);
+  const [recentDecisions, setRecentDecisions] = useState<RecentDecision[]>([]);
+  const [requestDetail, setRequestDetail] = useState<null | {
+    kind: 'pending' | 'approved' | 'rejected';
+    firstName?: string | null;
+    lastName?: string | null;
+    requestedTeamName?: string | null;
+    submittedAt?: string | null;
+    decidedAt?: string | null;
+  }>(null);
 
   const submitBugMutation = useMutation({
     mutationFn: async (bugData: { title: string; description: string }) => {
@@ -81,7 +139,104 @@ export default function ProfileGateway() {
     queryFn: () => apiRequest("/api/account/players"),
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
+    // Poll every 20s while a pending request is outstanding so the parent
+    // sees the approve/reject decision land without a hard refresh.
+    refetchInterval: (query) => {
+      const data = query.state.data as any[] | undefined;
+      const hasPending = !!data?.some((p: any) => p?.approvalStatus === 'pending' || p?.statusTag === 'awaiting_approval');
+      return hasPending ? 20_000 : false;
+    },
   });
+
+  // Load any persisted recent decisions when the user becomes known.
+  useEffect(() => {
+    if (!userId) return;
+    const stored = readJson<RecentDecision[]>(RECENT_DECISIONS_KEY(userId), []);
+    const cutoff = Date.now() - RECENT_DECISION_TTL_MS;
+    const fresh = stored.filter(d => {
+      const t = Date.parse(d.decidedAt);
+      return !isNaN(t) && t >= cutoff;
+    });
+    if (fresh.length !== stored.length) writeJson(RECENT_DECISIONS_KEY(userId), fresh);
+    setRecentDecisions(fresh);
+  }, [userId]);
+
+  // Reconcile the players list against the previously-snapshotted pending
+  // requests so we can detect approve/reject transitions and surface them
+  // in-app even when the decision happened while the parent was away.
+  useEffect(() => {
+    if (!userId || playersLoading) return;
+    const prev = readJson<PendingSnapshotMap>(PENDING_SNAPSHOT_KEY(userId), {});
+    const next: PendingSnapshotMap = {};
+    const decisions: RecentDecision[] = readJson<RecentDecision[]>(RECENT_DECISIONS_KEY(userId), []);
+    const knownDecisionIds = new Set(decisions.map(d => d.playerId));
+
+    const playerById = new Map<string, any>();
+    for (const p of players) playerById.set(p.id, p);
+
+    for (const p of players) {
+      const isPending = p?.approvalStatus === 'pending' || p?.statusTag === 'awaiting_approval';
+      if (isPending) {
+        next[p.id] = {
+          firstName: p.firstName,
+          lastName: p.lastName,
+          requestedTeamName: p.requestedTeamName ?? prev[p.id]?.requestedTeamName ?? null,
+          requestedTeamId: p.requestedTeamId ?? prev[p.id]?.requestedTeamId ?? null,
+          submittedAt: p.createdAt ?? prev[p.id]?.submittedAt ?? null,
+        };
+      }
+    }
+
+    let changed = false;
+    for (const [pid, snap] of Object.entries(prev)) {
+      if (next[pid]) continue; // still pending
+      if (knownDecisionIds.has(pid)) continue; // already recorded
+      const current = playerById.get(pid);
+      if (current && current.approvalStatus !== 'pending') {
+        decisions.unshift({
+          playerId: pid,
+          decision: 'approved',
+          firstName: current.firstName ?? snap.firstName,
+          lastName: current.lastName ?? snap.lastName,
+          requestedTeamName: snap.requestedTeamName ?? current.teamName ?? null,
+          submittedAt: snap.submittedAt ?? null,
+          decidedAt: new Date().toISOString(),
+        });
+        changed = true;
+      } else if (!current) {
+        // Player vanished — admin rejected (the row is removed on reject).
+        decisions.unshift({
+          playerId: pid,
+          decision: 'rejected',
+          firstName: snap.firstName,
+          lastName: snap.lastName,
+          requestedTeamName: snap.requestedTeamName ?? null,
+          submittedAt: snap.submittedAt ?? null,
+          decidedAt: new Date().toISOString(),
+        });
+        changed = true;
+      }
+    }
+
+    // Always rewrite the snapshot so resolved field values (e.g. team name
+    // arriving on a later refetch) are kept up to date.
+    writeJson(PENDING_SNAPSHOT_KEY(userId), next);
+    if (changed) {
+      const cutoff = Date.now() - RECENT_DECISION_TTL_MS;
+      const trimmed = decisions
+        .filter(d => Date.parse(d.decidedAt) >= cutoff)
+        .slice(0, 10);
+      writeJson(RECENT_DECISIONS_KEY(userId), trimmed);
+      setRecentDecisions(trimmed);
+    }
+  }, [userId, playersLoading, players]);
+
+  const dismissRecentDecision = (playerId: string) => {
+    if (!userId) return;
+    const next = recentDecisions.filter(d => d.playerId !== playerId);
+    setRecentDecisions(next);
+    writeJson(RECENT_DECISIONS_KEY(userId), next);
+  };
 
   // Fetch all account profiles to detect admin/coach roles across the account
   const { data: accountProfiles = [], isLoading: profilesLoading } = useQuery<any[]>({
@@ -446,6 +601,65 @@ export default function ProfileGateway() {
             </Card>
           )}
 
+          {/* Recent admin decisions on add-player requests (approved/rejected).
+              Shown in-app so the parent doesn't need to dig through email/push
+              to learn the outcome. Each card is dismissable. */}
+          {recentDecisions.length > 0 && (
+            <div className="space-y-2" data-testid="recent-decisions">
+              {recentDecisions.map((d) => {
+                const approved = d.decision === 'approved';
+                const name = `${d.firstName || ''} ${d.lastName || ''}`.trim() || 'Player';
+                return (
+                  <div
+                    key={d.playerId}
+                    className={`rounded-xl border px-3 py-2 flex items-center gap-3 ${
+                      approved
+                        ? 'bg-emerald-500/10 border-emerald-500/40'
+                        : 'bg-red-500/10 border-red-500/40'
+                    }`}
+                    data-testid={`recent-decision-${d.playerId}`}
+                  >
+                    {approved ? (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                    ) : (
+                      <XCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setRequestDetail({
+                        kind: approved ? 'approved' : 'rejected',
+                        firstName: d.firstName,
+                        lastName: d.lastName,
+                        requestedTeamName: d.requestedTeamName,
+                        submittedAt: d.submittedAt,
+                        decidedAt: d.decidedAt,
+                      })}
+                      className="flex-1 min-w-0 text-left focus:outline-none"
+                      data-testid={`recent-decision-open-${d.playerId}`}
+                    >
+                      <p className="text-sm font-semibold text-white truncate">
+                        {approved ? `${name} approved` : `${name} request declined`}
+                      </p>
+                      <p className="text-xs text-gray-400 truncate">
+                        {d.requestedTeamName ? `${d.requestedTeamName} · ` : ''}
+                        {formatDateTime(d.decidedAt)} · Tap for details
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => dismissRecentDecision(d.playerId)}
+                      className="p-1 text-gray-400 hover:text-white"
+                      aria-label="Dismiss"
+                      data-testid={`recent-decision-dismiss-${d.playerId}`}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {/* Player Profiles Section */}
           {(isCoach || isAdmin) && players.length > 0 && (
             <div className="border-t border-gray-700 my-6 pt-4">
@@ -525,13 +739,29 @@ export default function ProfileGateway() {
                         {player.firstName} {player.lastName}
                       </h3>
                       {isPending ? (
-                        <Badge
-                          variant="outline"
-                          className="text-xs bg-amber-500/20 border-amber-500/50 text-amber-300"
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRequestDetail({
+                              kind: 'pending',
+                              firstName: player.firstName,
+                              lastName: player.lastName,
+                              requestedTeamName: player.requestedTeamName,
+                              submittedAt: player.createdAt,
+                            });
+                          }}
+                          className="focus:outline-none focus:ring-2 focus:ring-amber-400 rounded-full"
                           data-testid={`badge-pending-${player.id}`}
                         >
-                          Awaiting approval
-                        </Badge>
+                          <Badge
+                            variant="outline"
+                            className="text-xs bg-amber-500/20 border-amber-500/50 text-amber-300 cursor-pointer hover:bg-amber-500/30"
+                          >
+                            <Clock className="w-3 h-3 mr-1" />
+                            Awaiting approval
+                          </Badge>
+                        </button>
                       ) : tagConfig && (
                         <Badge 
                           variant="outline" 
@@ -591,6 +821,78 @@ export default function ProfileGateway() {
         </div>
         </div>
       </div>
+
+      <Dialog open={!!requestDetail} onOpenChange={(o) => { if (!o) setRequestDetail(null); }}>
+        <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              {requestDetail?.kind === 'approved' && <CheckCircle2 className="w-5 h-5 text-emerald-400" />}
+              {requestDetail?.kind === 'rejected' && <XCircle className="w-5 h-5 text-red-400" />}
+              {requestDetail?.kind === 'pending' && <Clock className="w-5 h-5 text-amber-300" />}
+              {requestDetail?.kind === 'approved' && 'Player approved'}
+              {requestDetail?.kind === 'rejected' && 'Request declined'}
+              {requestDetail?.kind === 'pending' && 'Awaiting club admin'}
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              {requestDetail?.kind === 'pending' && 'The club admin still needs to review this add-player request.'}
+              {requestDetail?.kind === 'approved' && 'The club admin approved this add-player request.'}
+              {requestDetail?.kind === 'rejected' && 'The club admin declined this add-player request.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 pt-2 text-sm">
+            {requestDetail && (
+              <>
+                <div className="flex justify-between gap-4">
+                  <span className="text-gray-400">Player</span>
+                  <span className="text-white text-right">
+                    {`${requestDetail.firstName || ''} ${requestDetail.lastName || ''}`.trim() || '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-gray-400">Team</span>
+                  <span className="text-white text-right">{requestDetail.requestedTeamName || '—'}</span>
+                </div>
+                {requestDetail.submittedAt && (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-400">Submitted</span>
+                    <span className="text-white text-right">{formatDateTime(requestDetail.submittedAt)}</span>
+                  </div>
+                )}
+                {requestDetail.decidedAt && (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-400">Decided</span>
+                    <span className="text-white text-right">{formatDateTime(requestDetail.decidedAt)}</span>
+                  </div>
+                )}
+                {requestDetail.kind === 'pending' && (
+                  <p className="text-xs text-gray-400 pt-2">
+                    You'll get an email and push notification once a decision is made. This banner will update automatically too.
+                  </p>
+                )}
+                {requestDetail.kind === 'approved' && (
+                  <p className="text-xs text-gray-400 pt-2">
+                    The player profile is ready to use. Tap their card on the gateway to open the dashboard or complete payment if required.
+                  </p>
+                )}
+                {requestDetail.kind === 'rejected' && (
+                  <p className="text-xs text-gray-400 pt-2">
+                    Reach out to the club admin if you think this was a mistake. You can submit a new request anytime.
+                  </p>
+                )}
+              </>
+            )}
+            <div className="pt-3 flex justify-end">
+              <Button
+                onClick={() => setRequestDetail(null)}
+                className="bg-gray-700 hover:bg-gray-600 text-white"
+                data-testid="button-close-request-detail"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={bugDialogOpen} onOpenChange={setBugDialogOpen}>
         <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-md">

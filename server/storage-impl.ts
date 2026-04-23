@@ -5523,14 +5523,17 @@ class DatabaseStorage implements IStorage {
       data.programId &&
       !data.isTryout &&
       data.source !== 'admin_assignment' &&
+      data.source !== 'self_claim' &&
       targetStatus === 'active'
     ) {
+      // Task #248: Also upgrade self_claim grants in place when the family
+      // pays through BoxStat, mirroring the admin_assignment behavior.
       const existingUnpaid = await db.select().from(schema.productEnrollments)
         .where(and(
           eq(schema.productEnrollments.profileId, data.profileId),
           eq(schema.productEnrollments.programId, data.programId),
           eq(schema.productEnrollments.status, 'active'),
-          eq(schema.productEnrollments.source, 'admin_assignment'),
+          inArray(schema.productEnrollments.source, ['admin_assignment', 'self_claim']),
           isNull(schema.productEnrollments.paymentId),
           isNull(schema.productEnrollments.stripeSubscriptionId),
         ))
@@ -5575,6 +5578,8 @@ class DatabaseStorage implements IStorage {
         isTryout: data.isTryout ?? false,
         recommendedTeamId: data.recommendedTeamId ?? null,
         metadata: data.metadata ?? {},
+        isSelfClaimed: data.isSelfClaimed ?? false,
+        selfClaimedEndDate: data.selfClaimedEndDate ?? null,
         createdAt: now,
         updatedAt: now,
       })

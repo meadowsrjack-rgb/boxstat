@@ -91,6 +91,8 @@ export default function AddPlayer() {
   const returnTo = new URLSearchParams(window.location.search).get("returnTo");
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+  const [createdPlayerId, setCreatedPlayerId] = useState<string | null>(null);
+  const [wantsJoinTeam, setWantsJoinTeam] = useState<boolean>(false);
   const [playerData, setPlayerData] = useState<{
     firstName?: string;
     lastName?: string;
@@ -171,9 +173,18 @@ export default function AddPlayer() {
         data,
       });
     },
-    onSuccess: () => {
+    onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
-      
+
+      const newId = response?.player?.id || response?.id || null;
+      if (newId && wantsJoinTeam) {
+        // Stay on the wizard so the parent can finish the join-team step.
+        setCreatedPlayerId(newId);
+        toast({ title: "Player Added!", description: "Now pick the club team your player is on." });
+        setCurrentStep((s) => s + 1);
+        return;
+      }
+
       toast({
         title: "Player Added!",
         description: returnTo === "payments"
@@ -200,7 +211,9 @@ export default function AddPlayer() {
   // Simplified step flow: Just basic player info (no package/payment)
   // Payment is handled separately in the Payments section of parent dashboard
   const getStepFlow = () => {
-    return ["name", "dob", "gender", "skill_level"];
+    const base = ["name", "dob", "gender", "skill_level"];
+    if (wantsJoinTeam) base.push("join_team");
+    return base;
   };
 
   const stepFlow = getStepFlow();
@@ -287,12 +300,38 @@ export default function AddPlayer() {
           {currentStepName === "skill_level" && (
             <SkillLevelStep
               defaultValues={{ skillLevel: playerData.skillLevel || "" }}
+              wantsJoinTeam={wantsJoinTeam}
+              onWantsJoinTeamChange={setWantsJoinTeam}
               onSubmit={(data) => {
                 const finalData = { ...playerData, ...data };
                 addPlayerMutation.mutate(finalData);
               }}
               onBack={handleBack}
               isSubmitting={addPlayerMutation.isPending}
+            />
+          )}
+
+          {/* Task #248: Optional self-claim join-team step shown after the
+              player has been created when the parent opted in. */}
+          {currentStepName === "join_team" && createdPlayerId && (
+            <JoinTeamStep
+              playerId={createdPlayerId}
+              onComplete={() => {
+                queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/enrollments"] });
+                if (returnTo === "payments") {
+                  setLocation("/unified-account?tab=payments&openPayment=true");
+                } else {
+                  setLocation("/unified-account");
+                }
+              }}
+              onSkip={() => {
+                if (returnTo === "payments") {
+                  setLocation("/unified-account?tab=payments&openPayment=true");
+                } else {
+                  setLocation("/unified-account");
+                }
+              }}
             />
           )}
 
@@ -701,11 +740,15 @@ function SkillLevelStep({
   onSubmit,
   onBack,
   isSubmitting = false,
+  wantsJoinTeam = false,
+  onWantsJoinTeamChange,
 }: {
   defaultValues: { skillLevel?: string };
   onSubmit: (data: SkillLevelData) => void;
   onBack: () => void;
   isSubmitting?: boolean;
+  wantsJoinTeam?: boolean;
+  onWantsJoinTeamChange?: (v: boolean) => void;
 }) {
   const form = useForm<SkillLevelData>({
     resolver: zodResolver(skillLevelSchema),
@@ -752,6 +795,23 @@ function SkillLevelStep({
             </FormItem>
           )}
         />
+        {onWantsJoinTeamChange && (
+          <div className="flex items-start gap-3 rounded-md border border-gray-700 bg-gray-800/50 p-3">
+            <Checkbox
+              id="join-team-toggle"
+              checked={wantsJoinTeam}
+              onCheckedChange={(v) => onWantsJoinTeamChange(v === true)}
+              className="mt-1"
+              data-testid="checkbox-join-team"
+            />
+            <Label htmlFor="join-team-toggle" className="text-sm text-gray-200 cursor-pointer">
+              My player is already on a club team
+              <p className="text-xs text-gray-400 font-normal mt-1">
+                Pick the club and team next so we can give them immediate app access while you finish payment.
+              </p>
+            </Label>
+          </div>
+        )}
         <div className="flex justify-between pt-6">
           <button type="button" onClick={onBack} className="text-gray-400 hover:text-white transition-colors" disabled={isSubmitting}>
             <ChevronLeft className="w-6 h-6" />
@@ -776,6 +836,132 @@ function SkillLevelStep({
         </div>
       </form>
     </Form>
+  );
+}
+
+// Task #248: Join-team self-claim step. Lets a parent pick any organization
+// + team and (optionally) supply their current club subscription end date so
+// we can grant immediate unpaid-member access in BoxStat.
+function JoinTeamStep({
+  playerId,
+  onComplete,
+  onSkip,
+}: {
+  playerId: string;
+  onComplete: () => void;
+  onSkip: () => void;
+}) {
+  const { toast } = useToast();
+  const [orgId, setOrgId] = useState<string>("");
+  const [teamId, setTeamId] = useState<string>("");
+  const [claimedEndDate, setClaimedEndDate] = useState<string>("");
+
+  const { data: orgs = [], isLoading: orgsLoading } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["/api/organizations/public"],
+  });
+
+  const { data: teams = [], isLoading: teamsLoading } = useQuery<{ id: number; name: string; division?: string | null; level?: string | null; season?: string | null }[]>({
+    queryKey: ["/api/organizations", orgId, "teams", "public"],
+    enabled: !!orgId,
+  });
+
+  const joinMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest(`/api/account/players/${playerId}/join-team`, {
+        method: "POST",
+        data: {
+          organizationId: orgId,
+          teamId,
+          claimedEndDate: claimedEndDate || undefined,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "You're on the team!",
+        description: "We've granted access while your club subscription is verified. Add a payment method whenever you're ready.",
+      });
+      onComplete();
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Couldn't join team",
+        description: err?.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const canSubmit = !!orgId && !!teamId && !joinMutation.isPending;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label className="text-gray-400">Club / Organization *</Label>
+        <Select value={orgId} onValueChange={(v) => { setOrgId(v); setTeamId(""); }}>
+          <SelectTrigger className="bg-gray-800 border-gray-700 text-white" data-testid="select-join-org">
+            <SelectValue placeholder={orgsLoading ? "Loading..." : "Select a club"} />
+          </SelectTrigger>
+          <SelectContent>
+            {orgs.map((o) => (
+              <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label className="text-gray-400">Team *</Label>
+        <Select value={teamId} onValueChange={setTeamId} disabled={!orgId}>
+          <SelectTrigger className="bg-gray-800 border-gray-700 text-white" data-testid="select-join-team">
+            <SelectValue placeholder={!orgId ? "Pick a club first" : teamsLoading ? "Loading teams..." : (teams.length === 0 ? "No teams available" : "Select a team")} />
+          </SelectTrigger>
+          <SelectContent>
+            {teams.map((t) => {
+              const detail = [t.division, t.level, t.season].filter(Boolean).join(" • ");
+              return (
+                <SelectItem key={t.id} value={String(t.id)}>
+                  {t.name}{detail ? ` — ${detail}` : ""}
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label className="text-gray-400">Club subscription end date (optional)</Label>
+        <Input
+          type="date"
+          value={claimedEndDate}
+          onChange={(e) => setClaimedEndDate(e.target.value)}
+          className="bg-gray-800 border-gray-700 text-white"
+          data-testid="input-claimed-end-date"
+        />
+        <p className="text-xs text-gray-400 mt-1">
+          If you tell us when your club subscription ends we'll match BoxStat access to that date (with a minimum window so you have time to pay).
+        </p>
+      </div>
+
+      <div className="flex justify-between pt-6">
+        <Button type="button" variant="ghost" onClick={onSkip} className="text-gray-400 hover:text-white" disabled={joinMutation.isPending}>
+          Skip for now
+        </Button>
+        <Button
+          type="button"
+          onClick={() => joinMutation.mutate()}
+          disabled={!canSubmit}
+          className="bg-red-600 hover:bg-red-700 text-white"
+          data-testid="button-join-team-submit"
+        >
+          {joinMutation.isPending ? (
+            <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Joining...</>
+          ) : (
+            <><Check className="w-4 h-4 mr-2" />Join Team</>
+          )}
+        </Button>
+      </div>
+    </div>
   );
 }
 

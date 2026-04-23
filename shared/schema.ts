@@ -559,7 +559,7 @@ export const productEnrollments = pgTable("product_enrollments", {
   accountHolderId: varchar("account_holder_id").notNull(), // The parent/purchaser
   profileId: varchar("profile_id"), // The player enrolled (null for family-wide)
   status: varchar().notNull().default('active'), // 'active', 'grace_period', 'expired', 'cancelled', 'pending'
-  source: varchar().default('direct'), // 'direct', 'migration', 'gift', 'promo'
+  source: varchar().default('direct'), // 'direct', 'migration', 'gift', 'promo', 'admin_assignment', 'self_claim'
   paymentId: varchar("payment_id"), // Reference to the payment that created this enrollment
   stripeSubscriptionId: varchar("stripe_subscription_id"), // For recurring enrollments
   startDate: timestamp("start_date", { mode: 'string' }).defaultNow(),
@@ -568,6 +568,14 @@ export const productEnrollments = pgTable("product_enrollments", {
   totalCredits: integer("total_credits"), // Initial credits from product sessionCount
   remainingCredits: integer("remaining_credits"), // Credits left after check-ins
   metadata: jsonb().default('{}'), // Additional enrollment data
+  // Task #248: Self-claim path (parent signs their player onto an existing
+  // club team during signup). isSelfClaimed differentiates the parent-driven
+  // flow from the admin-driven `admin_assignment` flow (Task #243).
+  // selfClaimedEndDate stores the raw club-subscription end date the parent
+  // entered (may be null if they didn't know), kept separate from the computed
+  // `endDate` so admins can see what the parent originally claimed.
+  isSelfClaimed: boolean("is_self_claimed").default(false),
+  selfClaimedEndDate: date("self_claimed_end_date"),
   // Legacy/custom pricing tracking (for migrations and grandfathered rates)
   isLegacyPricing: boolean("is_legacy_pricing").default(false), // True if this enrollment has grandfathered pricing
   originalMigrationDate: timestamp("original_migration_date", { mode: 'string' }), // Date of original migration/grandfather

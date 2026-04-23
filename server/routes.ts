@@ -225,6 +225,33 @@ const stripe = stripeSecretKey
 const stripeOrgCache = new Map<string, { instance: Stripe; key: string; createdAt: number }>();
 const STRIPE_CACHE_TTL = 5 * 60 * 1000;
 
+// Default pay-by window for unpaid grants (admin-assigned per Task #243 and
+// parent self-claim per Task #248). Kept here so both code paths stay in sync.
+// Task #246 may make this configurable per organization; for now it's a
+// platform-wide constant.
+const DEFAULT_PAY_BY_WINDOW_DAYS = 14;
+
+function computePayByEndDateIso(claimedEndDate?: string | null): { endDateIso: string; storedClaimedDate: string | null } {
+  const defaultEnd = new Date();
+  defaultEnd.setDate(defaultEnd.getDate() + DEFAULT_PAY_BY_WINDOW_DAYS);
+
+  let storedClaimedDate: string | null = null;
+  let claimedEnd: Date | null = null;
+  if (claimedEndDate && typeof claimedEndDate === 'string') {
+    const trimmed = claimedEndDate.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      const parsed = new Date(trimmed + 'T23:59:59Z');
+      if (!isNaN(parsed.getTime())) {
+        storedClaimedDate = trimmed;
+        claimedEnd = parsed;
+      }
+    }
+  }
+
+  const finalEnd = claimedEnd && claimedEnd > defaultEnd ? claimedEnd : defaultEnd;
+  return { endDateIso: finalEnd.toISOString(), storedClaimedDate };
+}
+
 async function getOrgConnectInfo(organizationId: string): Promise<{ connectedAccountId: string | null; isConnected: boolean; stripeConnectStatus: string | null; stripeConnectType: string | null }> {
   let org: Awaited<ReturnType<typeof storage.getOrganization>>;
   try {
@@ -5425,7 +5452,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
+  // Task #248: Look up active teams for a given organization. Used by the
+  // self-claim "join an existing club team" step during parent signup so a
+  // parent can search for the team their player is already rostered on,
+  // including teams in an organization different from their own.
+  app.get('/api/organizations/:orgId/teams/public', requireAuth, async (req: any, res) => {
+    try {
+      const { orgId } = req.params;
+      const teams = await storage.getTeamsByOrganization(orgId);
+      const lite = (teams || [])
+        .filter((t: any) => t.active !== false && t.programId)
+        .map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          programId: t.programId,
+          division: t.division || null,
+          level: t.level || null,
+          season: t.season || null,
+        }));
+      res.json(lite);
+    } catch (error: any) {
+      console.error('Error fetching public teams for org:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch teams' });
+    }
+  });
+
+  // Task #248: Self-signup join-team endpoint. Lets a parent place their
+  // newly added player onto a club team they're already rostered on, granting
+  // immediate app access via an unpaid-member enrollment (mirrors Task #243's
+  // admin-driven path). Trust-based: no club-admin verification.
+  app.post('/api/account/players/:playerId/join-team', requireAuth, async (req: any, res) => {
+    try {
+      const { id: userId } = req.user;
+      const { playerId } = req.params;
+      const { organizationId, teamId, claimedEndDate } = req.body || {};
+
+      const teamIdNum = parseInt(teamId);
+      if (!Number.isInteger(teamIdNum) || teamIdNum <= 0) {
+        return res.status(400).json({ success: false, message: 'Valid teamId is required' });
+      }
+      if (!organizationId || typeof organizationId !== 'string') {
+        return res.status(400).json({ success: false, message: 'organizationId is required' });
+      }
+
+      const player = await storage.getUser(playerId);
+      if (!player || player.role !== 'player') {
+        return res.status(404).json({ success: false, message: 'Player not found' });
+      }
+      // Verify the requesting account holder owns this player.
+      const requester = await storage.getUser(userId);
+      const rootAccountId = requester?.accountHolderId || userId;
+      const playerAccountId = player.accountHolderId || player.parentId;
+      if (playerAccountId !== userId && playerAccountId !== rootAccountId) {
+        return res.status(403).json({ success: false, message: 'You can only join teams for your own players' });
+      }
+
+      const team = await storage.getTeam(String(teamIdNum));
+      if (!team) {
+        return res.status(404).json({ success: false, message: 'Team not found' });
+      }
+      if (team.organizationId !== organizationId) {
+        return res.status(400).json({ success: false, message: 'Team does not belong to the selected organization' });
+      }
+      if (!team.programId) {
+        return res.status(400).json({ success: false, message: 'This team is not tied to an enrollable program yet. Ask the club to set one up.' });
+      }
+
+      // Prefer accountHolderId, then parentId, then the player's own id as a
+      // last-resort fallback for legacy records.
+      const accountHolderId = player.accountHolderId || player.parentId || player.id;
+      const existingEnrollments = await storage.getEnrollmentsByAccountHolder(accountHolderId);
+      const hasActiveEnrollment = existingEnrollments.some(
+        (e: any) => e.programId === team.programId && e.profileId === playerId && e.status === 'active'
+      );
+
+      const { endDateIso, storedClaimedDate } = computePayByEndDateIso(claimedEndDate);
+      const parentId = player.parentId || accountHolderId;
+
+      // Wrap enrollment + team membership writes in a transaction so a
+      // mid-flight failure cannot leave a player partially enrolled / partially
+      // rostered.
+      const enrollment = await db.transaction(async (tx) => {
+        let createdEnrollment: any = null;
+        if (!hasActiveEnrollment) {
+          const [row] = await tx.insert(productEnrollments).values({
+            organizationId: team.organizationId!,
+            programId: team.programId,
+            accountHolderId,
+            profileId: playerId,
+            status: 'active',
+            source: 'self_claim',
+            endDate: endDateIso,
+            autoRenew: false,
+            isSelfClaimed: true,
+            selfClaimedEndDate: storedClaimedDate,
+            metadata: {
+              autoGrantedOnSelfClaim: true,
+              payByDate: endDateIso,
+              claimedEndDate: storedClaimedDate,
+            },
+          }).returning();
+          createdEnrollment = row;
+          console.log(`[join-team] Created self_claim enrollment for player ${playerId} on team ${teamIdNum} (program ${team.programId}), pay-by ${endDateIso}, claimed ${storedClaimedDate ?? 'none'}`);
+        }
+
+        await tx.insert(teamMemberships)
+          .values({
+            teamId: teamIdNum,
+            profileId: playerId,
+            role: 'player',
+            status: 'active',
+            jerseyNumber: player.jerseyNumber,
+            position: player.position,
+          })
+          .onConflictDoUpdate({
+            target: [teamMemberships.teamId, teamMemberships.profileId],
+            set: { status: 'active', role: 'player' },
+          });
+
+        if (parentId && parentId !== playerId) {
+          await tx.insert(teamMemberships)
+            .values({
+              teamId: teamIdNum,
+              profileId: parentId,
+              role: 'parent',
+              status: 'active',
+            })
+            .onConflictDoUpdate({
+              target: [teamMemberships.teamId, teamMemberships.profileId],
+              set: { status: 'active' },
+            });
+        }
+
+        await tx.update(users).set({ teamId: teamIdNum }).where(eq(users.id, playerId));
+
+        return createdEnrollment;
+      });
+
+      res.json({ success: true, enrollment, teamId: teamIdNum });
+    } catch (error: any) {
+      console.error('Error joining team via self-claim:', error);
+      res.status(500).json({ success: false, message: error.message || 'Failed to join team' });
+    }
+  });
+
   // Get child players for a user (for legacy migration claim flow)
   app.get('/api/users/:userId/children', requireAuth, async (req: any, res) => {
     try {
@@ -8296,7 +8467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             endDateIso = parsedDate.toISOString();
           } else {
             const defaultEnd = new Date();
-            defaultEnd.setDate(defaultEnd.getDate() + 14);
+            defaultEnd.setDate(defaultEnd.getDate() + DEFAULT_PAY_BY_WINDOW_DAYS);
             endDateIso = defaultEnd.toISOString();
           }
           await storage.createEnrollment({
@@ -14247,6 +14418,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           endDate: derivedEndDate,
           rawEndDate: enrollment.endDate,
           autoRenew: enrollment.autoRenew,
+          // Task #248: surface parent self-claim metadata so admins can see
+          // both the date the parent claimed (raw) and the computed pay-by.
+          isSelfClaimed: enrollment.isSelfClaimed ?? false,
+          selfClaimedEndDate: enrollment.selfClaimedEndDate ?? null,
           billingCycle: product?.billingCycle || null,
           stripeSubscriptionId: enrollment.stripeSubscriptionId,
           remainingCredits: enrollment.remainingCredits,

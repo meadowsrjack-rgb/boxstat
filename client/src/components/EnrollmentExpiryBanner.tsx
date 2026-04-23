@@ -11,6 +11,11 @@ interface Enrollment {
   endDate: string | null;
   gracePeriodEndDate: string | null;
   status: string;
+  source?: string | null;
+  paymentId?: string | null;
+  stripeSubscriptionId?: string | null;
+  isSelfClaimed?: boolean | null;
+  selfClaimedEndDate?: string | null;
 }
 
 interface Program {
@@ -48,6 +53,11 @@ export function EnrollmentExpiryBanner() {
   const programMap = Object.fromEntries(programs.map((p) => [p.id, p.name]));
   const playerMap = Object.fromEntries(players.map((p) => [p.id, `${p.firstName} ${p.lastName}`.trim()]));
 
+  const isUnpaidGrant = (e: Enrollment) =>
+    (e.source === "self_claim" || e.source === "admin_assignment") &&
+    !e.paymentId &&
+    !e.stripeSubscriptionId;
+
   const expiringSoon = enrollments.filter((e) => {
     if (e.status !== "active" || !e.endDate) return false;
     const days = daysUntil(e.endDate);
@@ -74,6 +84,12 @@ export function EnrollmentExpiryBanner() {
         const programName = programMap[e.programId] || "your program";
         const playerName = e.profileId ? playerMap[e.profileId] : null;
         const subject = playerName ? `${playerName}'s enrollment` : "Your enrollment";
+        const unpaid = isUnpaidGrant(e);
+        const noun = unpaid ? "trial access" : "enrollment";
+        const subjectWithNoun = playerName ? `${playerName}'s ${noun}` : `Your ${noun}`;
+        const claimNote = e.isSelfClaimed && e.selfClaimedEndDate
+          ? ` (matched to your club subscription end date of ${new Date(e.selfClaimedEndDate).toLocaleDateString()})`
+          : "";
         return (
           <Alert
             key={e.id}
@@ -83,11 +99,13 @@ export function EnrollmentExpiryBanner() {
             <AlertDescription className="flex items-center justify-between gap-4">
               <span className="text-amber-800 text-sm">
                 {days === 0
-                  ? `${subject} in ${programName} expires today.`
+                  ? `${subjectWithNoun} in ${programName} expires today${claimNote}.`
                   : days === 1
-                  ? `${subject} in ${programName} ends tomorrow.`
-                  : `${subject} in ${programName} ends in ${days} days.`}{" "}
-                Re-enroll through the Payments tab to avoid unenrollment.
+                  ? `${subjectWithNoun} in ${programName} ends tomorrow${claimNote}.`
+                  : `${subjectWithNoun} in ${programName} ends in ${days} days${claimNote}.`}{" "}
+                {unpaid
+                  ? "Pay through the Payments tab to keep access uninterrupted."
+                  : "Re-enroll through the Payments tab to avoid unenrollment."}
               </span>
               <Button
                 size="sm"
@@ -135,7 +153,8 @@ export function EnrollmentExpiryBanner() {
               <AlertDescription className="flex items-center justify-between gap-4">
                 <span className="text-amber-800 text-sm">
                   {subject} {enrollmentWord} in {programList} {programs.length > 1 ? "have" : "has"} no expiry date on file.{" "}
-                  Enroll through the Payments tab to keep your access active.
+                  Enroll through the Payments tab to keep your access active. If your player is on a club team,
+                  you can also enter the club subscription end date so we know when access should renew.
                 </span>
                 <Button
                   size="sm"

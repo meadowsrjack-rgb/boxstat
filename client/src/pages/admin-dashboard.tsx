@@ -2652,6 +2652,13 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
       if (user.role === "player" && checkPlayer(user)) return true;
       return linkedPlayersForUser.some((player: any) => checkPlayer(player));
     })();
+    // Task #248: Surface parent self-claimed enrollments distinctly so admins
+    // can verify them. A self-claim is always unpaid by definition, so this
+    // check runs before the generic Unpaid bucket below.
+    const hasSelfClaimedEnrollment = uniqueEnrollments.some((e: any) =>
+      e.status === 'active' && e.isSelfClaimed === true && !e.paymentId && !e.stripeSubscriptionId
+    );
+    if (hasSelfClaimedEnrollment) return "Self-Claimed";
     if (hasUnpaidEnrollment) return "Unpaid";
     if (hasActiveEnrollmentWithoutTeam) return "Needs Team";
     const hasActiveEnrollmentOnTeam = (() => {
@@ -3533,6 +3540,14 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                       <div className="flex items-center gap-2">
                                         {(() => {
                                           const isUnpaidGrant = enrollment.status === 'active' && enrollment.source === 'admin_assignment' && !enrollment.paymentId && !enrollment.stripeSubscriptionId;
+                                          const isSelfClaim = enrollment.status === 'active' && enrollment.source === 'self_claim' && !enrollment.paymentId && !enrollment.stripeSubscriptionId;
+                                          if (isSelfClaim) {
+                                            return (
+                                              <span className="text-xs text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded font-medium" data-testid={`badge-self-claim-${enrollment.enrollmentId}`}>
+                                                Self-Claimed{enrollment.endDate ? ` · pay by ${new Date(enrollment.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}
+                                              </span>
+                                            );
+                                          }
                                           return isUnpaidGrant ? (
                                             <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-medium" data-testid={`badge-unpaid-${enrollment.enrollmentId}`}>
                                               Unpaid{enrollment.endDate ? ` · pay by ${new Date(enrollment.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}
@@ -3636,8 +3651,25 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                         )}
                                       </div>
                                     )}
-                                    {/* Task #243: Admin controls for active unpaid admin_assignment grants */}
-                                    {!enrollment.isNew && enrollment.status === 'active' && enrollment.source === 'admin_assignment' && !enrollment.paymentId && !enrollment.stripeSubscriptionId && (
+                                    {/* Task #248: Claimed-vs-computed dates for parent self-claim enrollments */}
+                                    {!enrollment.isNew && enrollment.isSelfClaimed && (
+                                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 pt-2 border-t border-purple-100" data-testid={`self-claim-dates-${enrollment.enrollmentId}`}>
+                                        <div>
+                                          <label className="text-[10px] text-purple-700 uppercase">Parent claimed end</label>
+                                          <p className="text-xs text-gray-700">
+                                            {enrollment.selfClaimedEndDate ? new Date(enrollment.selfClaimedEndDate).toLocaleDateString() : 'Not provided'}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <label className="text-[10px] text-purple-700 uppercase">Computed pay-by</label>
+                                          <p className="text-xs text-gray-700">
+                                            {enrollment.endDate ? new Date(enrollment.endDate).toLocaleDateString() : '—'}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    )}
+                                    {/* Task #243 & #248: Admin controls for active unpaid admin_assignment OR self_claim grants */}
+                                    {!enrollment.isNew && enrollment.status === 'active' && (enrollment.source === 'admin_assignment' || enrollment.source === 'self_claim') && !enrollment.paymentId && !enrollment.stripeSubscriptionId && (
                                       <div className="mt-2 pt-2 border-t border-amber-100 flex flex-wrap items-end gap-2">
                                         <div>
                                           <label className="text-[10px] text-amber-700 uppercase block">Extend pay-by</label>
@@ -4260,6 +4292,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       {[
                         "Active",
                         "Invited",
+                        "Self-Claimed",
                         "Unpaid",
                         "Needs Team",
                         "Payment Failed",
@@ -4506,7 +4539,11 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                     return false;
                   })();
                   const hasAnyPaidEnrollment = activeEnrollments.some((e: any) => (e.paymentId || e.stripeSubscriptionId) && !e.isTryout);
+                  // Task #248: distinguish parent self-claimed enrollments from
+                  // generic admin-assigned unpaid grants in the row badge.
+                  const hasSelfClaimed = activeEnrollments.some((e: any) => e.isSelfClaimed === true && !e.paymentId && !e.stripeSubscriptionId);
                   if (hasLowBalance) return { label: "Low Balance", cls: "bg-yellow-400 text-yellow-900" };
+                  if (hasSelfClaimed && !hasAnyPaidEnrollment) return { label: "Self-Claimed", cls: "bg-purple-500 text-white" };
                   if (hasUnpaid && !hasAnyPaidEnrollment) return { label: "Unpaid", cls: "bg-orange-500 text-white" };
                   if (hasNeedsTeam) return { label: "Needs Team", cls: "bg-amber-500 text-white" };
                   if (hasActive) return { label: "Active", cls: "bg-green-600 text-white" };

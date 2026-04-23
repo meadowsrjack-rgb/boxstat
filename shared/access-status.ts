@@ -15,7 +15,7 @@ export interface AccessStatus {
   sourceLabel: string;
 }
 
-const SOURCE_LABELS: Record<AccessReason, string> = {
+export const SOURCE_LABELS: Record<AccessReason, string> = {
   paid: 'Source: paid Stripe subscription or one-time payment.',
   admin_grant: 'Source: admin-granted trial — pay by this date to keep access.',
   grace: 'Source: grace period after a missed payment.',

@@ -7139,6 +7139,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error fetching bulk status tags:', error);
     }
     
+    // Helper: derive a safe boolean indicating that this account was actually
+    // invited (has a live invite token) and hasn't completed sign-up yet. The
+    // raw invite token is stripped before sending to the client.
+    const stripInviteToken = (u: any) => {
+      const hasPendingInvite = u.status === 'invited' && !!u.inviteToken;
+      const { inviteToken, ...rest } = u;
+      return { ...rest, hasPendingInvite };
+    };
+
     // Enrich players with status tags and active team memberships
     const enrichedPlayers = players.map((player: any) => {
       const statusTag = statusTagsMap.get(player.id) || { tag: player.paymentStatus === 'pending' ? 'payment_due' : 'none' };
@@ -7159,7 +7168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasTryoutMembership = activeTeams.some((t: any) => t?.isTryout);
       
       return {
-        ...player,
+        ...stripInviteToken(player),
         statusTag: statusTag.tag || 'none',
         remainingCredits: statusTag.remainingCredits,
         lowBalance: statusTag.lowBalance,
@@ -7171,7 +7180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Add explicit null statusTag to non-players for consistent sorting
     const enrichedNonPlayers = nonPlayers.map((user: any) => ({
-      ...user,
+      ...stripInviteToken(user),
       statusTag: null,
       teamIds: [],
       activeTeams: [],

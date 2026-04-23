@@ -2954,7 +2954,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     if (filterRoles.size > 0 && !filterRoles.has(user.role)) return false;
     if (filterStatuses.size > 0) {
       const status = deriveUserStatus(user);
-      const isInvited = user.status === 'invited' || user.hasRegistered === false;
+      const isInvited = user.hasPendingInvite === true;
       const matches = filterStatuses.has(status) || (filterStatuses.has('Invited') && isInvited);
       if (!matches) return false;
     }
@@ -4422,7 +4422,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
         {/* Bulk Action Bar */}
         {selectedUserIds.size > 0 && (() => {
           const selectedInvitedIds = users
-            .filter((u: any) => selectedUserIds.has(u.id) && (u.status === 'invited' || u.hasRegistered === false))
+            .filter((u: any) => selectedUserIds.has(u.id) && u.hasPendingInvite === true)
             .map((u: any) => u.id);
           return (
             <div className="flex items-center gap-4 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg">
@@ -4951,7 +4951,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                        {(user.status === 'invited' || user.hasRegistered === false) && (
+                        {user.hasPendingInvite === true && (
                           <>
                             {user.role !== 'player' && (
                               <button

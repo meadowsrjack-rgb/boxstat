@@ -9970,7 +9970,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           alerts.push({
             type: 'pending_player_approvals',
             count: pendingApprovals.length,
-            message: `${pendingApprovals.length} player request${pendingApprovals.length > 1 ? 's' : ''} awaiting approval`,
+            message: `${pendingApprovals.length} player${pendingApprovals.length > 1 ? 's are' : ' is'} waiting for your approval`,
             details: pendingApprovals.map((p) => ({
               playerId: p.id,
               playerName: `${p.firstName || ''} ${p.lastName || ''}`.trim(),
@@ -9981,6 +9981,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (alertErr) {
         console.error('[admin alerts] Failed to load pending approvals:', alertErr);
+      }
+
+      // Task #262: Invited users who haven't claimed their account.
+      try {
+        const invitedNotClaimed = orgUsers.filter((u: any) =>
+          u.isActive !== false &&
+          u.approvalStatus !== 'pending' &&
+          u.approvalStatus !== 'rejected' &&
+          (u.status === 'invited' || u.hasRegistered === false)
+        );
+        if (invitedNotClaimed.length > 0) {
+          alerts.push({
+            type: 'invited_not_claimed',
+            count: invitedNotClaimed.length,
+            message: `${invitedNotClaimed.length} invited user${invitedNotClaimed.length > 1 ? 's haven\'t' : " hasn't"} claimed their account`,
+            details: invitedNotClaimed.slice(0, 25).map((u: any) => ({
+              userId: u.id,
+              name: `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+              email: u.email,
+            })),
+          });
+        }
+      } catch (alertErr) {
+        console.error('[admin alerts] Failed to load invited-not-claimed users:', alertErr);
       }
 
       res.json(alerts);

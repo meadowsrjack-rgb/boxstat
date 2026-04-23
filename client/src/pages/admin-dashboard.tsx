@@ -567,8 +567,28 @@ export default function AdminDashboard() {
               payment_overdue: { icon: DollarSign, bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-800', tab: 'users' },
               pending_requests: { icon: Clock, bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', tab: 'events' },
               missing_location: { icon: MapPinOff, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800', tab: 'events' },
+              invited_not_claimed: { icon: Mail, bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-800', tab: 'users' },
+              pending_player_approvals: { icon: UserPlus, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800', tab: 'overview' },
             };
             const config = alertConfig[alert.type] || { icon: AlertCircle, bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-800', tab: 'overview' };
+            const handleAlertClick = () => {
+              if (alert.type === 'invited_not_claimed') {
+                setActiveTab('users');
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', 'users');
+                url.searchParams.set('filter', 'invited');
+                window.history.replaceState({}, '', url.toString());
+                window.dispatchEvent(new CustomEvent('admin-users-apply-filter', { detail: { filter: 'invited' } }));
+              } else if (alert.type === 'pending_player_approvals') {
+                setActiveTab('overview');
+                setTimeout(() => {
+                  const el = document.getElementById('pending-player-approvals-card');
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+              } else {
+                setActiveTab(config.tab);
+              }
+            };
             const Icon = config.icon;
             const isCompleting = completingAlerts.has(alert.type);
             return (
@@ -590,22 +610,43 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <>
+                    {alert.type === 'invited_not_claimed' || alert.type === 'pending_player_approvals' ? (
+                      <div
+                        className={`p-1.5 rounded-full border-2 border-current ${config.text} shrink-0`}
+                        title="This alert clears automatically when the count reaches zero"
+                      >
+                        <AlertTriangle className="w-3 h-3" />
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDismissAlert(alert.type);
+                        }}
+                        className={`p-1.5 rounded-full border-2 border-current ${config.text} hover:bg-green-100 hover:border-green-600 hover:text-green-600 transition-colors shrink-0`}
+                        title="Mark as reviewed"
+                      >
+                        <Check className="w-3 h-3" />
+                      </button>
+                    )}
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDismissAlert(alert.type);
-                      }}
-                      className={`p-1.5 rounded-full border-2 border-current ${config.text} hover:bg-green-100 hover:border-green-600 hover:text-green-600 transition-colors shrink-0`}
-                      title="Mark as reviewed"
-                    >
-                      <Check className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => setActiveTab(config.tab)}
+                      onClick={handleAlertClick}
                       className="flex-1 flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
                     >
                       <div className="flex-1 min-w-0">
                         <span className={`text-sm font-medium ${config.text}`}>{alert.message}</span>
+                        {alert.type === 'invited_not_claimed' && alert.details?.length > 0 && (
+                          <p className="text-xs text-purple-600 mt-0.5 truncate">
+                            {alert.details.slice(0, 3).map((d: any) => d.name || d.email || 'Unknown').join(', ')}
+                            {alert.details.length > 3 && ` +${alert.details.length - 3} more`} · click to review &amp; resend invites
+                          </p>
+                        )}
+                        {alert.type === 'pending_player_approvals' && alert.details?.length > 0 && (
+                          <p className="text-xs text-amber-700 mt-0.5 truncate">
+                            {alert.details.slice(0, 3).map((d: any) => d.playerName || 'Player').join(', ')}
+                            {alert.details.length > 3 && ` +${alert.details.length - 3} more`} · click to approve or reject
+                          </p>
+                        )}
                         {alert.type === 'low_credits' && alert.details?.length > 0 && (
                           <p className="text-xs text-orange-600 mt-0.5 truncate">
                             {alert.details.slice(0, 3).map((d: any) => `${d.profileName} (${d.remainingCredits} left)`).join(', ')}
@@ -908,7 +949,9 @@ export default function AdminDashboard() {
               />
             )}
 
-            <PendingPlayerApprovalsCard />
+            <div id="pending-player-approvals-card" className="scroll-mt-24">
+              <PendingPlayerApprovalsCard />
+            </div>
 
             <RecentTransactionsCard payments={payments} users={users} programs={programs} isAdmin={currentUser?.role === 'admin' || hasAdminProfile} />
           </TabsContent>
@@ -1899,8 +1942,38 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<any>(null);
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [filterRoles, setFilterRoles] = useState<Set<string>>(new Set());
-  const [filterStatuses, setFilterStatuses] = useState<Set<string>>(new Set());
+  const [filterStatuses, setFilterStatuses] = useState<Set<string>>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('filter') === 'invited') return new Set(['Invited']);
+    }
+    return new Set();
+  });
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
+
+  // Task #262: Allow alert tiles to apply the Invited filter dynamically.
+  useEffect(() => {
+    const handler = (e: any) => {
+      if (e?.detail?.filter === 'invited') {
+        setFilterStatuses(new Set(['Invited']));
+      }
+    };
+    window.addEventListener('admin-users-apply-filter', handler);
+    return () => window.removeEventListener('admin-users-apply-filter', handler);
+  }, []);
+
+  // Strip the ?filter=invited query param after we apply it once so other
+  // navigations don't keep re-applying it.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('filter') === 'invited') {
+      params.delete('filter');
+      const search = params.toString();
+      const newUrl = window.location.pathname + (search ? `?${search}` : '') + window.location.hash;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
   const [usersPage, setUsersPage] = useState(1);
   const USERS_PAGE_SIZE = 50;
   const tableRef = useDragScroll();
@@ -4698,6 +4771,27 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       <div className="flex flex-wrap items-center gap-1">
                         <Badge className={`${summaryStatus.cls} whitespace-nowrap text-[10px] px-1.5 py-0.5`}>{summaryStatus.label}</Badge>
                         {(user.status === 'invited' || user.hasRegistered === false) && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!user.email) {
+                                  toast({ title: 'No email on file', variant: 'destructive' });
+                                  return;
+                                }
+                                if (confirm(`Resend invite email to ${user.email}? Any previously-shared invite links will be invalidated.`)) {
+                                  bulkResendInvites.mutate([user.id]);
+                                }
+                              }}
+                              disabled={bulkResendInvites.isPending || !user.email}
+                              className="inline-flex items-center gap-0.5 text-[10px] border border-blue-300 text-blue-700 bg-white hover:bg-blue-100 px-1.5 py-0.5 rounded-full whitespace-nowrap disabled:opacity-50"
+                              title={user.email ? `Resend invite to ${user.email}` : 'No email on file'}
+                              data-testid={`button-row-resend-invite-${user.id}`}
+                            >
+                              <Send className="w-2.5 h-2.5" />
+                              Resend
+                            </button>
                           <span
                             className="inline-flex items-center text-[10px] border border-blue-300 text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full cursor-help whitespace-nowrap"
                             title={
@@ -4709,6 +4803,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                           >
                             Invited
                           </span>
+                          </>
                         )}
                       </div>
                     </TableCell>
@@ -17172,34 +17267,66 @@ function PendingPlayerApprovalsCard() {
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : (
-          pending.map((p) => (
-            <div
-              key={p.id}
-              className="flex items-center justify-between rounded-md border bg-amber-50 px-3 py-2"
-              data-testid={`row-pending-${p.id}`}
-            >
-              <div>
-                <p className="font-medium text-gray-900">
-                  {p.firstName} {p.lastName}
-                </p>
-                <p className="text-xs text-gray-600">
-                  Parent: {p.parentName || p.parentEmail || "Unknown"} · Team: {p.requestedTeamName || "—"}
-                </p>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setSelected(p);
-                  setExpiry("");
-                  setOpen(true);
-                }}
-                data-testid={`button-review-${p.id}`}
+          pending.map((p) => {
+            const isApproving = approveMutation.isPending && approveMutation.variables?.playerId === p.id;
+            const isRejecting = rejectMutation.isPending && rejectMutation.variables === p.id;
+            const isBusy = isApproving || isRejecting;
+            return (
+              <div
+                key={p.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-amber-50 px-3 py-2"
+                data-testid={`row-pending-${p.id}`}
               >
-                Review
-              </Button>
-            </div>
-          ))
+                <div className="min-w-0">
+                  <p className="font-medium text-gray-900">
+                    {p.firstName} {p.lastName}
+                  </p>
+                  <p className="text-xs text-gray-600 truncate">
+                    Parent: {p.parentName || p.parentEmail || "Unknown"} · Team: {p.requestedTeamName || "—"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-green-300 text-green-700 hover:bg-green-50"
+                    disabled={isBusy}
+                    onClick={() => approveMutation.mutate({ playerId: p.id })}
+                    data-testid={`button-inline-approve-${p.id}`}
+                  >
+                    {isApproving ? "Approving…" : "Approve"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-red-300 text-red-700 hover:bg-red-50"
+                    disabled={isBusy}
+                    onClick={() => {
+                      if (confirm(`Reject ${p.firstName} ${p.lastName}? This removes the request.`)) {
+                        rejectMutation.mutate(p.id);
+                      }
+                    }}
+                    data-testid={`button-inline-reject-${p.id}`}
+                  >
+                    {isRejecting ? "Rejecting…" : "Reject"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={isBusy}
+                    onClick={() => {
+                      setSelected(p);
+                      setExpiry("");
+                      setOpen(true);
+                    }}
+                    data-testid={`button-review-${p.id}`}
+                  >
+                    More…
+                  </Button>
+                </div>
+              </div>
+            );
+          })
         )}
       </CardContent>
 

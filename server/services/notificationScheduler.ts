@@ -94,6 +94,15 @@ export class NotificationScheduler {
     });
     this.jobs.set('invitedClaimReminders', invitedClaimRemindersJob);
 
+    // Task #262: Daily digest for stranded onboarding states (invited-not-claimed
+    // and pending-approval). Runs every morning; deduped per org per day per type.
+    const strandedOnboardingDigestJob = cron.schedule('0 9 * * *', async () => {
+      await this.processStrandedOnboardingDigest();
+    }, {
+      scheduled: false
+    });
+    this.jobs.set('strandedOnboardingDigest', strandedOnboardingDigestJob);
+
     this.jobs.set('eventReminders', eventReminderJob);
     this.jobs.set('checkinAvailable', checkinAvailableJob);
     this.jobs.set('rsvpClosing', rsvpClosingJob);
@@ -1491,6 +1500,133 @@ export class NotificationScheduler {
   // Manual trigger for campaigns (testing)
   async triggerCampaignProcessor() {
     await this.processScheduledCampaigns();
+  }
+
+  async triggerStrandedOnboardingDigest() {
+    await this.processStrandedOnboardingDigest();
+  }
+
+  // Task #262: Daily digest reminding admins about invited users who never
+  // claimed their account and parent-added players awaiting approval. Sends at
+  // most one notification per type per org per day so we don't spam admins.
+  private async processStrandedOnboardingDigest() {
+    try {
+      console.log('[Stranded Onboarding] Running daily digest...');
+      const allOrgs = await storage.getAllOrganizations();
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+      for (const org of allOrgs) {
+        const orgId = org.id;
+
+        const adminIds = await getOrgAdminIds(orgId);
+        if (adminIds.length === 0) continue;
+
+        // 1) Invited users who never claimed their account.
+        try {
+          const invitedRows = await db.select({
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            email: users.email,
+          })
+            .from(users)
+            .where(and(
+              eq(users.organizationId, orgId),
+              sql`(${users.status} = 'invited' OR ${users.hasRegistered} IS NOT TRUE)`,
+              sql`(${users.approvalStatus} IS NULL OR ${users.approvalStatus} NOT IN ('pending','rejected'))`,
+              sql`(${users.isActive} IS NULL OR ${users.isActive} = TRUE)`,
+            ));
+
+          if (invitedRows.length > 0) {
+            // Stable dedup token per (org, type, date) stored in sentBy so it
+            // is invisible to users yet still queryable. Independent of count
+            // so a changing count during the day cannot trigger a duplicate.
+            const dedupSentBy = `system:stranded:invited:${today}`;
+            const existing = await db.select({ id: notifications.id })
+              .from(notifications)
+              .where(and(
+                eq(notifications.organizationId, orgId),
+                eq(notifications.sentBy, dedupSentBy),
+              ))
+              .limit(1);
+
+            if (existing.length === 0) {
+              const sample = invitedRows.slice(0, 3)
+                .map(u => `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || 'Unknown')
+                .join(', ');
+              const more = invitedRows.length > 3 ? ` +${invitedRows.length - 3} more` : '';
+              await adminNotificationService.createNotification({
+                organizationId: orgId,
+                types: ['notification'],
+                title: `${invitedRows.length} invited user${invitedRows.length > 1 ? 's' : ''} not yet claimed`,
+                message: `${invitedRows.length} invited user${invitedRows.length > 1 ? 's haven\'t' : " hasn't"} claimed their account yet: ${sample}${more}. Resend their invites from the Users tab.`,
+                recipientTarget: 'users',
+                recipientUserIds: adminIds,
+                deliveryChannels: ['in_app', 'email'],
+                sentBy: dedupSentBy,
+                status: 'sent',
+              }, { url: '/admin-dashboard?tab=users&filter=invited' });
+              console.log(`[Stranded Onboarding] Notified ${adminIds.length} admin(s) of ${invitedRows.length} invited-not-claimed user(s) in org ${orgId}`);
+            }
+          }
+        } catch (invitedErr) {
+          console.error(`[Stranded Onboarding] Invited digest failed for org ${orgId}:`, invitedErr);
+        }
+
+        // 2) Players awaiting parent-claim approval.
+        try {
+          const pendingRows = await db.select({
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName,
+          })
+            .from(users)
+            .where(and(
+              eq(users.requestedOrgId, orgId),
+              eq(users.approvalStatus, 'pending'),
+            ));
+
+          if (pendingRows.length > 0) {
+            // Stable dedup token per (org, type, date) stored in sentBy so it
+            // is invisible to users yet still queryable. Independent of count
+            // so a changing count during the day cannot trigger a duplicate.
+            const dedupSentBy = `system:stranded:approvals:${today}`;
+            const existing = await db.select({ id: notifications.id })
+              .from(notifications)
+              .where(and(
+                eq(notifications.organizationId, orgId),
+                eq(notifications.sentBy, dedupSentBy),
+              ))
+              .limit(1);
+
+            if (existing.length === 0) {
+              const sample = pendingRows.slice(0, 3)
+                .map(u => `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Player')
+                .join(', ');
+              const more = pendingRows.length > 3 ? ` +${pendingRows.length - 3} more` : '';
+              await adminNotificationService.createNotification({
+                organizationId: orgId,
+                types: ['notification'],
+                title: `${pendingRows.length} player${pendingRows.length > 1 ? 's' : ''} waiting for approval`,
+                message: `${pendingRows.length} player${pendingRows.length > 1 ? 's are' : ' is'} waiting for your approval: ${sample}${more}. Review them on the dashboard.`,
+                recipientTarget: 'users',
+                recipientUserIds: adminIds,
+                deliveryChannels: ['in_app', 'email'],
+                sentBy: dedupSentBy,
+                status: 'sent',
+              }, { url: '/admin-dashboard?tab=overview' });
+              console.log(`[Stranded Onboarding] Notified ${adminIds.length} admin(s) of ${pendingRows.length} pending approval(s) in org ${orgId}`);
+            }
+          }
+        } catch (pendingErr) {
+          console.error(`[Stranded Onboarding] Pending-approval digest failed for org ${orgId}:`, pendingErr);
+        }
+      }
+
+      console.log('[Stranded Onboarding] Daily digest complete');
+    } catch (err) {
+      console.error('[Stranded Onboarding] Fatal error:', err);
+    }
   }
 }
 

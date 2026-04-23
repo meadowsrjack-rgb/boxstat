@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, useSearch } from "wouter";
@@ -79,16 +79,12 @@ export default function RegistrationFlow() {
   const search = useSearch();
   const { toast } = useToast();
 
-  const { data: organizations = [] } = useQuery<Array<{ id: string; name: string; logoUrl?: string; sportType: string; primaryColor: string; secondaryColor: string }>>({
-    queryKey: ['/api/organizations/public'],
-  });
-  
   const urlParams = new URLSearchParams(window.location.search);
   const verifiedEmail = urlParams.get('email');
   const isVerified = urlParams.get('verified') === 'true';
   const urlOrganizationId = urlParams.get('organizationId');
   
-  const [currentStep, setCurrentStep] = useState(verifiedEmail && isVerified ? 3 : 1);
+  const [currentStep, setCurrentStep] = useState(verifiedEmail && isVerified ? 2 : 1);
   const [emailSent, setEmailSent] = useState(false);
   const [isPollingVerification, setIsPollingVerification] = useState(false);
   const [verificationSessionId, setVerificationSessionId] = useState<string | null>(null);
@@ -103,23 +99,31 @@ export default function RegistrationFlow() {
     password?: string;
   }>({
     email: verifiedEmail || undefined,
-    organizationId: (verifiedEmail && isVerified && urlOrganizationId) ? urlOrganizationId : undefined,
+    organizationId: urlOrganizationId || undefined,
     players: [],
   });
   
   // Watch URL for verified=true (e.g., from deep-link verification while
-  // sitting on step 2 "Waiting for verification..."). When the deep link
+  // sitting on step 1 "Waiting for verification..."). When the deep link
   // handler navigates the in-app router to /registration?email=...&verified=true,
   // the component is already mounted, so the useState initializer above does
-  // not re-run. This effect picks up the new URL and advances to step 3.
+  // not re-run. This effect picks up the new URL and advances to step 2
+  // (the intent step). It also hydrates the organizationId from the URL
+  // whenever it appears, even before verification completes.
   useEffect(() => {
     const params = new URLSearchParams(search || window.location.search);
     const emailFromUrl = params.get('email');
     const verifiedFromUrl = params.get('verified') === 'true';
     const orgFromUrl = params.get('organizationId');
 
+    if (orgFromUrl) {
+      setRegistrationData((prev) => (
+        prev.organizationId ? prev : { ...prev, organizationId: orgFromUrl }
+      ));
+    }
+
     if (verifiedFromUrl && emailFromUrl) {
-      setCurrentStep((prev) => (prev < 3 ? 3 : prev));
+      setCurrentStep((prev) => (prev < 2 ? 2 : prev));
       setRegistrationData((prev) => ({
         ...prev,
         email: prev.email || emailFromUrl,
@@ -131,7 +135,7 @@ export default function RegistrationFlow() {
 
   // Poll for email verification status when waiting for user to verify
   useEffect(() => {
-    if (!emailSent || !registrationData.email || currentStep !== 2) return;
+    if (!emailSent || !registrationData.email || currentStep !== 1) return;
     
     setIsPollingVerification(true);
     
@@ -158,7 +162,7 @@ export default function RegistrationFlow() {
             description: "Continuing with registration...",
           });
           // Move to next step
-          setCurrentStep(3);
+          setCurrentStep(2);
         }
       } catch (error) {
         console.error("Error checking verification status:", error);
@@ -217,7 +221,7 @@ export default function RegistrationFlow() {
     };
   }, [emailSent, registrationData.email, currentStep, verificationSessionId, toast]);
 
-  const totalSteps = registrationData.registrationType === "my_child" ? 7 : 6;
+  const totalSteps = registrationData.registrationType === "my_child" ? 6 : 5;
 
   const registrationMutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -309,15 +313,14 @@ export default function RegistrationFlow() {
   };
 
   const getStepTitle = () => {
-    if (currentStep === 1) return "Select Your Organization";
-    if (currentStep === 2) return "Enter Your Email";
-    if (currentStep === 3) return "Who are you registering for?";
-    if (currentStep === 4 && registrationData.registrationType === "myself") return "Your Information";
-    if (currentStep === 4 && registrationData.registrationType === "my_child") return "Parent/Guardian Information";
-    if (currentStep === 5) return "Your Address";
-    if (currentStep === 6 && registrationData.registrationType === "my_child") return "Player Information";
-    if ((currentStep === 6 && registrationData.registrationType === "myself") ||
-        (currentStep === 7 && registrationData.registrationType === "my_child")) return "Create Account";
+    if (currentStep === 1) return "Enter Your Email";
+    if (currentStep === 2) return "Who are you registering for?";
+    if (currentStep === 3 && registrationData.registrationType === "myself") return "Your Information";
+    if (currentStep === 3 && registrationData.registrationType === "my_child") return "Parent/Guardian Information";
+    if (currentStep === 4) return "Your Address";
+    if (currentStep === 5 && registrationData.registrationType === "my_child") return "Player Information";
+    if ((currentStep === 5 && registrationData.registrationType === "myself") ||
+        (currentStep === 6 && registrationData.registrationType === "my_child")) return "Create Account";
     return "Email Verification";
   };
 
@@ -378,17 +381,7 @@ export default function RegistrationFlow() {
 
           {/* Step Content */}
           <div>
-            {currentStep === 1 && (
-              <OrganizationSelectionStep
-                organizations={organizations}
-                onSelect={(orgId) => {
-                  setRegistrationData({ ...registrationData, organizationId: orgId });
-                  handleNext();
-                }}
-              />
-            )}
-
-            {currentStep === 2 && !emailSent && (
+            {currentStep === 1 && !emailSent && (
               <EmailEntryStep
                 organizationId={registrationData.organizationId || "default-org"}
                 onSubmit={(data, emailCheckData, sessionId) => {
@@ -405,7 +398,7 @@ export default function RegistrationFlow() {
               />
             )}
             
-            {currentStep === 2 && emailSent && (
+            {currentStep === 1 && emailSent && (
               <div className="text-center py-8">
                 <div className="mx-auto w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mb-6">
                   <Mail className="w-10 h-10 text-red-500" />
@@ -441,7 +434,7 @@ export default function RegistrationFlow() {
               </div>
             )}
 
-            {currentStep === 3 && (
+            {currentStep === 2 && (
               <RegistrationIntentStep
                 email={registrationData.email}
                 emailCheckData={registrationData.emailCheckData}
@@ -452,7 +445,7 @@ export default function RegistrationFlow() {
               />
             )}
 
-            {currentStep === 4 && registrationData.registrationType === "myself" && (
+            {currentStep === 3 && registrationData.registrationType === "myself" && (
               <PlayerInfoStep
                 email={registrationData.email}
                 emailCheckData={registrationData.emailCheckData}
@@ -467,7 +460,7 @@ export default function RegistrationFlow() {
               />
             )}
 
-            {currentStep === 4 && registrationData.registrationType === "my_child" && (
+            {currentStep === 3 && registrationData.registrationType === "my_child" && (
               <ParentInfoStep
                 email={registrationData.email}
                 emailCheckData={registrationData.emailCheckData}
@@ -478,7 +471,7 @@ export default function RegistrationFlow() {
               />
             )}
 
-            {currentStep === 5 && (
+            {currentStep === 4 && (
               <AddressInfoStep
                 onSubmit={(data) => {
                   setRegistrationData({ ...registrationData, addressInfo: data });
@@ -488,7 +481,7 @@ export default function RegistrationFlow() {
               />
             )}
 
-            {currentStep === 6 && registrationData.registrationType === "my_child" && (
+            {currentStep === 5 && registrationData.registrationType === "my_child" && (
               <PlayerListStep
                 players={registrationData.players}
                 onUpdate={(players) => {
@@ -498,8 +491,8 @@ export default function RegistrationFlow() {
               />
             )}
 
-            {((currentStep === 6 && registrationData.registrationType === "myself") ||
-              (currentStep === 7 && registrationData.registrationType === "my_child")) && (
+            {((currentStep === 5 && registrationData.registrationType === "myself") ||
+              (currentStep === 6 && registrationData.registrationType === "my_child")) && (
               <AccountCreationStep
                 onSubmit={handleSubmitRegistration}
                 isLoading={registrationMutation.isPending}
@@ -547,45 +540,6 @@ export default function RegistrationFlow() {
 }
 
 // Step Components
-
-function OrganizationSelectionStep({
-  organizations,
-  onSelect,
-}: {
-  organizations: Array<{ id: string; name: string; logoUrl?: string; sportType: string }>;
-  onSelect: (orgId: string) => void;
-}) {
-  return (
-    <div className="space-y-4">
-      <p className="text-gray-400 text-lg leading-relaxed">
-        Which organization are you joining?
-      </p>
-      <div className="space-y-3">
-        {organizations.map((org) => (
-          <button
-            key={org.id}
-            onClick={() => onSelect(org.id)}
-            className="w-full p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-red-500/50 transition-all text-left flex items-center gap-4"
-            data-testid={`org-select-${org.id}`}
-          >
-            <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
-              {org.logoUrl ? (
-                <img src={org.logoUrl} alt={org.name} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-red-500 font-bold text-lg">{org.name.charAt(0)}</span>
-              )}
-            </div>
-            <div>
-              <h3 className="text-white font-semibold text-lg">{org.name}</h3>
-              <p className="text-gray-400 text-sm capitalize">{org.sportType}</p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-500 ml-auto" />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function EmailEntryStep({ 
   onSubmit,

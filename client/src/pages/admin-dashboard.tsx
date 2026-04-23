@@ -529,21 +529,50 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/alerts"],
   });
 
-  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(() => {
+  const getLocalDateString = () => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+  const [dismissedAlerts, setDismissedAlerts] = useState<Record<string, string>>(() => {
     try {
       const stored = localStorage.getItem('dismissedAdminAlerts');
-      return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch { return new Set(); }
+      if (!stored) return {};
+      const parsed = JSON.parse(stored);
+      const today = getLocalDateString();
+      if (Array.isArray(parsed)) {
+        const migrated: Record<string, string> = {};
+        for (const t of parsed) {
+          if (typeof t === 'string') migrated[t] = today;
+        }
+        try { localStorage.setItem('dismissedAdminAlerts', JSON.stringify(migrated)); } catch {}
+        return migrated;
+      }
+      if (parsed && typeof parsed === 'object') {
+        const pruned: Record<string, string> = {};
+        for (const [k, v] of Object.entries(parsed)) {
+          if (v === today) pruned[k] = today;
+        }
+        if (Object.keys(pruned).length !== Object.keys(parsed).length) {
+          try { localStorage.setItem('dismissedAdminAlerts', JSON.stringify(pruned)); } catch {}
+        }
+        return pruned;
+      }
+      return {};
+    } catch { return {}; }
   });
   const [completingAlerts, setCompletingAlerts] = useState<Set<string>>(new Set());
-  const visibleAlerts = adminAlerts.filter((a: any) => !dismissedAlerts.has(a.type) && a.type !== 'unassigned_players');
+  const today = getLocalDateString();
+  const visibleAlerts = adminAlerts.filter((a: any) => dismissedAlerts[a.type] !== today && a.type !== 'unassigned_players');
 
   const handleDismissAlert = (alertType: string) => {
     setCompletingAlerts(prev => new Set([...prev, alertType]));
     setTimeout(() => {
       setDismissedAlerts(prev => {
-        const next = new Set([...prev, alertType]);
-        try { localStorage.setItem('dismissedAdminAlerts', JSON.stringify([...next])); } catch {}
+        const next = { ...prev, [alertType]: getLocalDateString() };
+        try { localStorage.setItem('dismissedAdminAlerts', JSON.stringify(next)); } catch {}
         return next;
       });
       setCompletingAlerts(prev => {
@@ -751,12 +780,16 @@ export default function AdminDashboard() {
                 ) : (
                   <>
                     {alert.type === 'invited_not_claimed' || alert.type === 'pending_player_approvals' || alert.type === 'pending_self_claims' ? (
-                      <div
-                        className={`p-1.5 rounded-full border-2 border-current ${config.text} shrink-0`}
-                        title="This alert clears automatically when the count reaches zero"
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDismissAlert(alert.type);
+                        }}
+                        className={`p-1.5 rounded-full border-2 border-current ${config.text} hover:bg-green-100 hover:border-green-600 hover:text-green-600 transition-colors shrink-0`}
+                        title="Mark as reviewed"
                       >
                         <AlertTriangle className="w-3 h-3" />
-                      </div>
+                      </button>
                     ) : (
                       <button
                         onClick={(e) => {

@@ -284,6 +284,55 @@ function useTabCycleScroll(tabValues: string[], activeTab: string, setActiveTab:
   return ref;
 }
 
+// Task #268: Pending invite chip with the same hover/tap-friendly access
+// status reveal as RosterChip below. No remove button — pending invites
+// are managed elsewhere — so the whole chip is the popover trigger.
+function PendingInviteChip({
+  player,
+  accessStatus,
+}: {
+  player: any;
+  accessStatus: import("@shared/access-status").AccessStatus;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span
+      className="inline-flex items-stretch rounded-full bg-amber-100 text-amber-800 text-xs font-medium overflow-hidden"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 px-2 py-1 hover:bg-amber-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+            data-testid={`chip-pending-invite-player-${player.id}`}
+            aria-label={`Show access status for ${player.firstName} ${player.lastName}`}
+          >
+            {player.firstName} {player.lastName}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          side="top"
+          align="start"
+          className="w-auto max-w-xs p-2"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <div className="flex flex-col gap-1">
+            <AccessUntilLine
+              status={accessStatus}
+              showTooltip={false}
+              className="text-xs"
+              testId={`access-until-pending-chip-${player.id}`}
+            />
+            <span className="text-[10px] text-gray-500">{accessStatus.sourceLabel}</span>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </span>
+  );
+}
+
 // Task #266: Roster chip with hover- and tap-friendly access status reveal.
 // The chip body opens a Popover (controlled) on hover, focus, or tap/click,
 // and a separate X button performs the destructive remove action so that a
@@ -15365,14 +15414,16 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
                         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
                           <p className="text-xs font-semibold text-amber-700 mb-2">Pending Invites — {editingTeamPendingPlayers.length} player{editingTeamPendingPlayers.length !== 1 ? 's' : ''} awaiting enrollment</p>
                           <div className="flex flex-wrap gap-1.5">
-                            {editingTeamPendingPlayers.map((p: any) => (
-                              <span
-                                key={p.id}
-                                className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full font-medium"
-                              >
-                                {p.firstName} {p.lastName}
-                              </span>
-                            ))}
+                            {editingTeamPendingPlayers.map((p: any) => {
+                              const accessStatus = getPlayerAccessStatusForTeam(p.id, editingTeam);
+                              return (
+                                <PendingInviteChip
+                                  key={p.id}
+                                  player={p}
+                                  accessStatus={accessStatus}
+                                />
+                              );
+                            })}
                           </div>
                         </div>
                       )}

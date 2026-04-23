@@ -1,5 +1,10 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { createElement, type ReactElement } from "react";
+import { QueryClient, QueryFunction, MutationCache } from "@tanstack/react-query";
 import { Capacitor } from '@capacitor/core';
+import { navigate } from "wouter/use-browser-location";
+import { toast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
+import { ACCESS_DENIED_ERROR_CODE } from "@shared/access-gate";
 
 // API base URL - use production backend when running in Capacitor native app
 const API_BASE_URL = Capacitor.isNativePlatform() 
@@ -13,11 +18,51 @@ function getFullUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
 }
 
-async function throwIfResNotOk(res: Response) {
-  if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+/**
+ * Error thrown by apiRequest / getQueryFn when the shared backend access
+ * guard rejects a request with a structured ENROLLMENT_ACCESS_DENIED 403.
+ * Carries the plain-English message and accessUntil from the server so the
+ * global handler can surface the unified paywall toast without the call site
+ * having to parse the response itself.
+ */
+export class AccessDeniedError extends Error {
+  code = ACCESS_DENIED_ERROR_CODE;
+  reason: string | null;
+  accessUntil: string | null;
+  constructor(message: string, reason: string | null, accessUntil: string | null) {
+    super(message || "This feature is locked.");
+    this.name = "AccessDeniedError";
+    this.reason = reason;
+    this.accessUntil = accessUntil;
   }
+}
+
+export function isAccessDeniedError(err: unknown): err is AccessDeniedError {
+  if (err instanceof AccessDeniedError) return true;
+  if (!err || typeof err !== "object") return false;
+  const code = (err as { code?: unknown }).code;
+  return code === ACCESS_DENIED_ERROR_CODE;
+}
+
+async function throwIfResNotOk(res: Response) {
+  if (res.ok) return;
+  const text = (await res.text()) || res.statusText;
+  if (res.status === 403) {
+    try {
+      const body = JSON.parse(text);
+      if (body && body.error === ACCESS_DENIED_ERROR_CODE) {
+        throw new AccessDeniedError(
+          body.message,
+          body.reason ?? null,
+          body.accessUntil ?? null,
+        );
+      }
+    } catch (e) {
+      if (e instanceof AccessDeniedError) throw e;
+      // Not JSON or not our structured 403 — fall through to generic error.
+    }
+  }
+  throw new Error(`${res.status}: ${text}`);
 }
 
 export async function apiRequest(
@@ -106,7 +151,41 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
+// Throttle the global access-denied toast so a burst of failing mutations or
+// query refetches only surfaces a single paywall notice.
+let lastAccessDeniedToastAt = 0;
+function showAccessDeniedToast(err: AccessDeniedError) {
+  const now = Date.now();
+  if (now - lastAccessDeniedToastAt < 1500) return;
+  lastAccessDeniedToastAt = now;
+  // Defer one tick so this toast wins over any generic per-call onError toast
+  // (the toaster only renders the most recently added entry).
+  setTimeout(() => {
+    toast({
+      title: "This feature is locked",
+      description: err.message,
+      variant: "destructive",
+      action: createElement(
+        ToastAction,
+        {
+          altText: "Go to Payments",
+          onClick: () => navigate("/unified-account?tab=payments"),
+          "data-testid": "toast-access-denied-pay",
+        },
+        "Go to Payments",
+      ) as ReactElement<typeof ToastAction>,
+    });
+  }, 0);
+}
+
+function handleMutationError(err: unknown) {
+  if (isAccessDeniedError(err)) {
+    showAccessDeniedToast(err);
+  }
+}
+
 export const queryClient = new QueryClient({
+  mutationCache: new MutationCache({ onError: handleMutationError }),
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),

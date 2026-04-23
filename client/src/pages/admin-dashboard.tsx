@@ -6,6 +6,8 @@ import StorePurchaseBanner from "@/components/StorePurchaseBanner";
 import EnrollmentAssignmentBanner from "@/components/EnrollmentAssignmentBanner";
 import { AccessUntilLine } from "@/components/AccessUntilLine";
 import { computeAccessStatus } from "@shared/access-status";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { STATUS_EXPLANATIONS, STATUS_LABELS, type UserStatusLabel } from "@/utils/statusExplanations";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BanterLoader } from "@/components/BanterLoader";
@@ -4486,38 +4488,43 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   </div>
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Status</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[
-                        "Active",
-                        "Invited",
-                        "Self-Claimed",
-                        "Unpaid",
-                        "Needs Team",
-                        "Payment Failed",
-                        "Low Balance",
-                        "Grace Period",
-                        "Expired",
-                        "No Enrollment",
-                      ].map((status) => (
-                        <button
-                          key={status}
-                          onClick={() => {
-                            setFilterStatuses(prev => {
-                              const next = new Set(prev);
-                              if (next.has(status)) next.delete(status); else next.add(status);
-                              return next;
-                            });
-                          }}
-                          className={`px-2 py-1 rounded-full text-xs font-medium border transition-colors ${
-                            filterStatuses.has(status)
-                              ? 'bg-blue-500 text-white border-blue-500'
-                              : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
-                          }`}
-                        >
-                          {status}
-                        </button>
-                      ))}
-                    </div>
+                    <TooltipProvider delayDuration={200}>
+                      <div className="flex flex-wrap gap-1.5">
+                        {STATUS_LABELS.map((status) => {
+                          const explain = STATUS_EXPLANATIONS[status];
+                          return (
+                            <Tooltip key={status}>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFilterStatuses(prev => {
+                                      const next = new Set(prev);
+                                      if (next.has(status)) next.delete(status); else next.add(status);
+                                      return next;
+                                    });
+                                  }}
+                                  className={`px-2 py-1 rounded-full text-xs font-medium border transition-colors ${
+                                    filterStatuses.has(status)
+                                      ? 'bg-blue-500 text-white border-blue-500'
+                                      : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                                  }`}
+                                  data-testid={`filter-status-chip-${status.toLowerCase().replace(/\s+/g, '-')}`}
+                                >
+                                  {status}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs text-xs leading-snug">
+                                <p className="font-semibold mb-1">{status}</p>
+                                <p className="mb-1">{explain.meaning}</p>
+                                <p className="mb-1"><span className="font-medium">How they got here:</span> {explain.howGotHere}</p>
+                                <p><span className="font-medium">To reach Active:</span> {explain.pathToActive}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
+                      </div>
+                    </TooltipProvider>
                   </div>
                 </div>
               </PopoverContent>
@@ -4750,6 +4757,25 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
 
                 const summaryStatus = getUserSummaryStatus();
 
+                const allProfileIdsForBilling = [user.id, ...linkedPlayers.map((p: any) => p.id)];
+                const billingEnrollments = enrollments.filter((e: any) =>
+                  allProfileIdsForBilling.includes(e.profileId) || allProfileIdsForBilling.includes(e.accountHolderId)
+                );
+                const accessStatusForRow = computeAccessStatus(billingEnrollments as any);
+                const formatBillingDate = (iso: string | null | undefined) => {
+                  if (!iso) return null;
+                  const d = new Date(iso);
+                  if (Number.isNaN(d.getTime())) return null;
+                  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                };
+                const expiryText = formatBillingDate(accessStatusForRow.accessUntil);
+                const nextPaymentCandidate =
+                  user.nextPaymentDate ||
+                  linkedPlayers.map((p: any) => p.nextPaymentDate).find((d: any) => !!d) ||
+                  null;
+                const nextPaymentText = formatBillingDate(nextPaymentCandidate);
+                const statusExplain = STATUS_EXPLANATIONS[summaryStatus.label as UserStatusLabel];
+
                 return (
                   <TableRow key={user.id} className="cursor-pointer hover:bg-gray-50" onClick={() => setEditingUser(user)} data-testid={`row-user-${user.id}`}>
                     <TableCell className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
@@ -4841,7 +4867,39 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                     </TableCell>
                     <TableCell className="px-2 py-1.5" data-testid={`text-status-${user.id}`}>
                       <div className="flex flex-wrap items-center gap-1">
-                        <Badge className={`${summaryStatus.cls} whitespace-nowrap text-[10px] px-1.5 py-0.5`}>{summaryStatus.label}</Badge>
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge
+                                tabIndex={0}
+                                className={`${summaryStatus.cls} whitespace-nowrap text-[10px] px-1.5 py-0.5 cursor-help focus:outline-none focus:ring-2 focus:ring-blue-400`}
+                                data-testid={`badge-status-${user.id}`}
+                              >
+                                {summaryStatus.label}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs text-xs leading-snug">
+                              <p className="font-semibold mb-1">{summaryStatus.label}</p>
+                              {statusExplain && (
+                                <>
+                                  <p className="mb-1">{statusExplain.meaning}</p>
+                                  <p className="mb-1"><span className="font-medium">How they got here:</span> {statusExplain.howGotHere}</p>
+                                  <p className="mb-2"><span className="font-medium">To reach Active:</span> {statusExplain.pathToActive}</p>
+                                </>
+                              )}
+                              <div className="border-t pt-1 mt-1 space-y-0.5">
+                                <p>
+                                  <span className="font-medium">Subscription expires:</span>{' '}
+                                  {expiryText ? expiryText : 'no expiry on file'}
+                                </p>
+                                <p>
+                                  <span className="font-medium">Next payment due:</span>{' '}
+                                  {nextPaymentText ? nextPaymentText : 'no upcoming payment'}
+                                </p>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         {(user.status === 'invited' || user.hasRegistered === false) && (
                           <>
                             {user.role !== 'player' && (

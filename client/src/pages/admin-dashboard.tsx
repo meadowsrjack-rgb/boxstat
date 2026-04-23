@@ -701,6 +701,7 @@ export default function AdminDashboard() {
               missing_location: { icon: MapPinOff, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800', tab: 'events' },
               invited_not_claimed: { icon: Mail, bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-800', tab: 'users' },
               pending_player_approvals: { icon: UserPlus, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800', tab: 'overview' },
+              pending_self_claims: { icon: UserPlus, bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-800', tab: 'users' },
             };
             const config = alertConfig[alert.type] || { icon: AlertCircle, bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-800', tab: 'overview' };
             const handleAlertClick = () => {
@@ -717,6 +718,13 @@ export default function AdminDashboard() {
                   const el = document.getElementById('pending-player-approvals-card');
                   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }, 100);
+              } else if (alert.type === 'pending_self_claims') {
+                setActiveTab('users');
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', 'users');
+                url.searchParams.set('filter', 'self_claimed');
+                window.history.replaceState({}, '', url.toString());
+                window.dispatchEvent(new CustomEvent('admin-users-apply-filter', { detail: { filter: 'self_claimed' } }));
               } else {
                 setActiveTab(config.tab);
               }
@@ -742,7 +750,7 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <>
-                    {alert.type === 'invited_not_claimed' || alert.type === 'pending_player_approvals' ? (
+                    {alert.type === 'invited_not_claimed' || alert.type === 'pending_player_approvals' || alert.type === 'pending_self_claims' ? (
                       <div
                         className={`p-1.5 rounded-full border-2 border-current ${config.text} shrink-0`}
                         title="This alert clears automatically when the count reaches zero"
@@ -777,6 +785,12 @@ export default function AdminDashboard() {
                           <p className="text-xs text-amber-700 mt-0.5 truncate">
                             {alert.details.slice(0, 3).map((d: any) => d.playerName || 'Player').join(', ')}
                             {alert.details.length > 3 && ` +${alert.details.length - 3} more`} · click to approve or reject
+                          </p>
+                        )}
+                        {alert.type === 'pending_self_claims' && alert.details?.length > 0 && (
+                          <p className="text-xs text-purple-600 mt-0.5 truncate">
+                            {alert.details.slice(0, 3).map((d: any) => d.playerName || 'Player').join(', ')}
+                            {alert.details.length > 3 && ` +${alert.details.length - 3} more`} · click to verify or reject
                           </p>
                         )}
                         {alert.type === 'low_credits' && alert.details?.length > 0 && (
@@ -2088,6 +2102,8 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     const handler = (e: any) => {
       if (e?.detail?.filter === 'invited') {
         setFilterStatuses(new Set(['Invited']));
+      } else if (e?.detail?.filter === 'self_claimed') {
+        setFilterStatuses(new Set(['Self-Claimed']));
       }
     };
     window.addEventListener('admin-users-apply-filter', handler);
@@ -2099,7 +2115,9 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get('filter') === 'invited') {
+    const f = params.get('filter');
+    if (f === 'invited' || f === 'self_claimed') {
+      if (f === 'self_claimed') setFilterStatuses(new Set(['Self-Claimed']));
       params.delete('filter');
       const search = params.toString();
       const newUrl = window.location.pathname + (search ? `?${search}` : '') + window.location.hash;

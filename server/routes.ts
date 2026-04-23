@@ -5679,6 +5679,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return createdEnrollment;
       });
 
+      // Notify org admins so the self-claim shows up in their dashboard
+      // alerts and they can verify or reject it (Task #253).
+      if (enrollment) {
+        try {
+          await adminNotificationService.createNotification({
+            organizationId: team.organizationId!,
+            types: ['notification'],
+            title: 'New self-claimed player to verify',
+            message: `${player.firstName || ''} ${player.lastName || ''} (parent ${requester?.firstName || ''} ${requester?.lastName || ''}) self-claimed a spot on ${team.name}. Verify or reject in the admin dashboard.`,
+            recipientTarget: 'roles',
+            recipientRoles: ['admin'],
+            deliveryChannels: ['in_app', 'email', 'push'],
+            sentBy: userId,
+            status: 'sent',
+          }, { url: '/admin-dashboard?tab=overview' });
+        } catch (notifyError) {
+          console.error('[join-team] Failed to send admin notification:', notifyError);
+        }
+      }
+
       res.json({ success: true, enrollment, teamId: teamIdNum });
     } catch (error: any) {
       console.error('Error joining team via self-claim:', error);
@@ -9987,6 +10007,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (alertErr) {
         console.error('[admin alerts] Failed to load pending approvals:', alertErr);
+      }
+
+      // Pending self-claims: parent self-claimed a team spot but admin
+      // hasn't verified or rejected it yet (Task #248 + #253).
+      try {
+        const pendingSelfClaims = allEnrollments.filter((e: any) =>
+          e.source === 'self_claim'
+          && e.isSelfClaimed
+          && e.status === 'active'
+          && !e.selfClaimVerifiedAt
+          && !e.selfClaimRejectedAt
+        );
+        if (pendingSelfClaims.length > 0) {
+          const details: any[] = [];
+          for (const enrollment of pendingSelfClaims.slice(0, 25)) {
+            const profile = enrollment.profileId ? await storage.getUser(enrollment.profileId) : null;
+            const program = await storage.getProgram(enrollment.programId);
+            details.push({
+              enrollmentId: enrollment.id,
+              playerId: enrollment.profileId,
+              playerName: profile ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : 'Unknown',
+              programName: program?.name || 'Unknown Program',
+              claimedEndDate: enrollment.selfClaimedEndDate || null,
+              payByDate: enrollment.endDate || null,
+            });
+          }
+          alerts.push({
+            type: 'pending_self_claims',
+            count: pendingSelfClaims.length,
+            message: `${pendingSelfClaims.length} self-claimed player${pendingSelfClaims.length > 1 ? 's are' : ' is'} waiting for verification`,
+            details,
+          });
+        }
+      } catch (alertErr) {
+        console.error('[admin alerts] Failed to load pending self-claims:', alertErr);
       }
 
       // Task #262: Invited users who haven't claimed their account.

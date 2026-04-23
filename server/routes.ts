@@ -9595,7 +9595,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           eq(productEnrollments.organizationId, organizationId),
           eq(productEnrollments.status, 'active'),
           sql`${products.productCategory} IS DISTINCT FROM 'goods'`,
-          gte(productEnrollments.startDate, sql`NOW() - INTERVAL '30 days'`),
           sql`${users.role} IS DISTINCT FROM 'parent'`
         ))
         .orderBy(desc(productEnrollments.startDate));

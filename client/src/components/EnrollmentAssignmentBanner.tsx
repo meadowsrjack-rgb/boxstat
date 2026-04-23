@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Users, ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface PendingAssignmentsInfo {
   pendingCount: number;
@@ -10,21 +10,56 @@ interface PendingAssignmentsInfo {
   latestStartDate: string | null;
 }
 
+const STORAGE_KEY = "dismissedAssignmentBannerDate";
+
+function todayLocal(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export default function EnrollmentAssignmentBanner({ onNavigateToUsers }: { onNavigateToUsers?: () => void }) {
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissedToday, setDismissedToday] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEY) === todayLocal();
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored && stored !== todayLocal()) {
+        localStorage.removeItem(STORAGE_KEY);
+        setDismissedToday(false);
+      }
+    } catch {}
+  }, []);
 
   const { data } = useQuery<PendingAssignmentsInfo>({
     queryKey: ['/api/admin/pending-assignments'],
   });
 
-  if (dismissed || !data || data.pendingCount === 0) return null;
+  if (dismissedToday || !data || data.pendingCount === 0) return null;
+
+  const handleDismiss = () => {
+    try {
+      localStorage.setItem(STORAGE_KEY, todayLocal());
+    } catch {}
+    setDismissedToday(true);
+  };
 
   return (
     <div className="relative bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-xl p-4 mb-4 shadow-sm">
       <button
-        onClick={() => setDismissed(true)}
+        onClick={handleDismiss}
         className="absolute top-2 right-2 p-1 text-red-400 hover:text-red-600 transition-colors"
-        aria-label="Dismiss"
+        aria-label="Dismiss for today"
+        title="Dismiss for today"
+        data-testid="button-dismiss-assignment-banner"
       >
         <X className="w-4 h-4" />
       </button>

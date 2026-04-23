@@ -1630,7 +1630,7 @@ function InlineSchedulePanel({
 }
 
 export default function UnifiedAccount() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [eventDetailOpen, setEventDetailOpen] = useState(false);
@@ -1680,6 +1680,16 @@ export default function UnifiedAccount() {
   const initialTab = urlParams.get("tab") || "home";
   const shouldOpenPayment = urlParams.get("openPayment") === "true";
   const [parentDashTab, setParentDashTab] = useState(initialTab);
+
+  // React to in-app navigation that changes ?tab= while we're already mounted
+  // (e.g. clicking a "Payments" button on a banner from the Home tab).
+  useEffect(() => {
+    const search = window.location.search;
+    const tabFromUrl = new URLSearchParams(search).get("tab");
+    if (tabFromUrl && tabFromUrl !== parentDashTab) {
+      setParentDashTab(tabFromUrl);
+    }
+  }, [location]);
 
   useEffect(() => {
     if (shouldOpenPayment) {

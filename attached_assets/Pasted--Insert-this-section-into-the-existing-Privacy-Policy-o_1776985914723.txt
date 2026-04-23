@@ -1,0 +1,71 @@
+*Insert this section into the existing Privacy Policy on the website:
+
+
+SMS Messaging and Communications
+As part of our services, BoxStat may collect and use your phone number to send SMS (text) messages related to your account and use of the platform. These messages may include service notifications, reminders, updates, security alerts, customer support responses, and, where applicable, promotional communications.
+We use your phone number solely for communication purposes consistent with this Privacy Policy. The frequency of messages may vary depending on your interaction with our services.
+Message and data rates may apply in accordance with your mobile carrier plan.
+You may opt out of receiving SMS messages at any time by replying STOP to any message. You may also reply HELP for assistance or contact us directly using the contact information provided in this policy.
+We may share your phone number with third-party service providers that assist us in delivering SMS communications. These providers are contractually obligated to protect your information and use it only for the purpose of providing messaging services on our behalf.
+We retain records of messaging preferences and consent, where required, to comply with applicable laws and regulations.
+Your phone number and related communication data are handled in accordance with the data protection and security practices described in this Privacy Policy.
+
+
+
+================================================================
+
+Terms of Service
+
+
+Welcome to BoxStat. These Terms of Service (“Terms”) govern your access to and use of the BoxStat platform, including our website, mobile applications, and related services (collectively, the “Service”).
+By accessing or using the Service, you agree to be bound by these Terms.
+1. Use of the Service
+You agree to use the Service only for lawful purposes and in accordance with these Terms. You must not use the Service in any way that could damage, disable, or impair our platform or interfere with any other party’s use.
+You are responsible for ensuring that all information you provide is accurate and up to date.
+2. Account Registration
+To access certain features, you may be required to create an account. You agree to:
+Maintain the confidentiality of your login credentials
+Accept responsibility for all activities under your account
+Notify us immediately of any unauthorized use
+We reserve the right to suspend or terminate accounts that violate these Terms.
+3. Communications and Messaging
+By providing your contact information, including your phone number, you agree that BoxStat may contact you for purposes related to your use of the Service.
+These communications may include:
+Account notifications and updates
+Appointment or activity reminders
+Customer support communications
+Service-related announcements
+Optional promotional or marketing messages (where applicable)
+For SMS communications:
+Message frequency may vary
+Message and data rates may apply
+You may opt out at any time by replying STOP
+You may request assistance by replying HELP
+Your consent to receive communications is not a condition of purchase or use of the Service.
+4. User Content
+You may submit or upload content, including text, images, and other materials (“User Content”). You retain ownership of your content, but you grant BoxStat a non-exclusive, worldwide, royalty-free license to use, store, and display such content for the purpose of operating and improving the Service.
+You are solely responsible for your User Content and must ensure it does not violate any laws or third-party rights.
+5. Prohibited Conduct
+You agree not to:
+Use the Service for unlawful, fraudulent, or abusive purposes
+Upload or distribute harmful, offensive, or misleading content
+Attempt to gain unauthorized access to the Service or its systems
+Interfere with the security or functionality of the Service
+6. Intellectual Property
+All content, features, and functionality of the Service, including but not limited to text, graphics, logos, and software, are the property of BoxStat or its licensors and are protected by applicable intellectual property laws.
+You may not copy, modify, distribute, or create derivative works without our prior written consent.
+7. Third-Party Services
+The Service may integrate with or rely on third-party services. We are not responsible for the availability, accuracy, or practices of such third parties.
+Your use of third-party services may be subject to their own terms and policies.
+8. Termination
+We reserve the right to suspend or terminate your access to the Service at any time, with or without notice, if you violate these Terms or engage in conduct that we believe is harmful to the platform or other users.
+9. Disclaimer of Warranties
+The Service is provided on an “as is” and “as available” basis. We make no warranties, express or implied, regarding the reliability, availability, or suitability of the Service.
+10. Limitation of Liability
+To the fullest extent permitted by law, BoxStat shall not be liable for any indirect, incidental, special, or consequential damages arising out of or related to your use of the Service.
+11. Indemnification
+You agree to indemnify and hold harmless BoxStat, its affiliates, and its personnel from any claims, damages, or expenses arising out of your use of the Service or violation of these Terms.
+12. Changes to These Terms
+We may update these Terms from time to time. Continued use of the Service after changes are posted constitutes your acceptance of the revised Terms.
+13. Governing Law
+These Terms shall be governed by and interpreted in accordance with applicable laws, without regard to conflict of law principles.

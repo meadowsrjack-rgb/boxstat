@@ -93,6 +93,12 @@ export default function AddPlayer() {
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [createdPlayerId, setCreatedPlayerId] = useState<string | null>(null);
   const [wantsJoinTeam, setWantsJoinTeam] = useState<boolean>(false);
+  // Task #255: When the parent enters via the profile-gateway "Add player"
+  // entry, force a final team-selection step and submit the player as a
+  // pending approval request instead of the regular create flow.
+  const requestsApproval = returnTo === "profile-gateway";
+  const [approvalOrgId, setApprovalOrgId] = useState<string>("");
+  const [approvalTeamId, setApprovalTeamId] = useState<string>("");
   const [playerData, setPlayerData] = useState<{
     firstName?: string;
     lastName?: string;
@@ -176,6 +182,17 @@ export default function AddPlayer() {
     onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
 
+      // Task #255: profile-gateway approval flow returns directly to the
+      // gateway with a status toast and shows the new pending player.
+      if (response?.pending || requestsApproval) {
+        toast({
+          title: "Request sent",
+          description: response?.message || "We've sent the request to your club admin. We'll notify you once they approve it.",
+        });
+        setTimeout(() => setLocation("/profile-gateway"), 1000);
+        return;
+      }
+
       const newId = response?.player?.id || response?.id || null;
       if (newId && wantsJoinTeam) {
         // Stay on the wizard so the parent can finish the join-team step.
@@ -212,7 +229,9 @@ export default function AddPlayer() {
   // Payment is handled separately in the Payments section of parent dashboard
   const getStepFlow = () => {
     const base = ["name", "dob", "gender", "skill_level"];
-    if (wantsJoinTeam) base.push("join_team");
+    // Task #255: Team selection is a required final step in the gateway flow.
+    if (requestsApproval) base.push("approval_team");
+    else if (wantsJoinTeam) base.push("join_team");
     return base;
   };
 
@@ -302,11 +321,40 @@ export default function AddPlayer() {
               defaultValues={{ skillLevel: playerData.skillLevel || "" }}
               wantsJoinTeam={wantsJoinTeam}
               onWantsJoinTeamChange={setWantsJoinTeam}
+              hideJoinTeamToggle={requestsApproval}
+              isFinalStep={!requestsApproval}
               onSubmit={(data) => {
-                const finalData = { ...playerData, ...data };
-                addPlayerMutation.mutate(finalData);
+                const merged = { ...playerData, ...data };
+                setPlayerData(merged);
+                if (requestsApproval) {
+                  // Advance to required team selection; submission happens
+                  // on the team-selection step.
+                  handleNext();
+                  return;
+                }
+                addPlayerMutation.mutate(merged);
               }}
               onBack={handleBack}
+              isSubmitting={addPlayerMutation.isPending}
+            />
+          )}
+
+          {/* Task #255: Required team selection for the profile-gateway entry. */}
+          {currentStepName === "approval_team" && (
+            <ApprovalTeamStep
+              orgId={approvalOrgId}
+              teamId={approvalTeamId}
+              onChangeOrg={(value) => { setApprovalOrgId(value); setApprovalTeamId(""); }}
+              onChangeTeam={setApprovalTeamId}
+              onBack={handleBack}
+              onSubmit={() => {
+                addPlayerMutation.mutate({
+                  ...playerData,
+                  requiresApproval: true,
+                  requestedOrganizationId: approvalOrgId,
+                  requestedTeamId: parseInt(approvalTeamId, 10),
+                });
+              }}
               isSubmitting={addPlayerMutation.isPending}
             />
           )}
@@ -742,6 +790,8 @@ function SkillLevelStep({
   isSubmitting = false,
   wantsJoinTeam = false,
   onWantsJoinTeamChange,
+  hideJoinTeamToggle = false,
+  isFinalStep = true,
 }: {
   defaultValues: { skillLevel?: string };
   onSubmit: (data: SkillLevelData) => void;
@@ -749,6 +799,8 @@ function SkillLevelStep({
   isSubmitting?: boolean;
   wantsJoinTeam?: boolean;
   onWantsJoinTeamChange?: (v: boolean) => void;
+  hideJoinTeamToggle?: boolean;
+  isFinalStep?: boolean;
 }) {
   const form = useForm<SkillLevelData>({
     resolver: zodResolver(skillLevelSchema),
@@ -795,7 +847,7 @@ function SkillLevelStep({
             </FormItem>
           )}
         />
-        {onWantsJoinTeamChange && (
+        {onWantsJoinTeamChange && !hideJoinTeamToggle && (
           <div className="flex items-start gap-3 rounded-md border border-gray-700 bg-gray-800/50 p-3">
             <Checkbox
               id="join-team-toggle"
@@ -826,16 +878,111 @@ function SkillLevelStep({
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Adding...
               </>
-            ) : (
+            ) : isFinalStep ? (
               <>
                 <UserPlus className="w-4 h-4 mr-2" />
                 Add Player
               </>
+            ) : (
+              <>Next<ChevronRight className="w-4 h-4 ml-2" /></>
             )}
           </Button>
         </div>
       </form>
     </Form>
+  );
+}
+
+// Task #255: Required team-selection step shown to parents arriving from the
+// profile gateway. Captures org + team and submits the player as a pending
+// approval request.
+function ApprovalTeamStep({
+  orgId,
+  teamId,
+  onChangeOrg,
+  onChangeTeam,
+  onBack,
+  onSubmit,
+  isSubmitting,
+}: {
+  orgId: string;
+  teamId: string;
+  onChangeOrg: (v: string) => void;
+  onChangeTeam: (v: string) => void;
+  onBack: () => void;
+  onSubmit: () => void;
+  isSubmitting: boolean;
+}) {
+  const { data: orgs = [], isLoading: orgsLoading } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["/api/organizations/public"],
+  });
+  const { data: teams = [], isLoading: teamsLoading } = useQuery<{ id: number; name: string; division?: string | null; level?: string | null; season?: string | null }[]>({
+    queryKey: ["/api/organizations", orgId, "teams", "public"],
+    enabled: !!orgId,
+  });
+
+  const canSubmit = !!orgId && !!teamId && !isSubmitting;
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-amber-900/20 border border-amber-700/50 rounded-lg p-4">
+        <p className="text-amber-200 text-sm">
+          Pick the club and team your player is joining. The club admin will review and approve the request before the profile becomes active.
+        </p>
+      </div>
+
+      <div>
+        <Label className="text-gray-400">Club / Organization *</Label>
+        <Select value={orgId} onValueChange={onChangeOrg}>
+          <SelectTrigger className="bg-gray-800 border-gray-700 text-white" data-testid="select-approval-org">
+            <SelectValue placeholder={orgsLoading ? "Loading..." : "Select a club"} />
+          </SelectTrigger>
+          <SelectContent>
+            {orgs.map((o) => (
+              <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label className="text-gray-400">Team *</Label>
+        <Select value={teamId} onValueChange={onChangeTeam} disabled={!orgId}>
+          <SelectTrigger className="bg-gray-800 border-gray-700 text-white" data-testid="select-approval-team">
+            <SelectValue placeholder={!orgId ? "Pick a club first" : teamsLoading ? "Loading teams..." : (teams.length === 0 ? "No teams available" : "Select a team")} />
+          </SelectTrigger>
+          <SelectContent>
+            {teams.map((t) => {
+              const detail = [t.division, t.level, t.season].filter(Boolean).join(" • ");
+              return (
+                <SelectItem key={t.id} value={String(t.id)}>
+                  {t.name}{detail ? ` — ${detail}` : ""}
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex justify-between pt-6">
+        <button type="button" onClick={onBack} className="text-gray-400 hover:text-white transition-colors" disabled={isSubmitting}>
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+        <Button
+          type="button"
+          onClick={onSubmit}
+          disabled={!canSubmit}
+          className="bg-red-600 hover:bg-red-700 text-white"
+          data-testid="button-submit-approval-request"
+        >
+          {isSubmitting ? (
+            <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending...</>
+          ) : (
+            <><Check className="w-4 h-4 mr-2" />Send to admin</>
+          )}
+        </Button>
+      </div>
+    </div>
   );
 }
 

@@ -4937,6 +4937,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const playersWithSubscriptions = await Promise.all(
       players.map(async (player: any) => {
         try {
+          // Task #255: Pending-approval players have no subscriptions/team
+          // memberships yet; surface their status without running the regular
+          // enrollment lookups so they show up correctly in the gateway.
+          if (player.approvalStatus === 'pending') {
+            let requestedTeamName: string | null = null;
+            if (player.requestedTeamId) {
+              const team = allTeams.find((t: any) => t.id === player.requestedTeamId);
+              if (team) requestedTeamName = team.name;
+            }
+            return {
+              ...player,
+              activeSubscriptions: [],
+              statusTag: 'awaiting_approval',
+              approvalStatus: 'pending',
+              requestedTeamName,
+            };
+          }
           const subscriptions = await storage.getSubscriptionsByPlayerId(player.id);
           const statusTag = await storage.getPlayerStatusTag(player.id);
           
@@ -5087,7 +5104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const { firstName, lastName, dateOfBirth, gender, skillLevel, aauMembershipId, postalCode, concussionWaiverAcknowledged, clubAgreementAcknowledged, packageId, addOnIds, selectedPricingOptionId } = req.body;
+      const { firstName, lastName, dateOfBirth, gender, skillLevel, aauMembershipId, postalCode, concussionWaiverAcknowledged, clubAgreementAcknowledged, packageId, addOnIds, selectedPricingOptionId, requiresApproval, requestedOrganizationId, requestedTeamId } = req.body;
       
       // Validate required fields
       if (!firstName || !lastName) {
@@ -5099,10 +5116,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Package selection is now optional - players can be added without enrolling in a program
       // Program enrollment happens separately in the Payments section
-      
+
+      // Task #255: Profile-gateway add-player flow with admin approval gate.
+      // When the parent submits from the gateway, we require a team and create
+      // the player in a pending state instead of running the regular Stripe
+      // flow. Existing entry points (registration, legacy claim) are unaffected.
+      const isApprovalRequest = !!requiresApproval;
+      let requestedTeam: any = null;
+      if (isApprovalRequest) {
+        const teamIdNum = parseInt(String(requestedTeamId));
+        if (!Number.isInteger(teamIdNum) || teamIdNum <= 0 || !requestedOrganizationId) {
+          return res.status(400).json({
+            success: false,
+            message: "Please choose the club and team your player is joining.",
+          });
+        }
+        requestedTeam = await storage.getTeam(String(teamIdNum));
+        if (!requestedTeam || requestedTeam.organizationId !== requestedOrganizationId) {
+          return res.status(400).json({
+            success: false,
+            message: "The selected team could not be found.",
+          });
+        }
+      }
+
       // Child players don't need their own email - they're managed through parent's account
       // The unique email constraint only applies to parent accounts (account_holder_id IS NULL)
-      
+
       // Create child player user
       const playerUser = await storage.createUser({
         organizationId: user.organizationId,
@@ -5120,11 +5160,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clubAgreementAcknowledged: clubAgreementAcknowledged || false,
         clubAgreementDate: clubAgreementAcknowledged ? new Date().toISOString() : null,
         accountHolderId: id,
-        packageSelected: packageId || null, // Optional now
+        packageSelected: isApprovalRequest ? null : (packageId || null), // Optional now
         teamAssignmentStatus: "pending",
-        hasRegistered: !packageId, // If no package, mark as registered immediately
+        hasRegistered: isApprovalRequest ? false : !packageId,
+        // Pending players are inactive until an admin approves the request.
         verified: true, // Child profiles are auto-verified through parent
-        isActive: true,
+        isActive: !isApprovalRequest,
+        approvalStatus: isApprovalRequest ? "pending" : null,
+        requestedTeamId: isApprovalRequest ? requestedTeam!.id : null,
+        requestedOrgId: isApprovalRequest ? requestedOrganizationId : null,
         awards: [],
         totalPractices: 0,
         totalGames: 0,
@@ -5132,7 +5176,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         videosCompleted: 0,
         yearsActive: 0,
       });
-      
+
+      if (isApprovalRequest) {
+        // Notify admins of the requested team's organization.
+        try {
+          await adminNotificationService.createNotification({
+            organizationId: requestedTeam.organizationId,
+            types: ['notification'],
+            title: 'New player awaiting approval',
+            message: `${firstName} ${lastName} (parent ${user.firstName || ''} ${user.lastName || ''}) is requesting to join ${requestedTeam.name}.`,
+            recipientTarget: 'roles',
+            recipientRoles: ['admin'],
+            deliveryChannels: ['in_app', 'email', 'push'],
+            sentBy: id,
+            status: 'sent',
+          }, { url: '/admin-dashboard?tab=overview' });
+        } catch (notifyError) {
+          console.error('[add-player approval] Failed to send admin notification:', notifyError);
+        }
+
+        return res.json({
+          success: true,
+          player: playerUser,
+          pending: true,
+          message: "Request sent to the club admin. We'll let you know when they approve it.",
+        });
+      }
+
       // If no package selected, just return success with the new player
       if (!packageId) {
         return res.json({
@@ -5594,6 +5664,217 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error joining team via self-claim:', error);
       res.status(500).json({ success: false, message: error.message || 'Failed to join team' });
+    }
+  });
+
+  // ==========================================================================
+  // Task #255: Admin pending player approval workflow
+  // ==========================================================================
+  // Profile-gateway add-player submissions create the player in
+  // `approval_status = 'pending'` (no team membership, no enrollment, no
+  // payment). Org admins approve (with/without expiry) or reject below.
+
+  async function loadPendingPlayersForOrg(orgId: string) {
+    const rows = await db.select().from(users).where(
+      and(eq(users.requestedOrgId, orgId), eq(users.approvalStatus, 'pending'))
+    );
+    const detailed: any[] = [];
+    for (const row of rows) {
+      const parent = row.accountHolderId ? await storage.getUser(row.accountHolderId) : null;
+      const team = row.requestedTeamId ? await storage.getTeam(String(row.requestedTeamId)) : null;
+      detailed.push({
+        id: row.id,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        dateOfBirth: row.dateOfBirth,
+        createdAt: row.createdAt,
+        requestedTeamId: row.requestedTeamId,
+        requestedTeamName: team?.name || null,
+        requestedOrgId: row.requestedOrgId,
+        parentId: row.accountHolderId,
+        parentName: parent ? `${parent.firstName || ''} ${parent.lastName || ''}`.trim() : null,
+        parentEmail: parent?.email || null,
+      });
+    }
+    return detailed;
+  }
+
+  async function notifyParentOfApprovalDecision(
+    parentId: string,
+    organizationId: string,
+    title: string,
+    message: string,
+    actionUrl?: string,
+  ) {
+    try {
+      await adminNotificationService.createNotification({
+        organizationId,
+        types: ['notification'],
+        title,
+        message,
+        recipientTarget: 'specific',
+        recipientUserIds: [parentId],
+        deliveryChannels: ['in_app', 'email', 'push'],
+        sentBy: 'system',
+        status: 'sent',
+      }, actionUrl ? { url: actionUrl } : undefined);
+    } catch (notifyError) {
+      console.error('[pending-approval] Failed to notify parent:', notifyError);
+    }
+  }
+
+  app.get('/api/admin/pending-player-approvals', requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role, id: userId } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(userId, organizationId);
+      if (!isAdminUser) return res.status(403).json({ message: 'Admin access required' });
+      const pending = await loadPendingPlayersForOrg(organizationId);
+      res.json({ success: true, pending });
+    } catch (error: any) {
+      console.error('Error listing pending player approvals:', error);
+      res.status(500).json({ success: false, message: error.message || 'Failed to load pending approvals' });
+    }
+  });
+
+  app.post('/api/admin/pending-player-approvals/:playerId/approve', requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role, id: adminId } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(adminId, organizationId);
+      if (!isAdminUser) return res.status(403).json({ message: 'Admin access required' });
+
+      const { playerId } = req.params;
+      const { expiryDate } = req.body || {};
+
+      const player = await storage.getUser(playerId);
+      if (!player || player.approvalStatus !== 'pending') {
+        return res.status(404).json({ success: false, message: 'Pending player not found' });
+      }
+      if (player.requestedOrgId !== organizationId) {
+        return res.status(403).json({ message: 'This request belongs to another organization' });
+      }
+      if (!player.requestedTeamId || !player.accountHolderId) {
+        return res.status(400).json({ success: false, message: 'Pending player is missing team or parent info' });
+      }
+
+      const team = await storage.getTeam(String(player.requestedTeamId));
+      if (!team) {
+        return res.status(400).json({ success: false, message: 'Requested team no longer exists' });
+      }
+
+      let endDateIso: string | null = null;
+      if (expiryDate) {
+        const parsed = new Date(expiryDate);
+        if (isNaN(parsed.getTime())) {
+          return res.status(400).json({ success: false, message: 'Invalid expiry date' });
+        }
+        endDateIso = parsed.toISOString();
+      }
+
+      await db.transaction(async (tx) => {
+        // Activate the player and clear pending markers. The player stays on
+        // the parent's organization (the existing join-team flow does the same
+        // — see the self-claim path) so /api/account/players continues to
+        // return them on the parent's gateway even when the requested team
+        // belongs to a different org. Team membership covers the cross-org
+        // relationship below.
+        await tx.update(users)
+          .set({
+            approvalStatus: 'approved',
+            isActive: true,
+            // When approved without expiry the parent must complete payment
+            // before they can use the profile, so flag paymentStatus pending
+            // to drive the existing `payment_due` routing on the gateway.
+            paymentStatus: endDateIso ? 'active' : 'pending',
+            packageSelected: team.programId || player.packageSelected,
+          })
+          .where(eq(users.id, playerId));
+
+        if (endDateIso && team.programId) {
+          // Approve-with-expiry: create an enrollment that covers the parent
+          // through the supplied date and add them to the team roster.
+          await tx.insert(productEnrollments).values({
+            organizationId: team.organizationId,
+            programId: team.programId,
+            accountHolderId: player.accountHolderId!,
+            profileId: playerId,
+            status: 'active',
+            source: 'admin_assignment',
+            endDate: endDateIso,
+            autoRenew: false,
+            metadata: { approvedFromGatewayRequest: true, approvedBy: adminId },
+          });
+
+          await tx.insert(teamMemberships)
+            .values({
+              teamId: team.id,
+              profileId: playerId,
+              role: 'player',
+              status: 'active',
+            })
+            .onConflictDoNothing({ target: [teamMemberships.teamId, teamMemberships.profileId] });
+        }
+      });
+
+      const teamLabel = team.name;
+      if (endDateIso) {
+        await notifyParentOfApprovalDecision(
+          player.accountHolderId!,
+          team.organizationId!,
+          'Player approved',
+          `${player.firstName || ''} ${player.lastName || ''}`.trim() + ` has been approved for ${teamLabel}.`,
+          '/profile-gateway',
+        );
+      } else {
+        await notifyParentOfApprovalDecision(
+          player.accountHolderId!,
+          team.organizationId!,
+          'Player approved — payment required',
+          `${player.firstName || ''} ${player.lastName || ''}`.trim() + ` is approved for ${teamLabel}. Complete payment to activate the profile.`,
+          '/profile-gateway',
+        );
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error approving pending player:', error);
+      res.status(500).json({ success: false, message: error.message || 'Failed to approve player' });
+    }
+  });
+
+  app.post('/api/admin/pending-player-approvals/:playerId/reject', requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role, id: adminId } = req.user;
+      const isAdminUser = role === 'admin' || await hasAdminProfile(adminId, organizationId);
+      if (!isAdminUser) return res.status(403).json({ message: 'Admin access required' });
+
+      const { playerId } = req.params;
+      const player = await storage.getUser(playerId);
+      if (!player || player.approvalStatus !== 'pending') {
+        return res.status(404).json({ success: false, message: 'Pending player not found' });
+      }
+      if (player.requestedOrgId !== organizationId) {
+        return res.status(403).json({ message: 'This request belongs to another organization' });
+      }
+
+      const parentId = player.accountHolderId;
+      const playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim();
+
+      await db.delete(users).where(eq(users.id, playerId));
+
+      if (parentId) {
+        await notifyParentOfApprovalDecision(
+          parentId,
+          organizationId,
+          'Player request declined',
+          `${playerName} was not approved by the club admin.`,
+          '/profile-gateway',
+        );
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error rejecting pending player:', error);
+      res.status(500).json({ success: false, message: error.message || 'Failed to reject player' });
     }
   });
 
@@ -9662,6 +9943,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eventType: e.eventType,
           })),
         });
+      }
+
+      // Task #255: Pending player approval requests for this organization.
+      try {
+        const pendingApprovals = await loadPendingPlayersForOrg(organizationId);
+        if (pendingApprovals.length > 0) {
+          alerts.push({
+            type: 'pending_player_approvals',
+            count: pendingApprovals.length,
+            message: `${pendingApprovals.length} player request${pendingApprovals.length > 1 ? 's' : ''} awaiting approval`,
+            details: pendingApprovals.map((p) => ({
+              playerId: p.id,
+              playerName: `${p.firstName || ''} ${p.lastName || ''}`.trim(),
+              parentName: p.parentName,
+              teamName: p.requestedTeamName,
+            })),
+          });
+        }
+      } catch (alertErr) {
+        console.error('[admin alerts] Failed to load pending approvals:', alertErr);
       }
 
       res.json(alerts);

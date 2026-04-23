@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Shield, ChevronRight, Settings, LogOut, Crown, Bug, ArrowDown } from "lucide-react";
+import { User, Shield, ChevronRight, Settings, LogOut, Crown, Bug, ArrowDown, CirclePlus } from "lucide-react";
 import { BanterLoader } from "@/components/BanterLoader";
 import OpenBoxStatPrompt from "@/components/OpenBoxStatPrompt";
 import { Badge } from "@/components/ui/badge";
@@ -216,6 +216,15 @@ export default function ProfileGateway() {
     } else if (type === "player" && playerId) {
       localStorage.setItem("selectedPlayerId", playerId);
       localStorage.setItem("viewingAsParent", "true");
+      // Task #255: Players approved without an expiry date are flagged
+      // payment_due — route the parent straight into the payments wizard
+      // so they can complete payment before using the profile.
+      const target = players.find((p: any) => p.id === playerId);
+      const targetTag = target?.statusTag || (target?.paymentStatus === "pending" ? "payment_due" : "none");
+      if (targetTag === "payment_due") {
+        setLocation(`/unified-account?tab=payments&openPayment=true&profileId=${playerId}`);
+        return;
+      }
       setLocation("/player-dashboard");
     }
   };
@@ -404,6 +413,7 @@ export default function ProfileGateway() {
           )}
 
           {players.map((player: any) => {
+            const isPending = player.approvalStatus === 'pending' || player.statusTag === 'awaiting_approval';
             const statusTag = player.statusTag || (player.paymentStatus === "pending" ? "payment_due" : "none");
             
             const getTagConfig = (tag: string) => {
@@ -448,8 +458,17 @@ export default function ProfileGateway() {
             return (
               <Card 
                 key={player.id}
-                className="bg-gray-800/50 border-gray-700 hover:bg-gray-800 transition-all cursor-pointer group"
-                onClick={() => handleSelectProfile("player", player.id)}
+                className={`bg-gray-800/50 border-gray-700 transition-all group ${isPending ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-800 cursor-pointer'}`}
+                onClick={() => {
+                  if (isPending) {
+                    toast({
+                      title: 'Awaiting club admin approval',
+                      description: `${player.firstName || 'This profile'} can be used once the club admin approves the request.`,
+                    });
+                    return;
+                  }
+                  handleSelectProfile("player", player.id);
+                }}
                 data-testid={`card-player-${player.id}`}
               >
                 <CardContent className="p-4 flex items-center gap-4">
@@ -464,7 +483,15 @@ export default function ProfileGateway() {
                       <h3 className="text-lg font-semibold text-white">
                         {player.firstName} {player.lastName}
                       </h3>
-                      {tagConfig && (
+                      {isPending ? (
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-amber-500/20 border-amber-500/50 text-amber-300"
+                          data-testid={`badge-pending-${player.id}`}
+                        >
+                          Awaiting approval
+                        </Badge>
+                      ) : tagConfig && (
                         <Badge 
                           variant="outline" 
                           className={`text-xs ${tagConfig.className}`}
@@ -475,14 +502,40 @@ export default function ProfileGateway() {
                       )}
                     </div>
                     <p className="text-sm text-gray-400">
-                      {tagConfig ? tagConfig.description : "Player dashboard"}
+                      {isPending
+                        ? `Waiting on club admin${player.requestedTeamName ? ` for ${player.requestedTeamName}` : ''}`
+                        : tagConfig ? tagConfig.description : "Player dashboard"}
                     </p>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
+                  {!isPending && (
+                    <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
+                  )}
                 </CardContent>
               </Card>
             );
           })}
+
+          {/* Task #255: Add player entry — shown for parent and admin
+              account holders (the audiences that can manage child profiles).
+              Pure-coach sessions are excluded to avoid a dead-end UX. */}
+          {(userRole === 'parent' || userRole === 'admin' || isAdmin) && (
+          <Card
+            className="bg-gray-800/30 border-gray-700 border-dashed hover:bg-gray-800 transition-all cursor-pointer group"
+            onClick={() => setLocation('/add-player?returnTo=profile-gateway')}
+            data-testid="card-add-player"
+          >
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-gray-700/60 flex items-center justify-center group-hover:bg-gray-700 transition-colors">
+                <CirclePlus className="w-8 h-8 text-gray-300" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-white">Add player</h3>
+                <p className="text-sm text-gray-400">Submit a request for a club admin to approve</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
+            </CardContent>
+          </Card>
+          )}
 
         </div>
         </div>

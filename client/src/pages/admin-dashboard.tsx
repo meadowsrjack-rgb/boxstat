@@ -906,6 +906,8 @@ export default function AdminDashboard() {
               />
             )}
 
+            <PendingPlayerApprovalsCard />
+
             <RecentTransactionsCard payments={payments} users={users} programs={programs} isAdmin={currentUser?.role === 'admin' || hasAdminProfile} />
           </TabsContent>
 
@@ -17108,5 +17110,149 @@ function FacilitiesTab({ organization }: { organization: any }) {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+// Task #255: Pending player approval admin card
+function PendingPlayerApprovalsCard() {
+  const { data, isLoading } = useQuery<{ success: boolean; pending: any[] }>({
+    queryKey: ["/api/admin/pending-player-approvals"],
+  });
+  const pending = data?.pending || [];
+
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<any | null>(null);
+  const [expiry, setExpiry] = useState<string>("");
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-player-approvals"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/alerts"] });
+  };
+
+  const approveMutation = useMutation({
+    mutationFn: async (vars: { playerId: string; expiryDate?: string }) =>
+      apiRequest(`/api/admin/pending-player-approvals/${vars.playerId}/approve`, {
+        method: "POST",
+        data: { expiryDate: vars.expiryDate || undefined },
+      }),
+    onSuccess: () => {
+      refresh();
+      setOpen(false);
+      setSelected(null);
+      setExpiry("");
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async (playerId: string) =>
+      apiRequest(`/api/admin/pending-player-approvals/${playerId}/reject`, {
+        method: "POST",
+      }),
+    onSuccess: () => {
+      refresh();
+      setOpen(false);
+      setSelected(null);
+    },
+  });
+
+  if (!isLoading && pending.length === 0) return null;
+
+  return (
+    <Card data-testid="card-pending-player-approvals">
+      <CardHeader>
+        <CardTitle>Players awaiting approval</CardTitle>
+        <CardDescription>
+          New player profiles requested from the parent gateway. Approve with an expiry date to enroll the player automatically, approve without to ask the parent to complete payment, or reject to remove the request.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : (
+          pending.map((p) => (
+            <div
+              key={p.id}
+              className="flex items-center justify-between rounded-md border bg-amber-50 px-3 py-2"
+              data-testid={`row-pending-${p.id}`}
+            >
+              <div>
+                <p className="font-medium text-gray-900">
+                  {p.firstName} {p.lastName}
+                </p>
+                <p className="text-xs text-gray-600">
+                  Parent: {p.parentName || p.parentEmail || "Unknown"} · Team: {p.requestedTeamName || "—"}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setSelected(p);
+                  setExpiry("");
+                  setOpen(true);
+                }}
+                data-testid={`button-review-${p.id}`}
+              >
+                Review
+              </Button>
+            </div>
+          ))
+        )}
+      </CardContent>
+
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setSelected(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Review player request</DialogTitle>
+            <DialogDescription>
+              {selected
+                ? `${selected.firstName} ${selected.lastName} — ${selected.requestedTeamName || "team"}`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium text-gray-700">Approve with expiry date</label>
+              <Input
+                type="date"
+                value={expiry}
+                onChange={(e) => setExpiry(e.target.value)}
+                data-testid="input-approval-expiry"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Setting an expiry creates an enrollment that ends on that date and adds the player to the team roster.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-wrap gap-2">
+            <Button
+              variant="destructive"
+              onClick={() => selected && rejectMutation.mutate(selected.id)}
+              disabled={!selected || rejectMutation.isPending}
+              data-testid="button-reject-approval"
+            >
+              {rejectMutation.isPending ? "Rejecting…" : "Reject"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => selected && approveMutation.mutate({ playerId: selected.id })}
+              disabled={!selected || approveMutation.isPending}
+              data-testid="button-approve-no-expiry"
+            >
+              {approveMutation.isPending && !expiry ? "Approving…" : "Approve without expiry"}
+            </Button>
+            <Button
+              onClick={() => selected && approveMutation.mutate({ playerId: selected.id, expiryDate: expiry })}
+              disabled={!selected || !expiry || approveMutation.isPending}
+              data-testid="button-approve-with-expiry"
+            >
+              {approveMutation.isPending && expiry ? "Approving…" : "Approve with expiry"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
   );
 }

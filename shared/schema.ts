@@ -325,6 +325,13 @@ export const users = pgTable("users", {
   subscriptionEndDate: date("subscription_end_date"),
   parentEmail: varchar("parent_email", { length: 255 }),
   skillLevel: varchar("skill_level"), // 'beginner', 'intermediate', 'advanced'
+  // Task #255: profile-gateway add-player flow with admin approval gate.
+  // approvalStatus is null for legacy/auto-approved profiles. When a parent
+  // adds a player from the profile gateway it is set to 'pending' until an
+  // org admin approves or rejects.
+  approvalStatus: varchar("approval_status"), // 'pending' | 'approved' | 'rejected'
+  requestedTeamId: integer("requested_team_id"),
+  requestedOrgId: varchar("requested_org_id"),
 });
 // NOTE: Email uniqueness is enforced via a partial unique index in the database
 // Only parent/account holder accounts (account_holder_id IS NULL) require unique emails

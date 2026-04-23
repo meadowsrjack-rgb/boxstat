@@ -4469,24 +4469,6 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                 <Trash2 className="w-4 h-4 mr-2" />
                 {bulkDeleteUsers.isPending ? "Deleting..." : "Delete Selected"}
               </Button>
-              {selectedInvitedIds.length > 0 && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => {
-                    if (confirm(`Resend invite emails to ${selectedInvitedIds.length} unclaimed account(s)? Any previously-shared invite links will be invalidated.`)) {
-                      bulkResendInvites.mutate(selectedInvitedIds);
-                    }
-                  }}
-                  disabled={bulkResendInvites.isPending}
-                  data-testid="button-bulk-resend-invites"
-                >
-                  <Mail className="w-4 h-4 mr-2" />
-                  {bulkResendInvites.isPending
-                    ? "Sending..."
-                    : `Resend Invites (${selectedInvitedIds.length})`}
-                </Button>
-              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -4980,28 +4962,6 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                         </TooltipProvider>
                         {user.hasPendingInvite === true && (
                           <>
-                            {user.role !== 'player' && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (!user.email) {
-                                    toast({ title: 'No email on file', variant: 'destructive' });
-                                    return;
-                                  }
-                                  if (confirm(`Resend invite email to ${user.email}? Any previously-shared invite links will be invalidated.`)) {
-                                    bulkResendInvites.mutate([user.id]);
-                                  }
-                                }}
-                                disabled={bulkResendInvites.isPending || !user.email}
-                                className="inline-flex items-center gap-0.5 text-[10px] border border-blue-300 text-blue-700 bg-white hover:bg-blue-100 px-1.5 py-0.5 rounded-full whitespace-nowrap disabled:opacity-50"
-                                title={user.email ? `Resend invite to ${user.email}` : 'No email on file'}
-                                data-testid={`button-row-resend-invite-${user.id}`}
-                              >
-                                <Send className="w-2.5 h-2.5" />
-                                Resend
-                              </button>
-                            )}
                           <span
                             className="inline-flex items-center text-[10px] border border-blue-300 text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full cursor-help whitespace-nowrap"
                             title={

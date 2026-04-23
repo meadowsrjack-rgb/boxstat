@@ -1318,7 +1318,9 @@ export class NotificationScheduler {
       const nowIso = now.toISOString();
       const INVITE_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
       const DAY_MS = 24 * 60 * 60 * 1000;
-      const REMINDER_DAYS = [2, 5];
+      // Follow-up cadence: first reminder 1 day after invite, second reminder
+      // 3 days after that (i.e. day 4). No manual resend exists anymore.
+      const REMINDER_DAYS = [1, 4];
       const MAX_REMINDERS = REMINDER_DAYS.length;
 
       const candidates = await db

@@ -205,6 +205,32 @@ export default function PrivacyPolicy() {
               </p>
             </section>
 
+            {/* SMS Messaging and Communications */}
+            <section>
+              <h2>SMS Messaging and Communications</h2>
+              <p>
+                As part of our services, BoxStat may collect and use your phone number to send SMS (text) messages related to your account and use of the platform. These messages may include service notifications, reminders, updates, security alerts, customer support responses, and, where applicable, promotional communications.
+              </p>
+              <p>
+                We use your phone number solely for communication purposes consistent with this Privacy Policy. The frequency of messages may vary depending on your interaction with our services.
+              </p>
+              <p>
+                Message and data rates may apply in accordance with your mobile carrier plan.
+              </p>
+              <p>
+                You may opt out of receiving SMS messages at any time by replying STOP to any message. You may also reply HELP for assistance or contact us directly using the contact information provided in this policy.
+              </p>
+              <p>
+                We may share your phone number with third-party service providers that assist us in delivering SMS communications. These providers are contractually obligated to protect your information and use it only for the purpose of providing messaging services on our behalf.
+              </p>
+              <p>
+                We retain records of messaging preferences and consent, where required, to comply with applicable laws and regulations.
+              </p>
+              <p>
+                Your phone number and related communication data are handled in accordance with the data protection and security practices described in this Privacy Policy.
+              </p>
+            </section>
+
             {/* Parental Rights and Consent */}
             <section>
               <h2>7. Parental Rights and Consent (COPPA Compliance)</h2>

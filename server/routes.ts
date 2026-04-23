@@ -14422,6 +14422,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // both the date the parent claimed (raw) and the computed pay-by.
           isSelfClaimed: enrollment.isSelfClaimed ?? false,
           selfClaimedEndDate: enrollment.selfClaimedEndDate ?? null,
+          // Task #253: admin verification timestamps for parent self-claims.
+          selfClaimVerifiedAt: enrollment.selfClaimVerifiedAt ?? null,
+          selfClaimRejectedAt: enrollment.selfClaimRejectedAt ?? null,
           billingCycle: product?.billingCycle || null,
           stripeSubscriptionId: enrollment.stripeSubscriptionId,
           remainingCredits: enrollment.remainingCredits,
@@ -14557,6 +14560,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching all enrollments:', error);
       res.status(500).json({ message: 'Failed to fetch enrollments' });
+    }
+  });
+
+  // Task #253: Admin verifies a parent self-claimed enrollment.
+  // Confirms the player really is on the team. Enrollment stays active and
+  // any pay-by deadline keeps running; the Self-Claimed badge is dropped.
+  app.post('/api/admin/enrollments/:id/verify-self-claim', requireAuth, async (req: any, res) => {
+    try {
+      const { role, id: userId, organizationId } = req.user;
+      if (role !== 'admin' && !(await hasAdminProfile(userId, organizationId))) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      const enrollmentId = parseInt(req.params.id);
+      if (Number.isNaN(enrollmentId)) {
+        return res.status(400).json({ message: 'Invalid enrollment id' });
+      }
+
+      const [existing] = await db.select()
+        .from(productEnrollments)
+        .where(eq(productEnrollments.id, enrollmentId));
+      if (!existing) {
+        return res.status(404).json({ message: 'Enrollment not found' });
+      }
+      if (existing.organizationId !== organizationId) {
+        return res.status(403).json({ message: 'Enrollment belongs to a different organization' });
+      }
+      if (!existing.isSelfClaimed || existing.source !== 'self_claim') {
+        return res.status(400).json({ message: 'This enrollment is not a parent self-claim' });
+      }
+      if (existing.status !== 'active') {
+        return res.status(400).json({ message: `Cannot verify a ${existing.status} enrollment` });
+      }
+      if (existing.paymentId || existing.stripeSubscriptionId) {
+        return res.status(400).json({ message: 'This self-claim already has payment evidence and does not need verification' });
+      }
+      if (existing.selfClaimRejectedAt) {
+        return res.status(400).json({ message: 'This claim has already been rejected' });
+      }
+      if (existing.selfClaimVerifiedAt) {
+        // Idempotent: already verified, return current state.
+        return res.json(existing);
+      }
+
+      const nowIso = new Date().toISOString();
+      const [updated] = await db.update(productEnrollments)
+        .set({
+          selfClaimVerifiedAt: nowIso,
+          selfClaimRejectedAt: null,
+          updatedAt: nowIso,
+        })
+        .where(eq(productEnrollments.id, enrollmentId))
+        .returning();
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error verifying self-claim enrollment:', error);
+      res.status(500).json({ message: error?.message || 'Failed to verify self-claim' });
+    }
+  });
+
+  // Task #253: Admin rejects a parent self-claimed enrollment.
+  // Cancels the enrollment so the player loses member access, records who
+  // rejected and when, and notifies the parent so they know what happened.
+  app.post('/api/admin/enrollments/:id/reject-self-claim', requireAuth, async (req: any, res) => {
+    try {
+      const { role, id: userId, organizationId } = req.user;
+      if (role !== 'admin' && !(await hasAdminProfile(userId, organizationId))) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      const enrollmentId = parseInt(req.params.id);
+      if (Number.isNaN(enrollmentId)) {
+        return res.status(400).json({ message: 'Invalid enrollment id' });
+      }
+
+      const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 500) : '';
+
+      const [existing] = await db.select()
+        .from(productEnrollments)
+        .where(eq(productEnrollments.id, enrollmentId));
+      if (!existing) {
+        return res.status(404).json({ message: 'Enrollment not found' });
+      }
+      if (existing.organizationId !== organizationId) {
+        return res.status(403).json({ message: 'Enrollment belongs to a different organization' });
+      }
+      if (!existing.isSelfClaimed || existing.source !== 'self_claim') {
+        return res.status(400).json({ message: 'This enrollment is not a parent self-claim' });
+      }
+      if (existing.paymentId || existing.stripeSubscriptionId) {
+        return res.status(400).json({ message: 'Cannot reject a self-claim that already has payment evidence' });
+      }
+      if (existing.selfClaimRejectedAt) {
+        // Idempotent: already rejected, return current state without re-notifying.
+        return res.json(existing);
+      }
+      if (existing.selfClaimVerifiedAt) {
+        return res.status(400).json({ message: 'This claim has already been verified. Cancel the enrollment instead if you need to remove access.' });
+      }
+
+      const nowIso = new Date().toISOString();
+      const existingMetadata = (existing.metadata as Record<string, any>) || {};
+      const [updated] = await db.update(productEnrollments)
+        .set({
+          status: 'cancelled',
+          autoRenew: false,
+          selfClaimRejectedAt: nowIso,
+          selfClaimVerifiedAt: null,
+          metadata: {
+            ...existingMetadata,
+            selfClaimRejection: {
+              rejectedAt: nowIso,
+              rejectedBy: userId,
+              reason: reason || null,
+            },
+          },
+          updatedAt: nowIso,
+        })
+        .where(eq(productEnrollments.id, enrollmentId))
+        .returning();
+
+      // Notify the parent (account holder) that their self-claim was rejected.
+      try {
+        let programName = 'a club team';
+        try {
+          const product = await storage.getProduct(existing.programId);
+          if (product?.name) programName = product.name;
+        } catch {}
+        const reasonSuffix = reason ? ` Reason: ${reason}` : '';
+        await storage.createNotification({
+          organizationId: existing.organizationId,
+          title: 'Club team access removed',
+          message: `An admin couldn't verify your claim that your player is on ${programName}, so the access has been removed. Please contact the club if this is a mistake.${reasonSuffix}`,
+          types: ['notification'],
+          recipientTarget: 'users',
+          recipientUserIds: [existing.accountHolderId],
+          status: 'sent',
+          deliveryChannels: ['in_app', 'email', 'push'],
+          sentBy: 'system',
+        });
+      } catch (notifyErr: any) {
+        console.error('[reject-self-claim] notification failed (non-fatal):', notifyErr?.message);
+      }
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error rejecting self-claim enrollment:', error);
+      res.status(500).json({ message: error?.message || 'Failed to reject self-claim' });
     }
   });
 

@@ -2656,7 +2656,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     // can verify them. A self-claim is always unpaid by definition, so this
     // check runs before the generic Unpaid bucket below.
     const hasSelfClaimedEnrollment = uniqueEnrollments.some((e: any) =>
-      e.status === 'active' && e.isSelfClaimed === true && !e.paymentId && !e.stripeSubscriptionId
+      e.status === 'active' && e.isSelfClaimed === true && !e.paymentId && !e.stripeSubscriptionId && !e.selfClaimVerifiedAt
     );
     if (hasSelfClaimedEnrollment) return "Self-Claimed";
     if (hasUnpaidEnrollment) return "Unpaid";
@@ -3541,6 +3541,16 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                         {(() => {
                                           const isUnpaidGrant = enrollment.status === 'active' && enrollment.source === 'admin_assignment' && !enrollment.paymentId && !enrollment.stripeSubscriptionId;
                                           const isSelfClaim = enrollment.status === 'active' && enrollment.source === 'self_claim' && !enrollment.paymentId && !enrollment.stripeSubscriptionId;
+                                          // Task #253: Once an admin verifies the parent self-claim,
+                                          // it becomes a regular unpaid grant rather than an unverified
+                                          // self-claim, so the purple badge gives way to a verified pill.
+                                          if (isSelfClaim && enrollment.selfClaimVerifiedAt) {
+                                            return (
+                                              <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded font-medium" data-testid={`badge-self-claim-verified-${enrollment.enrollmentId}`}>
+                                                Verified{enrollment.endDate ? ` · pay by ${new Date(enrollment.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}
+                                              </span>
+                                            );
+                                          }
                                           if (isSelfClaim) {
                                             return (
                                               <span className="text-xs text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded font-medium" data-testid={`badge-self-claim-${enrollment.enrollmentId}`}>
@@ -3666,6 +3676,44 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                                             {enrollment.endDate ? new Date(enrollment.endDate).toLocaleDateString() : '—'}
                                           </p>
                                         </div>
+                                      </div>
+                                    )}
+                                    {/* Task #253: Verify or reject parent self-claimed enrollments */}
+                                    {!enrollment.isNew && enrollment.status === 'active' && enrollment.source === 'self_claim' && !enrollment.paymentId && !enrollment.stripeSubscriptionId && !enrollment.selfClaimVerifiedAt && (
+                                      <div className="mt-2 pt-2 border-t border-purple-100 flex flex-wrap items-center gap-2" data-testid={`self-claim-actions-${enrollment.enrollmentId}`}>
+                                        <span className="text-[11px] text-purple-700 font-medium">Parent self-claimed this team. Verify the player really is on it, or reject if it's not real.</span>
+                                        <button
+                                          type="button"
+                                          className="text-xs px-2 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+                                          data-testid={`button-verify-self-claim-${enrollment.enrollmentId}`}
+                                          onClick={async () => {
+                                            try {
+                                              await apiRequest('POST', `/api/admin/enrollments/${enrollment.enrollmentId}/verify-self-claim`, {});
+                                              queryClient.invalidateQueries({ queryKey: ["/api/users", editingUser?.id, "program-memberships"] });
+                                              queryClient.invalidateQueries({ queryKey: ["/api/admin/enrollments"] });
+                                              toast({ title: 'Claim verified' });
+                                            } catch (err: any) {
+                                              toast({ title: err?.message || 'Failed to verify claim', variant: 'destructive' });
+                                            }
+                                          }}
+                                        >Verify</button>
+                                        <button
+                                          type="button"
+                                          className="text-xs px-2 py-1 border border-red-300 text-red-700 rounded hover:bg-red-50"
+                                          data-testid={`button-reject-self-claim-${enrollment.enrollmentId}`}
+                                          onClick={async () => {
+                                            const reason = window.prompt('Reject this self-claim? The enrollment will be cancelled and the parent will be notified. Optionally, enter a short reason to share with the parent (or leave blank).');
+                                            if (reason === null) return;
+                                            try {
+                                              await apiRequest('POST', `/api/admin/enrollments/${enrollment.enrollmentId}/reject-self-claim`, { reason: reason.trim() });
+                                              queryClient.invalidateQueries({ queryKey: ["/api/users", editingUser?.id, "program-memberships"] });
+                                              queryClient.invalidateQueries({ queryKey: ["/api/admin/enrollments"] });
+                                              toast({ title: 'Claim rejected' });
+                                            } catch (err: any) {
+                                              toast({ title: err?.message || 'Failed to reject claim', variant: 'destructive' });
+                                            }
+                                          }}
+                                        >Reject</button>
                                       </div>
                                     )}
                                     {/* Task #243 & #248: Admin controls for active unpaid admin_assignment OR self_claim grants */}
@@ -4541,7 +4589,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   const hasAnyPaidEnrollment = activeEnrollments.some((e: any) => (e.paymentId || e.stripeSubscriptionId) && !e.isTryout);
                   // Task #248: distinguish parent self-claimed enrollments from
                   // generic admin-assigned unpaid grants in the row badge.
-                  const hasSelfClaimed = activeEnrollments.some((e: any) => e.isSelfClaimed === true && !e.paymentId && !e.stripeSubscriptionId);
+                  const hasSelfClaimed = activeEnrollments.some((e: any) => e.isSelfClaimed === true && !e.paymentId && !e.stripeSubscriptionId && !e.selfClaimVerifiedAt);
                   if (hasLowBalance) return { label: "Low Balance", cls: "bg-yellow-400 text-yellow-900" };
                   if (hasSelfClaimed && !hasAnyPaidEnrollment) return { label: "Self-Claimed", cls: "bg-purple-500 text-white" };
                   if (hasUnpaid && !hasAnyPaidEnrollment) return { label: "Unpaid", cls: "bg-orange-500 text-white" };

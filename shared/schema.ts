@@ -576,6 +576,13 @@ export const productEnrollments = pgTable("product_enrollments", {
   // `endDate` so admins can see what the parent originally claimed.
   isSelfClaimed: boolean("is_self_claimed").default(false),
   selfClaimedEndDate: date("self_claimed_end_date"),
+  // Task #253: Admin verification workflow for parent self-claimed enrollments.
+  // selfClaimVerifiedAt is set when an admin confirms the player really is on
+  // the team (the enrollment stays active and pay-by stays in place).
+  // selfClaimRejectedAt is set when an admin rejects the claim — the
+  // enrollment is also cancelled and the parent is notified.
+  selfClaimVerifiedAt: timestamp("self_claim_verified_at", { mode: 'string' }),
+  selfClaimRejectedAt: timestamp("self_claim_rejected_at", { mode: 'string' }),
   // Legacy/custom pricing tracking (for migrations and grandfathered rates)
   isLegacyPricing: boolean("is_legacy_pricing").default(false), // True if this enrollment has grandfathered pricing
   originalMigrationDate: timestamp("original_migration_date", { mode: 'string' }), // Date of original migration/grandfather

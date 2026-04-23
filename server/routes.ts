@@ -5162,6 +5162,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Child players don't need their own email - they're managed through parent's account
       // The unique email constraint only applies to parent accounts (account_holder_id IS NULL)
 
+      // Always anchor the child to the root account holder so the player shows
+      // up regardless of which sub-role (parent/admin/coach) of the same human
+      // is currently signed in. user.accountHolderId is null on the root.
+      const rootAccountHolderId = user.accountHolderId || id;
+
       // Create child player user
       const playerUser = await storage.createUser({
         organizationId: user.organizationId,
@@ -5178,7 +5183,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         concussionWaiverDate: concussionWaiverAcknowledged ? new Date().toISOString() : null,
         clubAgreementAcknowledged: clubAgreementAcknowledged || false,
         clubAgreementDate: clubAgreementAcknowledged ? new Date().toISOString() : null,
-        accountHolderId: id,
+        accountHolderId: rootAccountHolderId,
+        parentId: rootAccountHolderId,
         packageSelected: isApprovalRequest ? null : (packageId || null), // Optional now
         teamAssignmentStatus: "pending",
         hasRegistered: isApprovalRequest ? false : !packageId,

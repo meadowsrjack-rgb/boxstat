@@ -2232,13 +2232,32 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     enabled: !!editingUser?.id,
   });
 
-  // Find child players linked to the parent being edited (available from users list)
-  const editingParentChildren = editingUser?.role === 'parent'
-    ? (users || []).filter((u: any) =>
-        (u.parentId === editingUser.id || u.accountHolderId === editingUser.id) &&
-        u.role === 'player'
-      )
-    : [];
+  // Find child players linked to the parent being edited (available from
+  // users list). Task #308: walk each player up to its root account-holder
+  // so we still pick up players whose `accountHolderId` points at a sibling
+  // profile (admin/coach role of the same human) rather than the parent row.
+  const editingParentChildren = (() => {
+    if (editingUser?.role !== 'parent') return [];
+    const list = users || [];
+    const byId = new Map<string, any>(list.map((u: any) => [u.id, u]));
+    const resolveRoot = (u: any): string | null => {
+      const visited = new Set<string>();
+      let cur: any = u;
+      while (cur && !visited.has(cur.id)) {
+        visited.add(cur.id);
+        const holderId = cur.accountHolderId || cur.parentId;
+        if (!holderId || holderId === cur.id) break;
+        const next = byId.get(holderId);
+        if (!next) break;
+        cur = next;
+      }
+      return cur?.id ?? null;
+    };
+    const editingRoot = resolveRoot(editingUser);
+    return list.filter((u: any) =>
+      u.role === 'player' && resolveRoot(u) === editingRoot
+    );
+  })();
 
   // Fetch program memberships for each child player using useQueries (safe for dynamic arrays)
   const childProgramMembershipQueries = useQueries({
@@ -2853,25 +2872,47 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   // so unrelated users still sort independently. The first time a key is
   // seen in the already-sorted list determines the family's position, so
   // "newest at top" still holds but the whole family rides along.
-  const groupedUsers = (() => {
-    const userById = new Map<string, any>(users.map((u: any) => [u.id, u]));
-    const resolveRootKey = (u: any): string => {
-      const visited = new Set<string>();
-      let cur: any = u;
-      while (cur && !visited.has(cur.id)) {
-        visited.add(cur.id);
-        const holderId = cur.accountHolderId || cur.parentId;
-        if (!holderId || holderId === cur.id) break;
-        const next = userById.get(holderId);
-        if (!next) break;
-        cur = next;
-      }
-      if (cur?.id) return `root:${cur.id}`;
-      const email = (getDisplayEmail(u) || '').toLowerCase();
-      if (email) return `email:${email}`;
-      return `self:${u.id}`;
-    };
+  // Task #308: Build a household map keyed by the root account-holder so the
+  // admin Users tab agrees with the profile selection page on which players
+  // belong to which family. The previous `accountHolderId === user.id` check
+  // missed players whose `accountHolderId` pointed at a sibling profile (e.g.
+  // an admin/coach role of the same human) instead of the canonical parent
+  // row. We compute the root key here once and reuse it everywhere we need
+  // to know "does this player belong to this household?".
+  const userById = new Map<string, any>(users.map((u: any) => [u.id, u]));
+  const resolveRootKey = (u: any): string => {
+    const visited = new Set<string>();
+    let cur: any = u;
+    while (cur && !visited.has(cur.id)) {
+      visited.add(cur.id);
+      const holderId = cur.accountHolderId || cur.parentId;
+      if (!holderId || holderId === cur.id) break;
+      const next = userById.get(holderId);
+      if (!next) break;
+      cur = next;
+    }
+    if (cur?.id) return `root:${cur.id}`;
+    const email = (getDisplayEmail(u) || '').toLowerCase();
+    if (email) return `email:${email}`;
+    return `self:${u.id}`;
+  };
 
+  // Group every user by their resolved household root so we can answer
+  // "members of this household" without re-walking the chain each lookup.
+  const householdMembersByRoot = new Map<string, any[]>();
+  for (const u of users) {
+    const key = resolveRootKey(u);
+    if (!householdMembersByRoot.has(key)) householdMembersByRoot.set(key, []);
+    householdMembersByRoot.get(key)!.push(u);
+  }
+  const householdPlayersFor = (u: any): any[] => {
+    const key = resolveRootKey(u);
+    const members = householdMembersByRoot.get(key) || [];
+    // Don't include the user themselves and only return player profiles.
+    return members.filter((m: any) => m.id !== u.id && m.role === 'player');
+  };
+
+  const groupedUsers = (() => {
     const familyOrder: string[] = [];
     const familyBuckets = new Map<string, any[]>();
     for (const u of sortedUsers) {
@@ -2893,9 +2934,10 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   const deriveUserStatus = (user: any): string => {
     const now = new Date();
     const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-    const linkedPlayersForUser = users.filter((u: any) =>
-      u.accountHolderId === user.id || u.parentId === user.id
-    );
+    // Task #308: Walk the household root so players linked through a sibling
+    // profile (admin/coach role of the same human) still count toward this
+    // user's status rollup, matching how the Users tab now groups them.
+    const linkedPlayersForUser = householdPlayersFor(user);
     const allRelevantEnrollments: any[] = [];
     const userEnrollments = enrollments.filter((e: any) =>
       e.accountHolderId === user.id || e.profileId === user.id
@@ -4733,7 +4775,12 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
             <TableBody>
               {paginatedUsers.map((user: any) => {
                 const userTeam = teams.find((t: any) => String(t.id) === String(user.teamId));
-                const linkedPlayers = users.filter((u: any) => (u.accountHolderId === user.id || u.parentId === user.id) && u.role === "player");
+                // Task #308: Use the resolved household root so every player
+                // in the family appears under the parent/admin/coach row,
+                // even when their `accountHolderId` points at a sibling
+                // profile of the same human. Player rows continue to render
+                // without a nested player list.
+                const linkedPlayers = user.role === 'player' ? [] : householdPlayersFor(user);
 
                 const getPlayerStatusColor = (player: any) => {
                   const playerEnrollments = enrollments.filter((e: any) => e.profileId === player.id);

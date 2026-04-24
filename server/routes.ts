@@ -7416,9 +7416,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get('/api/users', requireAuth, async (req: any, res) => {
     const { organizationId } = req.user;
-    const allUsers = await storage.getUsersByOrganization(organizationId);
+    const orgUsers = await storage.getUsersByOrganization(organizationId);
     const allTeams = await storage.getTeamsByOrganization(organizationId);
     const allPrograms = await storage.getProgramsByOrganization(organizationId);
+
+    // Task #308: Include household members whose `organizationId` is null or
+    // out-of-date but whose account chain still resolves to a user already in
+    // this organization. Without this, child player profiles linked to a
+    // sibling profile (e.g. an admin/coach role of the same human) or with a
+    // missing org get hidden from the admin Users tab even though the rest of
+    // the household is visible. We expand iteratively so multi-hop chains
+    // (player → admin sibling → parent root) are all picked up, but we never
+    // pull in users whose chain never touches this org.
+    const orgIds = new Set(orgUsers.map((u: any) => u.id));
+    const householdById = new Map<string, any>(orgUsers.map((u: any) => [u.id, u]));
+    let frontier = new Set(orgIds);
+    for (let hop = 0; hop < 5 && frontier.size > 0; hop++) {
+      const frontierIds = Array.from(frontier);
+      // Strict org boundary: only pull household members that belong to
+       // this organization or have no organization yet (the recovery case
+       // for child profiles whose `organizationId` was never set). Never
+       // surface users explicitly assigned to a different organization,
+       // even if a stale link points at one of our household members.
+      const extras = await db.select().from(users).where(
+        and(
+          or(
+            inArray(users.accountHolderId, frontierIds),
+            inArray(users.parentId, frontierIds),
+          ),
+          or(
+            eq(users.organizationId, organizationId),
+            isNull(users.organizationId),
+          )
+        )
+      );
+      const next = new Set<string>();
+      for (const row of extras) {
+        if (householdById.has(row.id)) continue;
+        householdById.set(row.id, row);
+        next.add(row.id);
+      }
+      frontier = next;
+    }
+    const allUsers = Array.from(householdById.values());
     
     // Create maps for quick lookup
     const teamMap = new Map(allTeams.map(t => [t.id, t]));

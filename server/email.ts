@@ -438,6 +438,20 @@ export interface SendNotificationEmailParams {
   firstName: string;
   title: string;
   message: string;
+  actionUrl?: string;
+}
+
+function resolveSameOriginActionUrl(actionUrl: string | undefined, appUrl: string): string {
+  if (!actionUrl || typeof actionUrl !== 'string') return appUrl;
+  if (!actionUrl.startsWith('/') || actionUrl.startsWith('//')) return appUrl;
+  try {
+    const base = new URL(appUrl);
+    const resolved = new URL(actionUrl, base);
+    if (resolved.origin !== base.origin) return appUrl;
+    return resolved.toString();
+  } catch {
+    return appUrl;
+  }
 }
 
 export async function sendNotificationEmail({
@@ -445,9 +459,11 @@ export async function sendNotificationEmail({
   firstName,
   title,
   message,
+  actionUrl,
 }: SendNotificationEmailParams): Promise<{ success: boolean; error?: string }> {
   const displayName = firstName || 'there';
   const appUrl = `https://${DOMAIN}`;
+  const buttonUrl = resolveSameOriginActionUrl(actionUrl, appUrl);
 
   try {
     await resend.emails.send({
@@ -461,6 +477,8 @@ ${message}
 ---
 BoxStat - Sports Management Platform
 ${DOMAIN}
+
+Open BoxStat: ${buttonUrl}
 
 To manage your notification preferences, visit ${appUrl}/settings/notifications
       `,
@@ -489,7 +507,7 @@ To manage your notification preferences, visit ${appUrl}/settings/notifications
                         <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                           <tr>
                             <td style="text-align: center; padding: 20px 0;">
-                              <a href="${appUrl}" style="display: inline-block; background-color: #dc2626; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">Open BoxStat</a>
+                              <a href="${buttonUrl}" style="display: inline-block; background-color: #dc2626; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">Open BoxStat</a>
                             </td>
                           </tr>
                         </table>

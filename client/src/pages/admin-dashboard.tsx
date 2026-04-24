@@ -485,6 +485,27 @@ export default function AdminDashboard() {
     window.history.replaceState({}, '', newUrl.toString());
   }, [deepLinkEventId]);
 
+  // Honor a hash on the URL by scrolling to the matching element once the
+  // active tab's content has rendered (e.g. /admin-dashboard?tab=overview#pending-player-approvals-card
+  // from a notification email button).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash;
+    if (!hash || hash.length < 2) return;
+    const id = hash.slice(1);
+    const tryScroll = (attempt: number) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      if (attempt < 10) {
+        setTimeout(() => tryScroll(attempt + 1), 150);
+      }
+    };
+    tryScroll(0);
+  }, [activeTab]);
+
   const { data: crmUnreadData } = useQuery<any>({
     queryKey: ['/api/admin/crm-unread'],
     refetchInterval: 30000,

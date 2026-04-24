@@ -898,6 +898,7 @@ export class NotificationService {
               firstName: user.firstName || '',
               title,
               message,
+              actionUrl: typeof data?.url === 'string' ? data.url : undefined,
             });
             console.log(`✅ Email notification sent to ${user.email}`);
           }

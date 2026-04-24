@@ -295,6 +295,7 @@ export class AdminNotificationService {
                     firstName: user.firstName || '',
                     title: notification.title,
                     message: notification.message,
+                    actionUrl: typeof pushData?.url === 'string' ? pushData.url : undefined,
                   });
                   
                   if (emailResult.success) {

@@ -5536,7 +5536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             deliveryChannels: ['in_app', 'email', 'push'],
             sentBy: id,
             status: 'sent',
-          }, { url: '/admin-dashboard?tab=overview' });
+          }, { url: '/admin-dashboard?tab=overview#pending-player-approvals-card' });
         } catch (notifyError) {
           console.error('[add-player approval] Failed to send admin notification:', notifyError);
         }

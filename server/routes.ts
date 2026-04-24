@@ -14,6 +14,7 @@ import { setupNotificationRoutes } from "./routes/notifications";
 import { setupAdminNotificationRoutes } from "./routes/adminNotifications";
 import { registerRequestClaimRoute } from "./routes/request-claim";
 import { handleSubscriptionInvoice } from "./lib/subscription-invoice";
+import { registerUsersListRoute } from "./lib/users-list";
 import { registerClaimHandoffRoutes } from "./routes/claim-handoff";
 import { adminNotificationService } from "./services/adminNotificationService";
 import { requireAuth, optionalAuth, isAdmin, isCoachOrAdmin, setAuthStorage } from "./auth";
@@ -7414,140 +7415,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // USER MANAGEMENT ROUTES (Admin only)
   // =============================================
   
-  app.get('/api/users', requireAuth, async (req: any, res) => {
-    const { organizationId } = req.user;
-    const orgUsers = await storage.getUsersByOrganization(organizationId);
-    const allTeams = await storage.getTeamsByOrganization(organizationId);
-    const allPrograms = await storage.getProgramsByOrganization(organizationId);
-
-    // Task #308: Include household members whose `organizationId` is null or
-    // out-of-date but whose account chain still resolves to a user already in
-    // this organization. Without this, child player profiles linked to a
-    // sibling profile (e.g. an admin/coach role of the same human) or with a
-    // missing org get hidden from the admin Users tab even though the rest of
-    // the household is visible. We expand iteratively so multi-hop chains
-    // (player → admin sibling → parent root) are all picked up, but we never
-    // pull in users whose chain never touches this org.
-    const orgIds = new Set(orgUsers.map((u: any) => u.id));
-    const householdById = new Map<string, any>(orgUsers.map((u: any) => [u.id, u]));
-    let frontier = new Set(orgIds);
-    for (let hop = 0; hop < 5 && frontier.size > 0; hop++) {
-      const frontierIds = Array.from(frontier);
-      // Strict org boundary: only pull household members that belong to
-       // this organization or have no organization yet (the recovery case
-       // for child profiles whose `organizationId` was never set). Never
-       // surface users explicitly assigned to a different organization,
-       // even if a stale link points at one of our household members.
-      const extras = await db.select().from(users).where(
-        and(
-          or(
-            inArray(users.accountHolderId, frontierIds),
-            inArray(users.parentId, frontierIds),
-          ),
-          or(
-            eq(users.organizationId, organizationId),
-            isNull(users.organizationId),
+  // Task #308: Include household members whose `organizationId` is null or
+  // out-of-date but whose account chain still resolves to a user already in
+  // this organization. Without this, child player profiles linked to a
+  // sibling profile (e.g. an admin/coach role of the same human) or with a
+  // missing org get hidden from the admin Users tab even though the rest of
+  // the household is visible.
+  //
+  // Strict org boundary: only pull household members that belong to this
+  // organization or have no organization yet (the recovery case for child
+  // profiles whose `organizationId` was never set). Never surface users
+  // explicitly assigned to a different organization, even if a stale link
+  // points at one of our household members.
+  registerUsersListRoute(app, {
+    authMiddleware: requireAuth,
+    deps: {
+      storage,
+      fetchHouseholdExtras: async (organizationId, frontierIds) => {
+        return db.select().from(users).where(
+          and(
+            or(
+              inArray(users.accountHolderId, frontierIds),
+              inArray(users.parentId, frontierIds),
+            ),
+            or(
+              eq(users.organizationId, organizationId),
+              isNull(users.organizationId),
+            )
           )
-        )
-      );
-      const next = new Set<string>();
-      for (const row of extras) {
-        if (householdById.has(row.id)) continue;
-        householdById.set(row.id, row);
-        next.add(row.id);
-      }
-      frontier = next;
-    }
-    const allUsers = Array.from(householdById.values());
-    
-    // Create maps for quick lookup
-    const teamMap = new Map(allTeams.map(t => [t.id, t]));
-    const programMap = new Map(allPrograms.map(p => [p.id, p]));
-    
-    // Fetch active team memberships for all players
-    const activeMemberships = await db.select({
-      profileId: teamMemberships.profileId,
-      teamId: teamMemberships.teamId,
-      status: teamMemberships.status,
-    })
-      .from(teamMemberships)
-      .where(inArray(teamMemberships.status, ['active', 'tryout']));
-    
-    // Group memberships by profileId
-    const membershipsByUser = new Map<string, number[]>();
-    const tryoutMembershipSet = new Set<string>();
-    for (const m of activeMemberships) {
-      const existing = membershipsByUser.get(m.profileId) || [];
-      existing.push(m.teamId);
-      membershipsByUser.set(m.profileId, existing);
-      if (m.status === 'tryout') {
-        tryoutMembershipSet.add(`${m.profileId}-${m.teamId}`);
-      }
-    }
-    
-    // Separate players from non-players
-    const players = allUsers.filter((u: any) => u.role === 'player');
-    const nonPlayers = allUsers.filter((u: any) => u.role !== 'player');
-    
-    // Fetch status tags for all players in a single bulk query
-    const playerIds = players.map((p: any) => p.id);
-    let statusTagsMap = new Map<string, {tag: string; remainingCredits?: number; lowBalance?: boolean}>();
-    
-    try {
-      statusTagsMap = await storage.getPlayerStatusTagsBulk(playerIds);
-    } catch (error) {
-      console.error('Error fetching bulk status tags:', error);
-    }
-    
-    // Helper: derive a safe boolean indicating that this account was actually
-    // invited (has a live invite token) and hasn't completed sign-up yet. The
-    // raw invite token is stripped before sending to the client.
-    const stripInviteToken = (u: any) => {
-      const hasPendingInvite = u.status === 'invited' && !!u.inviteToken;
-      const { inviteToken, ...rest } = u;
-      return { ...rest, hasPendingInvite };
-    };
-
-    // Enrich players with status tags and active team memberships
-    const enrichedPlayers = players.map((player: any) => {
-      const statusTag = statusTagsMap.get(player.id) || { tag: player.paymentStatus === 'pending' ? 'payment_due' : 'none' };
-      const activeTeamIds = membershipsByUser.get(player.id) || [];
-      const activeTeams = activeTeamIds.map(teamId => {
-        const team = teamMap.get(teamId);
-        if (!team) return null;
-        const program = team.programId ? programMap.get(team.programId) : null;
-        return {
-          teamId: team.id,
-          teamName: team.name,
-          programId: team.programId,
-          programName: program?.name || null,
-          isTryout: tryoutMembershipSet.has(`${player.id}-${teamId}`),
-        };
-      }).filter(Boolean);
-      
-      const hasTryoutMembership = activeTeams.some((t: any) => t?.isTryout);
-      
-      return {
-        ...stripInviteToken(player),
-        statusTag: statusTag.tag || 'none',
-        remainingCredits: statusTag.remainingCredits,
-        lowBalance: statusTag.lowBalance,
-        teamIds: activeTeamIds,
-        activeTeams,
-        isTryout: hasTryoutMembership,
-      };
-    });
-    
-    // Add explicit null statusTag to non-players for consistent sorting
-    const enrichedNonPlayers = nonPlayers.map((user: any) => ({
-      ...stripInviteToken(user),
-      statusTag: null,
-      teamIds: [],
-      activeTeams: [],
-    }));
-    
-    // Combine and return all users
-    res.json([...enrichedNonPlayers, ...enrichedPlayers]);
+        );
+      },
+      fetchActiveTeamMemberships: async () => {
+        return db.select({
+          profileId: teamMemberships.profileId,
+          teamId: teamMemberships.teamId,
+          status: teamMemberships.status,
+        })
+          .from(teamMemberships)
+          .where(inArray(teamMemberships.status, ['active', 'tryout']));
+      },
+    },
   });
   
   app.get('/api/users/role/:role', requireAuth, async (req: any, res) => {

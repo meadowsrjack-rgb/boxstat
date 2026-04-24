@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueries } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { buildHouseholdContext, householdPlayersFor as householdPlayersForCtx, groupUsersByHousehold } from "@/lib/household";
 import { authPersistence } from "@/services/authPersistence";
 import CrmMessageBanner from "@/components/CrmMessageBanner";
 import StorePurchaseBanner from "@/components/StorePurchaseBanner";
@@ -2879,56 +2880,9 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   // an admin/coach role of the same human) instead of the canonical parent
   // row. We compute the root key here once and reuse it everywhere we need
   // to know "does this player belong to this household?".
-  const userById = new Map<string, any>(users.map((u: any) => [u.id, u]));
-  const resolveRootKey = (u: any): string => {
-    const visited = new Set<string>();
-    let cur: any = u;
-    while (cur && !visited.has(cur.id)) {
-      visited.add(cur.id);
-      const holderId = cur.accountHolderId || cur.parentId;
-      if (!holderId || holderId === cur.id) break;
-      const next = userById.get(holderId);
-      if (!next) break;
-      cur = next;
-    }
-    if (cur?.id) return `root:${cur.id}`;
-    const email = (getDisplayEmail(u) || '').toLowerCase();
-    if (email) return `email:${email}`;
-    return `self:${u.id}`;
-  };
-
-  // Group every user by their resolved household root so we can answer
-  // "members of this household" without re-walking the chain each lookup.
-  const householdMembersByRoot = new Map<string, any[]>();
-  for (const u of users) {
-    const key = resolveRootKey(u);
-    if (!householdMembersByRoot.has(key)) householdMembersByRoot.set(key, []);
-    householdMembersByRoot.get(key)!.push(u);
-  }
-  const householdPlayersFor = (u: any): any[] => {
-    const key = resolveRootKey(u);
-    const members = householdMembersByRoot.get(key) || [];
-    // Don't include the user themselves and only return player profiles.
-    return members.filter((m: any) => m.id !== u.id && m.role === 'player');
-  };
-
-  const groupedUsers = (() => {
-    const familyOrder: string[] = [];
-    const familyBuckets = new Map<string, any[]>();
-    for (const u of sortedUsers) {
-      const key = resolveRootKey(u);
-      if (!familyBuckets.has(key)) {
-        familyBuckets.set(key, []);
-        familyOrder.push(key);
-      }
-      familyBuckets.get(key)!.push(u);
-    }
-    const out: any[] = [];
-    for (const key of familyOrder) {
-      out.push(...(familyBuckets.get(key) || []));
-    }
-    return out;
-  })();
+  const householdCtx = buildHouseholdContext(users, getDisplayEmail);
+  const householdPlayersFor = (u: any): any[] => householdPlayersForCtx(u, householdCtx);
+  const groupedUsers = groupUsersByHousehold(sortedUsers, householdCtx);
 
   // Helper: derive enrollment status label for a user
   const deriveUserStatus = (user: any): string => {

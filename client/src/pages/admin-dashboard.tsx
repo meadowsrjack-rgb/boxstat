@@ -15718,6 +15718,7 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
   const [activeView, setActiveView] = useState<'users' | 'teams' | 'leads'>('users');
   const [selectedTeamChat, setSelectedTeamChat] = useState<{ teamId: number; channel: 'players' | 'parents'; teamName: string } | null>(null);
   const [teamChatMessage, setTeamChatMessage] = useState("");
+  const [teamChatRoomSearch, setTeamChatRoomSearch] = useState("");
   const [clearChannelConfirm, setClearChannelConfirm] = useState(false);
   const [isNewMessageOpen, setIsNewMessageOpen] = useState(false);
   const [newMsgScheduleType, setNewMsgScheduleType] = useState<'immediate' | 'scheduled' | 'recurring'>('immediate');
@@ -15917,7 +15918,7 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
   // Send team chat message mutation (for admin)
   const sendTeamChatMutation = useMutation({
     mutationFn: async (data: { teamId: number; channel: 'players' | 'parents'; message: string }) => {
-      return apiRequest('/api/messages/team', { method: 'POST', data: { teamId: data.teamId, content: data.message, chatChannel: data.channel } });
+      return apiRequest(`/api/teams/${data.teamId}/messages`, { method: 'POST', data: { message: data.message, channel: data.channel } });
     },
     onSuccess: () => {
       refetchTeamChatMessages();
@@ -16597,7 +16598,26 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Team/Channel list */}
                     <div className="border rounded-lg p-4 space-y-2 max-h-96 overflow-y-auto">
-                      {teams.map((team: any) => (
+                      <Input
+                        value={teamChatRoomSearch}
+                        onChange={(e) => setTeamChatRoomSearch(e.target.value)}
+                        placeholder="Search teams..."
+                        className="mb-2"
+                        data-testid="input-team-chat-room-search"
+                      />
+                      {(() => {
+                        const q = teamChatRoomSearch.trim().toLowerCase();
+                        const filteredTeams = q
+                          ? teams.filter((team: any) => (team.name || '').toLowerCase().includes(q))
+                          : teams;
+                        if (filteredTeams.length === 0) {
+                          return (
+                            <div className="text-center py-4 text-gray-500 text-sm" data-testid="text-no-team-chat-rooms">
+                              No teams match your search.
+                            </div>
+                          );
+                        }
+                        return filteredTeams.map((team: any) => (
                         <div key={team.id} className="space-y-1">
                           <div className="font-medium text-sm px-2 pt-2">{team.name}</div>
                           <div
@@ -16617,7 +16637,8 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
                             <span className="text-sm text-gray-600">Parent Channel</span>
                           </div>
                         </div>
-                      ))}
+                        ));
+                      })()}
                     </div>
 
                     {/* Team Chat Messages */}
@@ -16772,6 +16793,14 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
                             <Input
                               value={teamChatMessage}
                               onChange={(e) => setTeamChatMessage(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  if (teamChatMessage.trim() && !sendTeamChatMutation.isPending && selectedTeamChat) {
+                                    sendTeamChatMutation.mutate({ teamId: selectedTeamChat.teamId, channel: selectedTeamChat.channel, message: teamChatMessage });
+                                  }
+                                }
+                              }}
                               placeholder="Send a message as admin..."
                               data-testid="input-team-chat-message"
                             />

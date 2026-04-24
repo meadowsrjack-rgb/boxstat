@@ -589,31 +589,61 @@ export default function EventDetailModal({
   }, [attendances, userId]);
 
   const rsvpData: RsvpData = useMemo(() => {
-    // Only count RSVPs from users who are actually invited to this event
-    const invitedUserIds = new Set(users.map(u => String(u.id)));
-    const invitedRsvps = rsvps.filter(r => invitedUserIds.has(String(r.userId)));
-    
-    const attending = invitedRsvps.filter(r => r.response === 'attending').length;
-    const notAttending = invitedRsvps.filter(r => r.response === 'not_attending').length;
-    const totalInvited = users.length || 0;
-    const noResponse = Math.max(0, totalInvited - attending - notAttending);
+    // Count over the union of invited users and anyone who has an RSVP on record.
+    // This guarantees the responder is always reflected (even if they aren't in
+    // the event's invited list) and keeps numerator/denominator on the same set.
+    const countedIds = new Set<string>(users.map(u => String(u.id)));
+    for (const r of rsvps) {
+      countedIds.add(String(r.userId));
+    }
+
+    const responseByUser = new Map<string, string>();
+    for (const r of rsvps) {
+      const uid = String(r.userId);
+      if (!countedIds.has(uid)) continue;
+      // Only count the latest known response per user (last write wins)
+      responseByUser.set(uid, r.response);
+    }
+
+    let attending = 0;
+    let notAttending = 0;
+    for (const resp of responseByUser.values()) {
+      if (resp === 'attending') attending++;
+      else if (resp === 'not_attending') notAttending++;
+    }
+    const total = countedIds.size;
+    const noResponse = Math.max(0, total - attending - notAttending);
 
     return {
       attending,
       notAttending,
       noResponse,
-      total: totalInvited,
+      total,
     };
   }, [rsvps, users]);
 
   const checkInData: CheckInData = useMemo(() => {
-    const checkedIn = attendances.length;
-    const totalInvited = users.length || 10;
+    // Count over the union of invited users and anyone who has checked in.
+    // This keeps numerator/denominator on the same population and removes the
+    // misleading hardcoded fallback of 10 when the invited list is empty.
+    const countedIds = new Set<string>(users.map(u => String(u.id)));
+    for (const a of attendances) {
+      countedIds.add(String(a.userId));
+    }
+
+    const checkedInIds = new Set<string>();
+    for (const a of attendances) {
+      const uid = String(a.userId);
+      if (countedIds.has(uid)) checkedInIds.add(uid);
+    }
+
+    const total = countedIds.size;
+    const checkedIn = checkedInIds.size;
 
     return {
       checkedIn,
-      notCheckedIn: Math.max(0, totalInvited - checkedIn),
-      total: totalInvited,
+      notCheckedIn: Math.max(0, total - checkedIn),
+      total,
     };
   }, [attendances, users]);
 

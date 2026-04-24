@@ -8,6 +8,7 @@ import { db } from '../db';
 import { notifications, notificationRecipients, productEnrollments, products, users, teamMemberships, teams } from '@shared/schema';
 import { eq, and, sql, lte, gte, gt, lt, inArray, isNotNull } from 'drizzle-orm';
 import { adminNotificationService } from './adminNotificationService';
+import { normalizeTitleKey } from './notificationDedup';
 
 export class NotificationScheduler {
   private jobs: Map<string, cron.ScheduledTask> = new Map();
@@ -270,7 +271,16 @@ export class NotificationScheduler {
         // This gives users 30 min warning that RSVP is about to close
         if (minutesUntilEvent <= 60 && minutesUntilEvent > 55) {
           const participantIds = await this.getEventParticipants(event);
-          
+
+          // Treat near-duplicate event records (titles differing only by case
+          // or whitespace) as the same event for the "already notified this
+          // user" check so a second event row in the same window can't
+          // create a second notification. See task #305.
+          const normalizedTitle = normalizeTitleKey(event.title);
+          const eventIdentityIds = upcomingEvents
+            .filter(e => normalizeTitleKey(e.title) === normalizedTitle)
+            .map(e => e.id);
+
           for (const memberId of participantIds) {
             // Check if user has already responded via the RSVP responses table
             const rsvpResponse = await storage.getRsvpResponseByUserAndEvent(memberId.toString(), event.id);
@@ -279,7 +289,7 @@ export class NotificationScheduler {
               const alreadySent = await notificationService.hasRecentNotification(
                 memberId.toString(),
                 'event_rsvp_closing',
-                event.id,
+                eventIdentityIds,
                 120
               );
 

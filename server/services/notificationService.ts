@@ -19,11 +19,15 @@ import webpush from "web-push";
 import { sendAPNsNotification, isAPNsConfigured } from "./apnsService";
 import { sendNotificationEmail } from "../email";
 import admin from 'firebase-admin';
+import { buildDedupIdentity, buildPushDedupKey } from "./notificationDedup";
 
 // Push dedup cache: prevents the same push content from being sent to the same
-// device endpoint within a short window. Key = endpoint+title hash, value = expiry timestamp.
-const pushDedupCache = new Map<string, number>();
-const PUSH_DEDUP_WINDOW_MS = 1_200_000; // 20 minutes - covers the 15-min cron interval
+// device endpoint within a short window. Key shape:
+//   `${protocol}:${deviceKey}:${type}:${eventIdOrNormalizedTitle}`
+// (see notificationDedup.ts). This makes near-duplicate event titles dedupe
+// to the same key on the same device.
+export const pushDedupCache = new Map<string, number>();
+export const PUSH_DEDUP_WINDOW_MS = 1_200_000; // 20 minutes - covers the 15-min cron interval
 
 // Clean up expired entries every 30 seconds
 setInterval(() => {
@@ -196,7 +200,24 @@ export class NotificationService {
 
   // ===== Notification Creation and Delivery =====
   
-  async sendPushNotification(notificationId: number, userId: string, title: string, message: string, collapseKey?: string, customData?: Record<string, any>): Promise<void> {
+  async sendPushNotification(
+    notificationId: number,
+    userId: string,
+    title: string,
+    message: string,
+    collapseKey?: string,
+    customData?: Record<string, any>,
+    dedupOptions?: { type?: string; eventId?: number | string | null },
+  ): Promise<void> {
+    // Compute the stable event identity used for in-memory dedup. Uses the
+    // event id when available so distinct events stay distinct, and falls
+    // back to the normalized title so two event records with titles that
+    // differ only by case/whitespace dedupe to the same key.
+    const dedupType = dedupOptions?.type || "notification";
+    const dedupIdentity = buildDedupIdentity(
+      dedupOptions?.eventId ?? (customData?.eventId as number | undefined),
+      title,
+    );
     const startTime = Date.now();
     console.log(`[Push Send] ========================================`);
     console.log(`[Push Send] 🚀 START push notification #${notificationId} to user ${userId}`);
@@ -397,10 +418,11 @@ export class NotificationService {
         const promises = webPushSubscriptions.map(async (subscription) => {
           const truncatedEndpoint = subscription.endpoint!.substring(0, 50) + '...';
           
-          // Dedup: skip if same endpoint already received a push with same title recently
-          const dedupKey = `web:${subscription.endpoint}:${title}`;
+          // Dedup: skip if same endpoint already received a push for this
+          // event identity + type recently. See notificationDedup.ts.
+          const dedupKey = buildPushDedupKey("web", subscription.endpoint!, dedupType, dedupIdentity);
           if (pushDedupCache.has(dedupKey) && pushDedupCache.get(dedupKey)! > Date.now()) {
-            console.log(`[Push Send] ⏭️  Skipping duplicate web push to ${truncatedEndpoint} (same title within ${PUSH_DEDUP_WINDOW_MS/1000}s)`);
+            console.log(`[Push Send] ⏭️  Skipping duplicate web push to ${truncatedEndpoint} (same event identity within ${PUSH_DEDUP_WINDOW_MS/1000}s)`);
             return;
           }
           pushDedupCache.set(dedupKey, Date.now() + PUSH_DEDUP_WINDOW_MS);
@@ -466,7 +488,7 @@ export class NotificationService {
         const devices = iosSubscriptions
           .filter((sub: any) => sub.fcmToken)
           .filter((sub: any) => {
-            const dedupKey = `ios:${sub.fcmToken}:${title}`;
+            const dedupKey = buildPushDedupKey("ios", sub.fcmToken, dedupType, dedupIdentity);
             if (pushDedupCache.has(dedupKey) && pushDedupCache.get(dedupKey)! > Date.now()) {
               console.log(`[Push Send] ⏭️  Skipping duplicate iOS push to token ${sub.fcmToken.substring(0, 20)}...`);
               return false;
@@ -533,7 +555,7 @@ export class NotificationService {
           .map((sub: any) => sub.fcmToken)
           .filter(Boolean)
           .filter((token: string) => {
-            const dedupKey = `android:${token}:${title}`;
+            const dedupKey = buildPushDedupKey("android", token, dedupType, dedupIdentity);
             if (pushDedupCache.has(dedupKey) && pushDedupCache.get(dedupKey)! > Date.now()) {
               console.log(`[Push Send] ⏭️  Skipping duplicate Android push to token ${token.substring(0, 20)}...`);
               return false;
@@ -763,15 +785,25 @@ export class NotificationService {
   }
   
   // Send notification via multiple channels (in-app, push, email)
-  async hasRecentNotification(userId: string, type: string, eventId: number, withinMinutes: number): Promise<boolean> {
+  // `eventId` accepts a single id or a list of ids that should be treated as
+  // the same event for this check (e.g. near-duplicate event records sharing
+  // a normalized title; see processRsvpWindowClosing).
+  async hasRecentNotification(
+    userId: string,
+    type: string,
+    eventId: number | number[],
+    withinMinutes: number,
+  ): Promise<boolean> {
     try {
       const cutoff = new Date(Date.now() - withinMinutes * 60 * 1000).toISOString();
+      const eventIds = Array.isArray(eventId) ? eventId : [eventId];
+      if (eventIds.length === 0) return false;
       const results = await db.select({ id: notifications.id })
         .from(notifications)
         .innerJoin(notificationRecipients, eq(notificationRecipients.notificationId, notifications.id))
         .where(and(
           eq(notificationRecipients.userId, userId),
-          eq(notifications.relatedEventId, eventId),
+          inArray(notifications.relatedEventId, eventIds),
           sql`${notifications.types} @> ARRAY[${type}]::text[]`,
           sql`${notifications.createdAt} >= ${cutoff}`
         ))
@@ -825,12 +857,28 @@ export class NotificationService {
           if (channels.includes('push')) {
             const eventCollapseKey = data.eventId ? `event-${type}-${data.eventId}` : undefined;
             const pushCustomData = Object.keys(data).length > 0 ? data : undefined;
-            await this.sendPushNotification(notification.id, userId, title, message, eventCollapseKey, pushCustomData);
+            await this.sendPushNotification(
+              notification.id,
+              userId,
+              title,
+              message,
+              eventCollapseKey,
+              pushCustomData,
+              { type, eventId: data.eventId ?? null },
+            );
           }
         }
       } else if (channels.includes('push')) {
         // Push-only notification (no in-app record)
-        await this.sendPushNotification(0, userId, title, message);
+        await this.sendPushNotification(
+          0,
+          userId,
+          title,
+          message,
+          undefined,
+          undefined,
+          { type, eventId: data.eventId ?? null },
+        );
       }
       
       // Send email notification if requested

@@ -196,6 +196,8 @@ export default function QuoteCheckout() {
       }
       setStep('payment');
     } else if (step === 'payment') {
+      // Task #325: in-flight guard for "Complete Payment".
+      if (completeCheckoutMutation.isPending) return;
       // For existing users selecting an existing player, send playerId
       // For new player creation, send player details
       const playerData = isExistingUserQuote && playerMode === 'existing' && selectedPlayerId

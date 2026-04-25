@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "wouter";
 import { Loader2, CheckCircle, XCircle, ShoppingBag, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,12 +21,24 @@ interface ProductInfo {
   inStock: boolean;
 }
 
+// Task #325: per-page-load client id for server-side Stripe idempotency.
+function generateClientCheckoutId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `cc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export default function StoreBuy() {
   const params = useParams<{ productId: string }>();
   const productId = params.productId;
   const [status, setStatus] = useState<"loading" | "checking" | "out-of-stock" | "redirecting" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const [product, setProduct] = useState<ProductInfo | null>(null);
+  const [clientCheckoutId] = useState<string>(() => generateClientCheckoutId());
+  // Task #325: ref-based in-flight guard (state would be stale in the
+  // initial useEffect closure). Reset on error so retry works.
+  const checkoutInFlightRef = useRef(false);
 
   useEffect(() => {
     if (!productId) {
@@ -63,16 +75,21 @@ export default function StoreBuy() {
   }, [productId]);
 
   async function startCheckout() {
+    // Task #325: in-flight guard (see ref comment above).
+    if (checkoutInFlightRef.current) return;
+    checkoutInFlightRef.current = true;
     try {
       setStatus("loading");
       const res = await fetch(`/api/store-checkout/${productId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientCheckoutId }),
       });
       const data = await res.json();
       if (!res.ok) {
         setStatus("error");
         setErrorMsg(data.error || "Failed to create checkout");
+        checkoutInFlightRef.current = false;
         return;
       }
       if (data.sessionUrl) {
@@ -81,10 +98,12 @@ export default function StoreBuy() {
       } else {
         setStatus("error");
         setErrorMsg("No checkout URL received");
+        checkoutInFlightRef.current = false;
       }
     } catch (err: any) {
       setStatus("error");
       setErrorMsg(err.message || "Something went wrong");
+      checkoutInFlightRef.current = false;
     }
   }
 

@@ -77,8 +77,15 @@ let wss: WebSocketServer | null = null;
 // the books match Stripe), cancel the just-created subscription, do NOT
 // expire-and-recreate the original enrollment, and notify admins so the
 // human refund can happen.
+//
+// Task #325: DUPLICATE_ONE_TIME_PAYMENT_WINDOW_MS — same idea, but for
+// payment-mode (tryout, QR-prefilled goods, quote-based, package one-time)
+// checkouts. When two completed payments for the same player+program land
+// inside this window, we keep the original, refund the new charge, and
+// notify admins.
 const CHECKOUT_IDEMPOTENCY_BUCKET_MS = 10 * 60 * 1000;
 const DUPLICATE_SUBSCRIPTION_WINDOW_MS = 15 * 60 * 1000;
+const DUPLICATE_ONE_TIME_PAYMENT_WINDOW_MS = 15 * 60 * 1000;
 
 // Build a Stripe idempotency key from the customer-facing checkout context.
 // `suffix` lets distinct flows (cart vs. add-player vs. legacy package) live
@@ -194,6 +201,165 @@ async function detectAndCancelDuplicateSubscription(args: {
   } catch (notifErr: any) {
     console.error(
       '[DuplicateSubscription] Admin notification failed (non-fatal):',
+      notifErr?.message || notifErr
+    );
+  }
+
+  return true;
+}
+
+// Task #325: shared webhook guardrail for duplicate one-time payments.
+// Returns true when a duplicate was detected — caller skips fulfillment.
+// On detection: refunds the new payment_intent, flips the new payment row
+// to 'refunded', records a refund row, notifies admins.
+async function detectAndRefundDuplicateOneTimePayment(args: {
+  orgStripe: Stripe;
+  session: Stripe.Checkout.Session;
+  organizationId: string;
+  programId: string;
+  playerId: string | null;
+  buyerUserId: string | null;
+  newPaymentId: string | null;
+  newStripePaymentId: string | null;
+  programName: string;
+  flow: string;
+  buyer: { email?: string | null; firstName?: string | null; lastName?: string | null } | null;
+  playerName?: string | null;
+}): Promise<boolean> {
+  if (!args.newStripePaymentId) return false;
+
+  // Find a recent completed payment with same (player|buyer)+program,
+  // excluding the just-created payment.
+  let orgPayments: any[] = [];
+  try {
+    orgPayments = await storage.getPaymentsByOrganization(args.organizationId);
+  } catch (err: any) {
+    console.error('[DuplicateOneTimePayment] Could not fetch org payments:', err?.message || err);
+    return false;
+  }
+
+  const newId = args.newPaymentId ? String(args.newPaymentId) : null;
+  const dup = orgPayments.find((p: any) => {
+    if (!p) return false;
+    if (newId && String(p.id) === newId) return false;
+    if (p.stripePaymentId && p.stripePaymentId === args.newStripePaymentId) return false;
+    if (p.status !== 'completed') return false;
+    if (p.programId !== args.programId) return false;
+    // Identity match: prefer playerId if provided, otherwise buyerUserId
+    if (args.playerId) {
+      if (p.playerId !== args.playerId && p.userId !== args.playerId) return false;
+    } else if (args.buyerUserId) {
+      if (p.userId !== args.buyerUserId) return false;
+    } else {
+      return false;
+    }
+    if (!p.createdAt) return false;
+    const ageMs = Date.now() - new Date(p.createdAt).getTime();
+    return ageMs >= 0 && ageMs < DUPLICATE_ONE_TIME_PAYMENT_WINDOW_MS;
+  });
+
+  if (!dup) return false;
+
+  const buyerEmail = args.buyer?.email || args.session.customer_email || 'unknown';
+  const buyerName = args.buyer
+    ? `${args.buyer.firstName || ''} ${args.buyer.lastName || ''}`.trim() || buyerEmail
+    : buyerEmail;
+  const playerLabel = args.playerName?.trim() || args.playerId || 'n/a';
+  const originalPaymentId = String(dup.id);
+  const originalStripeRef = dup.stripePaymentId || 'n/a';
+
+  console.warn(
+    `[DuplicateOneTimePayment] Detected duplicate ${args.flow} payment: ` +
+    `org ${args.organizationId}, customer ${buyerEmail}, player ${playerLabel}, ` +
+    `program "${args.programName}" (${args.programId}); ` +
+    `original payment ${originalPaymentId} (stripe ${originalStripeRef}, createdAt ${dup.createdAt}); ` +
+    `new payment ${newId ?? 'n/a'} (stripe ${args.newStripePaymentId}, session ${args.session.id})`
+  );
+
+  // Refund the new charge — accepts pi_/ch_/cs_ refs.
+  let refundOk = true;
+  let refundErrMsg = '';
+  let refundId: string | null = null;
+  try {
+    const ref = args.newStripePaymentId;
+    const refundParams: any = {};
+    if (ref.startsWith('pi_')) {
+      refundParams.payment_intent = ref;
+    } else if (ref.startsWith('ch_')) {
+      refundParams.charge = ref;
+    } else if (ref.startsWith('cs_')) {
+      const s = await args.orgStripe.checkout.sessions.retrieve(ref);
+      if (typeof s.payment_intent === 'string') {
+        refundParams.payment_intent = s.payment_intent;
+      } else {
+        throw new Error('Could not resolve payment_intent from checkout session');
+      }
+    } else {
+      throw new Error(`Unsupported stripePaymentId format: ${ref}`);
+    }
+    const refund = await args.orgStripe.refunds.create(refundParams);
+    refundId = refund.id;
+    console.warn(
+      `[DuplicateOneTimePayment] Refunded duplicate charge ${ref} -> refund ${refund.id} (status ${refund.status})`
+    );
+  } catch (refundErr: any) {
+    refundOk = false;
+    refundErrMsg = refundErr?.message || String(refundErr);
+    console.error(
+      `[DuplicateOneTimePayment] Failed to refund duplicate charge ${args.newStripePaymentId}:`,
+      refundErrMsg
+    );
+  }
+
+  // Flip new payment row to 'refunded' + record refund entry. Best-effort.
+  if (refundOk && newId) {
+    try {
+      await storage.updatePayment(newId, { status: 'refunded' });
+    } catch (updateErr: any) {
+      console.error(
+        '[DuplicateOneTimePayment] Could not flip payment status to refunded (non-fatal):',
+        updateErr?.message || updateErr
+      );
+    }
+    try {
+      await storage.createRefund({
+        paymentId: parseInt(newId),
+        organizationId: args.organizationId,
+        stripeRefundId: refundId ?? undefined,
+        amount: args.session.amount_total || 0,
+        reasonCode: 'duplicate_charge',
+        notes: `Auto-refunded by duplicate-charge guardrail (Task #325). Original payment ${originalPaymentId}.`,
+        initiatedBy: 'system',
+        refundedFee: false,
+        status: 'succeeded',
+        clearedAt: new Date().toISOString(),
+      });
+    } catch (refundRecordErr: any) {
+      console.error(
+        '[DuplicateOneTimePayment] Could not record refund row (non-fatal):',
+        refundRecordErr?.message || refundRecordErr
+      );
+    }
+  }
+
+  try {
+    const title = refundOk
+      ? '⚠️ Suspected Duplicate Payment Refunded'
+      : '🚨 URGENT: Duplicate Payment Auto-Refund FAILED';
+    const refundLine = refundOk
+      ? `duplicate charge auto-refunded (refund ${refundId ?? 'n/a'}).`
+      : `duplicate charge could NOT be auto-refunded (${refundErrMsg}) — please refund payment ${newId ?? args.newStripePaymentId} manually in Stripe.`;
+    await pushNotifications.notifyAllAdmins(
+      storage,
+      title,
+      `${buyerName} appears to have paid twice for ${playerLabel} in ${args.programName} ` +
+        `(${args.flow}). Original payment ${originalPaymentId} kept; ` +
+        refundLine,
+      args.organizationId
+    );
+  } catch (notifErr: any) {
+    console.error(
+      '[DuplicateOneTimePayment] Admin notification failed (non-fatal):',
       notifErr?.message || notifErr
     );
   }
@@ -3229,9 +3395,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const userId = session.metadata.userId;
           const playerId = session.metadata.playerId;
           const enrollmentIdsStr = session.metadata.enrollmentIds;
-          
+
           console.log(`✅ Quote checkout payment completed for quote ${quoteId}`);
-          
+
+          // Task #325: duplicate-charge guardrail for quotes. Identity is
+          // the quoteId (parsed from the description marker) — not
+          // player+program — because a quote bundles many enrollments paid
+          // as one basket. Same-quoteId match is required to avoid
+          // false-positives when a parent pays two different quotes in
+          // the 15-min window.
+          let isDuplicateQuote = false;
+          try {
+            const existingQuote = await storage.getQuoteCheckout(quoteId);
+            const quoteOrgId = existingQuote?.organizationId
+              || session.metadata?.organizationId
+              || (await resolveOrgId(session, userId));
+            const newPaymentRef = (session.payment_intent as string) || null;
+            if (newPaymentRef && quoteOrgId) {
+              const orgPayments = await storage.getPaymentsByOrganization(quoteOrgId);
+              const quoteMarker = `[quote:${quoteId}]`;
+              const priorPayment = orgPayments.find((p: any) =>
+                p && p.userId === userId && p.paymentType === 'quote_checkout' &&
+                p.status === 'completed' &&
+                typeof p.description === 'string' && p.description.includes(quoteMarker) &&
+                p.stripePaymentId && p.stripePaymentId !== newPaymentRef &&
+                p.createdAt &&
+                (Date.now() - new Date(p.createdAt).getTime()) < DUPLICATE_ONE_TIME_PAYMENT_WINDOW_MS
+              );
+              if (priorPayment) {
+                isDuplicateQuote = true;
+                const quoteOrgStripe = await getStripeForOrg(quoteOrgId);
+                let refundOk = true;
+                let refundErrMsg = '';
+                let refundId: string | null = null;
+                if (quoteOrgStripe) {
+                  try {
+                    const refundParams: any = {};
+                    if (newPaymentRef.startsWith('pi_')) refundParams.payment_intent = newPaymentRef;
+                    else if (newPaymentRef.startsWith('ch_')) refundParams.charge = newPaymentRef;
+                    else throw new Error(`Unsupported stripePaymentId format: ${newPaymentRef}`);
+                    const refund = await quoteOrgStripe.refunds.create(refundParams);
+                    refundId = refund.id;
+                    console.warn(`[DuplicateOneTimePayment] Refunded duplicate quote charge ${newPaymentRef} -> refund ${refund.id} (status ${refund.status})`);
+                  } catch (refundExc: any) {
+                    refundOk = false;
+                    refundErrMsg = refundExc?.message || String(refundExc);
+                    console.error(`[DuplicateOneTimePayment] Failed to refund duplicate quote charge ${newPaymentRef}:`, refundErrMsg);
+                  }
+                }
+                // Record the duplicate as a 'refunded' payment row + refund row
+                // for reconciliation parity with the shared one-time helper.
+                let refundedPaymentRowId: number | null = null;
+                try {
+                  const refundedRow = await storage.createPayment({
+                    organizationId: quoteOrgId,
+                    userId,
+                    playerId: playerId || undefined,
+                    amount: session.amount_total ?? 0,
+                    currency: 'usd',
+                    paymentType: 'quote_checkout',
+                    status: 'refunded',
+                    description: `Quote Checkout Payment [quote:${quoteId}] [duplicate-refunded]`,
+                    stripePaymentId: newPaymentRef,
+                  });
+                  refundedPaymentRowId = refundedRow?.id ?? null;
+                  if (refundedPaymentRowId != null) {
+                    try {
+                      await storage.createRefund({
+                        paymentId: refundedPaymentRowId,
+                        organizationId: quoteOrgId,
+                        stripeRefundId: refundId ?? undefined,
+                        amount: session.amount_total ?? 0,
+                        reasonCode: 'duplicate_charge',
+                        notes: `Auto-refunded duplicate quote payment (Task #325). Original payment ${priorPayment.id}.`,
+                        initiatedBy: 'system',
+                        refundedFee: false,
+                        status: refundOk ? 'succeeded' : 'failed',
+                        clearedAt: refundOk ? new Date().toISOString() : undefined,
+                      });
+                    } catch (refundRowErr: any) {
+                      console.error('[DuplicateOneTimePayment] Failed to record quote refund row (non-fatal):', refundRowErr?.message || refundRowErr);
+                    }
+                  }
+                } catch (paymentRowErr: any) {
+                  console.error('[DuplicateOneTimePayment] Failed to record refunded quote payment row (non-fatal):', paymentRowErr?.message || paymentRowErr);
+                }
+
+                try {
+                  const buyer = await storage.getUser(userId);
+                  const buyerName = buyer
+                    ? `${buyer.firstName || ''} ${buyer.lastName || ''}`.trim() || (buyer.email || 'A customer')
+                    : 'A customer';
+                  const title = refundOk
+                    ? '⚠️ Suspected Duplicate Quote Payment Refunded'
+                    : '🚨 URGENT: Duplicate Quote Payment Auto-Refund FAILED';
+                  const refundLine = refundOk
+                    ? `duplicate charge auto-refunded (refund ${refundId ?? 'n/a'}).`
+                    : `duplicate charge could NOT be auto-refunded (${refundErrMsg}) — please refund ${newPaymentRef} manually in Stripe.`;
+                  await pushNotifications.notifyAllAdmins(
+                    storage,
+                    title,
+                    `${buyerName} appears to have paid quote ${quoteId} twice. Original payment ${priorPayment.id} kept; ` + refundLine,
+                    quoteOrgId
+                  );
+                } catch (notifErr: any) {
+                  console.error('[DuplicateOneTimePayment] Quote duplicate notification failed (non-fatal):', notifErr?.message || notifErr);
+                }
+              }
+            }
+          } catch (dupErr: any) {
+            console.error('[DuplicateOneTimePayment] Quote duplicate detection failed (non-fatal):', dupErr?.message || dupErr);
+          }
+
+          if (isDuplicateQuote) {
+            console.log(`ℹ️ Skipping quote ${quoteId} fulfillment — duplicate payment refunded`);
+            return res.json({ received: true, duplicate: true });
+          }
+
           // Activate all enrollments from the quote
           if (enrollmentIdsStr) {
             try {
@@ -3245,7 +3525,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           
-          // Create payment record
+          // Create payment record. Task #325: encode quoteId in description
+          // so the dup guardrail can match by exact quoteId.
           if (session.amount_total && userId) {
             try {
               await storage.createPayment({
@@ -3256,7 +3537,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 currency: 'usd',
                 paymentType: 'quote_checkout',
                 status: 'completed',
-                description: `Quote Checkout Payment`,
+                description: `Quote Checkout Payment [quote:${quoteId}]`,
                 stripePaymentId: session.payment_intent as string,
               });
               console.log(`✅ Created payment record for quote ${quoteId}`);
@@ -3458,7 +3739,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   });
                 }
 
-                if (program && !isDuplicateSubscription) {
+                // Task #325: one-time package_purchase duplicate guard
+                // (subscription branch above handles recurring).
+                let isDuplicateOneTimePackage = false;
+                if (session.mode !== 'subscription') {
+                  const pkgOrgStripe = await getStripeForOrg(player.organizationId || session.metadata?.organizationId || 'default-org');
+                  if (pkgOrgStripe) {
+                    const buyer = await storage.getUser(userId);
+                    isDuplicateOneTimePackage = await detectAndRefundDuplicateOneTimePayment({
+                      orgStripe: pkgOrgStripe,
+                      session,
+                      organizationId: player.organizationId || session.metadata?.organizationId || 'default-org',
+                      programId: packageId,
+                      playerId,
+                      buyerUserId: userId,
+                      newPaymentId: pkgPaymentId,
+                      newStripePaymentId: stripePaymentRef,
+                      programName: program?.name || packageId,
+                      flow: 'package_purchase',
+                      buyer: buyer ? { email: buyer.email, firstName: buyer.firstName, lastName: buyer.lastName } : null,
+                      playerName: `${player.firstName || ''} ${player.lastName || ''}`.trim(),
+                    });
+                  }
+                }
+
+                if (program && !isDuplicateSubscription && !isDuplicateOneTimePackage) {
                   // Calculate enrollment end date from product duration
                   let enrollmentEndDate: string | undefined;
                   if (program.durationDays) {
@@ -3643,7 +3948,150 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sendPaymentReceiptEmail(session).catch(() => {});
           return res.json({ received: true });
         }
-        
+
+        // Task #325: QR / public store-checkout completion. Anonymous
+        // shopper, so duplicate identity = (buyer email + productId) within
+        // the 15-min window. Always record the payment row, refund and
+        // notify on duplicate.
+        if (session.metadata?.source === 'qr_code' && session.metadata?.productCategory === 'goods') {
+          const qrProductId = session.metadata.productId;
+          const qrBuyerEmail = (session.customer_details?.email || session.customer_email || '').toLowerCase().trim();
+          const qrPaymentRef = (session.payment_intent as string) || null;
+          const qrProduct = qrProductId ? await storage.getProgram(qrProductId) : null;
+          const qrOrgId = qrProduct?.organizationId
+            || session.metadata?.organizationId
+            || 'default-org';
+
+          // Record the QR sale (synthetic userId from email) so the books
+          // match Stripe even if we refund as duplicate below.
+          let qrPaymentId: string | null = null;
+          if (qrPaymentRef && session.amount_total) {
+            try {
+              const orgPaymentsExisting = await storage.getPaymentsByOrganization(qrOrgId);
+              const alreadyRecorded = orgPaymentsExisting.some(
+                (p: any) => p && p.stripePaymentId === qrPaymentRef
+              );
+              if (!alreadyRecorded) {
+                const qrPayment = await storage.createPayment({
+                  organizationId: qrOrgId,
+                  userId: `qr-anon:${qrBuyerEmail || qrPaymentRef}`,
+                  amount: session.amount_total,
+                  currency: 'usd',
+                  paymentType: 'qr_store_checkout',
+                  status: 'completed',
+                  description: qrProduct?.name ? `Store: ${qrProduct.name}` : `QR Store Purchase`,
+                  programId: qrProductId,
+                  stripePaymentId: qrPaymentRef,
+                });
+                qrPaymentId = qrPayment ? String(qrPayment.id) : null;
+              }
+            } catch (qrPayErr: any) {
+              console.error('[QR Store] Could not create payment record (non-fatal):', qrPayErr?.message || qrPayErr);
+            }
+          }
+
+          // Duplicate detection: same buyer email + same product within
+          // the 15-minute window with a different stripePaymentId.
+          let isDuplicateQr = false;
+          if (qrPaymentRef && qrBuyerEmail) {
+            try {
+              const orgPayments = await storage.getPaymentsByOrganization(qrOrgId);
+              const priorQr = orgPayments.find((p: any) =>
+                p && p.paymentType === 'qr_store_checkout' &&
+                p.status === 'completed' &&
+                p.programId === qrProductId &&
+                p.userId === `qr-anon:${qrBuyerEmail || qrPaymentRef}` &&
+                p.stripePaymentId && p.stripePaymentId !== qrPaymentRef &&
+                p.createdAt &&
+                (Date.now() - new Date(p.createdAt).getTime()) < DUPLICATE_ONE_TIME_PAYMENT_WINDOW_MS
+              );
+              if (priorQr) {
+                isDuplicateQr = true;
+                const qrOrgStripe = await getStripeForOrg(qrOrgId);
+                let refundOk = true;
+                let refundErrMsg = '';
+                let refundId: string | null = null;
+                if (qrOrgStripe) {
+                  try {
+                    const refundParams: any = {};
+                    if (qrPaymentRef.startsWith('pi_')) refundParams.payment_intent = qrPaymentRef;
+                    else if (qrPaymentRef.startsWith('ch_')) refundParams.charge = qrPaymentRef;
+                    else throw new Error(`Unsupported stripePaymentId format: ${qrPaymentRef}`);
+                    const refund = await qrOrgStripe.refunds.create(refundParams);
+                    refundId = refund.id;
+                    console.warn(`[DuplicateOneTimePayment] Refunded duplicate QR charge ${qrPaymentRef} -> refund ${refund.id} (status ${refund.status})`);
+                  } catch (refundExc: any) {
+                    refundOk = false;
+                    refundErrMsg = refundExc?.message || String(refundExc);
+                    console.error(`[DuplicateOneTimePayment] Failed to refund duplicate QR charge ${qrPaymentRef}:`, refundErrMsg);
+                  }
+                }
+                if (refundOk && qrPaymentId) {
+                  try {
+                    await storage.updatePayment(qrPaymentId, { status: 'refunded' });
+                  } catch (updateErr: any) {
+                    console.error('[DuplicateOneTimePayment] Could not flip QR payment to refunded (non-fatal):', updateErr?.message || updateErr);
+                  }
+                  try {
+                    await storage.createRefund({
+                      paymentId: parseInt(qrPaymentId),
+                      organizationId: qrOrgId,
+                      stripeRefundId: refundId ?? undefined,
+                      amount: session.amount_total || 0,
+                      reasonCode: 'duplicate_charge',
+                      notes: `Auto-refunded by duplicate-charge guardrail (Task #325). Original payment ${priorQr.id}.`,
+                      initiatedBy: 'system',
+                      refundedFee: false,
+                      status: 'succeeded',
+                      clearedAt: new Date().toISOString(),
+                    });
+                  } catch (refundRecordErr: any) {
+                    console.error('[DuplicateOneTimePayment] Could not record QR refund row (non-fatal):', refundRecordErr?.message || refundRecordErr);
+                  }
+                }
+                try {
+                  const title = refundOk
+                    ? '⚠️ Suspected Duplicate Store Purchase Refunded'
+                    : '🚨 URGENT: Duplicate Store Purchase Auto-Refund FAILED';
+                  const refundLine = refundOk
+                    ? `duplicate charge auto-refunded (refund ${refundId ?? 'n/a'}).`
+                    : `duplicate charge could NOT be auto-refunded (${refundErrMsg}) — please refund payment ${qrPaymentId ?? qrPaymentRef} manually in Stripe.`;
+                  await pushNotifications.notifyAllAdmins(
+                    storage,
+                    title,
+                    `${qrBuyerEmail || 'A QR shopper'} appears to have paid twice for ${qrProduct?.name || qrProductId}. ` +
+                      `Original payment ${priorQr.id} kept; ` + refundLine,
+                    qrOrgId
+                  );
+                } catch (notifErr: any) {
+                  console.error('[DuplicateOneTimePayment] QR duplicate notification failed (non-fatal):', notifErr?.message || notifErr);
+                }
+              }
+            } catch (dupErr: any) {
+              console.error('[DuplicateOneTimePayment] QR duplicate detection failed (non-fatal):', dupErr?.message || dupErr);
+            }
+          }
+
+          if (!isDuplicateQr) {
+            // Normal QR fulfillment path: notify admins this needs dispatch.
+            try {
+              await pushNotifications.notifyAllAdmins(
+                storage,
+                '📦 New Store Order',
+                `${qrBuyerEmail || 'A QR shopper'} ordered ${qrProduct?.name || qrProductId} — dispatch required`,
+                qrOrgId
+              );
+            } catch (notifErr: any) {
+              console.error('[QR Store] Dispatch notification failed (non-fatal):', notifErr?.message || notifErr);
+            }
+          } else {
+            console.log(`ℹ️ Skipping QR fulfillment notification for ${qrProductId} — duplicate payment refunded`);
+          }
+
+          sendPaymentReceiptEmail(session).catch(() => {});
+          return res.json({ received: true, duplicate: isDuplicateQr });
+        }
+
         // Handle package selection payments (existing family onboarding flow)
         const userId = session.metadata?.userId;
         const selectionIds = session.metadata?.packageSelectionIds;
@@ -3928,7 +4376,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tryoutConnectResult = await applyConnectChargeParams(tryoutSessionParams, req.user.organizationId, 'payment', tryoutServiceFeeCents);
       verifyConnectRouting(tryoutSessionParams, 'payment', req.user.organizationId, tryoutConnectResult, { applicationFeeAmount: tryoutServiceFeeCents, checkoutType: 'tryout' });
 
-      const session = await orgStripe.checkout.sessions.create(tryoutSessionParams);
+      // Task #325: idempotency key collapses double-click to one session.
+      const tryoutIdemKey = buildCheckoutIdempotencyKey({
+        flow: 'tryout',
+        userId: req.user.id,
+        packageId: programId,
+        playerId,
+        extra: recommendedTeamId ? `rt:${recommendedTeamId}` : undefined,
+      });
+      const session = await orgStripe.checkout.sessions.create(tryoutSessionParams, { idempotencyKey: tryoutIdemKey });
 
       res.json({ sessionUrl: session.url, sessionId: session.id });
     } catch (error: any) {
@@ -4365,10 +4821,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               p.stripePaymentId === session.payment_intent && p.status === 'completed'
             );
 
+            // Task #325: capture id for duplicate-refund targeting below.
+            let createdTryoutPaymentId: string | null = null;
             if (!alreadyPaid && session.amount_total) {
-              await storage.createPayment({
+              const tryoutPayment = await storage.createPayment({
                 organizationId: resolvedOrgId,
                 userId: accountHolderId,
+                playerId: profileId,
                 amount: session.amount_total,
                 currency: 'usd',
                 paymentType: 'stripe_checkout',
@@ -4377,65 +4836,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 programId,
                 stripePaymentId: session.payment_intent as string,
               });
+              createdTryoutPaymentId = tryoutPayment ? String(tryoutPayment.id) : null;
               paymentWasProcessed = true;
             }
 
-            const existingEnrollments = await storage.getActiveEnrollmentsWithCredits(profileId);
-            const hasTryoutEnrollment = existingEnrollments.some(
-              (e: any) => e.programId === programId && e.isTryout === true
-            );
-
-            if (!hasTryoutEnrollment) {
-              await storage.createEnrollment({
+            // Task #325: tryout duplicate guard (15-min window).
+            const tryoutOrgStripe = await getStripeForOrg(resolvedOrgId);
+            let isDuplicateTryout = false;
+            if (tryoutOrgStripe) {
+              const tryoutBuyer = await storage.getUser(accountHolderId);
+              isDuplicateTryout = await detectAndRefundDuplicateOneTimePayment({
+                orgStripe: tryoutOrgStripe,
+                session,
                 organizationId: resolvedOrgId,
                 programId,
-                accountHolderId,
-                profileId,
-                status: 'active',
-                source: 'direct',
-                totalCredits: 1,
-                remainingCredits: 1,
-                isTryout: true,
-                recommendedTeamId: recTeamId || null,
-                metadata: { tryout: true, recommendedTeamId: recTeamId },
+                playerId: profileId,
+                buyerUserId: accountHolderId,
+                newPaymentId: createdTryoutPaymentId,
+                newStripePaymentId: (session.payment_intent as string) || null,
+                programName: program?.name || programId,
+                flow: 'tryout',
+                buyer: tryoutBuyer ? { email: tryoutBuyer.email, firstName: tryoutBuyer.firstName, lastName: tryoutBuyer.lastName } : null,
+                playerName,
               });
-              paymentWasProcessed = true;
             }
 
-            if (recTeamId) {
-              try {
-                const recTeam = await storage.getTeam(String(recTeamId));
-                if (recTeam && String(recTeam.programId) === String(program?.id)) {
-                  await db.insert(teamMemberships).values({
-                    teamId: recTeamId,
-                    profileId,
-                    role: 'player',
-                    status: 'tryout',
-                  }).onConflictDoUpdate({
-                    target: [teamMemberships.teamId, teamMemberships.profileId],
-                    set: { status: 'tryout', leftAt: null },
-                  });
-                  console.log(`✅ Added tryout player ${profileId} to team ${recTeamId} roster`);
-                } else {
-                  console.warn(`⚠️ Skipped tryout membership: team ${recTeamId} not found or not in program`);
-                }
-              } catch (tmError: any) {
-                console.error('⚠️ Tryout team membership creation failed (non-fatal):', tmError.message);
+            if (isDuplicateTryout) {
+              console.log(`ℹ️ Skipping tryout enrollment for ${profileId} — duplicate payment refunded`);
+            } else {
+              const existingEnrollments = await storage.getActiveEnrollmentsWithCredits(profileId);
+              const hasTryoutEnrollment = existingEnrollments.some(
+                (e: any) => e.programId === programId && e.isTryout === true
+              );
+
+              if (!hasTryoutEnrollment) {
+                await storage.createEnrollment({
+                  organizationId: resolvedOrgId,
+                  programId,
+                  accountHolderId,
+                  profileId,
+                  status: 'active',
+                  source: 'direct',
+                  totalCredits: 1,
+                  remainingCredits: 1,
+                  isTryout: true,
+                  recommendedTeamId: recTeamId || null,
+                  metadata: { tryout: true, recommendedTeamId: recTeamId },
+                });
+                paymentWasProcessed = true;
               }
-            }
 
-            if (paymentWasProcessed) {
-              console.log(`✅ Created tryout enrollment for ${profileId} in ${programId}`);
-              try {
-                await pushNotifications.parentPaymentSuccessful(storage, accountHolderId, playerName, session.amount_total || 0);
-                await pushNotifications.notifyAllAdmins(
-                  storage,
-                  '🏀 New Tryout',
-                  `${playerName} paid for a tryout in ${program?.name || programId}`,
-                  resolvedOrgId
-                );
-              } catch (notifError: any) {
-                console.error('⚠️ Tryout notification failed (non-fatal):', notifError.message);
+              if (recTeamId) {
+                try {
+                  const recTeam = await storage.getTeam(String(recTeamId));
+                  if (recTeam && String(recTeam.programId) === String(program?.id)) {
+                    await db.insert(teamMemberships).values({
+                      teamId: recTeamId,
+                      profileId,
+                      role: 'player',
+                      status: 'tryout',
+                    }).onConflictDoUpdate({
+                      target: [teamMemberships.teamId, teamMemberships.profileId],
+                      set: { status: 'tryout', leftAt: null },
+                    });
+                    console.log(`✅ Added tryout player ${profileId} to team ${recTeamId} roster`);
+                  } else {
+                    console.warn(`⚠️ Skipped tryout membership: team ${recTeamId} not found or not in program`);
+                  }
+                } catch (tmError: any) {
+                  console.error('⚠️ Tryout team membership creation failed (non-fatal):', tmError.message);
+                }
+              }
+
+              if (paymentWasProcessed) {
+                console.log(`✅ Created tryout enrollment for ${profileId} in ${programId}`);
+                try {
+                  await pushNotifications.parentPaymentSuccessful(storage, accountHolderId, playerName, session.amount_total || 0);
+                  await pushNotifications.notifyAllAdmins(
+                    storage,
+                    '🏀 New Tryout',
+                    `${playerName} paid for a tryout in ${program?.name || programId}`,
+                    resolvedOrgId
+                  );
+                } catch (notifError: any) {
+                  console.error('⚠️ Tryout notification failed (non-fatal):', notifError.message);
+                }
               }
             }
           } catch (tryoutError: any) {
@@ -5016,6 +5501,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const baseUrl = `${req.protocol}://${req.get('host')}`;
 
+      // Task #325: idempotency key — collapses double-click to one session.
+      const platformIdemKey = buildCheckoutIdempotencyKey({
+        flow: 'platform_subscription',
+        userId,
+        packageId: plan,
+        extra: orgId || undefined,
+      });
       const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
         customer_email: userEmail,
@@ -5039,7 +5531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         success_url: `${baseUrl}/subscription-required?subscription=success&plan=${plan}`,
         cancel_url: `${baseUrl}/subscription-required?subscription=cancelled`,
-      });
+      }, { idempotencyKey: platformIdemKey });
 
       console.log(`[Platform Subscription] Created checkout session for org ${orgId}, plan: ${plan}, session: ${session.id}`);
       res.json({ success: true, url: session.url });
@@ -14636,7 +15128,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         payment_intent_data: sessionParams.payment_intent_data ?? null,
       });
 
-      const session = await orgStripe.checkout.sessions.create(sessionParams);
+      // Task #325: idempotency identity = client-supplied per-page-load
+      // UUID (+ authed userId when present). Avoids collapsing distinct
+      // anonymous shoppers behind the same NAT/IP. IP is a last-resort
+      // fallback for legacy clients that don't send clientCheckoutId.
+      const rawClientCheckoutId = typeof req.body?.clientCheckoutId === 'string'
+        ? req.body.clientCheckoutId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64)
+        : '';
+      const authedUserId = (req.user && typeof req.user.id === 'string') ? req.user.id : '';
+      const fallbackIp = (req.ip || req.socket?.remoteAddress || 'unknown').replace(/[^a-zA-Z0-9:.]/g, '');
+      const qrIdentity = rawClientCheckoutId
+        ? `cc:${rawClientCheckoutId}${authedUserId ? `:u:${authedUserId}` : ''}`
+        : authedUserId
+          ? `u:${authedUserId}`
+          : `anon-fallback:${fallbackIp}`;
+      const qrIdemKey = buildCheckoutIdempotencyKey({
+        flow: 'qr_store',
+        userId: qrIdentity,
+        packageId: productId,
+        extra: orgId,
+      });
+      const session = await orgStripe.checkout.sessions.create(sessionParams, { idempotencyKey: qrIdemKey });
       res.json({ sessionUrl: session.url, sessionId: session.id });
     } catch (error: any) {
       console.error('Error creating store checkout session:', error);
@@ -19484,7 +19996,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           payment_intent_data: quoteSessionParams.payment_intent_data ?? null,
         });
 
-        const session = await quoteOrgStripe.checkout.sessions.create(quoteSessionParams);
+        // Task #325: idempotency key — collapses double-click to one session.
+        const quoteIdemKey = buildCheckoutIdempotencyKey({
+          flow: 'quote_checkout',
+          userId: accountUser.id,
+          packageId: quote.id,
+          playerId: player.id,
+          extra: quote.organizationId,
+        });
+        const session = await quoteOrgStripe.checkout.sessions.create(quoteSessionParams, { idempotencyKey: quoteIdemKey });
 
         return res.json({ paymentUrl: session.url });
       }

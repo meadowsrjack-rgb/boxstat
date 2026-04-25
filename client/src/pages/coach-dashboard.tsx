@@ -1004,16 +1004,26 @@ function CoachPaymentsTab({ organizationId }: { organizationId: string }) {
     setQrDialogOpen(true);
   };
 
+  // Task #325: ref-based in-flight lock alongside checkoutLoading state.
+  const checkoutInFlightRef = useRef(false);
+
   const handleDirectCheckout = async (item: any) => {
+    if (checkoutInFlightRef.current || checkoutLoading) return;
+    checkoutInFlightRef.current = true;
     setCheckoutLoading(item.id);
     try {
       const token = localStorage.getItem('authToken');
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
+      // Task #325: deterministic time-bucketed client id for server-side
+      // Stripe idempotency (collapses repeat attempts in the 10-min bucket).
+      const bucket = Math.floor(Date.now() / 600000);
+      const clientCheckoutId = `coach-attempt:${item.id}:${bucket}`;
       const res = await fetch(`/api/store-checkout/${item.id}`, {
         method: 'POST',
         credentials: 'include',
         headers,
+        body: JSON.stringify({ clientCheckoutId }),
       });
       const data = await res.json();
       if (data.sessionUrl) {
@@ -1023,6 +1033,7 @@ function CoachPaymentsTab({ organizationId }: { organizationId: string }) {
       console.error('Checkout error:', err);
     } finally {
       setCheckoutLoading(null);
+      checkoutInFlightRef.current = false;
     }
   };
 

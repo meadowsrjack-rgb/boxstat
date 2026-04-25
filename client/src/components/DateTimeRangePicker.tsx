@@ -165,7 +165,12 @@ export default function DateTimeRangePicker({
           <span className="truncate text-sm">{summaryText}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start" sideOffset={4}>
+      <PopoverContent
+        className="w-auto p-0 max-w-[calc(100vw-1rem)] sm:max-w-none"
+        align="start"
+        sideOffset={4}
+        collisionPadding={8}
+      >
         <div className="bg-background rounded-lg border shadow-lg">
           <div className="px-4 py-3 border-b flex items-center justify-between">
             <h4 className="text-sm font-semibold">Select date & time range</h4>
@@ -201,18 +206,18 @@ export default function DateTimeRangePicker({
             </button>
           </div>
 
-          <div className="flex">
-            <div className="border-r">
+          <div className="flex flex-col sm:flex-row">
+            <div className="border-b sm:border-b-0 sm:border-r flex justify-center overflow-x-auto">
               <Calendar
                 mode="range"
                 selected={dateRange}
                 onDayClick={handleDayClick}
                 numberOfMonths={1}
-                className="p-3"
+                className="p-2 sm:p-3"
               />
             </div>
 
-            <div className="p-4 w-48 space-y-5">
+            <div className="p-4 w-full sm:w-48 space-y-5">
               <div className="space-y-2">
                 <label className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground">Start Time</label>
                 <div className="flex items-center gap-1">

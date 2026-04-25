@@ -714,18 +714,24 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   // Helpers
   const initials = `${(displayProfile?.firstName || "").charAt(0)}${(displayProfile?.lastName || "").charAt(0)}`.toUpperCase();
 
+  const byEventStartAsc = (a: Event, b: Event) =>
+    new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+
   const todayEvents = useMemo(() => {
     const today = new Date();
     const hidden = userPrefs.hiddenEventTypes || [];
-    return (allEvents || []).filter((ev: Event) => {
-      const dt = new Date(ev.startTime);
-      if (!isSameDay(dt, today)) return false;
-      if (hidden.length > 0) {
-        const parsed = parseEventMeta(ev);
-        if (hidden.includes(parsed.type)) return false;
-      }
-      return true;
-    });
+    return (allEvents || [])
+      .filter((ev: Event) => {
+        const dt = new Date(ev.startTime);
+        if (!isSameDay(dt, today)) return false;
+        if (hidden.length > 0) {
+          const parsed = parseEventMeta(ev);
+          if (hidden.includes(parsed.type)) return false;
+        }
+        return true;
+      })
+      .slice()
+      .sort(byEventStartAsc);
   }, [allEvents, userPrefs.hiddenEventTypes]);
 
   const upcomingEvents = useMemo(() => {
@@ -745,12 +751,17 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         .filter((ev: Event) => isAfter(new Date(ev.startTime), start))
         .filter((ev: Event) => !isSameDay(new Date(ev.startTime), new Date()))
         .filter(filterByType)
+        .slice()
+        .sort(byEventStartAsc)
         .slice(0, 3);
     } else {
-      return (allEvents || []).filter((ev: Event) => {
-        const dt = new Date(ev.startTime);
-        return isSameDay(dt, selectedDate) && filterByType(ev);
-      });
+      return (allEvents || [])
+        .filter((ev: Event) => {
+          const dt = new Date(ev.startTime);
+          return isSameDay(dt, selectedDate) && filterByType(ev);
+        })
+        .slice()
+        .sort(byEventStartAsc);
     }
   }, [allEvents, selectedDate, userPrefs.hiddenEventTypes]);
 

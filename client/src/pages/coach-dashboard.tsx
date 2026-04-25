@@ -538,9 +538,16 @@ export default function CoachDashboard() {
     });
   }, [coachEvents, coachUserPrefs.hiddenEventTypes]);
 
+  const getEventStart = (ev: any) =>
+    new Date(ev.startTime || ev.start_time).getTime();
+  const byStartAsc = (a: any, b: any) => getEventStart(a) - getEventStart(b);
+
   const todayEvents = useMemo(() => {
     const today = new Date();
-    return visibleCoachEvents.filter((ev) => isSameDay(new Date((ev as any).startTime || (ev as any).start_time), today));
+    return visibleCoachEvents
+      .filter((ev) => isSameDay(new Date((ev as any).startTime || (ev as any).start_time), today))
+      .slice()
+      .sort(byStartAsc);
   }, [visibleCoachEvents]);
 
   const upcomingEvents = useMemo(() => {
@@ -549,10 +556,14 @@ export default function CoachDashboard() {
       return visibleCoachEvents
         .filter((ev) => isAfter(new Date((ev as any).startTime || (ev as any).start_time), start))
         .filter((ev) => !isSameDay(new Date((ev as any).startTime || (ev as any).start_time), new Date()))
+        .slice()
+        .sort(byStartAsc)
         .slice(0, 3);
     } else {
       return visibleCoachEvents
         .filter((ev) => isSameDay(new Date((ev as any).startTime || (ev as any).start_time), selectedDate))
+        .slice()
+        .sort(byStartAsc)
         .slice(0, 10);
     }
   }, [visibleCoachEvents, selectedDate]);

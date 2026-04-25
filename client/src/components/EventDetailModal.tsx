@@ -1163,57 +1163,8 @@ export default function EventDetailModal({
               />
             )}
 
-            {/* GPS Location Banner */}
-            {!isAdminOrCoach && event.latitude != null && event.longitude != null && (
-              <div
-                className="rounded-xl px-4 py-3 flex items-center gap-3"
-                style={{ background: 'rgba(161,110,0,0.25)', borderLeft: '3px solid #ca8a04' }}
-                data-testid="card-location-status"
-              >
-                <MapPin className="h-5 w-5 text-yellow-500 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  {geoLoading ? (
-                    <p className="text-yellow-200 text-sm">Getting your location...</p>
-                  ) : geoError ? (
-                    <>
-                      <p className="text-yellow-200 text-sm font-medium">GPS required to check in at this location</p>
-                      <p className="text-yellow-400/70 text-xs">Location permission needed</p>
-                    </>
-                  ) : userDistance !== null ? (
-                    <p className="text-yellow-200 text-sm">
-                      {userDistance <= (event.checkInRadius ?? 200)
-                        ? `Within range — ${Math.round(userDistance)}m away`
-                        : `${Math.round(userDistance)}m away — need to be within ${event.checkInRadius ?? 200}m`}
-                    </p>
-                  ) : (
-                    <p className="text-yellow-200 text-sm font-medium">GPS required to check in at this location</p>
-                  )}
-                </div>
-                {(geoError || (!coords && !geoLoading)) && (
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <Button
-                      size="sm"
-                      className="h-7 px-3 text-xs bg-yellow-600 hover:bg-yellow-500 text-white border-0"
-                      onClick={handleRequestLocation}
-                      data-testid="button-enable-location"
-                    >
-                      Enable
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowLocationHelp(true)}
-                      className="h-7 w-7 p-0 text-yellow-400 hover:text-yellow-200 hover:bg-yellow-900/30"
-                      data-testid="button-location-help"
-                    >
-                      <HelpCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Check-In Section */}
+            {/* Check-In Section (GPS distance banner is rendered inside the
+                card just below the "Check-in opens at..." status row) */}
             <CheckInWheel
               data={checkInData}
               openTime={eventWindows.checkinOpen}
@@ -1225,6 +1176,56 @@ export default function EventDetailModal({
               checkedInUserIds={attendances.map(a => a.userId)}
               showQrButton={!userCheckIn && !isAdminOrCoach && userRole === 'player'}
               onQrClick={() => setShowQrScanner(true)}
+              locationBanner={
+                !isAdminOrCoach && event.latitude != null && event.longitude != null ? (
+                  <div
+                    className="rounded-lg px-3 py-2 flex items-center gap-2"
+                    style={{ background: 'rgba(161,110,0,0.25)', borderLeft: '3px solid #ca8a04' }}
+                    data-testid="card-location-status"
+                  >
+                    <MapPin className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      {geoLoading ? (
+                        <p className="text-yellow-200 text-xs">Getting your location...</p>
+                      ) : geoError ? (
+                        <>
+                          <p className="text-yellow-200 text-xs font-medium">GPS required to check in at this location</p>
+                          <p className="text-yellow-400/70 text-[11px]">Location permission needed</p>
+                        </>
+                      ) : userDistance !== null ? (
+                        <p className="text-yellow-200 text-xs">
+                          {userDistance <= (event.checkInRadius ?? 200)
+                            ? `Within range — ${Math.round(userDistance)}m away`
+                            : `${Math.round(userDistance)}m away — need to be within ${event.checkInRadius ?? 200}m`}
+                        </p>
+                      ) : (
+                        <p className="text-yellow-200 text-xs font-medium">GPS required to check in at this location</p>
+                      )}
+                    </div>
+                    {(geoError || (!coords && !geoLoading)) && (
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button
+                          size="sm"
+                          className="h-7 px-3 text-xs bg-yellow-600 hover:bg-yellow-500 text-white border-0"
+                          onClick={handleRequestLocation}
+                          data-testid="button-enable-location"
+                        >
+                          Enable
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowLocationHelp(true)}
+                          className="h-7 w-7 p-0 text-yellow-400 hover:text-yellow-200 hover:bg-yellow-900/30"
+                          data-testid="button-location-help"
+                        >
+                          <HelpCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : null
+              }
             />
 
             {/* Coach Roster Check-In Section */}

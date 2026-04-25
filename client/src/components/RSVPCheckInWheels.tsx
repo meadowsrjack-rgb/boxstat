@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Clock, QrCode } from 'lucide-react';
 import { timeUntil, getWindowStatus } from '@/lib/time';
@@ -39,6 +39,7 @@ interface CheckInWheelProps {
   checkedInUserIds?: string[];
   showQrButton?: boolean;
   onQrClick?: () => void;
+  locationBanner?: ReactNode;
 }
 
 function DonutChart({ attending, notAttending, noResponse, total }: { attending: number; notAttending: number; noResponse: number; total: number }) {
@@ -331,6 +332,7 @@ export function CheckInWheel({
   checkedInUserIds = [],
   showQrButton = false,
   onQrClick,
+  locationBanner,
 }: CheckInWheelProps) {
   const status = getWindowStatus(openTime, closeTime);
 
@@ -429,8 +431,8 @@ export function CheckInWheel({
             disabled={isButtonDisabled}
             size="sm"
             className={`text-xs px-3 py-1.5 h-auto border-0 ${
-              isUserCheckedIn 
-                ? 'bg-green-700 hover:bg-green-600 text-white' 
+              isUserCheckedIn
+                ? 'bg-green-700 hover:bg-green-600 text-white'
                 : 'bg-gray-700 hover:bg-gray-600 text-white'
             }`}
             data-testid="button-checkin-action"
@@ -439,6 +441,12 @@ export function CheckInWheel({
           </Button>
         </div>
       </div>
+
+      {locationBanner && (
+        <div className="mt-3" data-testid="checkin-location-banner-slot">
+          {locationBanner}
+        </div>
+      )}
     </div>
   );
 }

@@ -976,10 +976,20 @@ export class NotificationService {
       Legacy: 500, Legend: 500,
     };
     const xp = xpReward ?? tierXpMap[tier] ?? 50;
+    let recipientName = '';
+    try {
+      const recipient = await storage.getUser(userId);
+      if (recipient) {
+        recipientName = (recipient.firstName || recipient.lastName || recipient.email || '').toString().trim();
+      }
+    } catch {
+      // best-effort personalization; fall back to generic greeting
+    }
+    const greeting = recipientName ? `Congratulations ${recipientName}!` : 'Congratulations!';
     await this.sendMultiChannelNotification({
       userId,
       title: '🏅 You earned an award!',
-      message: `Congratulations! You received the "${awardName}" (${tier}) award.`,
+      message: `${greeting} You received the "${awardName}" (${tier}) award.`,
       type: 'award_received',
       data: {
         url: '/player-dashboard?popup=award',

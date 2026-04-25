@@ -523,8 +523,10 @@ async function sendAwardNotification(
     if (!user) return;
 
     const xpReward = notification.xpReward ?? getXpForTier(notification.awardTier);
+    const recipientName = (user.firstName || user.lastName || user.email || '').toString().trim();
+    const greeting = recipientName ? `Congratulations ${recipientName}!` : 'Congratulations!';
     const title = `🏆 New Award Earned: ${notification.awardName}`;
-    const message = `Congratulations! You've earned the "${notification.awardName}" (${notification.awardTier}) award!`;
+    const message = `${greeting} You've earned the "${notification.awardName}" (${notification.awardTier}) award!`;
 
     // Create in-app notification
     const createdNotification = await storage.createNotification({

@@ -3531,6 +3531,11 @@ export default function UnifiedAccount() {
                           </Button>
                           <Button
                             onClick={async () => {
+                              // Task #323: bail if a checkout request is already
+                              // in flight. The button is also disabled via
+                              // `isProcessingPayment`, but a fast double-tap can
+                              // fire two clicks before React re-renders.
+                              if (isProcessingPayment) return;
                               if (!selectedPackage) {
                                 toast({
                                   title: "Error",

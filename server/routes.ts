@@ -61,6 +61,146 @@ import { eq, and, or, sql, desc, inArray, gte, count, isNull } from "drizzle-orm
 
 let wss: WebSocketServer | null = null;
 
+// Task #323: Duplicate-subscription guardrails.
+//
+// CHECKOUT_IDEMPOTENCY_BUCKET_MS — width of the time bucket used to derive a
+// Stripe idempotency key from the (user, package, player) tuple on
+// `checkout.sessions.create`. Two POSTs from the same user for the same
+// package within this window collapse to the same Stripe Checkout Session
+// (Stripe will return the originally-created session) instead of producing
+// two parallel sessions.
+//
+// DUPLICATE_SUBSCRIPTION_WINDOW_MS — how recently an existing active
+// enrollment for the same player+program must have been created for an
+// arriving `checkout.session.completed` (subscription mode) to be treated as
+// a suspected duplicate. When tripped, we still record the payment row (so
+// the books match Stripe), cancel the just-created subscription, do NOT
+// expire-and-recreate the original enrollment, and notify admins so the
+// human refund can happen.
+const CHECKOUT_IDEMPOTENCY_BUCKET_MS = 10 * 60 * 1000;
+const DUPLICATE_SUBSCRIPTION_WINDOW_MS = 15 * 60 * 1000;
+
+// Build a Stripe idempotency key from the customer-facing checkout context.
+// `suffix` lets distinct flows (cart vs. add-player vs. legacy package) live
+// in the same key namespace without colliding. Keep keys ≤255 chars per
+// Stripe — the inputs here are uuid-ish so we're well under.
+function buildCheckoutIdempotencyKey(parts: {
+  flow: string;
+  userId: string;
+  packageId?: string | null;
+  playerId?: string | null;
+  extra?: string | null;
+}): string {
+  const bucket = Math.floor(Date.now() / CHECKOUT_IDEMPOTENCY_BUCKET_MS);
+  const pkg = parts.packageId || '';
+  const player = parts.playerId || '';
+  const extra = parts.extra ? `:${parts.extra}` : '';
+  return `co:${parts.flow}:${parts.userId}:${pkg}:${player}:${bucket}${extra}`;
+}
+
+// Task #323: shared webhook safety net for duplicate subscriptions.
+//
+// Called from every `checkout.session.completed` branch that can produce a
+// Stripe subscription. Detects when this player already has an active
+// enrollment for the same program with a *different* stripeSubscriptionId
+// created within the last DUPLICATE_SUBSCRIPTION_WINDOW_MS. When tripped:
+//   - cancels the just-created (duplicate) Stripe subscription
+//   - notifies all admins with both subscription IDs and both payment IDs
+//   - emits a [DuplicateSubscription] console.warn including customer
+//     email, player name, program name, both sub IDs, and both payment IDs
+// Returns `true` when a duplicate was detected (caller should skip the
+// enrollment expire-and-recreate dance and the subscription-record
+// creation); `false` otherwise.
+async function detectAndCancelDuplicateSubscription(args: {
+  session: Stripe.Checkout.Session;
+  playerId: string;
+  packageId: string;
+  newStripeSubscriptionId: string;
+  newPaymentId: string | null;
+  programName: string;
+  buyer: { id: string; email?: string | null; firstName?: string | null; lastName?: string | null } | null;
+  player: { firstName?: string | null; lastName?: string | null; organizationId?: string | null };
+  existingEnrollments: Array<{
+    id: number;
+    programId: string;
+    status: string;
+    stripeSubscriptionId: string | null;
+    paymentId: string | null;
+    createdAt: string | null;
+  }>;
+}): Promise<boolean> {
+  const dup = args.existingEnrollments.find(e => {
+    if (e.programId !== args.packageId) return false;
+    if (e.status !== 'active') return false;
+    if (!e.stripeSubscriptionId) return false;
+    if (e.stripeSubscriptionId === args.newStripeSubscriptionId) return false;
+    if (!e.createdAt) return false;
+    const ageMs = Date.now() - new Date(e.createdAt).getTime();
+    return ageMs >= 0 && ageMs < DUPLICATE_SUBSCRIPTION_WINDOW_MS;
+  });
+  if (!dup) return false;
+
+  const buyerEmail = args.buyer?.email || 'unknown';
+  const buyerName = args.buyer
+    ? `${args.buyer.firstName || ''} ${args.buyer.lastName || ''}`.trim() || buyerEmail
+    : 'Unknown buyer';
+  const playerName = `${args.player.firstName || ''} ${args.player.lastName || ''}`.trim() || args.playerId;
+  const originalPaymentId = dup.paymentId ?? 'n/a';
+  const newPaymentId = args.newPaymentId ?? 'n/a';
+
+  console.warn(
+    `[DuplicateSubscription] Detected duplicate subscription: ` +
+    `customer ${buyerEmail} (user ${args.buyer?.id ?? 'n/a'}), player ${playerName} (${args.playerId}), ` +
+    `program "${args.programName}" (${args.packageId}); ` +
+    `original sub ${dup.stripeSubscriptionId} (enrollment ${dup.id}, paymentId ${originalPaymentId}, createdAt ${dup.createdAt}); ` +
+    `new sub ${args.newStripeSubscriptionId} (paymentId ${newPaymentId}, session ${args.session.id})`
+  );
+
+  let cancelOk = true;
+  let cancelErrMsg = '';
+  try {
+    await stripe.subscriptions.cancel(args.newStripeSubscriptionId);
+    console.warn(`[DuplicateSubscription] Cancelled duplicate Stripe subscription ${args.newStripeSubscriptionId}`);
+  } catch (cancelErr: any) {
+    cancelOk = false;
+    cancelErrMsg = cancelErr?.message || String(cancelErr);
+    console.error(
+      `[DuplicateSubscription] Failed to cancel duplicate subscription ${args.newStripeSubscriptionId}:`,
+      cancelErrMsg
+    );
+  }
+
+  try {
+    const orgIdForNotif = args.player.organizationId || args.session.metadata?.organizationId || undefined;
+    // Task #323 follow-up: escalate when the auto-cancel itself failed —
+    // billing is still active and a human needs to cancel in the Stripe
+    // dashboard ASAP. The successful path keeps the lower-urgency wording
+    // so refund-only triage isn't drowned in red.
+    const title = cancelOk
+      ? '⚠️ Suspected Duplicate Subscription'
+      : '🚨 URGENT: Duplicate Subscription Auto-Cancel FAILED';
+    const cancelLine = cancelOk
+      ? `duplicate subscription ${args.newStripeSubscriptionId} auto-cancelled.`
+      : `duplicate subscription ${args.newStripeSubscriptionId} could NOT be auto-cancelled (${cancelErrMsg}) — please cancel it manually in Stripe immediately to stop billing.`;
+    await pushNotifications.notifyAllAdmins(
+      storage,
+      title,
+      `${buyerName} (${buyerEmail}) appears to have created a duplicate subscription for ${playerName} ` +
+        `in ${args.programName}. Original subscription ${dup.stripeSubscriptionId} (payment ${originalPaymentId}) kept active; ` +
+        cancelLine + ' ' +
+        `New payment ${newPaymentId} was recorded — please issue a refund manually.`,
+      orgIdForNotif
+    );
+  } catch (notifErr: any) {
+    console.error(
+      '[DuplicateSubscription] Admin notification failed (non-fatal):',
+      notifErr?.message || notifErr
+    );
+  }
+
+  return true;
+}
+
 // Helper function to check if user has any admin profile with the same email
 // This handles multi-profile accounts where a user might have both parent and admin profiles
 async function hasAdminProfile(userId: string, organizationId: string): Promise<boolean> {
@@ -2183,7 +2323,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subscription_data: sessionParams1.subscription_data ?? null,
       });
 
-      const session = await orgStripe.checkout.sessions.create(sessionParams1);
+      // Task #323: idempotency key collapses rapid double-submits from the
+      // same user into a single Stripe Checkout Session. Bucket is wide
+      // enough to absorb double-clicks but narrow enough that a deliberate
+      // re-attempt later still creates a fresh session.
+      const legacyIdemKey = buildCheckoutIdempotencyKey({
+        flow: 'legacy_package',
+        userId: user.id,
+        packageId: productId || '',
+        extra: metadata.packageSelectionIds || undefined,
+      });
+      const session = await orgStripe.checkout.sessions.create(sessionParams1, { idempotencyKey: legacyIdemKey });
       
       res.json({
         sessionUrl: session.url,
@@ -2682,7 +2832,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subscription_data: sessionParams.subscription_data ?? null,
       });
 
-      const session = await orgStripe2.checkout.sessions.create(sessionParams);
+      // Task #323: idempotency key — a frustrated double-click from the
+      // same user for the same package+player within ~10 minutes returns
+      // the same Checkout Session URL instead of creating a parallel one.
+      const pkgIdemKey = buildCheckoutIdempotencyKey({
+        flow: 'package_purchase',
+        userId: user.id,
+        packageId,
+        playerId: playerId || '',
+        extra: selectedPricingOptionId || undefined,
+      });
+      const session = await orgStripe2.checkout.sessions.create(sessionParams, { idempotencyKey: pkgIdemKey });
 
       try {
         const playerUser = playerId ? await storage.getUser(playerId) : null;
@@ -2826,12 +2986,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.json({ received: true, type: 'platform_subscription' });
         }
 
-        // Check if this is an "add_player" payment
-        if (session.metadata?.type === 'add_player') {
+        // Check if this is an "add_player" payment.
+        // Task #323: also catch the bundle-to-monthly subscription flow
+        // (`add_player_subscription`) so its `checkout.session.completed`
+        // event runs through the same duplicate-subscription safety net.
+        if (session.metadata?.type === 'add_player' || session.metadata?.type === 'add_player_subscription') {
           const playerId = session.metadata.playerId;
           const accountHolderId = session.metadata.accountHolderId;
           const packageId = session.metadata.packageId;
-          
+
           if (!playerId || !accountHolderId) {
             console.error("Missing required metadata for add_player:", { playerId, accountHolderId });
             return res.status(400).json({ 
@@ -2839,7 +3002,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               received: { playerId, accountHolderId }
             });
           }
-          
+
+          // Task #323: in subscription mode `session.payment_intent` is null —
+          // the actual payment ref lives on the first invoice. Resolve it
+          // (and the subscription id) the same way the package_purchase
+          // branch does so payment rows are stamped with a real Stripe ref.
+          const addPlayerStripePaymentRef = await resolveStripePaymentRef(session);
+          const addPlayerStripeSubscriptionId =
+            session.mode === 'subscription' && session.subscription
+              ? (typeof session.subscription === 'string'
+                  ? session.subscription
+                  : session.subscription.id)
+              : undefined;
+
           // Update player to finalize registration
           const updatedPlayer = await storage.updateUser(playerId, {
             paymentStatus: "paid",
@@ -2890,7 +3065,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   status: 'completed',
                   description: `Player Registration: ${updatedPlayer.firstName} ${updatedPlayer.lastName}`,
                   programId: packageId,
-                  stripePaymentId: session.payment_intent as string,
+                  // Task #323: subscription-mode sessions have a null
+                  // `session.payment_intent`; fall back to the first
+                  // invoice / subscription ref so the row is never blank.
+                  stripePaymentId: addPlayerStripePaymentRef,
                   selectedSize: (packageId && mainSizesById[packageId]) || undefined,
                 });
                 createdPaymentId = paymentRecord ? String(paymentRecord.id) : null;
@@ -2922,7 +3100,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       status: 'completed',
                       description: addOn.name,
                       programId: addOnId,
-                      stripePaymentId: session.payment_intent as string,
+                      // Task #323: subscription-mode sessions have a null
+                      // `session.payment_intent`; reuse the resolved ref so
+                      // add-on rows always reference a real Stripe id and
+                      // accounting reconciliation doesn't drop them.
+                      stripePaymentId: addPlayerStripePaymentRef,
                       selectedSize: sizesById[addOnId] || undefined,
                     });
                     const sizeBit = sizesById[addOnId] ? ` (Size ${sizesById[addOnId]})` : '';
@@ -2956,8 +3138,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   // Check for existing enrollment
                   const existingEnrollments = await storage.getActiveEnrollmentsWithCredits(playerId);
                   const hasEnrollment = existingEnrollments.some(e => e.programId === packageId);
-                  
-                  if (!hasEnrollment) {
+
+                  // Task #323: same duplicate-subscription safety net used
+                  // by the package_purchase branch — protects the
+                  // bundle-to-monthly add-player flow against double-charge.
+                  let isDuplicateSubscription = false;
+                  if (session.mode === 'subscription' && addPlayerStripeSubscriptionId) {
+                    const buyer = await storage.getUser(accountHolderId);
+                    isDuplicateSubscription = await detectAndCancelDuplicateSubscription({
+                      session,
+                      playerId,
+                      packageId,
+                      newStripeSubscriptionId: addPlayerStripeSubscriptionId,
+                      newPaymentId: createdPaymentId,
+                      programName: program.name || packageId,
+                      buyer: buyer ? { id: buyer.id, email: buyer.email, firstName: buyer.firstName, lastName: buyer.lastName } : null,
+                      player: { firstName: updatedPlayer.firstName, lastName: updatedPlayer.lastName, organizationId: updatedPlayer.organizationId },
+                      existingEnrollments,
+                    });
+                  }
+
+                  if (isDuplicateSubscription) {
+                    console.log(`ℹ️ Skipping enrollment side-effects for player ${playerId} — duplicate subscription cancelled`);
+                  } else if (!hasEnrollment) {
                     await storage.createEnrollment({
                       organizationId: updatedPlayer.organizationId,
                       accountHolderId: accountHolderId,
@@ -2966,6 +3169,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       status: 'active',
                       source: 'payment',
                       paymentId: createdPaymentId,
+                      // Task #323: persist the Stripe subscription id on the
+                      // enrollment so the duplicate-detection check above can
+                      // recognize subsequent attempts as duplicates.
+                      stripeSubscriptionId: addPlayerStripeSubscriptionId,
                       remainingCredits: program.sessionCount ?? undefined,
                       totalCredits: program.sessionCount ?? undefined,
                     });
@@ -3197,6 +3404,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           
+          // Task #323: track duplicate-subscription detection across the
+          // playerId branch so we can also skip the subscription-record
+          // creation below when we've cancelled the redundant Stripe sub.
+          let isDuplicateSubscription = false;
+
           // Update player's paymentStatus to "paid" and create enrollment
           if (playerId && typeof playerId === 'string' && playerId.length > 0) {
             try {
@@ -3212,8 +3424,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Check for existing enrollment for this player and program
                 const existingEnrollments = await storage.getActiveEnrollmentsWithCredits(playerId);
                 const hasEnrollment = existingEnrollments.some(e => e.programId === packageId);
-                
-                if (program) {
+
+                // Task #323: webhook-side duplicate-subscription safety net.
+                //
+                // Even with a frontend button guard and a Stripe idempotency
+                // key, two checkout sessions for the same player+program can
+                // still slip through (different browsers, different idempotency
+                // bucket boundary, race with the user clicking back-and-buy
+                // again, etc). When we detect that this player already has an
+                // active enrollment for this same program with a *different*
+                // stripeSubscriptionId created within the last
+                // DUPLICATE_SUBSCRIPTION_WINDOW_MS, we treat the new charge
+                // as a duplicate:
+                //   - Keep the payment row already inserted above so Stripe
+                //     books reconcile with our payments table.
+                //   - Skip the expire-and-recreate enrollment dance — the
+                //     original enrollment is the source of truth.
+                //   - Cancel the duplicate Stripe subscription so the customer
+                //     doesn't keep getting billed.
+                //   - Notify admins so a human can issue the refund.
+                if (session.mode === 'subscription' && stripeSubscriptionId) {
+                  const buyer = await storage.getUser(userId);
+                  isDuplicateSubscription = await detectAndCancelDuplicateSubscription({
+                    session,
+                    playerId,
+                    packageId,
+                    newStripeSubscriptionId: stripeSubscriptionId,
+                    newPaymentId: pkgPaymentId,
+                    programName: program?.name || packageId,
+                    buyer: buyer ? { id: buyer.id, email: buyer.email, firstName: buyer.firstName, lastName: buyer.lastName } : null,
+                    player,
+                    existingEnrollments,
+                  });
+                }
+
+                if (program && !isDuplicateSubscription) {
                   // Calculate enrollment end date from product duration
                   let enrollmentEndDate: string | undefined;
                   if (program.durationDays) {
@@ -3355,8 +3600,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           
-          // For subscription mode checkouts, create a subscription record
-          if (session.mode === 'subscription' && session.subscription) {
+          // For subscription mode checkouts, create a subscription record.
+          // Task #323: skip if we just cancelled this as a duplicate above —
+          // we don't want a stale active subscription record referencing a
+          // sub that no longer exists in Stripe.
+          if (session.mode === 'subscription' && session.subscription && !isDuplicateSubscription) {
             try {
               const stripeSubscriptionId = typeof session.subscription === 'string' 
                 ? session.subscription 
@@ -3726,7 +3974,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('⚠️ Abandoned cart completion failed (non-fatal):', cartError.message);
       }
 
-      if (session.metadata?.type === 'add_player') {
+      // Task #323: also accept `add_player_subscription` here since the
+      // bundle-to-monthly flow now tags its session metadata.type with the
+      // more specific value (the webhook handler accepts both for the same
+      // reason). This keeps the success-page verify endpoint working for
+      // both one-time-payment and subscription-mode add-player checkouts.
+      if (session.metadata?.type === 'add_player' || session.metadata?.type === 'add_player_subscription') {
         const playerId = session.metadata.playerId;
         const accountHolderId = session.metadata.accountHolderId;
         const packageId = session.metadata.packageId;
@@ -3735,11 +3988,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: 'Missing required metadata' });
         }
         
+        // Task #323: resolve the real payment ref BEFORE the dedupe check —
+        // for subscription-mode add-player checkouts, `session.payment_intent`
+        // is null, so a naive `p.stripePaymentId === session.payment_intent`
+        // would match every prior subscription-mode row with a null id and
+        // either always treat it as a duplicate or always create a new row.
+        // Use the resolved invoice/subscription ref instead, matching the
+        // package_purchase verify-session branch.
+        const verifyStripePaymentRef = await resolveStripePaymentRef(session);
         const existingPayments = await storage.getPaymentsByUser(playerId);
-        const alreadyProcessed = existingPayments.some(p => 
-          p.stripePaymentId === session.payment_intent && p.status === 'completed'
-        );
-        
+        const alreadyProcessed = verifyStripePaymentRef
+          ? existingPayments.some(p => p.stripePaymentId === verifyStripePaymentRef && p.status === 'completed')
+          : false;
+
         if (!alreadyProcessed) {
           const updatedPlayer = await storage.updateUser(playerId, {
             paymentStatus: "paid",
@@ -3756,7 +4017,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (session.metadata?.sizeSelections) {
               try { addPlayerSizesById = JSON.parse(session.metadata.sizeSelections) as Record<string, string>; } catch {}
             }
-            const verifyStripePaymentRef = await resolveStripePaymentRef(session);
             const verifyStripeSubscriptionId = session.mode === 'subscription' && session.subscription
               ? (typeof session.subscription === 'string' ? session.subscription : session.subscription.id)
               : undefined;
@@ -3797,8 +4057,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 if (program) {
                   const existingEnrollments = await storage.getActiveEnrollmentsWithCredits(playerId);
                   const hasEnrollment = existingEnrollments.some(e => e.programId === packageId);
-                  
-                  if (!hasEnrollment) {
+
+                  // Task #323: mirror the webhook safety net here so a parent
+                  // who lands on the success page before the webhook fires
+                  // (or whose webhook is delayed/lost) doesn't end up with two
+                  // active subscriptions for the same player+program.
+                  let isDuplicateSubscription = false;
+                  if (session.mode === 'subscription' && verifyStripeSubscriptionId) {
+                    const buyer = await storage.getUser(accountHolderId);
+                    isDuplicateSubscription = await detectAndCancelDuplicateSubscription({
+                      session,
+                      playerId,
+                      packageId,
+                      newStripeSubscriptionId: verifyStripeSubscriptionId,
+                      newPaymentId: verifyPaymentId,
+                      programName: program.name || packageId,
+                      buyer: buyer ? { id: buyer.id, email: buyer.email, firstName: buyer.firstName, lastName: buyer.lastName } : null,
+                      player: { firstName: updatedPlayer.firstName, lastName: updatedPlayer.lastName, organizationId: updatedPlayer.organizationId },
+                      existingEnrollments,
+                    });
+                  }
+
+                  if (isDuplicateSubscription) {
+                    console.log(`ℹ️ verify-session: skipping enrollment side-effects for player ${playerId} — duplicate subscription cancelled`);
+                  } else if (!hasEnrollment) {
                     await storage.createEnrollment({
                       organizationId: updatedPlayer.organizationId,
                       accountHolderId: accountHolderId,
@@ -3970,6 +4252,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const now = new Date().toISOString();
               
               const enrollmentUser = await storage.getUser(enrollmentProfileId);
+
+              // Task #323: mirror the webhook safety net in verify-session so
+              // a parent who lands on the success page before/without the
+              // webhook firing can't end up with two active subscriptions for
+              // the same player+program. Only relevant in subscription mode.
+              let isDuplicateSubscription = false;
+              if (session.mode === 'subscription' && pkgStripeSubscriptionId) {
+                const existingEnrollments = await storage.getActiveEnrollmentsWithCredits(enrollmentProfileId);
+                const buyer = await storage.getUser(userId);
+                isDuplicateSubscription = await detectAndCancelDuplicateSubscription({
+                  session,
+                  playerId: enrollmentProfileId,
+                  packageId,
+                  newStripeSubscriptionId: pkgStripeSubscriptionId,
+                  newPaymentId: String(payment.id),
+                  programName: program.name || packageId,
+                  buyer: buyer ? { id: buyer.id, email: buyer.email, firstName: buyer.firstName, lastName: buyer.lastName } : null,
+                  player: { firstName: enrollmentUser?.firstName, lastName: enrollmentUser?.lastName, organizationId: enrollmentUser?.organizationId },
+                  existingEnrollments,
+                });
+              }
+
+              if (isDuplicateSubscription) {
+                console.log(`ℹ️ verify-session: skipping enrollment side-effects for ${enrollmentProfileId} in ${packageId} — duplicate subscription cancelled`);
+              } else {
               await storage.createEnrollment({
                 organizationId: enrollmentUser?.organizationId || program.organizationId || session.metadata?.organizationId || "default-org",
                 programId: packageId,
@@ -4022,6 +4329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 if (existingUser?.stripeSubscriptionId !== subscriptionId) {
                   await storage.updateUser(userId, { stripeSubscriptionId: subscriptionId });
                 }
+              }
               }
             } catch (enrollError) {
               console.error('Error creating enrollment:', enrollError);
@@ -4449,7 +4757,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         payment_intent_data: cartSessionParams.payment_intent_data ?? null,
       });
 
-      const newSession = await orgStripe.checkout.sessions.create(cartSessionParams);
+      // Task #323: idempotency key for the resume-cart flow.
+      const cartIdemKey = buildCheckoutIdempotencyKey({
+        flow: 'cart_purchase',
+        userId: req.user.id,
+        packageId: cart.productId,
+      });
+      const newSession = await orgStripe.checkout.sessions.create(cartSessionParams, { idempotencyKey: cartIdemKey });
 
       if (!newSession.url) {
         return res.status(500).json({ error: 'Failed to create checkout session' });
@@ -5748,7 +6062,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           success_url: successUrl,
           cancel_url: `${origin}/add-player?step=5&payment=cancelled`,
           metadata: {
-            type: 'add_player',
+            // Task #323: align session metadata.type with the subscription_data
+            // metadata above so the `checkout.session.completed` handler (which
+            // already accepts both `add_player` and `add_player_subscription`
+            // for backward compat with in-flight sessions) unambiguously
+            // identifies the bundle-to-monthly subscription flow.
+            type: 'add_player_subscription',
             playerId: playerUser.id,
             accountHolderId: id,
             packageId: packageId,
@@ -5767,7 +6086,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           subscription_data: addPlayerSubParams.subscription_data ?? null,
         });
 
-        session = await playerOrgStripe.checkout.sessions.create(addPlayerSubParams);
+        // Task #323: idempotency key for the bundle-to-monthly add-player flow.
+        const addPlayerSubIdemKey = buildCheckoutIdempotencyKey({
+          flow: 'add_player_subscription',
+          userId: id,
+          packageId,
+          playerId: playerUser.id,
+          extra: selectedPricingOptionId || undefined,
+        });
+        session = await playerOrgStripe.checkout.sessions.create(addPlayerSubParams, { idempotencyKey: addPlayerSubIdemKey });
         
         console.log(`Created subscription checkout for bundle-to-monthly: ${pricingOptionName} -> Monthly after ${bundleDurationDays} days`);
       } else {
@@ -5846,7 +6173,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           payment_intent_data: addPlayerPayParams.payment_intent_data ?? null,
         });
 
-        session = await playerOrgStripe.checkout.sessions.create(addPlayerPayParams);
+        // Task #323: idempotency key for the standard one-time add-player flow.
+        const addPlayerPayIdemKey = buildCheckoutIdempotencyKey({
+          flow: 'add_player_payment',
+          userId: id,
+          packageId,
+          playerId: playerUser.id,
+          extra: selectedPricingOptionId || undefined,
+        });
+        session = await playerOrgStripe.checkout.sessions.create(addPlayerPayParams, { idempotencyKey: addPlayerPayIdemKey });
       }
       
       // Update player with checkout session ID

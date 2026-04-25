@@ -280,6 +280,11 @@ export default function MyPurchasesCard() {
 
   // Handle purchase - creates a checkout session for the selected product
   const handlePurchase = async (productId: string, productCategory: string) => {
+    // Task #323: belt-and-suspenders guard against duplicate Stripe charges
+    // from accidental double-taps. The buttons are also disabled via
+    // `loadingProductId`, but a quick double-tap can fire two clicks before
+    // the first re-render. Bail early if any purchase is already in flight.
+    if (loadingProductId) return;
     try {
       setLoadingProductId(productId);
       

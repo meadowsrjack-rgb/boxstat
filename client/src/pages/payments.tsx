@@ -327,10 +327,14 @@ function StoreItemDialog({
   item,
   onClose,
   onPurchase,
+  isLoading = false,
 }: {
   item: Program | null;
   onClose: () => void;
   onPurchase: (item: Program, selectedOption?: any) => void;
+  // Task #323: when a checkout request is already in flight we disable the
+  // Buy Now button so a frantic shopper can't queue a second Stripe session.
+  isLoading?: boolean;
 }) {
   const [imgIndex, setImgIndex] = useState(0);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
@@ -501,12 +505,20 @@ function StoreItemDialog({
               Cancel
             </Button>
             <Button
-              className="bg-red-600 hover:bg-red-700 text-white"
-              onClick={() => { onClose(); onPurchase(item, selectedOption || undefined); }}
+              className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-60 disabled:cursor-not-allowed"
+              // Task #323: trigger the purchase first and KEEP THE DIALOG OPEN
+              // until the redirect/error resolves. Closing immediately hid the
+              // disabled "Processing…" state and let users believe nothing was
+              // happening, encouraging double-clicks. The dialog will be torn
+              // down naturally when the parent navigates to Stripe Checkout
+              // (or, on error, the parent clears the loading flag and the
+              // user can dismiss).
+              onClick={() => onPurchase(item, selectedOption || undefined)}
+              disabled={isLoading}
               data-testid={`button-buy-${item.id}`}
             >
               <ShoppingBag className="h-4 w-4 mr-1" />
-              Buy Now
+              {isLoading ? 'Processing…' : 'Buy Now'}
             </Button>
           </div>
         </DialogFooter>
@@ -1375,6 +1387,12 @@ export default function PaymentsPage() {
 
   const handleEnroll = async (playerId: string | null) => {
     if (!selectedProgram) return;
+    // Task #323: belt-and-suspenders guard against duplicate Stripe charges
+    // from accidental double-clicks. The dialog button is also disabled while
+    // `loading` is true, but a quick double-tap can fire two clicks before
+    // the first re-render. Bail early if a checkout request is already in
+    // flight.
+    if (loading) return;
     try {
       setLoading(true);
       setError(null);
@@ -1403,6 +1421,7 @@ export default function PaymentsPage() {
   
   const handleEnrollWithAddOns = async (playerId: string | null, addOnIds: string[], sizes: Record<string, string>) => {
     if (!selectedProgram) return;
+    if (loading) return; // Task #323: guard against double-submit
     try {
       setLoading(true);
       setError(null);
@@ -1432,6 +1451,7 @@ export default function PaymentsPage() {
   };
 
   const handlePurchaseItem = async (item: Program, selectedOption?: any) => {
+    if (loading) return; // Task #323: guard against double-submit
     try {
       setLoading(true);
       setError(null);
@@ -1458,6 +1478,7 @@ export default function PaymentsPage() {
   };
 
   const handleTryoutCheckout = async (programId: string, playerId: string, recommendedTeamId?: number) => {
+    if (loading) return; // Task #323: guard against double-submit
     try {
       setLoading(true);
       setError(null);
@@ -1723,6 +1744,7 @@ export default function PaymentsPage() {
         item={selectedStoreItem}
         onClose={() => setSelectedStoreItem(null)}
         onPurchase={handlePurchaseItem}
+        isLoading={loading}
       />
 
       {/* Tryout Enrollment Dialog */}

@@ -2644,7 +2644,7 @@ class MemStorage implements IStorage {
 // =============================================
 
 import { db } from "./db";
-import { eq, and, gte, lte, or, sql, isNull, isNotNull, inArray, desc, ilike } from "drizzle-orm";
+import { eq, and, gte, lte, or, sql, isNull, isNotNull, inArray, desc, ilike, ne } from "drizzle-orm";
 import * as schema from "../shared/schema";
 
 class DatabaseStorage implements IStorage {
@@ -5506,6 +5506,64 @@ class DatabaseStorage implements IStorage {
     return results as ProductEnrollment[];
   }
   
+  /**
+   * Task #326: Cancel any other still-active unpaid `admin_assignment` /
+   * `self_claim` enrollment rows for the same profile + program once a paid
+   * enrollment exists. Records the reason in the row's metadata so admins can
+   * trace why the duplicate was retired. Returns the number of rows cancelled.
+   */
+  private async cancelDuplicateUnpaidEnrollments(
+    profileId: string,
+    programId: string,
+    keepEnrollmentId: number,
+  ): Promise<number> {
+    const dupes = await db.select().from(schema.productEnrollments)
+      .where(and(
+        eq(schema.productEnrollments.profileId, profileId),
+        eq(schema.productEnrollments.programId, programId),
+        eq(schema.productEnrollments.status, 'active'),
+        inArray(schema.productEnrollments.source, ['admin_assignment', 'self_claim']),
+        isNull(schema.productEnrollments.paymentId),
+        isNull(schema.productEnrollments.stripeSubscriptionId),
+        ne(schema.productEnrollments.id, keepEnrollmentId),
+      ));
+    if (dupes.length === 0) return 0;
+    const now = new Date().toISOString();
+    let cancelled = 0;
+    for (const dupe of dupes) {
+      const existingMetadata: Record<string, unknown> =
+        dupe.metadata && typeof dupe.metadata === 'object' && !Array.isArray(dupe.metadata)
+          ? (dupe.metadata as Record<string, unknown>)
+          : {};
+      // Re-assert the same predicates we used to select the row so a
+      // concurrent payment/upgrade between SELECT and UPDATE doesn't
+      // accidentally cancel a row that just became paid.
+      await db.update(schema.productEnrollments)
+        .set({
+          status: 'cancelled',
+          metadata: {
+            ...existingMetadata,
+            cancelledReason: 'duplicate_paid_enrollment_exists',
+            cancelledAt: now,
+            replacedByEnrollmentId: keepEnrollmentId,
+          },
+          updatedAt: now,
+        })
+        .where(and(
+          eq(schema.productEnrollments.id, dupe.id),
+          eq(schema.productEnrollments.status, 'active'),
+          inArray(schema.productEnrollments.source, ['admin_assignment', 'self_claim']),
+          isNull(schema.productEnrollments.paymentId),
+          isNull(schema.productEnrollments.stripeSubscriptionId),
+        ));
+      cancelled++;
+    }
+    console.log(
+      `[createEnrollment] Cancelled ${cancelled} duplicate unpaid enrollment(s) for profile=${profileId} program=${programId} (kept #${keepEnrollmentId})`,
+    );
+    return cancelled;
+  }
+
   async createEnrollment(data: InsertProductEnrollment): Promise<ProductEnrollment> {
     const now = new Date().toISOString();
 
@@ -5559,6 +5617,13 @@ class DatabaseStorage implements IStorage {
           .where(eq(schema.productEnrollments.id, existingUnpaid[0].id))
           .returning();
         console.log(`[createEnrollment] Upgraded admin_assignment enrollment ${existingUnpaid[0].id} to paid (source=${data.source})`);
+        // Task #326: Cancel any other unpaid duplicate rows for the same
+        // profile + program left over from earlier double-grants.
+        await this.cancelDuplicateUnpaidEnrollments(
+          data.profileId,
+          data.programId,
+          (upgraded as ProductEnrollment).id,
+        );
         return upgraded as ProductEnrollment;
       }
     }
@@ -5587,7 +5652,28 @@ class DatabaseStorage implements IStorage {
         updatedAt: now,
       })
       .returning();
-    return results[0] as ProductEnrollment;
+    const created = results[0] as ProductEnrollment;
+    // Task #326: When the freshly inserted row carries payment evidence,
+    // also clean up any other still-active unpaid duplicate rows for the
+    // same profile + program. This covers payment-success / subscription
+    // webhook paths that bypass the upgrade gate above (e.g. when the
+    // existing grant was created with a different source than
+    // admin_assignment / self_claim, or when a fresh insert is created
+    // intentionally and an old duplicate is still on file).
+    if (
+      (data.paymentId || data.stripeSubscriptionId) &&
+      data.profileId &&
+      data.programId &&
+      !data.isTryout &&
+      (data.status ?? 'active') === 'active'
+    ) {
+      await this.cancelDuplicateUnpaidEnrollments(
+        data.profileId,
+        data.programId,
+        created.id,
+      );
+    }
+    return created;
   }
   
   async deductEnrollmentCredit(enrollmentId: number): Promise<ProductEnrollment | undefined> {

@@ -63,9 +63,14 @@ export function EnrollmentExpiryBanner() {
   // Compute the unified access status per player and only surface banners
   // for states the parent should act on: grace, admin_grant (unpaid), or a
   // paid window that's about to lapse in the next 7 days.
+  const playerStatuses = new Map<string, ReturnType<typeof computeAccessStatus>>();
+  for (const [key, list] of Array.from(groups.entries())) {
+    playerStatuses.set(key, computeAccessStatus(list as AccessStatusInput[]));
+  }
+
   const banners = Array.from(groups.entries())
-    .map(([key, list]) => {
-      const status = computeAccessStatus(list as AccessStatusInput[]);
+    .map(([key, _list]) => {
+      const status = playerStatuses.get(key)!;
       const subject = key === SELF_KEY ? "Your" : `${playerMap[key] || "Player"}'s`;
       const days = daysUntil(status.accessUntil);
 
@@ -118,10 +123,20 @@ export function EnrollmentExpiryBanner() {
   // Surface "no expiry on file" enrollments separately so admins/parents can
   // backfill the date — this is a data-quality nudge that the unified line
   // can't express on its own.
+  //
+  // Task #326: Compute per player (not per enrollment row) and skip when the
+  // player's unified access is already `paid` or `grace`. Otherwise a stale
+  // unpaid admin_assignment / self_claim row with no end date keeps tripping
+  // the banner even though a separate paid enrollment for the same program
+  // already covers the player.
   const noExpiryGroups = new Map<string, string[]>();
   for (const e of enrollments) {
     if (e.status !== "active" || e.endDate) continue;
     const key = e.profileId || SELF_KEY;
+    const playerStatus = playerStatuses.get(key);
+    if (playerStatus && (playerStatus.reason === "paid" || playerStatus.reason === "grace")) {
+      continue;
+    }
     const programLabel = e.programId || "your program";
     if (!noExpiryGroups.has(key)) noExpiryGroups.set(key, []);
     noExpiryGroups.get(key)!.push(programLabel);

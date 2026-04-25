@@ -76,7 +76,22 @@ export function computeAccessStatus(enrollments: AccessStatusInput[] | null | un
       continue;
     }
     if (!cActive && bestActive) continue;
-    // Both active or both expired: pick the latest end date.
+    // Task #326: A paid enrollment always beats a stale unpaid admin_grant
+    // for the same player, regardless of end date. This is the only
+    // pairing where date-based comparison was masking effective paid
+    // access (e.g. an admin_assignment with no end date trumping a paid
+    // row that has one). Other reason pairings keep the original
+    // "latest end date wins" semantics.
+    if (cActive && bestActive) {
+      if (c.reason === 'paid' && best.reason === 'admin_grant') {
+        best = c;
+        continue;
+      }
+      if (c.reason === 'admin_grant' && best.reason === 'paid') {
+        continue;
+      }
+    }
+    // Both active (non-paid-vs-admin) or both expired: pick the latest end date.
     const cTime = c.date ? new Date(c.date).getTime() : -Infinity;
     const bTime = best.date ? new Date(best.date).getTime() : -Infinity;
     if (cTime > bTime) {

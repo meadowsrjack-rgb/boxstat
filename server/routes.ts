@@ -15772,6 +15772,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Task #326: Admin-only endpoint to re-run the duplicate-enrollment
+  // reconciliation on demand. Cancels any leftover unpaid admin_assignment /
+  // self_claim rows that duplicate a paid enrollment for the same player +
+  // program. Idempotent — safe to call repeatedly.
+  app.post('/api/admin/enrollments/reconcile-duplicates', requireAuth, async (req: any, res) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    try {
+      const { backfillDuplicateEnrollments } = await import('./backfillDuplicateEnrollments');
+      const result = await backfillDuplicateEnrollments();
+      res.json({ ok: true, ...result });
+    } catch (error) {
+      console.error('Error reconciling duplicate enrollments:', error);
+      res.status(500).json({ message: 'Failed to reconcile duplicates' });
+    }
+  });
+
   // Create an enrollment (admin only for now)
   app.post('/api/enrollments', requireAuth, async (req: any, res) => {
     const { role, organizationId, id: userId } = req.user;

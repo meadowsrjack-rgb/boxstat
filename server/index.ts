@@ -11,6 +11,7 @@ import { ensureAuxTables } from "./boot";
 import { restoreDefaultOrgStripeConnection } from "./restoreDefaultOrgStripe";
 import { backfillStrandedInvites } from "./backfillStrandedInvites";
 import { backfillRegisteredInviteFlags } from "./backfillRegisteredInviteFlags";
+import { backfillDuplicateEnrollments } from "./backfillDuplicateEnrollments";
 import { startPendingClaimSweeper } from "./lib/pending-claim-store";
 
 const app = express();
@@ -259,6 +260,15 @@ app.use((req, res, next) => {
     // updated by the magic-link or set-password paths (task #249).
     backfillRegisteredInviteFlags().catch(err => {
       console.error('[Backfill Registered Invite Flags] Unhandled error:', err);
+    });
+
+    // One-shot idempotent backfill: cancel any leftover unpaid
+    // admin_assignment / self_claim enrollment rows that duplicate a paid
+    // enrollment for the same player + program. Stops the "Access pending"
+    // and "no expiry on file" banners from firing on already-paid players
+    // (task #326).
+    backfillDuplicateEnrollments().catch(err => {
+      console.error('[Backfill Duplicate Enrollments] Unhandled error:', err);
     });
   });
 })();

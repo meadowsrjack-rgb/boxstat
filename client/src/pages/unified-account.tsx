@@ -1504,7 +1504,37 @@ function InlineSchedulePanel({
   });
 
   const availableSlots = availability?.slots?.filter((s: any) => s.available) || [];
-  const formatTime = (isoStr: string) => new Date(isoStr).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const programTimezone: string | undefined = availability?.timezone;
+  const formatTime = (isoStr: string) =>
+    new Date(isoStr).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      ...(programTimezone ? { timeZone: programTimezone } : {}),
+    });
+  const formatWeekday = (isoStr: string) =>
+    new Date(isoStr).toLocaleDateString("en-US", {
+      weekday: "long",
+      ...(programTimezone ? { timeZone: programTimezone } : {}),
+    });
+  const formatLongDate = (isoStr: string) =>
+    new Date(isoStr).toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+      ...(programTimezone ? { timeZone: programTimezone } : {}),
+    });
+  const timezoneLabel = (() => {
+    if (!programTimezone) return null;
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: programTimezone,
+        timeZoneName: "long",
+      }).formatToParts(new Date());
+      return parts.find((p) => p.type === "timeZoneName")?.value || programTimezone;
+    } catch {
+      return programTimezone;
+    }
+  })();
 
   if (booked) {
     const sessionsCreated = bookingResult?.sessionsCreated || 1;
@@ -1521,8 +1551,8 @@ function InlineSchedulePanel({
             {selectedSlot && (
               <p className="text-sm text-amber-600">
                 {sessionsCreated > 1
-                  ? `Every ${new Date(selectedSlot.startTime).toLocaleDateString("en-US", { weekday: "long" })} at ${formatTime(selectedSlot.startTime)} — Pending approval`
-                  : `${new Date(selectedSlot.startTime).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })} at ${formatTime(selectedSlot.startTime)} — Pending approval`
+                  ? `Every ${formatWeekday(selectedSlot.startTime)} at ${formatTime(selectedSlot.startTime)} — Pending approval`
+                  : `${formatLongDate(selectedSlot.startTime)} at ${formatTime(selectedSlot.startTime)} — Pending approval`
                 }
               </p>
             )}
@@ -1564,9 +1594,21 @@ function InlineSchedulePanel({
       </div>
 
       <div>
-        <p className="text-xs font-medium text-gray-500 mb-2">
-          {selectedDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-        </p>
+        <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+          <p className="text-xs font-medium text-gray-500">
+            {selectedDate.toLocaleDateString("en-US", {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+              ...(programTimezone ? { timeZone: programTimezone } : {}),
+            })}
+          </p>
+          {timezoneLabel && (
+            <p className="text-xs text-gray-500" data-testid="text-availability-timezone">
+              Times shown in {timezoneLabel}
+            </p>
+          )}
+        </div>
         {isLoading ? (
           <div className="flex items-center justify-center py-4">
             <Loader2 className="w-5 h-5 animate-spin text-gray-400" />

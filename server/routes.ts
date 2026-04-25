@@ -15,6 +15,16 @@ import { setupAdminNotificationRoutes } from "./routes/adminNotifications";
 import { registerRequestClaimRoute } from "./routes/request-claim";
 import { handleSubscriptionInvoice } from "./lib/subscription-invoice";
 import { registerUsersListRoute } from "./lib/users-list";
+import {
+  getProgramTimezone,
+  getZonedParts,
+  zonedWallTimeToUtc,
+  dayOfWeekForDateString,
+  partsToHHmm,
+  formatShortDateInZone,
+  formatLongDateInZone,
+  formatTimeInZone,
+} from "./lib/program-timezone";
 import { registerClaimHandoffRoutes } from "./routes/claim-handoff";
 import { adminNotificationService } from "./services/adminNotificationService";
 import { requireAuth, optionalAuth, isAdmin, isCoachOrAdmin, setAuthStorage } from "./auth";
@@ -15496,43 +15506,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const sessionLength = program.sessionLengthMinutes || 60;
-      
-      const targetDate = date ? new Date(date as string) : new Date();
       const orgId = program.organizationId;
-      
+      const organization = await storage.getOrganization(orgId).catch(() => null);
+      const programTz = getProgramTimezone(program, organization);
+
+      // Resolve target calendar date in the program time zone.
+      // If a YYYY-MM-DD string is supplied, treat it as the calendar day in the
+      // program zone. Otherwise use today's calendar day in that zone.
+      let targetDateStr: string;
+      if (date) {
+        const raw = String(date);
+        // Accept either a plain YYYY-MM-DD or any parseable date string.
+        const ymd = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (ymd) {
+          targetDateStr = `${ymd[1]}-${ymd[2]}-${ymd[3]}`;
+        } else {
+          const parsed = new Date(raw);
+          const p = getZonedParts(parsed, programTz);
+          targetDateStr = `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
+        }
+      } else {
+        const p = getZonedParts(new Date(), programTz);
+        targetDateStr = `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
+      }
+      const [tYear, tMonth, tDay] = targetDateStr.split('-').map(Number);
+      const dayOfWeek = dayOfWeekForDateString(targetDateStr);
+
       // Get all events for this organization
       const allEvents = await storage.getEventsByOrganization(orgId);
 
       // Use admin-defined availability windows
       const availabilitySlots = await storage.getAvailabilitySlotsByProgram(programId);
-      const dayOfWeek = targetDate.getDay(); // 0=Sunday, 6=Saturday
-      
+
       // Filter windows matching this day of week
       const dayWindows = availabilitySlots.filter((s: any) => s.dayOfWeek === dayOfWeek);
-      
-      const dayStart = new Date(targetDate);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(targetDate);
-      dayEnd.setHours(23, 59, 59, 999);
-      
+
+      // Day boundaries anchored to program time zone (00:00 -> 24:00 wall-clock)
+      const dayStart = zonedWallTimeToUtc(tYear, tMonth, tDay, 0, 0, programTz);
+      const dayEnd = zonedWallTimeToUtc(tYear, tMonth, tDay + 1, 0, 0, programTz);
+
       const blockedEvents = allEvents.filter((event: any) => {
         const eventStart = new Date(event.startTime);
         const eventEnd = new Date(event.endTime);
         return eventStart < dayEnd && eventEnd > dayStart && event.isActive !== false && event.status !== 'cancelled';
       });
-      
-      // Generate time slots from admin-defined availability windows
+
+      // Generate time slots, anchored to the program's wall-clock time zone.
       const slots: Array<{ startTime: string; endTime: string; available: boolean }> = [];
-      
-      if (dayWindows.length === 0) {
-        // No availability windows defined for this day - fallback to 8 AM - 8 PM
-        const startOfDay = new Date(targetDate);
-        startOfDay.setHours(8, 0, 0, 0);
-        const endOfDay = new Date(targetDate);
-        endOfDay.setHours(20, 0, 0, 0);
-        
-        let currentSlot = new Date(startOfDay);
-        while (currentSlot.getTime() + sessionLength * 60 * 1000 <= endOfDay.getTime()) {
+      // Build list of (startH, startM, endH, endM) windows for the day.
+      const windowsHHmm: Array<{ startH: number; startM: number; endH: number; endM: number }> =
+        dayWindows.length === 0
+          ? [{ startH: 8, startM: 0, endH: 20, endM: 0 }]
+          : dayWindows.map((w: any) => {
+              const [sH, sM] = w.startTime.split(':').map(Number);
+              const [eH, eM] = w.endTime.split(':').map(Number);
+              return { startH: sH, startM: sM, endH: eH, endM: eM };
+            });
+
+      for (const w of windowsHHmm) {
+        const windowStart = zonedWallTimeToUtc(tYear, tMonth, tDay, w.startH, w.startM, programTz);
+        const windowEnd = zonedWallTimeToUtc(tYear, tMonth, tDay, w.endH, w.endM, programTz);
+
+        let currentSlot = new Date(windowStart);
+        while (currentSlot.getTime() + sessionLength * 60 * 1000 <= windowEnd.getTime()) {
           const slotEnd = new Date(currentSlot.getTime() + sessionLength * 60 * 1000);
           const isBlocked = blockedEvents.some((event: any) => {
             const eventStart = new Date(event.startTime);
@@ -15542,36 +15578,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           slots.push({ startTime: currentSlot.toISOString(), endTime: slotEnd.toISOString(), available: !isBlocked });
           currentSlot = new Date(currentSlot.getTime() + 30 * 60 * 1000);
         }
-      } else {
-        // Use admin-defined windows
-        for (const window of dayWindows) {
-          const [startH, startM] = window.startTime.split(':').map(Number);
-          const [endH, endM] = window.endTime.split(':').map(Number);
-          
-          const windowStart = new Date(targetDate);
-          windowStart.setHours(startH, startM, 0, 0);
-          const windowEnd = new Date(targetDate);
-          windowEnd.setHours(endH, endM, 0, 0);
-          
-          let currentSlot = new Date(windowStart);
-          while (currentSlot.getTime() + sessionLength * 60 * 1000 <= windowEnd.getTime()) {
-            const slotEnd = new Date(currentSlot.getTime() + sessionLength * 60 * 1000);
-            const isBlocked = blockedEvents.some((event: any) => {
-              const eventStart = new Date(event.startTime);
-              const eventEnd = new Date(event.endTime);
-              return currentSlot < eventEnd && slotEnd > eventStart;
-            });
-            slots.push({ startTime: currentSlot.toISOString(), endTime: slotEnd.toISOString(), available: !isBlocked });
-            currentSlot = new Date(currentSlot.getTime() + 30 * 60 * 1000);
-          }
-        }
       }
-      
+
       res.json({
         programId,
         programName: program.name,
         sessionLengthMinutes: sessionLength,
-        date: targetDate.toISOString().split('T')[0],
+        date: targetDateStr,
+        timezone: programTz,
         slots,
         blockedEvents: blockedEvents.map((e: any) => ({
           id: e.id,
@@ -15609,7 +15623,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessionLength = program.sessionLengthMinutes || 60;
       const userId = req.user.id;
       const orgId = program.organizationId;
-      
+      const organization = await storage.getOrganization(orgId).catch(() => null);
+      const programTz = getProgramTimezone(program, organization);
+
       // Validate the player belongs to the authenticated user
       const targetPlayerId = playerId || userId;
       if (playerId && playerId !== userId) {
@@ -15637,8 +15653,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingPending = allOrgEvents.filter((e: any) => 
         e.enrollmentId === enrollment.id && e.status === 'pending' && e.scheduleRequestSource
       );
+      // Track the IDs we just cancelled so the in-memory conflict check below
+      // does not collide with the user's own outdated pending events.
+      const cancelledPendingIds = new Set<number>();
       for (const pendingEvent of existingPending) {
         await storage.updateEvent(pendingEvent.id, { status: 'cancelled', isActive: false } as any);
+        cancelledPendingIds.add(pendingEvent.id);
       }
 
       // Check credit availability
@@ -15664,25 +15684,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (let week = 0; week < creditsToBook; week++) {
         const sessionStart = new Date(new Date(startTime).getTime() + week * 7 * 24 * 60 * 60 * 1000);
         const sessionEnd = new Date(sessionStart.getTime() + sessionLength * 60 * 1000);
-        
-        const dayOfWeek = sessionStart.getDay();
-        const sessionHour = sessionStart.getHours();
-        const sessionMinute = sessionStart.getMinutes();
-        const sessionTimeStr = `${String(sessionHour).padStart(2, '0')}:${String(sessionMinute).padStart(2, '0')}`;
-        const endHour = sessionEnd.getHours();
-        const endMinute = sessionEnd.getMinutes();
-        const endTimeStr = `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`;
-        
+
+        // Day-of-week and HH:mm comparisons must happen in the program time
+        // zone, not the server's local zone, so a slot the user can see in the
+        // grid is not later rejected because the server's wall-clock differs.
+        const startParts = getZonedParts(sessionStart, programTz);
+        const endParts = getZonedParts(sessionEnd, programTz);
+        const dayOfWeek = startParts.dayOfWeek;
+        const sessionTimeStr = partsToHHmm(startParts);
+        const endTimeStr = partsToHHmm(endParts);
+
         if (availabilitySlots.length > 0) {
           const dayWindows = availabilitySlots.filter((s: any) => s.dayOfWeek === dayOfWeek);
           const fitsWindow = dayWindows.some((w: any) => sessionTimeStr >= w.startTime && endTimeStr <= w.endTime);
           if (!fitsWindow) {
-            skippedWeeks.push(sessionStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            skippedWeeks.push(formatShortDateInZone(sessionStart, programTz));
             continue;
           }
         }
-        
+
         const hasConflict = allOrgEvents.some((event: any) => {
+          // Skip events the user just cancelled in this same request — the
+          // in-memory list still has their old `status: 'pending'`.
+          if (cancelledPendingIds.has(event.id)) return false;
           const eventStart = new Date(event.startTime);
           const eventEnd = new Date(event.endTime);
           return sessionStart < eventEnd && sessionEnd > eventStart && event.isActive !== false && event.status !== 'cancelled';
@@ -15691,9 +15715,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const eventEnd = new Date(event.endTime);
           return sessionStart < eventEnd && sessionEnd > eventStart;
         });
-        
+
         if (hasConflict) {
-          skippedWeeks.push(sessionStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+          skippedWeeks.push(formatShortDateInZone(sessionStart, programTz));
           continue;
         }
 
@@ -15705,6 +15729,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           startTime: sessionStart.toISOString(),
           endTime: sessionEnd.toISOString(),
           location: '',
+          timezone: programTz,
           assignTo: {
             users: [targetPlayerId, userId],
             programs: [programId],
@@ -15743,8 +15768,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send notifications
       try {
         const firstDate = new Date(createdEvents[0].startTime);
-        const dateStr = firstDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-        const timeStr = firstDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        const dateStr = formatLongDateInZone(firstDate, programTz);
+        const timeStr = formatTimeInZone(firstDate, programTz);
         
         const sessionWord = createdEvents.length === 1 ? 'session' : 'sessions';
         const recurringText = createdEvents.length > 1 ? 'recurring weekly ' : '';
@@ -15774,6 +15799,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         events: createdEvents,
         sessionsCreated: createdEvents.length,
         skippedWeeks,
+        timezone: programTz,
         message: createdEvents.length > 1
           ? `${createdEvents.length} weekly sessions requested! Awaiting admin approval.`
           : `Session requested! Awaiting admin approval.`,

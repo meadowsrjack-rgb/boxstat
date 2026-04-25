@@ -23,6 +23,7 @@ interface AvailabilityResponse {
   programName: string;
   sessionLengthMinutes: number;
   date: string;
+  timezone?: string;
   slots: TimeSlot[];
   blockedEvents: Array<{
     id: number;
@@ -112,10 +113,41 @@ export default function ScheduleRequest() {
     }
   };
 
+  const programTimezone = availability?.timezone;
   const formatTime = (isoStr: string) => {
     const d = new Date(isoStr);
-    return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    return d.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      ...(programTimezone ? { timeZone: programTimezone } : {}),
+    });
   };
+  const formatLongDate = (isoStr: string) =>
+    new Date(isoStr).toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      ...(programTimezone ? { timeZone: programTimezone } : {}),
+    });
+  const formatShortDate = (isoStr: string) =>
+    new Date(isoStr).toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      ...(programTimezone ? { timeZone: programTimezone } : {}),
+    });
+  const timezoneLabel = (() => {
+    if (!programTimezone) return null;
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: programTimezone,
+        timeZoneName: "long",
+      }).formatToParts(new Date());
+      return parts.find((p) => p.type === "timeZoneName")?.value || programTimezone;
+    } catch {
+      return programTimezone;
+    }
+  })();
 
   const availableSlots = availability?.slots?.filter((s) => s.available) || [];
   const today = new Date();
@@ -134,16 +166,14 @@ export default function ScheduleRequest() {
               Your {availability?.programName} session has been scheduled for{" "}
               {selectedSlot && (
                 <span className="font-medium">
-                  {new Date(selectedSlot.startTime).toLocaleDateString("en-US", {
-                    weekday: "long",
-                    month: "long",
-                    day: "numeric",
-                  })}{" "}
-                  at {formatTime(selectedSlot.startTime)}
+                  {formatLongDate(selectedSlot.startTime)} at {formatTime(selectedSlot.startTime)}
                 </span>
               )}
             </p>
             <p className="text-sm text-gray-500">You'll find it in your events calendar and receive reminders.</p>
+            {timezoneLabel && (
+              <p className="text-xs text-gray-400">Times shown in {timezoneLabel}</p>
+            )}
             <div className="flex gap-3 pt-2">
               <Button
                 variant="outline"
@@ -232,7 +262,16 @@ export default function ScheduleRequest() {
                     weekday: "long",
                     month: "long",
                     day: "numeric",
+                    ...(programTimezone ? { timeZone: programTimezone } : {}),
                   })}
+                  {timezoneLabel && (
+                    <span
+                      className="block text-xs text-gray-500 mt-0.5"
+                      data-testid="text-availability-timezone"
+                    >
+                      Times shown in {timezoneLabel}
+                    </span>
+                  )}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -275,11 +314,7 @@ export default function ScheduleRequest() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">
-                    {new Date(selectedSlot.startTime).toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    })}
+                    {formatShortDate(selectedSlot.startTime)}
                   </p>
                   <p className="text-sm text-gray-600">
                     {formatTime(selectedSlot.startTime)} - {formatTime(selectedSlot.endTime)}

@@ -55,7 +55,7 @@ describe("Task #326 — findDuplicatesToCancel", () => {
     expect(result).toEqual([]);
   });
 
-  it("does not touch a non-admin/self_claim duplicate (e.g. another paid row)", () => {
+  it("does not touch two paid rows for the same player+program", () => {
     const result = findDuplicatesToCancel([
       { ...baseRow, id: 1, source: "payment", paymentId: "pi_old" },
       { ...baseRow, id: 2, source: "payment", paymentId: "pi_new" },
@@ -82,5 +82,54 @@ describe("Task #326 — findDuplicatesToCancel", () => {
       { ...baseRow, id: 3, source: "payment", paymentId: "pi_paid" },
     ]);
     expect(result).toEqual([]);
+  });
+
+  // Task #332: Source is no longer a gate. Any unpaid active row should be
+  // collapsed when a paid row exists, regardless of how it was created.
+  it.each([
+    ["admin"],
+    ["direct"],
+    ["migration"],
+    ["import"],
+    ["payment"], // legacy 'payment' source row whose payment row never landed
+    ["quote"],
+    ["tryout_upgrade"],
+    [null],
+  ])("cancels unpaid duplicate with source=%s when a paid row exists (Task #332)", (src) => {
+    const result = findDuplicatesToCancel([
+      { ...baseRow, id: 11, source: src as string | null, paymentId: null, stripeSubscriptionId: null },
+      { ...baseRow, id: 12, source: "payment", paymentId: "pi_paid" },
+    ]);
+    expect(result).toEqual([{ cancelId: 11, keepId: 12 }]);
+  });
+
+  it("collapses a legacy unpaid leftover whose isTryout column is NULL (Task #332)", () => {
+    // isTryout is nullable in the schema; legacy rows can have NULL.
+    // The JS-side check `if (row.isTryout) continue;` correctly treats
+    // NULL as not-a-tryout, so the row is eligible for collapse.
+    const result = findDuplicatesToCancel([
+      { ...baseRow, id: 41, source: "admin", paymentId: null, stripeSubscriptionId: null, isTryout: null as any },
+      { ...baseRow, id: 42, source: "payment", paymentId: "pi_paid", isTryout: false },
+    ]);
+    expect(result).toEqual([{ cancelId: 41, keepId: 42 }]);
+  });
+
+  it("preserves tryout enrollments — a paid full-program row does NOT collapse a tryout credit (Task #332)", () => {
+    const result = findDuplicatesToCancel([
+      { ...baseRow, id: 21, source: "payment", paymentId: null, stripeSubscriptionId: null, isTryout: true },
+      { ...baseRow, id: 22, source: "payment", paymentId: "pi_paid", isTryout: false },
+    ]);
+    expect(result).toEqual([]);
+  });
+
+  it("keeps the most recent paid row when several paid rows coexist (Task #332)", () => {
+    const result = findDuplicatesToCancel([
+      { ...baseRow, id: 31, source: "admin_assignment" },
+      { ...baseRow, id: 32, source: "payment", paymentId: "pi_old" },
+      { ...baseRow, id: 33, source: "payment", paymentId: "pi_new" },
+    ]);
+    // Older paid row (id=32) is left alone; only the unpaid leftover collapses
+    // and it points at the most recent paid row.
+    expect(result).toEqual([{ cancelId: 31, keepId: 33 }]);
   });
 });

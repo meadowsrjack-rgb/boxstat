@@ -3492,16 +3492,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     console.log(`✅ Created enrollment for player ${playerId} in program ${packageId}`);
                   } else {
                     // Re-enrollment: expire old and create fresh active enrollment.
-                    // Task #243: skip the expire-then-recreate dance for unpaid
-                    // admin_assignment grants — let storage.createEnrollment
-                    // upgrade them in place so the audit trail is preserved.
+                    // Task #243 / #332: skip the expire-then-recreate dance for
+                    // ANY unpaid leftover row — let storage.createEnrollment
+                    // upgrade it in place so the original enrolled-on date /
+                    // audit trail is preserved. The absence of paymentId and
+                    // stripeSubscriptionId is the sole signal that the row is
+                    // unpaid; we deliberately do not gate on `source` here
+                    // (e.g. an unpaid `direct` / `admin` / `migration` /
+                    // `import` row should also be upgraded, not expired).
                     const oldEnrollment = existingEnrollments.find(e => e.programId === packageId);
-                    const isUnpaidAdminGrant =
+                    const isUnpaidLeftover =
                       oldEnrollment &&
-                      (oldEnrollment as any).source === 'admin_assignment' &&
                       !(oldEnrollment as any).paymentId &&
-                      !(oldEnrollment as any).stripeSubscriptionId;
-                    if (oldEnrollment && !isUnpaidAdminGrant) {
+                      !(oldEnrollment as any).stripeSubscriptionId &&
+                      !(oldEnrollment as any).isTryout;
+                    if (oldEnrollment && !isUnpaidLeftover) {
                       await storage.updateEnrollment(oldEnrollment.id, { status: 'expired' });
                     }
                     await storage.createEnrollment({

@@ -59,6 +59,23 @@ const matchesEnrollmentFilter = (row: Row, filter: Record<string, unknown>): boo
       }
       continue;
     }
+    if (k === "_or") {
+      // Synthetic disjunction emitted by the fake `or(...)` helper.
+      const disjuncts = v as Record<string, unknown>[];
+      const anyMatches = disjuncts.some((d) => matchesEnrollmentFilter(row, d));
+      if (!anyMatches) return false;
+      continue;
+    }
+    if (k === "_ors") {
+      // Multiple OR clauses collected by the fake `and(...)` reducer; each
+      // disjunction must independently match.
+      const ors = v as Record<string, unknown>[][];
+      for (const disjuncts of ors) {
+        const anyMatches = disjuncts.some((d) => matchesEnrollmentFilter(row, d));
+        if (!anyMatches) return false;
+      }
+      continue;
+    }
     if (k === "_ne") continue;
     if ((row as any)[snakeToCamel(k)] !== v) return false;
   }
@@ -173,6 +190,13 @@ vi.mock("drizzle-orm", async () => {
         for (const [k, v] of Object.entries(c.filter)) {
           if (k === "_isNull" && Array.isArray(acc._isNull)) {
             (acc._isNull as string[]).push(...(v as string[]));
+          } else if (k === "_or") {
+            // Multiple OR clauses inside an AND need to be preserved as
+            // separate disjunctions — collect them under _ors so
+            // matchesEnrollmentFilter can require all of them to match.
+            const ors = (acc._ors as Record<string, unknown>[][] | undefined) ?? [];
+            ors.push(v as Record<string, unknown>[]);
+            acc._ors = ors;
           } else {
             acc[k] = v;
           }
@@ -181,7 +205,11 @@ vi.mock("drizzle-orm", async () => {
       }, {}),
     }),
     or: (...conds: PendingFilter[]) => ({
-      filter: conds.reduce<Record<string, unknown>>((acc, c) => ({ ...acc, ...c.filter }), {}),
+      // The fake filter language is a flat object of clauses ANDed together;
+      // to express OR, we stash the disjuncts under a synthetic _or key that
+      // matchesEnrollmentFilter treats as "row matches if ANY disjunct
+      // matches". Each disjunct is itself a flat AND filter.
+      filter: { _or: conds.filter(Boolean).map((c) => c.filter) },
     }),
     sql: actual.sql,
   };
@@ -316,5 +344,217 @@ describe("Task #326 — storage.createEnrollment payment-path reconciliation", (
     const reloaded = enrollments.find((r) => r.id === grant.id)!;
     expect(reloaded.status).toBe("active");
     expect(reloaded.metadata).not.toHaveProperty("cancelledReason");
+  });
+
+  // Task #332: the upgrade gate must not depend on the existing row's
+  // `source`. Any unpaid active row for the same player+program is a
+  // valid upgrade target — including rows created via the user-PATCH
+  // unified flow ("admin"), the legacy direct path ("direct"), the
+  // migration importer ("migration"), the bulk CSV importer ("import"),
+  // and even an old "payment" row whose payment never landed.
+  describe("Task #332 — collapse works regardless of the existing row's source", () => {
+    const NON_GRANT_SOURCES = ["admin", "direct", "migration", "import", "payment", "quote"] as const;
+
+    it.each(NON_GRANT_SOURCES.map((s) => [s]))(
+      "upgrades an existing unpaid row with source=%s in place when a paid enrollment lands",
+      async (existingSource) => {
+        const existing = seedEnrollment({ source: existingSource });
+
+        const storage = new DatabaseStorage();
+        const result = await storage.createEnrollment({
+          organizationId: "org-1",
+          programId: "program-A",
+          accountHolderId: "parent-1",
+          profileId: "player-jack",
+          status: "active",
+          source: "payment",
+          paymentId: "pi_paid",
+          stripeSubscriptionId: null,
+          endDate: new Date(Date.now() + 90 * 86400_000).toISOString(),
+          metadata: {},
+        });
+
+        // The original row was upgraded in place — same id preserved.
+        expect(result.id).toBe(existing.id);
+        expect(result.paymentId).toBe("pi_paid");
+        expect(result.source).toBe("payment");
+        expect(result.status).toBe("active");
+        expect((result.metadata as any).upgradedFromSource).toBe(existingSource);
+
+        // No second active row sneaks in.
+        const activeForPair = enrollments.filter(
+          (r) =>
+            r.profileId === "player-jack" && r.programId === "program-A" && r.status === "active",
+        );
+        expect(activeForPair).toHaveLength(1);
+      },
+    );
+
+    it("collapses leftover unpaid rows with mixed sources (admin + direct + migration) when payment lands", async () => {
+      const adminRow = seedEnrollment({ source: "admin" });
+      const directRow = seedEnrollment({ source: "direct" });
+      const migrationRow = seedEnrollment({ source: "migration" });
+
+      const storage = new DatabaseStorage();
+      const result = await storage.createEnrollment({
+        organizationId: "org-1",
+        programId: "program-A",
+        accountHolderId: "parent-1",
+        profileId: "player-jack",
+        status: "active",
+        source: "payment",
+        paymentId: "pi_paid",
+        stripeSubscriptionId: null,
+        endDate: new Date(Date.now() + 90 * 86400_000).toISOString(),
+        metadata: {},
+      });
+
+      // One of the three was upgraded in place. The other two were collapsed
+      // with explanatory metadata.
+      const winnerId = result.id;
+      const allThree = [adminRow.id, directRow.id, migrationRow.id];
+      expect(allThree).toContain(winnerId);
+      const winner = enrollments.find((r) => r.id === winnerId)!;
+      expect(winner.status).toBe("active");
+      expect(winner.paymentId).toBe("pi_paid");
+
+      const losers = allThree.filter((id) => id !== winnerId).map((id) => enrollments.find((r) => r.id === id)!);
+      for (const loser of losers) {
+        expect(loser.status).toBe("cancelled");
+        expect(loser.metadata).toMatchObject({
+          cancelledReason: "duplicate_paid_enrollment_exists",
+          replacedByEnrollmentId: winnerId,
+        });
+        expect((loser.metadata as any).cancelledFromSource).toBe(loser.source);
+      }
+
+      // Net active rows for the pair: exactly one.
+      const activeForPair = enrollments.filter(
+        (r) =>
+          r.profileId === "player-jack" && r.programId === "program-A" && r.status === "active",
+      );
+      expect(activeForPair).toHaveLength(1);
+    });
+
+    // Regression for the code-review finding on Task #332: `isTryout` is
+    // nullable in the schema (default false but no NOT NULL constraint).
+    // Long-lived datasets carry rows where the column is literally NULL.
+    // Both the upgrade gate and the duplicate-cancel pass must include
+    // those legacy rows — otherwise they'd silently slip past the dedup
+    // logic and a duplicate Active row would be left behind.
+    it("upgrades a legacy unpaid row whose isTryout column is NULL", async () => {
+      const legacy = seedEnrollment({ source: "admin", isTryout: null as any });
+
+      const storage = new DatabaseStorage();
+      const result = await storage.createEnrollment({
+        organizationId: "org-1",
+        programId: "program-A",
+        accountHolderId: "parent-1",
+        profileId: "player-jack",
+        status: "active",
+        source: "payment",
+        paymentId: "pi_paid",
+        stripeSubscriptionId: null,
+        endDate: new Date(Date.now() + 90 * 86400_000).toISOString(),
+        metadata: {},
+      });
+
+      // Upgraded in place.
+      expect(result.id).toBe(legacy.id);
+      expect(result.paymentId).toBe("pi_paid");
+      expect((result.metadata as any).upgradedFromSource).toBe("admin");
+
+      // Net active rows for the pair: exactly one.
+      const activeForPair = enrollments.filter(
+        (r) =>
+          r.profileId === "player-jack" && r.programId === "program-A" && r.status === "active",
+      );
+      expect(activeForPair).toHaveLength(1);
+    });
+
+    it("cancels a legacy unpaid duplicate (isTryout=NULL) when a fresh paid row is inserted", async () => {
+      // Seed two existing unpaid leftovers — one with isTryout=null (legacy),
+      // one with isTryout=false (modern). Then trigger an upgrade so the
+      // first one becomes paid; the cancel-duplicates pass must catch the
+      // second.
+      const legacy = seedEnrollment({ source: "admin", isTryout: null as any });
+      const modern = seedEnrollment({ source: "direct", isTryout: false });
+
+      const storage = new DatabaseStorage();
+      const result = await storage.createEnrollment({
+        organizationId: "org-1",
+        programId: "program-A",
+        accountHolderId: "parent-1",
+        profileId: "player-jack",
+        status: "active",
+        source: "payment",
+        paymentId: "pi_paid",
+        stripeSubscriptionId: null,
+        endDate: new Date(Date.now() + 90 * 86400_000).toISOString(),
+        metadata: {},
+      });
+
+      // One was upgraded in place, the other cancelled — and at the end
+      // there's exactly one Active row regardless of which was picked.
+      expect([legacy.id, modern.id]).toContain(result.id);
+      const losers = [legacy, modern].filter((r) => r.id !== result.id);
+      for (const loser of losers) {
+        const reloaded = enrollments.find((r) => r.id === loser.id)!;
+        expect(reloaded.status).toBe("cancelled");
+        expect((reloaded.metadata as any).cancelledReason).toBe(
+          "duplicate_paid_enrollment_exists",
+        );
+      }
+      const activeForPair = enrollments.filter(
+        (r) =>
+          r.profileId === "player-jack" && r.programId === "program-A" && r.status === "active",
+      );
+      expect(activeForPair).toHaveLength(1);
+    });
+
+    // The headline regression scenario from the task description: parent's
+    // player got an admin_assignment auto-grant when they were rostered, then
+    // the parent paid via Stripe checkout. After the webhook fires there must
+    // be one Active row carrying the payment evidence — and zero leftover
+    // unpaid duplicates regardless of how the original grant was created.
+    it("end-to-end: team-assignment auto-grant + paid checkout = one Active row with payment evidence", async () => {
+      // Step 1: admin assigns the player to a team — auto-grants an unpaid
+      // admin_assignment enrollment with a pay-by date.
+      const teamGrant = seedEnrollment({
+        source: "admin_assignment",
+        endDate: new Date(Date.now() + 14 * 86400_000).toISOString(),
+        metadata: { autoGrantedOnAssignment: true, payByDate: "any" },
+      });
+
+      // Step 2: parent runs through Stripe checkout. The webhook calls
+      // storage.createEnrollment with payment evidence.
+      const storage = new DatabaseStorage();
+      const result = await storage.createEnrollment({
+        organizationId: "org-1",
+        programId: "program-A",
+        accountHolderId: "parent-1",
+        profileId: "player-jack",
+        status: "active",
+        source: "payment",
+        paymentId: "pi_paid_checkout",
+        stripeSubscriptionId: "sub_paid_checkout",
+        endDate: new Date(Date.now() + 365 * 86400_000).toISOString(),
+        metadata: {},
+      });
+
+      // The original grant was upgraded in place (audit trail preserved).
+      expect(result.id).toBe(teamGrant.id);
+      expect(result.paymentId).toBe("pi_paid_checkout");
+      expect(result.stripeSubscriptionId).toBe("sub_paid_checkout");
+
+      // Single active row for the player+program, carrying payment evidence.
+      const activeForPair = enrollments.filter(
+        (r) =>
+          r.profileId === "player-jack" && r.programId === "program-A" && r.status === "active",
+      );
+      expect(activeForPair).toHaveLength(1);
+      expect(activeForPair[0].paymentId).toBe("pi_paid_checkout");
+      expect(activeForPair[0].stripeSubscriptionId).toBe("sub_paid_checkout");
+    });
   });
 });

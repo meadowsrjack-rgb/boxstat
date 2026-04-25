@@ -5507,10 +5507,16 @@ class DatabaseStorage implements IStorage {
   }
   
   /**
-   * Task #326: Cancel any other still-active unpaid `admin_assignment` /
-   * `self_claim` enrollment rows for the same profile + program once a paid
-   * enrollment exists. Records the reason in the row's metadata so admins can
-   * trace why the duplicate was retired. Returns the number of rows cancelled.
+   * Task #326 / #332: Cancel any other still-active unpaid enrollment rows
+   * for the same profile + program once a paid enrollment exists, regardless
+   * of the leftover row's `source`. The absence of `paymentId` AND
+   * `stripeSubscriptionId` is the sole signal that the row is unpaid — the
+   * `source` field is a categorical label (admin_assignment, self_claim,
+   * admin, direct, migration, import, payment-with-no-surviving-payment,
+   * etc.) and should not gate cleanup. Tryout rows are excluded so a paid
+   * full-program enrollment doesn't accidentally retire a tryout credit.
+   * Records the reason in the row's metadata so admins can trace why the
+   * duplicate was retired. Returns the number of rows cancelled.
    */
   private async cancelDuplicateUnpaidEnrollments(
     profileId: string,
@@ -5522,7 +5528,13 @@ class DatabaseStorage implements IStorage {
         eq(schema.productEnrollments.profileId, profileId),
         eq(schema.productEnrollments.programId, programId),
         eq(schema.productEnrollments.status, 'active'),
-        inArray(schema.productEnrollments.source, ['admin_assignment', 'self_claim']),
+        // Task #332: isTryout is nullable in the DB (default false but no
+        // NOT NULL constraint), so we must include legacy NULL rows here —
+        // otherwise they'd silently slip past the dedup logic.
+        or(
+          eq(schema.productEnrollments.isTryout, false),
+          isNull(schema.productEnrollments.isTryout),
+        ),
         isNull(schema.productEnrollments.paymentId),
         isNull(schema.productEnrollments.stripeSubscriptionId),
         ne(schema.productEnrollments.id, keepEnrollmentId),
@@ -5546,13 +5558,18 @@ class DatabaseStorage implements IStorage {
             cancelledReason: 'duplicate_paid_enrollment_exists',
             cancelledAt: now,
             replacedByEnrollmentId: keepEnrollmentId,
+            cancelledFromSource: dupe.source ?? null,
           },
           updatedAt: now,
         })
         .where(and(
           eq(schema.productEnrollments.id, dupe.id),
           eq(schema.productEnrollments.status, 'active'),
-          inArray(schema.productEnrollments.source, ['admin_assignment', 'self_claim']),
+          // Task #332: include legacy isTryout=NULL rows.
+          or(
+            eq(schema.productEnrollments.isTryout, false),
+            isNull(schema.productEnrollments.isTryout),
+          ),
           isNull(schema.productEnrollments.paymentId),
           isNull(schema.productEnrollments.stripeSubscriptionId),
         ));
@@ -5567,15 +5584,26 @@ class DatabaseStorage implements IStorage {
   async createEnrollment(data: InsertProductEnrollment): Promise<ProductEnrollment> {
     const now = new Date().toISOString();
 
-    // Task #243: When a payment-backed enrollment is being created, upgrade an
-    // existing unpaid admin_assignment grant in place rather than creating a
-    // duplicate row. This preserves the original assignment audit trail and
-    // keeps the player on a single active enrollment per program.
+    // Task #243 / #248 / #332: When a payment-backed enrollment is being
+    // created, upgrade an existing unpaid grant in place rather than creating
+    // a duplicate row. This preserves the original enrolled-on date / audit
+    // trail and keeps the player on a single active enrollment per program.
     //
-    // Gate: hard payment evidence only — `paymentId` or
-    // `stripeSubscriptionId` must be present. The `source` field alone is
-    // not trusted because /api/enrollments accepts a client-supplied
-    // source. All payment-completion call sites pass payment evidence.
+    // Gates:
+    //   - Hard payment evidence only — `paymentId` or `stripeSubscriptionId`
+    //     must be present. The `source` field alone is not trusted because
+    //     /api/enrollments accepts a client-supplied source. All
+    //     payment-completion call sites pass payment evidence.
+    //   - The new row's source must NOT be admin_assignment / self_claim
+    //     (defensive: those are the unpaid-grant sources, so a real paid
+    //     enrollment shouldn't be wearing them).
+    //   - Existing-row source is intentionally NOT filtered (Task #332). Any
+    //     active row for the same profile+program that lacks payment evidence
+    //     is a candidate for upgrade. Earlier versions only matched
+    //     admin_assignment / self_claim, which let unpaid rows whose source
+    //     was admin / direct / migration / import / payment-without-payment
+    //     slip through and end up as a duplicate Active row alongside the
+    //     freshly-created paid one.
     const hasPaymentEvidence = !!data.paymentId || !!data.stripeSubscriptionId;
     const targetStatus = data.status ?? 'active';
     if (
@@ -5587,14 +5615,19 @@ class DatabaseStorage implements IStorage {
       data.source !== 'self_claim' &&
       targetStatus === 'active'
     ) {
-      // Task #248: Also upgrade self_claim grants in place when the family
-      // pays through BoxStat, mirroring the admin_assignment behavior.
       const existingUnpaid = await db.select().from(schema.productEnrollments)
         .where(and(
           eq(schema.productEnrollments.profileId, data.profileId),
           eq(schema.productEnrollments.programId, data.programId),
           eq(schema.productEnrollments.status, 'active'),
-          inArray(schema.productEnrollments.source, ['admin_assignment', 'self_claim']),
+          // Task #332: isTryout is nullable in the DB schema; legacy rows
+          // can have a NULL value. We must include those — otherwise an
+          // unpaid leftover with isTryout=NULL would not be picked up for
+          // upgrade-in-place and would leave a duplicate Active row behind.
+          or(
+            eq(schema.productEnrollments.isTryout, false),
+            isNull(schema.productEnrollments.isTryout),
+          ),
           isNull(schema.productEnrollments.paymentId),
           isNull(schema.productEnrollments.stripeSubscriptionId),
         ))
@@ -5611,14 +5644,23 @@ class DatabaseStorage implements IStorage {
             autoRenew: data.autoRenew ?? existingUnpaid[0].autoRenew ?? false,
             totalCredits: data.totalCredits ?? existingUnpaid[0].totalCredits ?? null,
             remainingCredits: data.remainingCredits ?? existingUnpaid[0].remainingCredits ?? null,
-            metadata: { ...(existingUnpaid[0].metadata as any || {}), ...(data.metadata as any || {}), upgradedFromAdminAssignment: true },
+            metadata: {
+              ...(existingUnpaid[0].metadata as any || {}),
+              ...(data.metadata as any || {}),
+              upgradedFromAdminAssignment: true,
+              upgradedFromSource: existingUnpaid[0].source ?? null,
+            },
             updatedAt: now,
           })
           .where(eq(schema.productEnrollments.id, existingUnpaid[0].id))
           .returning();
-        console.log(`[createEnrollment] Upgraded admin_assignment enrollment ${existingUnpaid[0].id} to paid (source=${data.source})`);
-        // Task #326: Cancel any other unpaid duplicate rows for the same
-        // profile + program left over from earlier double-grants.
+        console.log(
+          `[createEnrollment] Upgraded enrollment ${existingUnpaid[0].id} ` +
+          `(was source=${existingUnpaid[0].source}) to paid (new source=${data.source})`,
+        );
+        // Task #326 / #332: Cancel any other unpaid duplicate rows for the
+        // same profile + program left over from earlier double-grants,
+        // regardless of their source.
         await this.cancelDuplicateUnpaidEnrollments(
           data.profileId,
           data.programId,

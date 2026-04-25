@@ -1,6 +1,6 @@
 import { db } from './db';
 import { productEnrollments } from '@shared/schema';
-import { and, eq, inArray, isNull, ne } from 'drizzle-orm';
+import { and, eq, isNull, ne, or } from 'drizzle-orm';
 
 interface BackfillResult {
   scanned: number;
@@ -15,6 +15,7 @@ export interface DuplicateScanRow {
   source: string | null;
   paymentId: string | null;
   stripeSubscriptionId: string | null;
+  isTryout?: boolean | null;
 }
 
 export interface DuplicateCancellation {
@@ -26,12 +27,25 @@ export interface DuplicateCancellation {
  * Pure helper that picks which active enrollment rows should be cancelled as
  * duplicates of a paid row for the same player + program. Exposed for unit
  * testing without a database.
+ *
+ * Task #332: Source is no longer a gate — any active row that lacks payment
+ * evidence (no `paymentId` AND no `stripeSubscriptionId`) is a candidate for
+ * cancellation when a paid row exists for the same profile+program. This
+ * collapses leftover unpaid grants whose source is admin_assignment,
+ * self_claim, admin, direct, migration, import, or any historic
+ * `payment`-row whose payment never landed. Tryout rows are preserved so a
+ * paid full-program enrollment doesn't accidentally retire a tryout credit.
+ *
+ * If multiple paid rows exist for the same profile+program (rare), we keep
+ * the most recent one (highest id) and let the others stand — only unpaid
+ * leftovers are collapsed.
  */
 export function findDuplicatesToCancel(rows: DuplicateScanRow[]): DuplicateCancellation[] {
   const groups = new Map<string, DuplicateScanRow[]>();
   for (const row of rows) {
     if (row.status !== 'active') continue;
     if (!row.profileId || !row.programId) continue;
+    if (row.isTryout) continue;
     const key = `${row.profileId}::${row.programId}`;
     const list = groups.get(key) || [];
     list.push(row);
@@ -40,13 +54,14 @@ export function findDuplicatesToCancel(rows: DuplicateScanRow[]): DuplicateCance
 
   const out: DuplicateCancellation[] = [];
   for (const rowsForGroup of Array.from(groups.values())) {
-    const paid = rowsForGroup.find((r) => r.paymentId || r.stripeSubscriptionId);
-    if (!paid) continue;
+    const paidRows = rowsForGroup.filter((r) => r.paymentId || r.stripeSubscriptionId);
+    if (paidRows.length === 0) continue;
+    // Most recent paid row wins (highest id ≈ most recently created).
+    const keep = paidRows.reduce((acc, r) => (r.id > acc.id ? r : acc), paidRows[0]);
     for (const r of rowsForGroup) {
-      if (r.id === paid.id) continue;
+      if (r.id === keep.id) continue;
       if (r.paymentId || r.stripeSubscriptionId) continue;
-      if (r.source !== 'admin_assignment' && r.source !== 'self_claim') continue;
-      out.push({ cancelId: r.id, keepId: paid.id });
+      out.push({ cancelId: r.id, keepId: keep.id });
     }
   }
   return out;
@@ -82,6 +97,7 @@ export async function backfillDuplicateEnrollments(): Promise<BackfillResult> {
         source: r.source,
         paymentId: r.paymentId,
         stripeSubscriptionId: r.stripeSubscriptionId,
+        isTryout: r.isTryout,
       })),
     );
     if (cancellations.length === 0) {
@@ -113,6 +129,7 @@ export async function backfillDuplicateEnrollments(): Promise<BackfillResult> {
             cancelledAt: now,
             replacedByEnrollmentId: keepId,
             cancelledBy: 'backfillDuplicateEnrollments',
+            cancelledFromSource: dupe.source ?? null,
           },
           updatedAt: now,
         })
@@ -120,14 +137,24 @@ export async function backfillDuplicateEnrollments(): Promise<BackfillResult> {
           and(
             eq(productEnrollments.id, cancelId),
             eq(productEnrollments.status, 'active'),
+            or(eq(productEnrollments.isTryout, false), isNull(productEnrollments.isTryout)),
             isNull(productEnrollments.paymentId),
             isNull(productEnrollments.stripeSubscriptionId),
-            inArray(productEnrollments.source, ['admin_assignment', 'self_claim']),
             ne(productEnrollments.id, keepId),
           ),
         )
         .returning({ id: productEnrollments.id });
-      if (updated.length > 0) result.cancelled++;
+      if (updated.length > 0) {
+        result.cancelled++;
+        // Per-row audit log so operators can trace exactly which player /
+        // program / enrollment ids were collapsed and which paid row each
+        // cancellation now points at.
+        console.log(
+          `[Backfill Duplicate Enrollments] Cancelled enrollment id=${cancelId} ` +
+            `(profileId=${dupe.profileId} programId=${dupe.programId} ` +
+            `source=${dupe.source ?? 'null'}) — replaced by id=${keepId}.`,
+        );
+      }
     }
 
     console.log(

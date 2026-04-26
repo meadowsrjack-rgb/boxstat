@@ -15719,6 +15719,7 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
   const [selectedTeamChat, setSelectedTeamChat] = useState<{ teamId: number; channel: 'players' | 'parents'; teamName: string } | null>(null);
   const [teamChatMessage, setTeamChatMessage] = useState("");
   const [teamChatRoomSearch, setTeamChatRoomSearch] = useState("");
+  const [teamChatMessageSearch, setTeamChatMessageSearch] = useState("");
   const [clearChannelConfirm, setClearChannelConfirm] = useState(false);
   const [isNewMessageOpen, setIsNewMessageOpen] = useState(false);
   const [newMsgScheduleType, setNewMsgScheduleType] = useState<'immediate' | 'scheduled' | 'recurring'>('immediate');
@@ -16711,13 +16712,36 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
                             </div>
                           )}
                           
+                          <Input
+                            value={teamChatMessageSearch}
+                            onChange={(e) => setTeamChatMessageSearch(e.target.value)}
+                            placeholder="Search messages..."
+                            className="mb-1"
+                            data-testid="input-team-chat-message-search"
+                          />
+                          {(() => {
+                            const mq = teamChatMessageSearch.trim().toLowerCase();
+                            const filteredMessages = mq
+                              ? teamChatMessages.filter((msg: any) => {
+                                  const content = (msg.content || '').toLowerCase();
+                                  const senderName = msg.sender
+                                    ? `${msg.sender.firstName || ''} ${msg.sender.lastName || ''}`.toLowerCase()
+                                    : '';
+                                  return content.includes(mq) || senderName.includes(mq);
+                                })
+                              : teamChatMessages;
+                            return (
                           <div className="space-y-3 max-h-64 overflow-y-auto">
                             {teamChatMessages.length === 0 ? (
                               <div className="text-center py-4 text-gray-500 text-sm">
                                 No messages in this channel yet.
                               </div>
+                            ) : filteredMessages.length === 0 ? (
+                              <div className="text-center py-4 text-gray-500 text-sm" data-testid="text-no-team-chat-messages">
+                                No messages match your search.
+                              </div>
                             ) : (
-                              teamChatMessages.map((msg: any) => {
+                              filteredMessages.map((msg: any) => {
                                 const isMuted = mutedUsers.some((m: any) => m.userId === msg.senderId);
                                 return (
                                   <div key={msg.id} className={`rounded-lg p-3 group relative ${msg.isPinned ? 'bg-yellow-50 border border-yellow-200' : 'bg-gray-100'}`}>
@@ -16788,6 +16812,8 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
                               })
                             )}
                           </div>
+                            );
+                          })()}
 
                           <div className="flex gap-2 pt-2 border-t">
                             <Input

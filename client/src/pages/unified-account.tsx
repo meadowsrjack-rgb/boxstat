@@ -1117,6 +1117,8 @@ function PlayerProfileCard({ player, onCoachClick, onNavigateToPayments }: { pla
 function ParentMessagesSection({ players, userId }: { players: any[]; userId?: string }) {
   const [activeChat, setActiveChat] = useState<{ type: 'team' | 'coach' | 'management'; teamId?: number; coachId?: string; teamName?: string } | null>(null);
   const [newMessage, setNewMessage] = useState("");
+  const [teamChatSearch, setTeamChatSearch] = useState("");
+  const [chatMessageSearch, setChatMessageSearch] = useState("");
   const storageKey = `crm_seen_reply_count_${userId || 'unknown'}`;
   const [managementChatViewed, setManagementChatViewed] = useState(() => {
     const saved = localStorage.getItem(storageKey);
@@ -1381,22 +1383,51 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
             <CardDescription>Chat with other parents and coaches</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            {playerTeams.map((team: any) => (
-              <div key={team.id} className="border rounded-lg p-3 space-y-2">
-                <div className="font-medium text-sm">{team.name}</div>
-                <div className="text-xs text-gray-500 mb-2">Player: {team.playerName}</div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full gap-1"
-                  onClick={() => setActiveChat({ type: 'team', teamId: team.id, teamName: team.name })}
-                  data-testid={`button-team-chat-${team.id}`}
-                >
-                  <Users className="w-3 h-3" />
-                  Open Team Chat
-                </Button>
-              </div>
-            ))}
+            {playerTeams.length > 1 && (
+              <Input
+                value={teamChatSearch}
+                onChange={(e) => setTeamChatSearch(e.target.value)}
+                placeholder="Search team chats..."
+                className="mb-2"
+                data-testid="input-parent-team-chat-search"
+              />
+            )}
+            {(() => {
+              const q = teamChatSearch.trim().toLowerCase();
+              const filteredPlayerTeams = q
+                ? playerTeams.filter((team: any) => {
+                    const fields = [
+                      team.name || '',
+                      team.playerName || '',
+                      team.coachName || '',
+                    ].join(' ').toLowerCase();
+                    return fields.includes(q);
+                  })
+                : playerTeams;
+              if (filteredPlayerTeams.length === 0) {
+                return (
+                  <div className="text-center py-4 text-gray-500 text-sm" data-testid="text-no-parent-team-chats">
+                    No team chats match your search.
+                  </div>
+                );
+              }
+              return filteredPlayerTeams.map((team: any) => (
+                <div key={team.id} className="border rounded-lg p-3 space-y-2">
+                  <div className="font-medium text-sm">{team.name}</div>
+                  <div className="text-xs text-gray-500 mb-2">Player: {team.playerName}</div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full gap-1"
+                    onClick={() => setActiveChat({ type: 'team', teamId: team.id, teamName: team.name })}
+                    data-testid={`button-team-chat-${team.id}`}
+                  >
+                    <Users className="w-3 h-3" />
+                    Open Team Chat
+                  </Button>
+                </div>
+              ));
+            })()}
           </CardContent>
         </Card>
       ) : (

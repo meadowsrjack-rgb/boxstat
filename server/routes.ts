@@ -13923,14 +13923,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eqOp(teamSchema.teamMemberships.teamId, teamId),
             eqOp(teamSchema.teamMemberships.status, 'active')
           ));
+        // Coach already received a dedicated push above via pushNotifications.coachNewMessage
+        // so exclude them from this bulk push to avoid duplicate notifications.
         const recipientIds: string[] = [];
         for (const tm of memberships) {
-          if (tm.profileId && tm.profileId !== validatedSenderId) {
+          if (
+            tm.profileId &&
+            tm.profileId !== validatedSenderId &&
+            tm.profileId !== team.coachId
+          ) {
             recipientIds.push(tm.profileId);
           }
-        }
-        if (team.coachId && team.coachId !== validatedSenderId && !recipientIds.includes(team.coachId)) {
-          recipientIds.push(team.coachId);
         }
         
         if (recipientIds.length > 0) {
@@ -13943,8 +13946,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             recipientTarget: 'users',
             recipientUserIds: recipientIds,
             status: 'sent',
-            deliveryChannels: ['in_app'],
+            deliveryChannels: ['in_app', 'push'],
             sentBy: 'system',
+          }, {
+            url: '/unified-account?tab=messages',
+            teamId: parseInt(req.params.teamId),
+            channel,
           });
         }
       }

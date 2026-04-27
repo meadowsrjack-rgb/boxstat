@@ -801,6 +801,7 @@ export const attendances = pgTable("attendances", {
   longitude: numeric(),
   checkedInByUserId: varchar("checked_in_by_user_id"), // For proxy check-ins (parent checking in player)
   checkInMethod: varchar("check_in_method"), // 'location', 'qr', 'manual', 'proxy'
+  status: varchar().default('present'), // 'present' | 'absent' (coach manual mark)
 });
 
 // Facilities table (saved locations for quick event creation)
@@ -1598,6 +1599,7 @@ export interface Attendance {
   eventId: number;
   checkedInAt: Date;
   type: "advance" | "onsite";
+  status?: "present" | "absent";
 }
 
 export const insertAttendanceSchema = z.object({

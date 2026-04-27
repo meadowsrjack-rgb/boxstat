@@ -152,7 +152,8 @@ export interface IStorage {
   getAttendance(eventId: string, userId: string): Promise<Attendance | undefined>;
   getAttendancesByEvent(eventId: string): Promise<Attendance[]>;
   getAttendancesByUser(userId: string): Promise<Attendance[]>;
-  createAttendance(attendance: InsertAttendance): Promise<Attendance>;
+  createAttendance(attendance: InsertAttendance & { status?: string; checkedInByUserId?: string; checkInMethod?: string }): Promise<Attendance>;
+  updateAttendance(id: string, data: { status?: string }): Promise<Attendance | undefined>;
   
   // Award operations
   getAward(id: string): Promise<Award | undefined>;
@@ -1317,15 +1318,27 @@ class MemStorage implements IStorage {
     return Array.from(this.attendances.values()).filter(att => att.userId === userId);
   }
   
-  async createAttendance(attendance: InsertAttendance): Promise<Attendance> {
+  async createAttendance(attendance: InsertAttendance & { status?: string }): Promise<Attendance> {
     const newAttendance: Attendance = {
       ...attendance,
       id: this.generateId(),
       type: attendance.type ?? "advance",
       checkedInAt: new Date(),
+      status: ((attendance as any).status || 'present') as "present" | "absent",
     };
     this.attendances.set(newAttendance.id, newAttendance);
     return newAttendance;
+  }
+
+  async updateAttendance(id: string, data: { status?: string }): Promise<Attendance | undefined> {
+    const existing = this.attendances.get(id);
+    if (!existing) return undefined;
+    const updated: Attendance = {
+      ...existing,
+      ...(data.status ? { status: data.status as "present" | "absent" } : {}),
+    };
+    this.attendances.set(id, updated);
+    return updated;
   }
   
   // Award operations
@@ -4036,8 +4049,8 @@ class DatabaseStorage implements IStorage {
     return results.map(att => this.mapDbAttendanceToAttendance(att));
   }
 
-  async createAttendance(attendance: InsertAttendance): Promise<Attendance> {
-    const dbAttendance = {
+  async createAttendance(attendance: InsertAttendance & { status?: string; checkedInByUserId?: string; checkInMethod?: string }): Promise<Attendance> {
+    const dbAttendance: any = {
       userId: attendance.userId,
       eventId: attendance.eventId,
       type: attendance.type || 'advance',
@@ -4045,10 +4058,26 @@ class DatabaseStorage implements IStorage {
       latitude: attendance.latitude !== undefined ? attendance.latitude.toString() : undefined,
       longitude: attendance.longitude !== undefined ? attendance.longitude.toString() : undefined,
       checkedInAt: new Date().toISOString(),
+      status: (attendance as any).status || 'present',
     };
+    if ((attendance as any).checkedInByUserId) dbAttendance.checkedInByUserId = (attendance as any).checkedInByUserId;
+    if ((attendance as any).checkInMethod) dbAttendance.checkInMethod = (attendance as any).checkInMethod;
 
     const results = await db.insert(schema.attendances).values(dbAttendance).returning();
     return this.mapDbAttendanceToAttendance(results[0]);
+  }
+
+  async updateAttendance(id: string, data: { status?: string }): Promise<Attendance | undefined> {
+    const idNum = parseInt(id);
+    if (isNaN(idNum)) return undefined;
+    const updateData: any = {};
+    if (data.status) updateData.status = data.status;
+    if (Object.keys(updateData).length === 0) {
+      const existing = await db.select().from(schema.attendances).where(eq(schema.attendances.id, idNum));
+      return existing[0] ? this.mapDbAttendanceToAttendance(existing[0]) : undefined;
+    }
+    const results = await db.update(schema.attendances).set(updateData).where(eq(schema.attendances.id, idNum)).returning();
+    return results[0] ? this.mapDbAttendanceToAttendance(results[0]) : undefined;
   }
 
   // Award operations
@@ -6165,6 +6194,7 @@ class DatabaseStorage implements IStorage {
       eventId: dbAttendance.eventId.toString(),
       checkedInAt: new Date(dbAttendance.checkedInAt),
       type: (dbAttendance.type || 'advance') as "advance" | "onsite",
+      status: (dbAttendance.status || 'present') as "present" | "absent",
     };
   }
 

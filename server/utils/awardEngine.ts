@@ -178,7 +178,9 @@ async function evaluateCheckinAward(userId: string, award: SelectAwardDefinition
   const eventFilter = award.eventFilter || 'any';
   const countMode = award.countMode || 'total';
 
-  let query = db.select({ count: sql<number>`count(*)` }).from(attendances).where(eq(attendances.userId, userId));
+  let query = db.select({ count: sql<number>`count(*)` }).from(attendances).where(
+    and(eq(attendances.userId, userId), sql`(${attendances.status} IS NULL OR ${attendances.status} = 'present')`)
+  );
   
   if (eventFilter !== 'any') {
     const eventTypeMap: Record<string, string> = {
@@ -209,7 +211,10 @@ async function calculateCheckinStreak(userId: string, eventFilter: string): Prom
   const checkins = await db
     .select({ date: attendances.checkedInAt })
     .from(attendances)
-    .where(eq(attendances.userId, userId))
+    .where(and(
+      eq(attendances.userId, userId),
+      sql`(${attendances.status} IS NULL OR ${attendances.status} = 'present')`
+    ))
     .orderBy(desc(attendances.checkedInAt));
 
   if (checkins.length === 0) return 0;
@@ -609,7 +614,10 @@ export async function getAwardProgress(
         const [checkinResult] = await db
           .select({ count: sql<number>`count(*)` })
           .from(attendances)
-          .where(eq(attendances.userId, userId));
+          .where(and(
+            eq(attendances.userId, userId),
+            sql`(${attendances.status} IS NULL OR ${attendances.status} = 'present')`
+          ));
         current = Number(checkinResult?.count || 0);
         break;
       

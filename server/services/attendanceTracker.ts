@@ -56,6 +56,7 @@ async function getPlayerAttendanceForEvents(playerId: string, eventIds: number[]
   const results = await db.execute(
     sql`SELECT DISTINCT event_id FROM attendances
         WHERE user_id = ${playerId}
+          AND (status IS NULL OR status = 'present')
           AND event_id IN (${sql.join(eventIds.map(id => sql`${id}`), sql`, `)})`
   );
   const rows = (results.rows || results) as any[];

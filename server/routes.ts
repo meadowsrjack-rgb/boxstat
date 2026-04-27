@@ -12993,7 +12993,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get existing attendances
       const existingAttendances = await storage.getAttendancesByEvent(eventId);
-      const checkedInPlayerIds = new Set(existingAttendances.map((a: any) => a.userId));
+      const presentPlayerIds = new Set(
+        existingAttendances.filter((a: any) => (a.status || 'present') === 'present').map((a: any) => a.userId)
+      );
       
       const results: { playerId: string; success: boolean; action: string; playerName?: string; error?: string }[] = [];
       
@@ -13007,19 +13009,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           const playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'Unknown Player';
           
-          if (action === 'checkout') {
-            // Remove check-in (undo)
+          if (action === 'absent') {
+            // Mark player as absent. If an attendance row exists, flip status to 'absent'; otherwise create one.
             const attendance = existingAttendances.find((a: any) => a.userId === playerId);
             if (attendance) {
-              await storage.deleteAttendance(attendance.id);
+              await storage.updateAttendance(attendance.id, { status: 'absent' });
+            } else {
+              await storage.createAttendance({
+                userId: playerId,
+                eventId: eventId,
+                qrCodeData: `coach-absent-${coachId}-${Date.now()}`,
+                checkedInByUserId: coachId,
+                checkInMethod: 'coach_roster',
+                status: 'absent',
+              } as any);
+            }
+            results.push({ playerId, success: true, action: 'absent', playerName });
+            continue;
+          }
+
+          if (action === 'checkout') {
+            // Remove check-in (undo) - kept for backward compatibility with any callers
+            const attendance = existingAttendances.find((a: any) => a.userId === playerId);
+            if (attendance) {
+              await storage.updateAttendance(attendance.id, { status: 'absent' });
               results.push({ playerId, success: true, action: 'checkout', playerName });
             } else {
               results.push({ playerId, success: false, action: 'checkout', playerName, error: 'Not checked in' });
             }
           } else {
-            // Check in
-            if (checkedInPlayerIds.has(playerId)) {
+            // Check in (action === 'checkin' or 'present' or default)
+            if (presentPlayerIds.has(playerId)) {
               results.push({ playerId, success: false, action: 'checkin', playerName, error: 'Already checked in' });
+              continue;
+            }
+
+            // If a prior 'absent' record exists, just flip back to 'present' (no re-credit / re-award)
+            const prior = existingAttendances.find((a: any) => a.userId === playerId);
+            if (prior) {
+              await storage.updateAttendance(prior.id, { status: 'present' });
+              presentPlayerIds.add(playerId);
+              results.push({ playerId, success: true, action: 'checkin', playerName });
               continue;
             }
             
@@ -13032,7 +13062,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
             
             await storage.createAttendance(attendanceData);
-            checkedInPlayerIds.add(playerId);
+            presentPlayerIds.add(playerId);
             
             // Credit deduction and award tracking
             try {
@@ -13183,9 +13213,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Get current attendance status
+      // Get current attendance status (only count rows with status='present' as checked in)
       const attendances = await storage.getAttendancesByEvent(eventId);
-      const checkedInIds = new Set(attendances.map((a: any) => a.userId));
+      const presentAttendances = attendances.filter((a: any) => (a.status || 'present') === 'present');
+      const checkedInIds = new Set(presentAttendances.map((a: any) => a.userId));
       
       // Build roster with status
       const roster = allPlayers.map(player => ({
@@ -13200,7 +13231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         eventId,
         roster,
-        checkedInCount: attendances.length,
+        checkedInCount: presentAttendances.length,
         totalPlayers: roster.length,
       });
     } catch (error: any) {

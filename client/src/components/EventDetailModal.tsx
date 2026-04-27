@@ -584,9 +584,15 @@ export default function EventDetailModal({
     return rsvps.find(r => r.userId === String(userId));
   }, [rsvps, userId]);
 
+  // Only attendance rows with status='present' (or no status set, for legacy rows) count as a check-in.
+  // Rows with status='absent' are coach-marked absences and must not be treated as checked in.
+  const presentAttendances = useMemo(() => {
+    return attendances.filter(a => (a.status ?? 'present') !== 'absent');
+  }, [attendances]);
+
   const userCheckIn = useMemo(() => {
-    return attendances.find(a => a.userId === String(userId));
-  }, [attendances, userId]);
+    return presentAttendances.find(a => a.userId === String(userId));
+  }, [presentAttendances, userId]);
 
   const rsvpData: RsvpData = useMemo(() => {
     // Count over the union of invited users and anyone who has an RSVP on record.
@@ -627,12 +633,12 @@ export default function EventDetailModal({
     // This keeps numerator/denominator on the same population and removes the
     // misleading hardcoded fallback of 10 when the invited list is empty.
     const countedIds = new Set<string>(users.map(u => String(u.id)));
-    for (const a of attendances) {
+    for (const a of presentAttendances) {
       countedIds.add(String(a.userId));
     }
 
     const checkedInIds = new Set<string>();
-    for (const a of attendances) {
+    for (const a of presentAttendances) {
       const uid = String(a.userId);
       if (countedIds.has(uid)) checkedInIds.add(uid);
     }
@@ -645,13 +651,13 @@ export default function EventDetailModal({
       notCheckedIn: Math.max(0, total - checkedIn),
       total,
     };
-  }, [attendances, users]);
+  }, [presentAttendances, users]);
 
   // Sort users by status: checked-in > going > not going > no response
   const sortedUsers = useMemo(() => {
     return [...users].sort((a, b) => {
-      const aAttendance = attendances.find(att => att.userId === a.id);
-      const bAttendance = attendances.find(att => att.userId === b.id);
+      const aAttendance = presentAttendances.find(att => att.userId === a.id);
+      const bAttendance = presentAttendances.find(att => att.userId === b.id);
       const aRsvp = rsvps.find(r => r.userId === a.id);
       const bRsvp = rsvps.find(r => r.userId === b.id);
       
@@ -668,7 +674,7 @@ export default function EventDetailModal({
       
       return aPriority - bPriority;
     });
-  }, [users, attendances, rsvps]);
+  }, [users, presentAttendances, rsvps]);
 
   // Compute RSVP names for display (for parent: show linked players + all linked profiles)
   const rsvpNames = useMemo(() => {
@@ -751,7 +757,7 @@ export default function EventDetailModal({
 
   // Get check-in status for each linked player
   const getPlayerCheckIn = (playerId: string) => {
-    return attendances.find(a => a.userId === playerId);
+    return presentAttendances.find(a => a.userId === playerId);
   };
 
   const handleRsvpClick = (response?: 'attending' | 'not_attending') => {
@@ -896,7 +902,7 @@ export default function EventDetailModal({
     }
 
     // Check if player is already checked in
-    const playerAlreadyCheckedIn = attendances.find(a => a.userId === playerId);
+    const playerAlreadyCheckedIn = presentAttendances.find(a => a.userId === playerId);
     if (playerAlreadyCheckedIn) {
       toast({
         title: 'Already Checked In',
@@ -1173,7 +1179,7 @@ export default function EventDetailModal({
               isUserCheckedIn={!!userCheckIn}
               disabled={checkInMutation.isPending || isCheckingLocation}
               invitedUsers={users}
-              checkedInUserIds={attendances.map(a => a.userId)}
+              checkedInUserIds={presentAttendances.map(a => a.userId)}
               showQrButton={!userCheckIn && !isAdminOrCoach && userRole === 'player'}
               onQrClick={() => setShowQrScanner(true)}
               locationBanner={
@@ -1473,10 +1479,14 @@ export default function EventDetailModal({
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          {userAttendance ? (
+                          {userAttendance && userAttendance.status !== 'absent' ? (
                             <Badge className="bg-green-800 text-green-200 text-xs border-0">
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               Checked In
+                            </Badge>
+                          ) : userAttendance && userAttendance.status === 'absent' ? (
+                            <Badge className="bg-red-900/60 text-red-300 text-xs border border-red-700/50">
+                              Absent
                             </Badge>
                           ) : userRsvpResponse?.response === 'attending' ? (
                             <Badge className="bg-blue-900/60 text-blue-300 text-xs border border-blue-700/50">
@@ -1491,19 +1501,36 @@ export default function EventDetailModal({
                               No response
                             </Badge>
                           )}
-                          {isAdminOrCoach && !userAttendance && user.role === 'player' && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 w-7 p-0 text-green-500 hover:text-green-400 hover:bg-green-900/30"
-                              disabled={coachCheckInMutation.isPending}
-                              onClick={() => coachCheckInMutation.mutate({ playerIds: [user.id] })}
-                              data-testid={`button-manual-checkin-${user.id}`}
-                              title="Check in manually"
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                          )}
+                          {isAdminOrCoach && user.role === 'player' && (() => {
+                            const attendanceState: 'none' | 'present' | 'absent' = !userAttendance
+                              ? 'none'
+                              : (userAttendance.status === 'absent' ? 'absent' : 'present');
+                            const nextAction: 'checkin' | 'absent' = attendanceState === 'present' ? 'absent' : 'checkin';
+                            const dotClass =
+                              attendanceState === 'present'
+                                ? 'bg-green-500 border-green-400 hover:bg-green-400'
+                                : attendanceState === 'absent'
+                                  ? 'bg-red-500 border-red-400 hover:bg-red-400'
+                                  : 'bg-gray-600 border-gray-500 hover:bg-gray-500';
+                            const title =
+                              attendanceState === 'present'
+                                ? 'Mark absent'
+                                : attendanceState === 'absent'
+                                  ? 'Mark present'
+                                  : 'Mark present';
+                            return (
+                              <button
+                                type="button"
+                                aria-label={title}
+                                title={title}
+                                disabled={coachCheckInMutation.isPending}
+                                onClick={() => coachCheckInMutation.mutate({ playerIds: [user.id], action: nextAction })}
+                                className={`h-4 w-4 rounded-full border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${dotClass}`}
+                                data-testid={`button-attendance-toggle-${user.id}`}
+                                data-state={attendanceState}
+                              />
+                            );
+                          })()}
                         </div>
                       </div>
                     );

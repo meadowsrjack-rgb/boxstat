@@ -1016,9 +1016,19 @@ export default function EventDetailModal({
     return { hours, minutes, totalMinutes };
   };
 
-  const getAvatarColor = (index: number): string => {
-    const colors = ['bg-purple-600', 'bg-teal-600', 'bg-blue-600', 'bg-orange-600', 'bg-pink-600', 'bg-indigo-600', 'bg-yellow-600', 'bg-red-600'];
-    return colors[index % colors.length];
+  const getAvatarColor = (role?: string | null): string => {
+    switch ((role || '').toLowerCase()) {
+      case 'player':
+        return 'bg-blue-600';
+      case 'coach':
+        return 'bg-green-600';
+      case 'admin':
+        return 'bg-red-600';
+      case 'parent':
+        return 'bg-purple-600';
+      default:
+        return 'bg-gray-600';
+    }
   };
 
   const qrCodeValue = useMemo(() => {
@@ -1308,7 +1318,7 @@ export default function EventDetailModal({
                             data-testid={`checkbox-player-${player.id}`}
                           />
                         )}
-                        <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0 ${getAvatarColor(idx)}`}>
+                        <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0 ${getAvatarColor('player')}`}>
                           {initials || '?'}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -1471,7 +1481,7 @@ export default function EventDetailModal({
                         data-testid={`row-participant-${user.id}`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-semibold text-white flex-shrink-0 ${getAvatarColor(idx)}`}>
+                          <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-semibold text-white flex-shrink-0 ${getAvatarColor(user.role)}`}>
                             {initials || '?'}
                           </div>
                           <span className="text-sm font-medium text-white">

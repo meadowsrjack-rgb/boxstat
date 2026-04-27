@@ -12520,9 +12520,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Also notify parent if player has a linked parent account
           const player = await storage.getUser(attendanceData.userId);
+          const playerName = `${player?.firstName || ''} ${player?.lastName || ''}`.trim() || 'A player';
           if (player?.linkedParentId) {
-            const playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'Your player';
             await pushNotifications.parentPlayerCheckedIn(storage, player.linkedParentId, playerName, eventId);
+          }
+
+          // Notify all coaches on the team and all admins in the org about the check-in
+          const event = await storage.getEvent(String(eventId));
+          if (event && (event.teamId || event.organizationId)) {
+            await pushNotifications.notifyTeamCoachesAndAdmins(
+              storage,
+              event.teamId,
+              event.organizationId,
+              '✅ Player Checked In',
+              `${playerName} checked in to ${event.title}`,
+              {
+                url: `/home?eventId=${eventId}`,
+                excludeUserId: req.user?.id,
+                customData: { eventId, type: 'checkin', playerId: attendanceData.userId },
+              }
+            );
           }
         }
       } catch (notifError: any) {
@@ -12945,7 +12962,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Log error but don't fail the RSVP operation
         console.error('⚠️ Award evaluation failed (non-fatal):', awardError.message);
       }
-      
+
+      // Notify all coaches on the team and all admins in the org about this RSVP
+      try {
+        const event = await storage.getEvent(eventId.toString());
+        if (event && (event.teamId || event.organizationId)) {
+          const playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'A player';
+          const responseLabel = response === 'attending'
+            ? 'is attending'
+            : response === 'not_attending'
+              ? 'declined'
+              : response === 'maybe'
+                ? 'responded "maybe"'
+                : `responded "${response}"`;
+          const emoji = response === 'attending'
+            ? '✅'
+            : response === 'not_attending'
+              ? '❌'
+              : '❓';
+          await pushNotifications.notifyTeamCoachesAndAdmins(
+            storage,
+            event.teamId,
+            event.organizationId,
+            `${emoji} New RSVP`,
+            `${playerName} ${responseLabel} for ${event.title}`,
+            {
+              url: `/home?eventId=${eventId}`,
+              excludeUserId: req.user?.id,
+              customData: { eventId, type: 'rsvp', response },
+            }
+          );
+        }
+      } catch (notifError: any) {
+        console.error('⚠️ Proxy RSVP notification failed (non-fatal):', notifError.message);
+      }
+
       res.json({ 
         success: true, 
         rsvp: result,
@@ -13140,7 +13191,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const successCount = results.filter(r => r.success).length;
       const failCount = results.filter(r => !r.success).length;
-      
+
+      // Notify other coaches on the team and admins in the org about this
+      // check-in / absent / checkout activity. Skip the actor (the coach who
+      // performed the action) so they don't get notified about their own clicks.
+      // Per-player when only one was affected, summary when bulk to avoid spam.
+      try {
+        const successfulRows = results.filter(r => r.success);
+        const orgId = event.organizationId || req.user?.organizationId || null;
+        if (successfulRows.length > 0 && (event.teamId || orgId)) {
+
+          if (successfulRows.length === 1) {
+            const row = successfulRows[0];
+            const verb = row.action === 'absent'
+              ? 'was marked absent for'
+              : row.action === 'checkout'
+                ? 'was removed from attendance for'
+                : 'was checked in to';
+            const emoji = row.action === 'absent' ? '🚫' : row.action === 'checkout' ? '↩️' : '✅';
+            await pushNotifications.notifyTeamCoachesAndAdmins(
+              storage,
+              event.teamId,
+              orgId,
+              `${emoji} Attendance Update`,
+              `${row.playerName || 'A player'} ${verb} ${event.title}`,
+              {
+                url: `/home?eventId=${eventId}`,
+                excludeUserId: coachId,
+                customData: { eventId, type: 'checkin', playerId: row.playerId, action: row.action },
+              }
+            );
+          } else {
+            const actionVerb = action === 'absent'
+              ? 'marked absent'
+              : action === 'checkout'
+                ? 'removed from attendance'
+                : 'checked in';
+            const emoji = action === 'absent' ? '🚫' : action === 'checkout' ? '↩️' : '✅';
+            await pushNotifications.notifyTeamCoachesAndAdmins(
+              storage,
+              event.teamId,
+              orgId,
+              `${emoji} Attendance Update`,
+              `${successfulRows.length} player${successfulRows.length === 1 ? '' : 's'} ${actionVerb} for ${event.title}`,
+              {
+                url: `/home?eventId=${eventId}`,
+                excludeUserId: coachId,
+                customData: { eventId, type: 'checkin', action, count: successfulRows.length },
+              }
+            );
+          }
+        }
+      } catch (notifError: any) {
+        console.error('⚠️ Coach roster notification failed (non-fatal):', notifError.message);
+      }
+
       res.json({ 
         success: true, 
         results,
@@ -13456,23 +13561,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('⚠️ Award evaluation failed (non-fatal):', awardError.message);
       }
       
-      // Send RSVP confirmation notification (only for 'attending')
+      // Send RSVP notifications: low-attendance warning + fan-out to coaches/admins
       try {
-        if (rsvpData.response === 'attending' && rsvpData.userId) {
-          // Get event to notify coaches about RSVP summary
+        if (rsvpData.userId) {
           const event = await storage.getEvent(rsvpData.eventId.toString());
-          if (event?.teamId) {
-            const team = await storage.getTeam(event.teamId);
-            if (team?.coachId) {
-              // Get count of attending responses
-              const responses = await storage.getRsvpResponsesByEvent(rsvpData.eventId);
-              const attendingCount = responses.filter((r: any) => r.response === 'attending').length;
-              
-              // Only notify if this brings attendance below threshold (e.g., 5 players)
-              if (attendingCount < 5) {
-                await pushNotifications.coachLowAttendanceWarning(storage, team.coachId, rsvpData.eventId, attendingCount);
+          if (event && (event.teamId || event.organizationId)) {
+            const player = await storage.getUser(rsvpData.userId);
+            const playerName = `${player?.firstName || ''} ${player?.lastName || ''}`.trim() || 'A player';
+
+            // Decide whether the primary coach will get a separate low-attendance
+            // warning so we can exclude them from the per-RSVP fan-out and avoid
+            // sending two pushes back-to-back.
+            let primaryCoachExcluded: string | undefined;
+            if (rsvpData.response === 'attending' && event.teamId) {
+              const team = await storage.getTeam(event.teamId);
+              if (team?.coachId) {
+                const responses = await storage.getRsvpResponsesByEvent(rsvpData.eventId);
+                const attendingCount = responses.filter((r: any) => r.response === 'attending').length;
+                if (attendingCount < 5) {
+                  await pushNotifications.coachLowAttendanceWarning(storage, team.coachId, rsvpData.eventId, attendingCount);
+                  primaryCoachExcluded = team.coachId;
+                }
               }
             }
+
+            // Per-RSVP fan-out to all coaches on the team and all admins in the org
+            const responseLabel = rsvpData.response === 'attending'
+              ? 'is attending'
+              : rsvpData.response === 'not_attending'
+                ? 'declined'
+                : rsvpData.response === 'maybe'
+                  ? 'responded "maybe"'
+                  : `responded "${rsvpData.response}"`;
+            const emoji = rsvpData.response === 'attending'
+              ? '✅'
+              : rsvpData.response === 'not_attending'
+                ? '❌'
+                : '❓';
+            await pushNotifications.notifyTeamCoachesAndAdmins(
+              storage,
+              event.teamId,
+              event.organizationId,
+              `${emoji} New RSVP`,
+              `${playerName} ${responseLabel} for ${event.title}`,
+              {
+                url: `/home?eventId=${rsvpData.eventId}`,
+                excludeUserId: [req.user?.id, primaryCoachExcluded],
+                customData: { eventId: rsvpData.eventId, type: 'rsvp', response: rsvpData.response },
+              }
+            );
           }
         }
       } catch (notifError: any) {

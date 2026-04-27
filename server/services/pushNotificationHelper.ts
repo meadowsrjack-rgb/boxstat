@@ -1,6 +1,6 @@
 import { notificationService } from "./notificationService";
 import { db } from "../db";
-import { users, events, teams, programs, products } from "../../shared/schema";
+import { users, events, teams, programs, products, teamMemberships } from "../../shared/schema";
 import type { Event } from "../../shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import type { IStorage } from "../storage";
@@ -492,6 +492,79 @@ export const pushNotifications = {
       message,
       url: url || '/coach-dashboard',
     });
+  },
+
+  // Fan out a notification to every active coach on a team and every admin in
+  // the org. Used for RSVP and check-in events so the staff who care about
+  // attendance get a push notification. The actor (the user who performed the
+  // action) is excluded so people don't get notified about their own actions.
+  async notifyTeamCoachesAndAdmins(
+    storage: IStorage,
+    teamId: number | null | undefined,
+    organizationId: string | null | undefined,
+    title: string,
+    message: string,
+    opts?: { url?: string; excludeUserId?: string | (string | undefined | null)[]; customData?: Record<string, any> }
+  ) {
+    const recipients = new Set<string>();
+
+    if (teamId != null) {
+      try {
+        const coachRows = await db
+          .select({ profileId: teamMemberships.profileId })
+          .from(teamMemberships)
+          .where(and(
+            eq(teamMemberships.teamId, teamId),
+            inArray(teamMemberships.role, ['coach', 'assistant_coach', 'head_coach']),
+            eq(teamMemberships.status, 'active'),
+          ));
+        for (const row of coachRows) {
+          if (row.profileId) recipients.add(row.profileId);
+        }
+
+        // Also include the team's primary coach (teams.coachId) in case they
+        // aren't represented in team_memberships.
+        const team = await getTeamById(teamId);
+        if (team?.coachId) recipients.add(team.coachId);
+      } catch (err) {
+        console.error('notifyTeamCoachesAndAdmins: failed to load team coaches', err);
+      }
+    }
+
+    if (organizationId) {
+      try {
+        const adminRows = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(and(
+            eq(users.organizationId, organizationId),
+            eq(users.role, 'admin'),
+          ));
+        for (const row of adminRows) {
+          if (row.id) recipients.add(row.id);
+        }
+      } catch (err) {
+        console.error('notifyTeamCoachesAndAdmins: failed to load admins', err);
+      }
+    }
+
+    if (opts?.excludeUserId) {
+      const excludes = Array.isArray(opts.excludeUserId) ? opts.excludeUserId : [opts.excludeUserId];
+      for (const id of excludes) {
+        if (id) recipients.delete(id);
+      }
+    }
+    if (recipients.size === 0) return;
+
+    for (const userId of recipients) {
+      await sendNotification(storage, {
+        userId,
+        title,
+        message,
+        url: opts?.url,
+        customData: opts?.customData,
+      });
+    }
   },
 
   // ============================================

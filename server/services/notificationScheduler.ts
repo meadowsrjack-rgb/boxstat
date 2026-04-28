@@ -168,12 +168,27 @@ export class NotificationScheduler {
             console.log(`  Found ${participantIds.length} participants for reminder ${reminderHours}h: ${participantIds.join(', ')}`);
             
             const dedupWindowMinutes = reminderHours >= 24 ? 720 : (reminderHours >= 2 ? 120 : 60);
-            
+
+            // Treat near-duplicate event records (same normalized title and
+            // same start time, within 5 minutes) as a single event for the
+            // "already notified this user" check. This collapses bulk-created
+            // duplicate event rows ("12U Gray Practice" × 4) so each user gets
+            // exactly one reminder per logical event window.
+            const normalizedTitle = normalizeTitleKey(event.title);
+            const startBucketMs = 5 * 60 * 1000;
+            const eventStartBucket = Math.floor(eventStart.getTime() / startBucketMs);
+            const eventIdentityIds = upcomingEvents
+              .filter(e =>
+                normalizeTitleKey(e.title) === normalizedTitle &&
+                Math.floor(new Date(e.startTime).getTime() / startBucketMs) === eventStartBucket
+              )
+              .map(e => e.id);
+
             for (const memberId of participantIds) {
               const alreadySent = await notificationService.hasRecentNotification(
                 memberId.toString(),
                 'event_reminder',
-                event.id,
+                eventIdentityIds,
                 dedupWindowMinutes
               );
 
@@ -185,7 +200,7 @@ export class NotificationScheduler {
                   timeUntil
                 );
               } else {
-                console.log(`  Skipping duplicate reminder for user ${memberId}, event ${event.id}`);
+                console.log(`  Skipping duplicate reminder for user ${memberId}, event ${event.id} (identity: [${eventIdentityIds.join(',')}])`);
               }
             }
           }
@@ -211,7 +226,20 @@ export class NotificationScheduler {
         // Notify about check-in availability 30 minutes before event starts
         if (minutesUntilEvent <= 30 && minutesUntilEvent > 25) {
           const participantIds = await this.getEventParticipants(event);
-          
+
+          // Collapse near-duplicate event records (same normalized title and
+          // start time within 5 minutes) so each user gets a single check-in
+          // availability notification per logical event window.
+          const normalizedTitle = normalizeTitleKey(event.title);
+          const startBucketMs = 5 * 60 * 1000;
+          const eventStartBucket = Math.floor(eventStart.getTime() / startBucketMs);
+          const eventIdentityIds = upcomingEvents
+            .filter(e =>
+              normalizeTitleKey(e.title) === normalizedTitle &&
+              Math.floor(new Date(e.startTime).getTime() / startBucketMs) === eventStartBucket
+            )
+            .map(e => e.id);
+
           for (const memberId of participantIds) {
             // Check if user already has a check-in for this event
             const existingCheckin = await storage.getAttendance(event.id.toString(), memberId.toString());
@@ -221,7 +249,7 @@ export class NotificationScheduler {
               const alreadySent = await notificationService.hasRecentNotification(
                 memberId.toString(),
                 'event_checkin_available',
-                event.id,
+                eventIdentityIds,
                 60
               );
 
@@ -273,12 +301,20 @@ export class NotificationScheduler {
           const participantIds = await this.getEventParticipants(event);
 
           // Treat near-duplicate event records (titles differing only by case
-          // or whitespace) as the same event for the "already notified this
-          // user" check so a second event row in the same window can't
-          // create a second notification. See task #305.
+          // or whitespace, AND starting within the same 5-minute window) as
+          // the same event for the "already notified this user" check so a
+          // second event row in the same window can't create a second
+          // notification. The start-time bucket prevents over-collapsing two
+          // legitimately distinct same-title events that happen to fall in
+          // the 2-hour query window. See task #305.
           const normalizedTitle = normalizeTitleKey(event.title);
+          const startBucketMs = 5 * 60 * 1000;
+          const eventStartBucket = Math.floor(eventStart.getTime() / startBucketMs);
           const eventIdentityIds = upcomingEvents
-            .filter(e => normalizeTitleKey(e.title) === normalizedTitle)
+            .filter(e =>
+              normalizeTitleKey(e.title) === normalizedTitle &&
+              Math.floor(new Date(e.startTime).getTime() / startBucketMs) === eventStartBucket
+            )
             .map(e => e.id);
 
           for (const memberId of participantIds) {

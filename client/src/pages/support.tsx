@@ -52,11 +52,11 @@ export default function SupportPage() {
               </CardHeader>
               <CardContent>
                 <a
-                  href="mailto:info@boxstat.app"
+                  href="mailto:hello@boxstat.app"
                   className="text-red-400 hover:text-red-300 hover:underline font-medium transition-colors"
                   data-testid="link-email-support"
                 >
-                  info@boxstat.app
+                  hello@boxstat.app
                 </a>
               </CardContent>
             </Card>
@@ -178,7 +178,7 @@ export default function SupportPage() {
               className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white border-0 shadow-lg shadow-red-500/25"
               data-testid="button-contact-support"
             >
-              <a href="mailto:info@boxstat.app">
+              <a href="mailto:hello@boxstat.app">
                 <Mail className="mr-2 h-4 w-4" />
                 Contact Support
               </a>

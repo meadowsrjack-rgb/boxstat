@@ -5,13 +5,13 @@ import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation, useSearch } from "wouter";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, ChevronRight, UserPlus, Users, Check, Mail, Loader2, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, UserPlus, Users, Check, CheckCircle2, Mail, Calendar } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { DateOfBirthPicker } from "@/components/DateOfBirthPicker";
 import { authPersistence } from "@/services/authPersistence";
@@ -75,8 +75,7 @@ interface Player extends PlayerInfo {
 }
 
 export default function RegistrationFlow() {
-  const [location, setLocation] = useLocation();
-  const search = useSearch();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -86,8 +85,8 @@ export default function RegistrationFlow() {
   
   const [currentStep, setCurrentStep] = useState(verifiedEmail && isVerified ? 2 : 1);
   const [emailSent, setEmailSent] = useState(false);
-  const [isPollingVerification, setIsPollingVerification] = useState(false);
-  const [verificationSessionId, setVerificationSessionId] = useState<string | null>(null);
+  const [resendCooldownUntil, setResendCooldownUntil] = useState<number | null>(null);
+  const [resendCooldownRemaining, setResendCooldownRemaining] = useState(0);
   const [registrationData, setRegistrationData] = useState<{
     organizationId?: string;
     email?: string;
@@ -103,123 +102,83 @@ export default function RegistrationFlow() {
     players: [],
   });
   
-  // Watch URL for verified=true (e.g., from deep-link verification while
-  // sitting on step 1 "Waiting for verification..."). When the deep link
-  // handler navigates the in-app router to /registration?email=...&verified=true,
-  // the component is already mounted, so the useState initializer above does
-  // not re-run. This effect picks up the new URL and advances to step 2
-  // (the intent step). It also hydrates the organizationId from the URL
-  // whenever it appears, even before verification completes.
+  // Tick the resend-button cooldown countdown each second while it's active.
+  // The original tab intentionally does not poll for verification status —
+  // verification continues in the new tab opened from the email link.
   useEffect(() => {
-    const params = new URLSearchParams(search || window.location.search);
-    const emailFromUrl = params.get('email');
-    const verifiedFromUrl = params.get('verified') === 'true';
-    const orgFromUrl = params.get('organizationId');
-
-    if (orgFromUrl) {
-      setRegistrationData((prev) => (
-        prev.organizationId ? prev : { ...prev, organizationId: orgFromUrl }
-      ));
+    if (!resendCooldownUntil) {
+      setResendCooldownRemaining(0);
+      return;
     }
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((resendCooldownUntil - Date.now()) / 1000));
+      setResendCooldownRemaining(remaining);
+      if (remaining === 0) {
+        setResendCooldownUntil(null);
+      }
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [resendCooldownUntil]);
 
-    if (verifiedFromUrl && emailFromUrl) {
-      setCurrentStep((prev) => (prev < 2 ? 2 : prev));
-      setRegistrationData((prev) => ({
-        ...prev,
-        email: prev.email || emailFromUrl,
-        organizationId: prev.organizationId || orgFromUrl || undefined,
-      }));
-      setIsPollingVerification(false);
+  const RESEND_COOLDOWN_MS = 60 * 1000;
+
+  const resendVerificationMutation = useMutation({
+    mutationFn: async (email: string) => {
+      return await apiRequest("/api/auth/resend-verification", {
+        method: "POST",
+        data: { email },
+      });
+    },
+    onSuccess: () => {
+      setResendCooldownUntil(Date.now() + RESEND_COOLDOWN_MS);
+      toast({
+        title: "Verification Email Sent",
+        description: "Check your inbox (and spam folder) for the new link.",
+      });
+    },
+    onError: (error: any) => {
+      // apiRequest throws Error("<status>: <text>"); pull the status off the front
+      // so we can detect a server-side rate limit response.
+      const rawMessage = String(error?.message || "");
+      const statusMatch = rawMessage.match(/^(\d{3}):/);
+      const status = error?.status ?? (statusMatch ? Number(statusMatch[1]) : undefined);
+      const lower = rawMessage.toLowerCase();
+      const isRateLimited =
+        status === 429 ||
+        lower.includes("rate limit") ||
+        lower.includes("too many") ||
+        lower.includes("try again") ||
+        lower.includes("please wait");
+
+      if (isRateLimited) {
+        setResendCooldownUntil(Date.now() + RESEND_COOLDOWN_MS);
+        toast({
+          title: "Please wait a moment",
+          description: "You can request another verification email in about a minute.",
+        });
+      } else {
+        toast({
+          title: "Couldn't send email",
+          description: "Something went wrong sending the verification email. Please try again.",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  const handleResendVerification = () => {
+    if (!registrationData.email) return;
+    if (resendCooldownRemaining > 0 || resendVerificationMutation.isPending) {
+      toast({
+        title: "Please wait a moment",
+        description: `You can request another verification email in ${resendCooldownRemaining || 60}s.`,
+      });
+      return;
     }
-  }, [location, search]);
-
-  // Poll for email verification status when waiting for user to verify
-  useEffect(() => {
-    if (!emailSent || !registrationData.email || currentStep !== 1) return;
-    
-    setIsPollingVerification(true);
-    
-    const checkVerification = async () => {
-      try {
-        const params = new URLSearchParams({
-          email: registrationData.email!,
-        });
-        if (registrationData.organizationId) {
-          params.append('organizationId', registrationData.organizationId);
-        }
-        if (verificationSessionId) {
-          params.append('sessionId', verificationSessionId);
-        }
-        
-        const response = await fetch(`/api/auth/check-verification-status?${params.toString()}`);
-        const data = await response.json();
-        
-        if (data.success && data.verified) {
-          clearInterval(pollInterval);
-          setIsPollingVerification(false);
-          toast({
-            title: "Email Verified!",
-            description: "Continuing with registration...",
-          });
-          // Move to next step
-          setCurrentStep(2);
-        }
-      } catch (error) {
-        console.error("Error checking verification status:", error);
-      }
-    };
-
-    const pollInterval = setInterval(checkVerification, 3000);
-
-    // Immediately re-check when tab/app regains visibility (handles Android resume)
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        checkVerification();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // Manual re-check signal pushed by the deep-link handler when a
-    // boxstat://verify-email (or /registration?verified=true) deep link is
-    // received. Some iOS bounce-page flows do not trigger Capacitor's
-    // appStateChange, so this guarantees an instant re-check (~immediate
-    // instead of waiting up to 3s for the next poll cycle).
-    const handleVerifyEmailRecheck = () => {
-      checkVerification();
-    };
-    window.addEventListener('boxstat:verify-email-recheck', handleVerifyEmailRecheck);
-
-    // Capacitor appStateChange for Android/iOS native resume
-    let removeAppStateListener: (() => void) | undefined;
-    let cancelled = false;
-    (async () => {
-      try {
-        const { App } = await import('@capacitor/app');
-        const listener = await App.addListener('appStateChange', ({ isActive }) => {
-          if (isActive) {
-            checkVerification();
-          }
-        });
-        if (cancelled) {
-          listener.remove();
-        } else {
-          removeAppStateListener = () => listener.remove();
-        }
-      } catch {
-        // Capacitor App plugin not available in web context — ignore
-      }
-    })();
-    
-    // Cleanup interval on unmount or when conditions change
-    return () => {
-      cancelled = true;
-      clearInterval(pollInterval);
-      setIsPollingVerification(false);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('boxstat:verify-email-recheck', handleVerifyEmailRecheck);
-      removeAppStateListener?.();
-    };
-  }, [emailSent, registrationData.email, currentStep, verificationSessionId, toast]);
+    resendVerificationMutation.mutate(registrationData.email);
+  };
 
   const totalSteps = registrationData.registrationType === "my_child" ? 6 : 5;
 
@@ -384,53 +343,68 @@ export default function RegistrationFlow() {
             {currentStep === 1 && !emailSent && (
               <EmailEntryStep
                 organizationId={registrationData.organizationId || "default-org"}
-                onSubmit={(data, emailCheckData, sessionId) => {
+                onSubmit={(data, emailCheckData) => {
                   setRegistrationData({ 
                     ...registrationData, 
                     email: data.email,
                     emailCheckData: emailCheckData 
                   });
-                  if (sessionId) {
-                    setVerificationSessionId(sessionId);
-                  }
                   setEmailSent(true);
                 }}
               />
             )}
             
             {currentStep === 1 && emailSent && (
-              <div className="text-center py-8">
-                <div className="mx-auto w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mb-6">
-                  <Mail className="w-10 h-10 text-red-500" />
+              <div className="text-center py-4" data-testid="check-your-email-panel">
+                <div className="mx-auto w-16 h-16 bg-green-500/15 rounded-full flex items-center justify-center mb-6">
+                  <CheckCircle2 className="w-9 h-9 text-green-400" />
                 </div>
-                <h3 className="text-2xl font-semibold text-white mb-3">Check Your Email</h3>
-                <p className="text-gray-400 mb-2">
-                  We sent a verification link to
-                </p>
-                <p className="text-white font-medium mb-6">{registrationData.email}</p>
-                <p className="text-gray-500 text-sm">
-                  Please click the link in your email to verify your account.
-                </p>
-                {isPollingVerification && (
-                  <div className="flex items-center justify-center gap-2 mt-4 text-gray-400">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-sm">Waiting for verification...</span>
-                  </div>
-                )}
-                <p className="text-gray-600 text-xs mt-4">
-                  Don't see it? Check your spam folder.
-                </p>
-                <button
-                  type="button"
-                  className="text-red-400 hover:text-red-300 text-sm mt-3 underline underline-offset-2"
-                  onClick={() => {
-                    setEmailSent(false);
-                    setIsPollingVerification(false);
-                    setVerificationSessionId(null);
-                  }}
+                <h3 className="text-2xl font-semibold text-white mb-3">Check your email</h3>
+                <p className="text-gray-400 mb-1">We've sent a verification link to</p>
+                <p
+                  className="text-white font-medium mb-6 break-all"
+                  data-testid="text-verification-email"
                 >
-                  Didn't work? Try again
-                </button>
+                  {registrationData.email}
+                </p>
+
+                <div className="border border-white/15 bg-white/5 rounded-lg p-4 mb-6 text-left flex items-start gap-3">
+                  <Mail className="w-5 h-5 text-gray-300 mt-0.5 shrink-0" />
+                  <p className="text-sm text-gray-300 leading-relaxed">
+                    You must verify your email address before you can access the app.
+                    The link will expire in 24 hours.
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={
+                    resendVerificationMutation.isPending || resendCooldownRemaining > 0
+                  }
+                  className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold disabled:opacity-60"
+                  data-testid="button-resend-verification"
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  {resendVerificationMutation.isPending
+                    ? "Sending..."
+                    : resendCooldownRemaining > 0
+                      ? `Resend verification email (${resendCooldownRemaining}s)`
+                      : "Resend verification email"}
+                </Button>
+
+                <p className="text-gray-400 text-sm mt-4">
+                  Didn't receive the email? Check your spam folder or{" "}
+                  <button
+                    type="button"
+                    className="text-red-400 hover:text-red-300 underline underline-offset-2"
+                    onClick={() => setLocation("/login")}
+                    data-testid="link-login-to-resend"
+                  >
+                    log in
+                  </button>{" "}
+                  to resend.
+                </p>
               </div>
             )}
 
@@ -545,7 +519,7 @@ function EmailEntryStep({
   onSubmit,
   organizationId,
 }: { 
-  onSubmit: (data: { email: string }, emailCheckData: any, sessionId?: string) => void;
+  onSubmit: (data: { email: string }, emailCheckData: any) => void;
   organizationId: string;
 }) {
   const { toast } = useToast();
@@ -594,10 +568,7 @@ function EmailEntryStep({
     
     // Detect the native platform (ios/android) or web
     const sourcePlatform = Capacitor.isNativePlatform() ? Capacitor.getPlatform() : 'web';
-    
-    // Store sessionId for polling correlation
-    let sessionId: string | undefined;
-    
+
     // Send verification email immediately at step 1
     try {
       const verifyResponse = await apiRequest("/api/auth/send-verification", {
@@ -608,9 +579,8 @@ function EmailEntryStep({
           sourcePlatform,
         },
       });
-      
+
       if (verifyResponse.success) {
-        sessionId = verifyResponse.sessionId;
         toast({
           title: "Verification Email Sent!",
           description: "Please check your inbox and verify your email before completing registration.",
@@ -629,8 +599,8 @@ function EmailEntryStep({
       }
       console.error("Error sending verification:", error);
     }
-    
-    onSubmit(data, checkData, sessionId);
+
+    onSubmit(data, checkData);
   };
 
   return (

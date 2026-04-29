@@ -14499,8 +14499,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.get('/api/payments/user/:userId', requireAuth, async (req: any, res) => {
-    const payments = await storage.getPaymentsByUser(req.params.userId);
-    res.json(payments);
+    try {
+      const targetUserId = req.params.userId;
+      const requesterId = req.user.id;
+      const requesterOrgId = req.user.organizationId;
+
+      // Allow self-access without further checks.
+      if (targetUserId !== requesterId) {
+        // Otherwise the requester must be an admin in the same organization
+        // as the target user, OR the target's parent/guardian.
+        const targetUser = await storage.getUser(targetUserId);
+        if (!targetUser) {
+          return res.status(404).json({ error: 'User not found' });
+        }
+
+        const sameOrg = !!requesterOrgId && targetUser.organizationId === requesterOrgId;
+        const isAdminUser = sameOrg && (
+          req.user.role === 'admin' ||
+          await hasAdminProfile(requesterId, requesterOrgId)
+        );
+        const isParentOfTarget =
+          targetUser.parentId === requesterId ||
+          (targetUser as any).guardianId === requesterId;
+
+        if (!isAdminUser && !isParentOfTarget) {
+          return res.status(403).json({ error: 'Forbidden' });
+        }
+      }
+
+      const payments = await storage.getPaymentsByUser(targetUserId);
+      res.json(payments);
+    } catch (error) {
+      console.error('Error fetching user payments:', error);
+      res.status(500).json({ error: 'Failed to fetch user payments' });
+    }
   });
   
   // Get payment history with Stripe subscription details

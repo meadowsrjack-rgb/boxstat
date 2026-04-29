@@ -2254,6 +2254,16 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     enabled: !!editingUser?.id,
   });
 
+  // Fetch transactions/payments for the user being edited so admins can
+  // see this user's full payment history without leaving the edit dialog.
+  // Hierarchical key shape so existing invalidateQueries({ queryKey:
+  // ['/api/payments'] }) on payment/refund mutations also refreshes this list.
+  const { data: editingUserPayments = [], isLoading: editingUserPaymentsLoading } = useQuery<any[]>({
+    queryKey: ["/api/payments", "user", editingUser?.id],
+    queryFn: () => apiRequest(`/api/payments/user/${editingUser?.id}`),
+    enabled: !!editingUser?.id,
+  });
+
   // Find child players linked to the parent being edited (available from
   // users list). Task #308: walk each player up to its root account-holder
   // so we still pick up players whose `accountHolderId` points at a sibling
@@ -4478,7 +4488,53 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                     />
                     <Label htmlFor="edit-active" data-testid="label-edit-active">Active</Label>
                   </div>
-                  
+
+                  {/* Transactions list — shows this user's full payment history */}
+                  <div className="space-y-2 pt-2 border-t">
+                    <Label data-testid="label-edit-transactions">Transactions</Label>
+                    <div className="border rounded-lg bg-gray-50 max-h-64 overflow-y-auto" data-testid="list-edit-transactions">
+                      {editingUserPaymentsLoading ? (
+                        <p className="text-xs text-gray-500 italic p-3">Loading transactions…</p>
+                      ) : editingUserPayments.length === 0 ? (
+                        <p className="text-xs text-gray-500 italic p-3" data-testid="text-no-transactions">No transactions for this user.</p>
+                      ) : (
+                        <div className="divide-y">
+                          {[...editingUserPayments]
+                            .sort((a: any, b: any) => new Date(b.createdAt || b.paidAt || 0).getTime() - new Date(a.createdAt || a.paidAt || 0).getTime())
+                            .map((p: any) => {
+                              const statusColor =
+                                p.status === 'completed' ? 'bg-green-100 text-green-700 border-green-200' :
+                                p.status === 'refunded' ? 'bg-orange-100 text-orange-700 border-orange-200' :
+                                p.status === 'partially_refunded' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                                p.status === 'pending' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                                p.status === 'failed' ? 'bg-red-100 text-red-700 border-red-200' :
+                                'bg-gray-100 text-gray-700 border-gray-200';
+                              const dateStr = p.createdAt || p.paidAt
+                                ? new Date(p.createdAt || p.paidAt).toLocaleDateString()
+                                : '—';
+                              const label = p.description || p.paymentType || 'Payment';
+                              return (
+                                <div key={p.id} className="flex items-center justify-between gap-3 px-3 py-2 bg-white" data-testid={`row-edit-transaction-${p.id}`}>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <p className="text-sm font-medium truncate" data-testid={`text-edit-transaction-label-${p.id}`}>{label}</p>
+                                      <Badge className={`text-[10px] px-1.5 ${statusColor}`} data-testid={`badge-edit-transaction-status-${p.id}`}>
+                                        {p.status || 'unknown'}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-0.5" data-testid={`text-edit-transaction-date-${p.id}`}>{dateStr}</p>
+                                  </div>
+                                  <p className="text-sm font-semibold flex-shrink-0" data-testid={`text-edit-transaction-amount-${p.id}`}>
+                                    ${((p.amount || 0) / 100).toFixed(2)}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <Button 
                     type="button" 
                     className="w-full" 

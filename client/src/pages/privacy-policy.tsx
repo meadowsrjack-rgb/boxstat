@@ -52,7 +52,7 @@ export default function PrivacyPolicy() {
               </p>
               <p>
                 <strong>Contact Information:</strong><br />
-                Email: <a href="mailto:privacy@boxstat.app">privacy@boxstat.app</a><br />
+                Email: <a href="mailto:hello@boxstat.app">hello@boxstat.app</a><br />
                 For privacy-related inquiries, please use the email above.
               </p>
             </section>
@@ -257,7 +257,7 @@ export default function PrivacyPolicy() {
               <h3>7.3 How to Exercise Your Rights</h3>
               <p>To review, modify, or delete your child's information:</p>
               <ul>
-                <li><strong>Email:</strong> <a href="mailto:privacy@boxstat.app">privacy@boxstat.app</a></li>
+                <li><strong>Email:</strong> <a href="mailto:hello@boxstat.app">hello@boxstat.app</a></li>
                 <li><strong>In-App:</strong> Navigate to Account Settings → Profile Management → Delete Profile</li>
               </ul>
               <p>
@@ -298,7 +298,7 @@ export default function PrivacyPolicy() {
               <h3>User-Requested Deletion:</h3>
               <p>
                 Users can request complete account deletion through Account Settings or by emailing 
-                <a href="mailto:privacy@boxstat.app">privacy@boxstat.app</a>. We will delete all personal 
+                <a href="mailto:hello@boxstat.app">hello@boxstat.app</a>. We will delete all personal 
                 information within 30 days, except data we must retain for legal compliance.
               </p>
             </section>
@@ -418,7 +418,7 @@ export default function PrivacyPolicy() {
               </ul>
 
               <p>
-                To exercise any of these rights, email <a href="mailto:privacy@boxstat.app">privacy@boxstat.app</a>
+                To exercise any of these rights, email <a href="mailto:hello@boxstat.app">hello@boxstat.app</a>
               </p>
             </section>
 
@@ -453,7 +453,7 @@ export default function PrivacyPolicy() {
               
               <p>
                 <strong>Privacy Inquiries:</strong><br />
-                Email: <a href="mailto:privacy@boxstat.app">privacy@boxstat.app</a>
+                Email: <a href="mailto:hello@boxstat.app">hello@boxstat.app</a>
               </p>
 
               <p>

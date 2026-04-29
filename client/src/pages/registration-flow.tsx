@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronLeft, ChevronRight, UserPlus, Users, Check, CheckCircle2, Mail, Calendar } from "lucide-react";
@@ -72,6 +73,13 @@ type AccountCreation = z.infer<typeof accountCreationSchema>;
 
 interface Player extends PlayerInfo {
   id: string;
+  // Task #342: Each player picks the org+team they're joining. Saved as
+  // requestedOrganizationId / requestedTeamId on the registration payload so
+  // the backend can route them to the chosen club's pending-approval queue.
+  organizationId?: string;
+  organizationName?: string;
+  requestedTeamId?: string;
+  requestedTeamName?: string;
 }
 
 export default function RegistrationFlow() {
@@ -257,17 +265,27 @@ export default function RegistrationFlow() {
   };
 
   const handleSubmitRegistration = (accountData: AccountCreation) => {
+    // Task #342: Forward each player's org+team picks to the server so they
+    // can be created against the chosen club's pending-approval queue rather
+    // than silently inheriting the parent's organization.
+    const playersForSubmit = registrationData.players.map((p) => ({
+      ...p,
+      organizationId: p.organizationId,
+      requestedTeamId: p.requestedTeamId,
+    }));
+
     const submissionData = {
       ...registrationData,
+      players: playersForSubmit,
       password: accountData.password,
       acceptTerms: accountData.acceptTerms,
       marketingOptIn: accountData.marketingOptIn,
     };
-    
+
     // Pass password separately for auto-login to avoid state timing issues
-    registrationMutation.mutate({ 
-      data: submissionData, 
-      password: accountData.password 
+    registrationMutation.mutate({
+      data: submissionData,
+      password: accountData.password,
     });
   };
 
@@ -1238,6 +1256,106 @@ function AddressInfoStep({
   );
 }
 
+// Task #342: Per-player org+team picker shown after the basic info step in
+// the registration flow. Mirrors ApprovalTeamStep from the standalone Add
+// Player wizard so the parent picks each child's club + team before account
+// creation, and the server can route them to that org's approval queue.
+function PlayerOrgTeamStep({
+  player,
+  onBack,
+  onSave,
+}: {
+  player: Player;
+  onBack: () => void;
+  onSave: (orgId: string, orgName: string, teamId: string, teamName: string) => void;
+}) {
+  const [orgId, setOrgId] = useState<string>(player.organizationId || "");
+  const [teamId, setTeamId] = useState<string>(player.requestedTeamId || "");
+
+  const { data: orgs = [], isLoading: orgsLoading } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["/api/organizations/public"],
+  });
+  const { data: teams = [], isLoading: teamsLoading } = useQuery<{ id: number; name: string; division?: string | null; level?: string | null; season?: string | null }[]>({
+    queryKey: ["/api/organizations", orgId, "teams", "public"],
+    enabled: !!orgId,
+  });
+
+  const canSave = !!orgId && !!teamId;
+
+  const handleSave = () => {
+    const org = orgs.find((o) => o.id === orgId);
+    const team = teams.find((t) => String(t.id) === teamId);
+    if (!org || !team) return;
+    const detail = [team.division, team.level, team.season].filter(Boolean).join(" • ");
+    const teamLabel = detail ? `${team.name} — ${detail}` : team.name;
+    onSave(org.id, org.name, String(team.id), teamLabel);
+  };
+
+  return (
+    <div>
+      <button
+        onClick={onBack}
+        className="flex items-center justify-center w-10 h-10 text-gray-400 hover:text-white mb-6 transition-colors rounded-md hover:bg-white/10"
+        data-testid="button-back-to-info"
+      >
+        <ChevronLeft className="w-5 h-5" />
+      </button>
+
+      <div className="space-y-4">
+        <div className="bg-amber-900/20 border border-amber-700/50 rounded-lg p-4">
+          <p className="text-amber-200 text-sm">
+            Pick the club and team {player.firstName || "this player"} is joining. The club admin will review and approve before the profile becomes active.
+          </p>
+        </div>
+
+        <div>
+          <Label className="text-gray-300 text-sm font-medium">Club / Organization *</Label>
+          <Select value={orgId} onValueChange={(v) => { setOrgId(v); setTeamId(""); }}>
+            <SelectTrigger className="h-12 bg-white/5 border-white/10 text-white" data-testid="select-player-org">
+              <SelectValue placeholder={orgsLoading ? "Loading..." : "Select a club"} />
+            </SelectTrigger>
+            <SelectContent>
+              {orgs.map((o) => (
+                <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label className="text-gray-300 text-sm font-medium">Team *</Label>
+          <Select value={teamId} onValueChange={setTeamId} disabled={!orgId}>
+            <SelectTrigger className="h-12 bg-white/5 border-white/10 text-white" data-testid="select-player-team">
+              <SelectValue placeholder={!orgId ? "Pick a club first" : teamsLoading ? "Loading teams..." : (teams.length === 0 ? "No teams available" : "Select a team")} />
+            </SelectTrigger>
+            <SelectContent>
+              {teams.map((t) => {
+                const detail = [t.division, t.level, t.season].filter(Boolean).join(" • ");
+                return (
+                  <SelectItem key={t.id} value={String(t.id)}>
+                    {t.name}{detail ? ` — ${detail}` : ""}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Button
+          type="button"
+          onClick={handleSave}
+          disabled={!canSave}
+          className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold mt-6 disabled:opacity-50"
+          data-testid="button-save-player"
+        >
+          <Check className="w-4 h-4 mr-2" />
+          Save Player
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function PlayerListStep({
   players,
   onUpdate,
@@ -1248,6 +1366,8 @@ function PlayerListStep({
   onNext: () => void;
 }) {
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+  // Sub-step within the editor: 'info' (name/dob/etc) -> 'team' (org+team picker).
+  const [editorStep, setEditorStep] = useState<"info" | "team">("info");
 
   const addPlayer = () => {
     const newPlayer: Player = {
@@ -1258,45 +1378,70 @@ function PlayerListStep({
       gender: "",
     };
     setEditingPlayer(newPlayer);
+    setEditorStep("info");
   };
 
-  const savePlayer = (playerData: PlayerInfo) => {
-    if (editingPlayer) {
-      const updatedPlayer = { ...editingPlayer, ...playerData };
-      const existingIndex = players.findIndex(p => p.id === editingPlayer.id);
-      
-      if (existingIndex >= 0) {
-        const updatedPlayers = [...players];
-        updatedPlayers[existingIndex] = updatedPlayer;
-        onUpdate(updatedPlayers);
-      } else {
-        onUpdate([...players, updatedPlayer]);
-      }
-      
-      setEditingPlayer(null);
+  const handleInfoSubmit = (playerData: PlayerInfo) => {
+    if (!editingPlayer) return;
+    setEditingPlayer({ ...editingPlayer, ...playerData });
+    setEditorStep("team");
+  };
+
+  const handleTeamSave = (orgId: string, orgName: string, teamId: string, teamName: string) => {
+    if (!editingPlayer) return;
+    const updatedPlayer: Player = {
+      ...editingPlayer,
+      organizationId: orgId,
+      organizationName: orgName,
+      requestedTeamId: teamId,
+      requestedTeamName: teamName,
+    };
+    const existingIndex = players.findIndex(p => p.id === editingPlayer.id);
+    if (existingIndex >= 0) {
+      const updatedPlayers = [...players];
+      updatedPlayers[existingIndex] = updatedPlayer;
+      onUpdate(updatedPlayers);
+    } else {
+      onUpdate([...players, updatedPlayer]);
     }
+    setEditingPlayer(null);
+    setEditorStep("info");
   };
 
   const removePlayer = (id: string) => {
     onUpdate(players.filter(p => p.id !== id));
   };
 
+  // Continue is gated on every player having org+team picked so the server's
+  // per-player approval-routing requirement is met.
+  const allPlayersHaveTeam = players.length > 0 && players.every(p => !!p.organizationId && !!p.requestedTeamId);
+
   if (editingPlayer) {
+    if (editorStep === "team") {
+      return (
+        <PlayerOrgTeamStep
+          player={editingPlayer}
+          onBack={() => setEditorStep("info")}
+          onSave={handleTeamSave}
+        />
+      );
+    }
     return (
       <div>
-        <button 
-          onClick={() => setEditingPlayer(null)}
+        <button
+          onClick={() => { setEditingPlayer(null); setEditorStep("info"); }}
           className="flex items-center justify-center w-10 h-10 text-gray-400 hover:text-white mb-6 transition-colors rounded-md hover:bg-white/10"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
         <PlayerInfoStep
-          onSubmit={savePlayer}
+          onSubmit={handleInfoSubmit}
           defaultValues={{
             firstName: editingPlayer.firstName,
             lastName: editingPlayer.lastName,
             dateOfBirth: editingPlayer.dateOfBirth,
             gender: editingPlayer.gender,
+            skillLevel: editingPlayer.skillLevel,
           }}
         />
       </div>
@@ -1317,13 +1462,18 @@ function PlayerListStep({
               <p className="text-sm text-gray-400">
                 {player.dateOfBirth && new Date(player.dateOfBirth).toLocaleDateString()}
               </p>
+              {(player.organizationName || player.requestedTeamName) && (
+                <p className="text-xs text-gray-500 mt-1" data-testid={`player-club-${player.id}`}>
+                  {player.organizationName}{player.requestedTeamName ? ` • ${player.requestedTeamName}` : ""}
+                </p>
+              )}
             </div>
             <div className="flex gap-2">
               <Button
                 type="button"
                 size="sm"
                 variant="ghost"
-                onClick={() => setEditingPlayer(player)}
+                onClick={() => { setEditingPlayer(player); setEditorStep("info"); }}
                 className="text-gray-400 hover:text-white hover:bg-white/10"
                 data-testid={`button-edit-player-${player.id}`}
               >
@@ -1358,7 +1508,7 @@ function PlayerListStep({
       <Button
         type="button"
         onClick={onNext}
-        disabled={players.length === 0}
+        disabled={!allPlayersHaveTeam}
         className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold disabled:opacity-50"
         data-testid="button-next"
       >

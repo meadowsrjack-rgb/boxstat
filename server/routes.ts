@@ -2374,7 +2374,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
   
   app.post("/api/payments/checkout-session", requireAuth, async (req: any, res) => {
-    const orgStripe = await getStripeForOrg(req.user.organizationId);
+    // Task #342: Multi-org households can drive checkout from any of their
+    // children's clubs, so accept the active player's `organizationId` in
+    // the body. Validate the caller actually has access to that org before
+    // we route Stripe to its connected account.
+    const requestedOrgId = typeof req.body?.organizationId === 'string' && req.body.organizationId.length > 0
+      ? req.body.organizationId
+      : null;
+    let targetOrgId: string = req.user.organizationId;
+    if (requestedOrgId && requestedOrgId !== req.user.organizationId) {
+      const isOrgAdmin = await hasAdminProfile(req.user.id, requestedOrgId);
+      let allowed = isOrgAdmin;
+      if (!allowed) {
+        const linkedPlayers = await storage.getPlayersByParent(req.user.id);
+        allowed = linkedPlayers.some((p: any) => p.organizationId === requestedOrgId);
+      }
+      if (!allowed) {
+        return res.status(403).json({ error: "You do not have access to that organization" });
+      }
+      targetOrgId = requestedOrgId;
+    }
+
+    const orgStripe = await getStripeForOrg(targetOrgId);
     if (!orgStripe) {
       return res.status(500).json({ error: "Stripe is not configured for this organization" });
     }
@@ -2477,10 +2498,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       lineItems.push(legacyFeeLineItem);
 
       const stripeCustomerId = await getOrCreateStripeCustomer(orgStripe, user);
-      
+
       const origin = `${req.protocol}://${req.get('host')}`;
-      const orgDisplayName = await getOrgDisplayName(req.user.organizationId);
-      
+      const orgDisplayName = await getOrgDisplayName(targetOrgId);
+
+      // Stamp the org we routed to so webhooks/entitlements can attribute
+      // the purchase to the correct child's club.
+      metadata.organizationId = targetOrgId;
+
       const sessionParams1: any = {
         customer: stripeCustomerId,
         line_items: lineItems,
@@ -2491,10 +2516,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...(mode === 'payment' ? { payment_intent_data: { statement_descriptor: orgDisplayName.substring(0, 22) } } : {}),
       };
 
-      const connectResult1 = await applyConnectChargeParams(sessionParams1, req.user.organizationId, mode, legacyServiceFeeCents, mode === 'subscription' ? legacySubtotal : undefined);
-      verifyConnectRouting(sessionParams1, mode, req.user.organizationId, connectResult1, { applicationFeeAmount: legacyServiceFeeCents, checkoutType: 'legacy_package' });
+      const connectResult1 = await applyConnectChargeParams(sessionParams1, targetOrgId, mode, legacyServiceFeeCents, mode === 'subscription' ? legacySubtotal : undefined);
+      verifyConnectRouting(sessionParams1, mode, targetOrgId, connectResult1, { applicationFeeAmount: legacyServiceFeeCents, checkoutType: 'legacy_package' });
 
-      console.log(`[Connect] legacy_package: creating session for org ${req.user.organizationId}`, {
+      console.log(`[Connect] legacy_package: creating session for org ${targetOrgId}`, {
         payment_intent_data: sessionParams1.payment_intent_data ?? null,
         subscription_data: sessionParams1.subscription_data ?? null,
       });
@@ -5725,12 +5750,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           accountHolderId = primaryUser.id;
           
-          // Create player profiles for children - no email needed
-          // Child players are managed through parent's account
-          const createdPlayers = [];
+          // Task #342: Each child can join a different organization. We
+          // validate the org+team they picked, route the player to that org,
+          // and create them as a pending approval (mirroring the
+          // /api/account/players approval path) so the chosen club admin
+          // reviews before access is granted. The frontend gates Continue on
+          // every player having org+team picked; we mirror that as a
+          // server-side requirement for `my_child` so the API contract
+          // matches and partial payloads are rejected here too.
+          const createdPlayers: any[] = [];
           for (const player of players) {
+            const playerOrgId: string | undefined = player.organizationId;
+            const playerTeamIdRaw = player.requestedTeamId;
+            const teamIdNum = playerTeamIdRaw != null && playerTeamIdRaw !== '' ? parseInt(String(playerTeamIdRaw)) : NaN;
+
+            if (!playerOrgId || !Number.isInteger(teamIdNum) || teamIdNum <= 0) {
+              return res.status(400).json({
+                success: false,
+                message: `Please pick both a club and team for ${player.firstName || 'each player'}.`,
+              });
+            }
+
+            const requestedTeam = await storage.getTeam(String(teamIdNum));
+            if (!requestedTeam || requestedTeam.organizationId !== playerOrgId) {
+              return res.status(400).json({
+                success: false,
+                message: `The team selected for ${player.firstName || 'a player'} could not be found.`,
+              });
+            }
+
             const playerUser = await storage.createUser({
-              organizationId,
+              organizationId: playerOrgId,
               email: null as any, // Child players don't need email - managed through parent account
               role: "player",
               firstName: player.firstName,
@@ -5739,10 +5789,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               gender: player.gender,
               skillLevel: player.skillLevel || null,
               accountHolderId,
+              parentId: accountHolderId,
               teamAssignmentStatus: "pending",
-              hasRegistered: true,
+              hasRegistered: false,
               verified: true, // Child profiles are auto-verified through parent
-              isActive: true,
+              isActive: false,
+              approvalStatus: "pending",
+              requestedTeamId: requestedTeam.id,
+              requestedOrgId: playerOrgId,
               awards: [],
               totalPractices: 0,
               totalGames: 0,
@@ -5751,6 +5805,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
               yearsActive: 0,
             });
             createdPlayers.push(playerUser);
+
+            // Notify the chosen club's admins that a new player is awaiting
+            // approval, mirroring the standalone Add Player flow.
+            try {
+              await adminNotificationService.createNotification({
+                organizationId: requestedTeam.organizationId,
+                types: ['notification'],
+                title: 'New player awaiting approval',
+                message: `${player.firstName} ${player.lastName} (parent ${parentInfo?.firstName || ''} ${parentInfo?.lastName || ''}) is requesting to join ${requestedTeam.name}.`,
+                recipientTarget: 'roles',
+                recipientRoles: ['admin'],
+                deliveryChannels: ['in_app', 'email', 'push'],
+                sentBy: accountHolderId,
+                status: 'sent',
+              }, { url: '/admin-dashboard?tab=overview#pending-player-approvals-card' });
+            } catch (notifyError) {
+              console.error('[registration approval] Failed to send admin notification:', notifyError);
+            }
           }
         } else {
           // "myself" registration - create parent account first
@@ -6067,19 +6139,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const accountHolderId = user?.accountHolderId || id;
     
     if (user?.role === "parent" || user?.role === "admin" || user?.role === "coach") {
-      // Get all players linked to any profile in this account
-      const allUsers = await storage.getUsersByOrganization(user.organizationId);
-      players = allUsers.filter(u => (u.accountHolderId === accountHolderId || u.parentId === accountHolderId || u.accountHolderId === id || u.parentId === id) && u.role === "player");
+      // Task #342: Resolve linked players across ALL organizations (not just
+      // the current user's org). getPlayersByParent matches via parentId,
+      // accountHolderId, or guardianId regardless of org.
+      const fromAccountRoot = await storage.getPlayersByParent(accountHolderId);
+      const fromCurrent = accountHolderId !== id ? await storage.getPlayersByParent(id) : [];
+      const seen = new Set<string>();
+      players = [...fromAccountRoot, ...fromCurrent].filter(p => {
+        if (seen.has(p.id)) return false;
+        seen.add(p.id);
+        return true;
+      });
     } else if (user?.role === "player") {
       // Return self
       players = [user];
     }
     
-    // Fetch active subscriptions, status tags, and team info for each player
-    const allTeams = await storage.getTeamsByOrganization(user.organizationId);
+    // Task #342: Fetch teams + organization info per-player-org (not just the
+    // current account's org), so multi-org households render correctly.
+    const teamsByOrg = new Map<string, any[]>();
+    const orgById = new Map<string, any>();
+    const uniqueOrgIds = Array.from(new Set(players.map((p: any) => p.organizationId).filter(Boolean) as string[]));
+    if (user?.organizationId && !uniqueOrgIds.includes(user.organizationId)) {
+      uniqueOrgIds.push(user.organizationId);
+    }
+    await Promise.all(uniqueOrgIds.map(async (orgId) => {
+      try {
+        const [teams, org] = await Promise.all([
+          storage.getTeamsByOrganization(orgId),
+          storage.getOrganization(orgId),
+        ]);
+        teamsByOrg.set(orgId, teams || []);
+        if (org) orgById.set(orgId, org);
+      } catch (err) {
+        console.error(`[account/players] Failed to load teams/org for ${orgId}:`, err);
+      }
+    }));
+    const allTeams = teamsByOrg.get(user?.organizationId || '') || [];
     
     const playersWithSubscriptions = await Promise.all(
       players.map(async (player: any) => {
+        const playerOrg = player.organizationId ? orgById.get(player.organizationId) : null;
+        const playerOrgTeams = (player.organizationId && teamsByOrg.get(player.organizationId)) || allTeams;
+        const organizationName = playerOrg?.name || null;
         try {
           // Task #255: Pending-approval players have no subscriptions/team
           // memberships yet; surface their status without running the regular
@@ -6087,8 +6189,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (player.approvalStatus === 'pending') {
             let requestedTeamName: string | null = null;
             if (player.requestedTeamId) {
-              const team = allTeams.find((t: any) => t.id === player.requestedTeamId);
+              const lookupTeams = player.requestedOrgId && teamsByOrg.get(player.requestedOrgId)
+                ? teamsByOrg.get(player.requestedOrgId)!
+                : playerOrgTeams;
+              const team = lookupTeams.find((t: any) => t.id === player.requestedTeamId);
               if (team) requestedTeamName = team.name;
+            }
+            // Task #342: Surface the requested-org name for pending players
+            // whose home org isn't loaded yet (e.g. cross-org request).
+            let requestedOrgName: string | null = organizationName;
+            if (!requestedOrgName && player.requestedOrgId) {
+              try {
+                const reqOrg = orgById.get(player.requestedOrgId) || await storage.getOrganization(player.requestedOrgId);
+                if (reqOrg) requestedOrgName = reqOrg.name;
+              } catch {}
             }
             return {
               ...player,
@@ -6096,6 +6210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               statusTag: 'awaiting_approval',
               approvalStatus: 'pending',
               requestedTeamName,
+              organizationName: organizationName || requestedOrgName || null,
               accessStatus: computeAccessStatus([]),
             };
           }
@@ -6123,7 +6238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let teamInfo = null;
           const firstActive = activeTeamMemberships[0];
           if (firstActive) {
-            const team = allTeams.find((t: any) => t.id === firstActive.teamId);
+            const team = playerOrgTeams.find((t: any) => t.id === firstActive.teamId);
             if (team) {
               teamInfo = {
                 teamId: team.id,
@@ -6143,6 +6258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ...player,
             ...teamInfo,
             allTeamIds,
+            organizationName,
             activeSubscriptions: (subscriptions || []).map(s => ({
               id: s.id,
               productName: s.productName,
@@ -6157,6 +6273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error(`Error fetching subscriptions for player ${player.id}:`, error);
           return {
             ...player,
+            organizationName,
             activeSubscriptions: [],
             statusTag: player.paymentStatus === 'pending' ? 'payment_due' : 'none',
             accessStatus: computeAccessStatus([]),
@@ -6715,7 +6832,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // self-claim "join an existing club team" step during parent signup so a
   // parent can search for the team their player is already rostered on,
   // including teams in an organization different from their own.
-  app.get('/api/organizations/:orgId/teams/public', requireAuth, async (req: any, res) => {
+  // Task #342: Public team picker — used by both the standalone Add Player
+  // wizard (authenticated) and the unauthenticated registration flow's
+  // per-player org/team picker. Returns a lite, non-sensitive shape so it's
+  // safe to expose without auth (mirrors /api/organizations/public).
+  app.get('/api/organizations/:orgId/teams/public', async (req: any, res) => {
     try {
       const { orgId } = req.params;
       const teams = await storage.getTeamsByOrganization(orgId);
@@ -11244,37 +11365,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
     
-    // For admins in parent context (unified account page), aggregate events for all linked players
-    if (role === 'admin' && !childProfileId && context === 'parent') {
-      console.log('  Admin in parent context - aggregating events for linked players');
-      
-      // Get all linked players for this admin
+    // Task #342: Parent context (unified account page) — aggregate events
+    // for linked players across ALL organizations they belong to. Works for
+    // both admin- and parent-role sessions when context=parent.
+    if (!childProfileId && context === 'parent') {
+      console.log('  Parent context - aggregating events for linked players across orgs');
+
       const linkedPlayers = await storage.getPlayersByParent(userId);
-      
+
       if (linkedPlayers.length === 0) {
         console.log('  No linked players found - returning empty');
         return res.json([]);
       }
-      
-      // Aggregate events from all linked players
+
+      // Pre-fetch events for each unique player org so we can scope-filter
+      // per player without redundant DB hits.
+      const eventsByOrg = new Map<string, any[]>();
+      const uniqueOrgIds = Array.from(new Set(linkedPlayers.map(p => p.organizationId).filter(Boolean) as string[]));
+      await Promise.all(uniqueOrgIds.map(async (orgId) => {
+        try {
+          eventsByOrg.set(orgId, await storage.getEventsByOrganization(orgId));
+        } catch (err) {
+          console.error(`[events parent-aggregate] Failed to load events for ${orgId}:`, err);
+          eventsByOrg.set(orgId, []);
+        }
+      }));
+
       const aggregatedEventIds = new Set<string>();
-      const aggregatedEvents: typeof allEvents = [];
-      
+      const aggregatedEvents: any[] = [];
+
       for (const player of linkedPlayers) {
-        // Get event scope for each player
+        const playerOrgId = player.organizationId || organizationId;
+        const orgEvents = eventsByOrg.get(playerOrgId) || allEvents;
+
         const { teamIds, divisionIds, programIds, targetUserId } = await getUserEventScope(
           userId,
-          'parent', // Use parent logic for each child
-          organizationId,
+          'parent',
+          playerOrgId,
           player.id
         );
-        
-        console.log(`  Child ${player.id} scope - teams: [${teamIds}], programs: [${programIds}]`);
-        
-        // Filter events for this player
-        const playerEvents = filterEventsByScope(allEvents, 'parent', teamIds, divisionIds, programIds, targetUserId, false, true);
-        
-        // Add to aggregated list (dedupe by ID)
+
+        const playerEvents = filterEventsByScope(orgEvents, 'parent', teamIds, divisionIds, programIds, targetUserId, false, true);
+
         for (const event of playerEvents) {
           const eventId = String(event.id);
           if (!aggregatedEventIds.has(eventId)) {
@@ -11283,8 +11415,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
-      
-      console.log(`  Aggregated ${aggregatedEvents.length} unique events for ${linkedPlayers.length} players`);
+
+      console.log(`  Aggregated ${aggregatedEvents.length} unique events across ${uniqueOrgIds.length} orgs for ${linkedPlayers.length} players`);
       console.log('🔍 EVENT FILTERING DEBUG - End\n');
       return res.json(await enrichEventsWithFacility(aggregatedEvents));
     }
@@ -11350,6 +11482,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
     
+    // Task #342: Parent without a specific child profile — aggregate upcoming
+    // events across every org their linked players belong to. This mirrors
+    // the multi-org aggregation in /api/events?context=parent.
+    if (role === 'parent' && !childProfileId) {
+      const linkedPlayers = await storage.getPlayersByParent(userId);
+      if (linkedPlayers.length === 0) {
+        return res.json([]);
+      }
+
+      const eventsByOrg = new Map<string, any[]>();
+      const uniqueOrgIds = Array.from(new Set(linkedPlayers.map(p => p.organizationId).filter(Boolean) as string[]));
+      await Promise.all(uniqueOrgIds.map(async (orgId) => {
+        try {
+          eventsByOrg.set(orgId, await storage.getUpcomingEvents(orgId));
+        } catch (err) {
+          console.error(`[events/upcoming parent-aggregate] Failed to load events for ${orgId}:`, err);
+          eventsByOrg.set(orgId, []);
+        }
+      }));
+
+      const aggregatedEventIds = new Set<string>();
+      const aggregatedEvents: any[] = [];
+
+      for (const player of linkedPlayers) {
+        const playerOrgId = player.organizationId || organizationId;
+        const orgEvents = eventsByOrg.get(playerOrgId) || allEvents;
+        const { teamIds, divisionIds, programIds, targetUserId } = await getUserEventScope(
+          userId,
+          'parent',
+          playerOrgId,
+          player.id
+        );
+        const playerEvents = filterEventsByScope(orgEvents, 'parent', teamIds, divisionIds, programIds, targetUserId, false, true);
+        for (const event of playerEvents) {
+          const eventId = String(event.id);
+          if (!aggregatedEventIds.has(eventId)) {
+            aggregatedEventIds.add(eventId);
+            aggregatedEvents.push(event);
+          }
+        }
+      }
+
+      return res.json(await enrichEventsWithFacility(aggregatedEvents));
+    }
+
     // Get user's event scope (teams, divisions, programs, target user ID)
     const { teamIds, divisionIds, programIds, targetUserId } = await getUserEventScope(
       userId,
@@ -15186,7 +15363,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================
   
   app.get('/api/programs', optionalAuth, async (req: any, res) => {
-    const organizationId = req.user?.organizationId || 'default-org';
+    const requestedOrgId = typeof req.query.organizationId === 'string' && req.query.organizationId.length > 0
+      ? req.query.organizationId
+      : null;
+    const sessionOrgId = req.user?.organizationId || 'default-org';
+    let organizationId = sessionOrgId;
+
+    // Task #342: Per-player payments scope. Allow callers to request a
+    // specific org's catalog (e.g. when viewing the store inside a per-player
+    // tab) provided the requester has a player linked to that org or is an
+    // admin of it.
+    if (requestedOrgId && requestedOrgId !== sessionOrgId) {
+      if (!req.user) {
+        return res.status(403).json({ message: 'Sign in to view organization-scoped programs' });
+      }
+      const userId = req.user.id;
+      const isAdminOfTarget = req.user.role === 'admin' && sessionOrgId === requestedOrgId
+        || await hasAdminProfile(userId, requestedOrgId);
+      let allowed = isAdminOfTarget;
+      if (!allowed) {
+        const linkedPlayers = await storage.getPlayersByParent(userId);
+        allowed = linkedPlayers.some((p: any) => p.organizationId === requestedOrgId);
+      }
+      if (!allowed) {
+        return res.status(403).json({ message: 'You do not have access to this organization' });
+      }
+      organizationId = requestedOrgId;
+    }
+
     const programs = await storage.getProgramsByOrganization(organizationId);
 
     const hasMembersOnlyPrograms = programs.some((p: any) => p.visibility === 'members_only');

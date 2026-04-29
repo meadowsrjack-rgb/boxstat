@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,10 +63,10 @@ function LeadConnectorFrame({ src }: { src: string }) {
       />
       <div className="mt-3 flex items-center justify-end gap-2">
         <Badge variant="secondary" className="hidden md:inline-flex">Secure checkout</Badge>
-        <a 
-          href={src} 
-          target="_blank" 
-          rel="noreferrer" 
+        <a
+          href={src}
+          target="_blank"
+          rel="noreferrer"
           className="inline-flex items-center text-sm hover:underline"
           data-testid="link-open-new-tab"
         >
@@ -76,16 +77,48 @@ function LeadConnectorFrame({ src }: { src: string }) {
   );
 }
 
+// Task #342: Each player can belong to a different club, so payments,
+// purchases and the registration form prefill all need to be scoped to the
+// currently active player. We fetch the cross-org player list from
+// /api/account/players (which already enriches each player with
+// organizationName / organizationId) and render a per-player tab strip.
+type AccountPlayer = {
+  id: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  organizationId?: string | null;
+  organizationName?: string | null;
+  teamName?: string | null;
+  grade?: string | null;
+  dob?: string | null;
+};
+
 export default function PaymentsTab() {
   const { user } = useAuth();
   const [tab, setTab] = useLastTab(PRODUCTS[0].id);
 
-  // Let parent choose which player they're registering, then pass to LC form via query params
+  const { data: accountPlayers = [] } = useQuery<AccountPlayer[]>({
+    queryKey: ["/api/account/players"],
+  });
+
+  const players: AccountPlayer[] = accountPlayers.length > 0
+    ? accountPlayers
+    : ((user as any)?.players ?? []);
+
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | undefined>(undefined);
-  
-  // Get players from user data - this will be populated after onboarding
-  const players = (user as any)?.players ?? [];
-  const selectedPlayer = players.find((p:any) => p.id === selectedPlayerId) ?? players[0];
+
+  // Default the active per-player tab to the first player whenever the list
+  // arrives or changes shape (e.g. after a new player is approved).
+  useEffect(() => {
+    if (!selectedPlayerId && players.length > 0) {
+      setSelectedPlayerId(players[0].id);
+    } else if (selectedPlayerId && players.length > 0 && !players.some(p => p.id === selectedPlayerId)) {
+      setSelectedPlayerId(players[0].id);
+    }
+  }, [players, selectedPlayerId]);
+
+  const selectedPlayer = players.find((p) => p.id === selectedPlayerId) ?? players[0];
+  const selectedOrgId = selectedPlayer?.organizationId ?? undefined;
 
   const basePrefill = useMemo(() => ({
     email: (user as any)?.email ?? undefined,
@@ -95,13 +128,16 @@ export default function PaymentsTab() {
   }), [user]);
 
   const playerPrefill = useMemo(() => ({
-    // Replace cf_* with your actual LC custom field keys
-    cf_player_first: selectedPlayer?.firstName,
-    cf_player_last: selectedPlayer?.lastName,
-    cf_player_grade: selectedPlayer?.grade,
-    cf_player_team: selectedPlayer?.teamName,
-    cf_player_dob: selectedPlayer?.dob,
+    cf_player_first: selectedPlayer?.firstName ?? undefined,
+    cf_player_last: selectedPlayer?.lastName ?? undefined,
+    cf_player_grade: selectedPlayer?.grade ?? undefined,
+    cf_player_team: selectedPlayer?.teamName ?? undefined,
+    cf_player_dob: selectedPlayer?.dob ?? undefined,
+    cf_player_org: selectedPlayer?.organizationName ?? undefined,
   }), [selectedPlayer]);
+
+  // Hide the per-player tab strip when there is only a single player (or none).
+  const showPlayerTabs = players.length > 1;
 
   return (
     <div className="mx-auto max-w-5xl p-4 md:p-6 space-y-6">
@@ -111,17 +147,17 @@ export default function PaymentsTab() {
           <p className="text-muted-foreground">Register or purchase packages directly inside the app.</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => (window.location.href = "/onboarding") } 
+          <Button
+            variant="outline"
+            onClick={() => (window.location.href = "/onboarding") }
             className="gap-2"
             data-testid="button-add-update-players"
           >
             <UserPlus className="h-4 w-4"/> Add/Update Players
           </Button>
-          <Button 
-            variant="default" 
-            className="gap-2" 
+          <Button
+            variant="default"
+            className="gap-2"
             onClick={() => document.getElementById('root')?.scrollTo({ top: 0, behavior: "smooth" })}
             data-testid="button-checkout"
           >
@@ -130,34 +166,46 @@ export default function PaymentsTab() {
         </div>
       </div>
 
-      <MyPurchasesCard />
-
-      {players.length > 0 && (
-        <div className="flex items-center gap-2 text-sm" data-testid="player-selector">
-          <span className="text-muted-foreground">Registering player:</span>
-          <select
-            className="border rounded-md px-2 py-1"
-            value={selectedPlayerId ?? players[0]?.id}
-            onChange={(e) => setSelectedPlayerId(e.target.value)}
-            data-testid="select-player"
-          >
-            {players.map((p:any) => (
-              <option key={p.id} value={p.id} data-testid={`option-player-${p.id}`}>
-                {p.firstName} {p.lastName}{p.teamName ? ` — ${p.teamName}`: ""}
-              </option>
+      {showPlayerTabs && (
+        <Tabs
+          value={selectedPlayerId ?? players[0]?.id ?? ""}
+          onValueChange={(v) => setSelectedPlayerId(v)}
+          data-testid="player-tabs"
+        >
+          <TabsList className="flex w-full flex-wrap gap-1" data-testid="player-tabs-list">
+            {players.map((p) => (
+              <TabsTrigger
+                key={p.id}
+                value={p.id}
+                className="flex-1 text-xs md:text-sm"
+                data-testid={`player-tab-${p.id}`}
+              >
+                <span className="flex flex-col items-start text-left">
+                  <span>{p.firstName} {p.lastName}</span>
+                  {/* Always show a club subtitle so multi-org households can tell tabs apart, even before a club is assigned. */}
+                  <span
+                    className="text-[10px] text-muted-foreground font-normal"
+                    data-testid={`player-tab-org-${p.id}`}
+                  >
+                    {p.organizationName || "No club assigned"}
+                  </span>
+                </span>
+              </TabsTrigger>
             ))}
-          </select>
-        </div>
+          </TabsList>
+        </Tabs>
       )}
+
+      <MyPurchasesCard orgId={selectedOrgId} />
 
       <Card className="border-muted/40">
         <CardContent className="pt-6">
           <Tabs value={tab} onValueChange={(v) => setTab(v as ProductId)}>
             <TabsList className="grid w-full grid-cols-2 md:grid-cols-5" data-testid="tabs-products">
               {PRODUCTS.map((p) => (
-                <TabsTrigger 
-                  key={p.id} 
-                  value={p.id} 
+                <TabsTrigger
+                  key={p.id}
+                  value={p.id}
                   className="text-xs md:text-sm"
                   data-testid={`tab-${p.id}`}
                 >

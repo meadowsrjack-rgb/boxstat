@@ -787,6 +787,15 @@ export default function ProfileGateway() {
                         {tagConfig ? tagConfig.description : "Player dashboard"}
                       </p>
                     )}
+                    {/* Task #342: Show the player's club so multi-org households can tell profiles apart at a glance. */}
+                    {player.organizationName && (
+                      <p
+                        className="text-xs text-gray-500 mt-0.5"
+                        data-testid={`player-org-${player.id}`}
+                      >
+                        {player.organizationName}
+                      </p>
+                    )}
                   </div>
                   {!isPending && (
                     <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />

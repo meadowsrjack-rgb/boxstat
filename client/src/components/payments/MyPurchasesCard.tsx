@@ -252,20 +252,40 @@ function StoreSection({
   );
 }
 
-export default function MyPurchasesCard() {
+// Task #342: Per-player payments scope. The PaymentsTab now passes the
+// active player's `orgId`, and we fetch programs + purchases scoped to that
+// org so multi-org households see the right catalog and entitlements when
+// switching between children.
+type MyPurchasesCardProps = {
+  orgId?: string;
+};
+
+export default function MyPurchasesCard({ orgId }: MyPurchasesCardProps = {}) {
   const { toast } = useToast();
   const [loadingProductId, setLoadingProductId] = useState<string | null>(null);
 
-  // Fetch all products from database
+  // Fetch all products from database, scoped to the active player's club
+  // when one is provided.
   const { data: allProducts = [], isLoading: productsLoading } = useQuery<Product[]>({
-    queryKey: ["/api/programs"],
+    queryKey: orgId ? ["/api/programs", { organizationId: orgId }] : ["/api/programs"],
+    queryFn: async () => {
+      const url = orgId
+        ? `/api/programs?organizationId=${encodeURIComponent(orgId)}`
+        : "/api/programs";
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch programs");
+      return res.json();
+    },
   });
 
-  // Fetch purchase status
+  // Fetch purchase status, also scoped per active player's org.
   const { data: purchases = [], isLoading: purchasesLoading, error } = useQuery<PurchaseStatus[]>({
-    queryKey: ["my-purchases"],
+    queryKey: orgId ? ["my-purchases", { organizationId: orgId }] : ["my-purchases"],
     queryFn: async () => {
-      const res = await fetch("/api/purchases/me");
+      const url = orgId
+        ? `/api/purchases/me?organizationId=${encodeURIComponent(orgId)}`
+        : "/api/purchases/me";
+      const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch purchases");
       return res.json();
     },
@@ -296,6 +316,10 @@ export default function MyPurchasesCard() {
         body: JSON.stringify({
           productId,
           productCategory,
+          // Task #342: Forward the active player's org so Stripe Connect
+          // routes the charge to that club's connected account, not the
+          // session org.
+          ...(orgId ? { organizationId: orgId } : {}),
         }),
       });
 

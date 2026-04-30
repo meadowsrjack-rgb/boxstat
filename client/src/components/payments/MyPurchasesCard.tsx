@@ -51,16 +51,56 @@ const formatExpiryDate = (value?: string) => {
   });
 };
 
-// Task #345: Pick the right verb for the expiry line. Subscriptions auto-renew
-// on the date so we say "Renews", one-time enrollments say "Expires", and
-// already-lapsed access reads "Expired" in past tense.
+// Task #347: Warn parents two weeks ahead so a child's club access never
+// quietly lapses. Anything inside this window flips the expiry line to amber
+// with an alert icon and switches to relative "Expires in N days" copy.
+const EXPIRY_WARNING_DAYS = 14;
+
+// Calendar-day diff between today and the expiry date so a row stops saying
+// "Expires in 1 day" the moment the date rolls over, regardless of the hour
+// the original purchase happened. Returns null when we can't parse the date.
+const getDaysUntilExpiry = (value?: string): number | null => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfExpiry = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffMs = startOfExpiry.getTime() - startOfToday.getTime();
+  return Math.round(diffMs / (1000 * 60 * 60 * 24));
+};
+
+// Task #347: Subscriptions auto-renew, so they're never at risk of lapsing
+// from the parent's perspective and shouldn't trigger the amber warning.
+const isExpiringSoon = (
+  status: PurchaseStatus["status"],
+  productType: string | undefined,
+  daysUntilExpiry: number | null,
+) => {
+  if (status === "expired") return false;
+  if (productType === "Subscription") return false;
+  if (daysUntilExpiry === null) return false;
+  return daysUntilExpiry >= 0 && daysUntilExpiry <= EXPIRY_WARNING_DAYS;
+};
+
+// Task #345 / #347: Pick the right verb for the expiry line. Subscriptions
+// auto-renew so we say "Renews"; already-lapsed access reads "Expired" in
+// past tense. For one-time enrollments inside the warning window we swap the
+// absolute date for a relative "Expires today / tomorrow / in N days" hint
+// so parents don't have to do the math themselves.
 const getExpiryLabel = (
   status: PurchaseStatus["status"],
   productType: string | undefined,
   formattedDate: string,
+  daysUntilExpiry: number | null,
 ) => {
   if (status === "expired") return `Expired ${formattedDate}`;
   if (productType === "Subscription") return `Renews ${formattedDate}`;
+  if (isExpiringSoon(status, productType, daysUntilExpiry) && daysUntilExpiry !== null) {
+    if (daysUntilExpiry === 0) return "Expires today";
+    if (daysUntilExpiry === 1) return "Expires tomorrow";
+    return `Expires in ${daysUntilExpiry} days`;
+  }
   return `Expires ${formattedDate}`;
 };
 
@@ -153,12 +193,18 @@ function ProgramsSection({
                     {(() => {
                       const formatted = formatExpiryDate(rec?.expiresAt);
                       if (!formatted) return null;
+                      const daysUntilExpiry = getDaysUntilExpiry(rec?.expiresAt);
+                      const expiringSoon = isExpiringSoon(status, program.type, daysUntilExpiry);
                       return (
                         <span
-                          className="text-xs text-white/60"
+                          className={`text-xs flex items-center gap-1 ${
+                            expiringSoon ? "text-amber-400 font-medium" : "text-white/60"
+                          }`}
                           data-testid={`text-program-expiry-${program.id}`}
+                          data-expiring-soon={expiringSoon ? "true" : undefined}
                         >
-                          {getExpiryLabel(status, program.type, formatted)}
+                          {expiringSoon && <AlertCircle className="h-3 w-3 shrink-0" />}
+                          {getExpiryLabel(status, program.type, formatted, daysUntilExpiry)}
                         </span>
                       );
                     })()}

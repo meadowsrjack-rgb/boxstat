@@ -37,6 +37,33 @@ const formatPrice = (cents?: number) => {
   return `$${(cents / 100).toFixed(2)}`;
 };
 
+// Task #345: Format the enrollment expiry date in the parent's own locale so
+// "Expires Jun 12, 2026" reads naturally everywhere. Returns null on unparsable
+// inputs so the row simply hides the line instead of rendering "Invalid Date".
+const formatExpiryDate = (value?: string) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
+// Task #345: Pick the right verb for the expiry line. Subscriptions auto-renew
+// on the date so we say "Renews", one-time enrollments say "Expires", and
+// already-lapsed access reads "Expired" in past tense.
+const getExpiryLabel = (
+  status: PurchaseStatus["status"],
+  productType: string | undefined,
+  formattedDate: string,
+) => {
+  if (status === "expired") return `Expired ${formattedDate}`;
+  if (productType === "Subscription") return `Renews ${formattedDate}`;
+  return `Expires ${formattedDate}`;
+};
+
 // Get type badge styles
 const getTypeBadgeStyle = (type?: string) => {
   switch (type) {
@@ -112,16 +139,30 @@ function ProgramsSection({
                 </div>
                 
                 {status ? (
-                  <Badge 
-                    variant={status === "active" ? "default" : status === "pending" ? "secondary" : "destructive"} 
-                    className="gap-1"
-                    data-testid={`badge-program-status-${program.id}`}
-                  >
-                    {status === "active" && <Check className="h-3 w-3"/>}
-                    {status === "pending" && <Clock className="h-3 w-3"/>}
-                    {status === "expired" && <AlertCircle className="h-3 w-3"/>}
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge
+                      variant={status === "active" ? "default" : status === "pending" ? "secondary" : "destructive"}
+                      className="gap-1"
+                      data-testid={`badge-program-status-${program.id}`}
+                    >
+                      {status === "active" && <Check className="h-3 w-3"/>}
+                      {status === "pending" && <Clock className="h-3 w-3"/>}
+                      {status === "expired" && <AlertCircle className="h-3 w-3"/>}
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </Badge>
+                    {(() => {
+                      const formatted = formatExpiryDate(rec?.expiresAt);
+                      if (!formatted) return null;
+                      return (
+                        <span
+                          className="text-xs text-white/60"
+                          data-testid={`text-program-expiry-${program.id}`}
+                        >
+                          {getExpiryLabel(status, program.type, formatted)}
+                        </span>
+                      );
+                    })()}
+                  </div>
                 ) : (
                   <Button 
                     size="sm" 

@@ -1,4 +1,4 @@
-const CACHE_VERSION = '11';
+const CACHE_VERSION = '12';
 const CACHE_NAME = 'boxstat-v' + CACHE_VERSION;
 const STATIC_CACHE = [
   'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
@@ -129,19 +129,28 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  // The backend nests routing/data fields under `data` (see
+  // server/services/notificationService.ts). Older callers may also have
+  // sent these at the top level, so fall back through both shapes.
+  const innerData = (notificationData && typeof notificationData.data === 'object' && notificationData.data) || {};
+  const targetUrl = innerData.url || notificationData.url || '/';
+  const notifId = innerData.notificationId ?? notificationData.id;
+  const notifType = innerData.type || notificationData.type;
+
   const options = {
     body: notificationData.body || notificationData.message || 'New notification from BoxStat',
     icon: '/favicon.ico',
     badge: '/favicon.ico',
     vibrate: [200, 100, 200],
-    tag: notificationData.type || 'default',
-    requireInteraction: notificationData.type === 'announcement',
+    tag: notificationData.tag || notifType || 'default',
+    requireInteraction: notifType === 'announcement',
     data: {
-      url: notificationData.url || '/',
-      notificationId: notificationData.id,
-      type: notificationData.type
+      ...innerData,
+      url: targetUrl,
+      notificationId: notifId,
+      type: notifType
     },
-    actions: [
+    actions: notificationData.actions || [
       { action: 'view', title: 'View' },
       { action: 'dismiss', title: 'Dismiss' }
     ]

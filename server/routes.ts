@@ -55,7 +55,7 @@ import {
   insertUserAwardRecordSchema,
   insertRefundSchema,
 } from "@shared/schema";
-import { evaluateAwardsForUser } from "./utils/awardEngine";
+import { evaluateAwardsForUser, getAwardProgress } from "./utils/awardEngine";
 import { populateAwards } from "./utils/populateAwards";
 import { pushNotifications, resolveEventParticipants } from "./services/pushNotificationHelper";
 import { notificationScheduler } from "./services/notificationScheduler";
@@ -13911,6 +13911,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // the API directly. Coaches/admins/parents continue to pass through.
       if (await rejectIfNoPlayerAccess(req, res, { playerId: userId })) return;
 
+      // Fire-and-forget: re-run the engine so any newly-qualifying automatic
+      // awards (e.g. Collection / system awards whose criteria were just
+      // backfilled) get credited the next time this page is fetched.
+      // Skipped silently on error to avoid blocking the response.
+      evaluateAwardsForUser(userId, storage).catch((err) => {
+        console.error(`[Awards API] Background evaluation failed for ${userId}:`, err);
+      });
+
       const userAwardRecords = await storage.getUserAwardRecords(userId);
       console.log(`[Awards API] User ${userId}: Found ${userAwardRecords.length} user award records`);
       
@@ -13971,6 +13979,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error fetching user awards:', error);
       res.status(500).json({ error: 'Failed to fetch user awards', message: error.message });
+    }
+  });
+
+  // Award progress for unearned awards (for the "Available" list progress bars)
+  app.get('/api/users/:userId/award-progress', requireAuth, async (req: any, res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    try {
+      const { userId } = req.params;
+      const { id: currentUserId, role, organizationId } = req.user;
+
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) return res.status(404).json({ error: 'User not found' });
+      if (targetUser.organizationId !== organizationId) {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      let isAuthorized = userId === currentUserId || role === 'admin' || role === 'coach';
+      if (!isAuthorized && role === 'parent') {
+        const linkedPlayers = await storage.getPlayersByParent(currentUserId);
+        isAuthorized = linkedPlayers.some(p => p.id === userId);
+      }
+      if (!isAuthorized) {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      if (await rejectIfNoPlayerAccess(req, res, { playerId: userId })) return;
+
+      const progressMap = await getAwardProgress(userId);
+      const progress: Record<string, { current: number; target: number; percentage: number }> = {};
+      progressMap.forEach((value, key) => {
+        progress[String(key)] = value;
+      });
+      res.json(progress);
+    } catch (error: any) {
+      console.error('Error fetching award progress:', error);
+      res.status(500).json({ error: 'Failed to fetch award progress', message: error.message });
     }
   });
 
@@ -18983,21 +19027,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dbAwardId = awardDefinition.id; // This is the integer ID
       }
       
-      // Check if user already has this award for the same year (only for non-manual awards)
-      const currentYear = year || new Date().getFullYear();
+      // Resolve the award definition once and reuse for the duplicate check
+      // and the allow-multiple year handling below.
       const awardDef = await storage.getAwardDefinition(dbAwardId);
-      if (awardDef && awardDef.triggerCategory !== 'manual') {
-        const hasAward = await storage.checkUserHasAward(userId, dbAwardId, currentYear);
+      const allowMultiple = !!awardDef?.allowMultiple;
+
+      // For repeatable awards, store year as null so the unique
+      // (user_id, award_id, year) constraint allows multiple grants
+      // (NULLs are treated as distinct in PostgreSQL unique constraints).
+      const grantYear = allowMultiple ? null : (year || new Date().getFullYear());
+
+      // Block duplicates only when the award is not manually-granted AND
+      // not flagged as repeatable. Manual & repeatable awards may be
+      // granted as many times as the coach wants.
+      if (awardDef && awardDef.triggerCategory !== 'manual' && !allowMultiple) {
+        const hasAward = await storage.checkUserHasAward(userId, dbAwardId, grantYear);
         if (hasAward) {
           return res.status(400).json({ error: 'User already has this award for the specified year' });
         }
       }
-      
+
       const userAwardData = insertUserAwardRecordSchema.parse({
         userId,
         awardId: dbAwardId,
         awardedBy: awardedById,
-        year: currentYear,
+        year: grantYear,
         notes: notes || null,
         visible: true,
       });
@@ -19056,20 +19110,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!awardDefinition) {
         return res.status(404).json({ error: 'Award definition not found' });
       }
-      
-      // Check if user already has this award for the same year (only for non-manual awards)
-      if (awardDefinition.triggerCategory !== 'manual') {
-        const hasAward = await storage.checkUserHasAward(userId, awardId, year);
+
+      const allowMultiple = !!awardDefinition.allowMultiple;
+
+      // For repeatable awards, store year as null so the unique
+      // (user_id, award_id, year) constraint allows multiple grants.
+      const grantYear = allowMultiple ? null : (year || null);
+
+      // Block duplicates only when the award is not manually-granted AND
+      // not flagged as repeatable. Pass `year ?? undefined` to preserve the
+      // original "any year" semantics when the caller omits year — passing
+      // null would only check for existing NULL-year rows and let a duplicate
+      // sneak past the unique constraint (which treats NULLs as distinct).
+      if (awardDefinition.triggerCategory !== 'manual' && !allowMultiple) {
+        const hasAward = await storage.checkUserHasAward(
+          userId,
+          awardId,
+          year ?? undefined,
+        );
         if (hasAward) {
           return res.status(400).json({ error: 'User already has this award for the specified year' });
         }
       }
-      
+
       const userAwardData = insertUserAwardRecordSchema.parse({
         userId,
         awardId,
         awardedBy: awardedById,
-        year: year || null,
+        year: grantYear,
         notes: notes || null,
         visible: true,
       });

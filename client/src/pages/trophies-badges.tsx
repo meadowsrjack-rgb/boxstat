@@ -68,6 +68,33 @@ const TRIGGER_LABELS: Record<TriggerCategory, string> = {
   video: "Training",
 };
 
+// Human-friendly unit label shown next to the progress bar
+// (e.g. "check-ins", "RSVPs attended", "months active").
+function getProgressUnit(award: AwardDefinition): string | null {
+  const cat = award.triggerCategory || "manual";
+  if (cat === "checkin") {
+    const mode = (award as any).countMode;
+    return mode === "streak" ? "check-in streak" : "check-ins";
+  }
+  if (cat === "rsvp") {
+    const mode = (award as any).countMode;
+    return mode === "streak" ? "RSVP streak" : "RSVPs attended";
+  }
+  if (cat === "time") {
+    const unit = (award as any).timeUnit || "years";
+    return `${unit} active`;
+  }
+  if (cat === "system") {
+    if ((award as any).targetTier) {
+      return `${(award as any).targetTier} awards earned`;
+    }
+    if ((award as any).referenceId) return "times earned";
+    return "awards earned";
+  }
+  if (cat === "store") return "purchase";
+  return null;
+}
+
 export default function TrophiesBadgesPage() {
   const { user } = useAuth();
   const { currentChildProfile } = useAppMode();
@@ -107,6 +134,12 @@ export default function TrophiesBadgesPage() {
   });
 
   const userAwardRecords = userAwardsResponse?.allAwards || [];
+
+  type AwardProgress = { current: number; target: number; percentage: number };
+  const { data: awardProgress = {} } = useQuery<Record<string, AwardProgress>>({
+    queryKey: ["/api/users", viewingUserId, "award-progress"],
+    enabled: !!user && !!viewingUserId,
+  });
 
   const { data: programMemberships = [] } = useQuery<ProgramMembership[]>({
     queryKey: ["/api/users", viewingUserId, "program-memberships"],
@@ -465,7 +498,9 @@ export default function TrophiesBadgesPage() {
           ) : (
             <div className="flex flex-col gap-2.5">
               {filteredAvailableAwards.map((award) => {
-                const progressPct = award.threshold ? 0 : null;
+                const prog = awardProgress[String(award.id)];
+                const hasProgress = !!prog && prog.target > 0;
+                const unit = getProgressUnit(award);
                 return (
                   <div
                     key={award.id}
@@ -488,17 +523,25 @@ export default function TrophiesBadgesPage() {
                           {award.description}
                         </p>
                       )}
-                      {progressPct !== null && (
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <div className="flex-1 h-1 bg-[#e8e8e8] rounded-[2px] overflow-hidden">
-                            <div
-                              className="h-full rounded-[2px] transition-all duration-400 bg-primary"
-                              style={{ width: `${progressPct}%` }}
-                            />
+                      {hasProgress && (
+                        <div className="mt-1.5" data-testid={`progress-available-${award.id}`}>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-1.5 bg-[#e8e8e8] rounded-[2px] overflow-hidden">
+                              <div
+                                className="h-full rounded-[2px] transition-all duration-400 bg-primary"
+                                style={{ width: `${prog.percentage}%` }}
+                              />
+                            </div>
+                            <span
+                              className="text-[11px] font-semibold text-[#666] min-w-[44px] text-right tabular-nums"
+                              data-testid={`progress-text-${award.id}`}
+                            >
+                              {Math.min(prog.current, prog.target)}/{prog.target}
+                            </span>
                           </div>
-                          <span className="text-[11px] font-semibold text-[#aaa] min-w-[30px] text-right">
-                            {progressPct}%
-                          </span>
+                          {unit && (
+                            <p className="text-[10px] text-[#aaa] mt-0.5">{unit}</p>
+                          )}
                         </div>
                       )}
                     </div>

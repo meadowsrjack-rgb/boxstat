@@ -328,21 +328,35 @@ async function evaluateSystemAward(
     return count >= threshold;
   }
   
-  // Specific award-based collection (original behavior)
-  if (!award.referenceId) return false;
-  
-  const targetAwardId = parseInt(award.referenceId, 10);
-  if (isNaN(targetAwardId)) return false;
+  // Specific award-based collection
+  if (award.referenceId) {
+    const targetAwardId = parseInt(award.referenceId, 10);
+    if (isNaN(targetAwardId)) return false;
 
-  const userAwardRecords = await db
-    .select()
+    const userAwardRecords = await db
+      .select()
+      .from(userAwards)
+      .where(and(
+        eq(userAwards.userId, userId),
+        eq(userAwards.awardId, targetAwardId)
+      ));
+
+    return userAwardRecords.length >= threshold;
+  }
+
+  // Fallback: neither tier nor reference set — treat as "earn any N awards".
+  // This makes a Collection award with threshold N earn-able once the user
+  // has collected N other distinct awards (e.g. "Award Opener" with N=2).
+  const anyAwards = await db
+    .select({ count: sql<number>`count(DISTINCT ${userAwards.awardId})` })
     .from(userAwards)
     .where(and(
       eq(userAwards.userId, userId),
-      eq(userAwards.awardId, targetAwardId)
+      sql`${userAwards.awardId} <> ${award.id}` // Don't count this meta award itself
     ));
 
-  return userAwardRecords.length >= threshold;
+  const anyCount = Number(anyAwards[0]?.count) || 0;
+  return anyCount >= threshold;
 }
 
 async function evaluateTimeAward(user: any, award: SelectAwardDefinition): Promise<boolean> {
@@ -652,10 +666,67 @@ export async function getAwardProgress(
           }
         }
         break;
+
+      case 'system':
+        // Collection / meta award progress
+        if (award.targetTier) {
+          const [tierRow] = await db
+            .select({ count: sql<number>`count(DISTINCT ${awardDefinitions.id})` })
+            .from(userAwards)
+            .innerJoin(awardDefinitions, eq(userAwards.awardId, awardDefinitions.id))
+            .where(and(
+              eq(userAwards.userId, userId),
+              eq(awardDefinitions.tier, award.targetTier),
+              sql`${awardDefinitions.id} <> ${award.id}`
+            ));
+          current = Number(tierRow?.count || 0);
+        } else if (award.referenceId) {
+          const targetAwardId = parseInt(award.referenceId, 10);
+          if (!isNaN(targetAwardId)) {
+            const [refRow] = await db
+              .select({ count: sql<number>`count(*)` })
+              .from(userAwards)
+              .where(and(
+                eq(userAwards.userId, userId),
+                eq(userAwards.awardId, targetAwardId)
+              ));
+            current = Number(refRow?.count || 0);
+          }
+        } else {
+          // "Earn any N awards" fallback (matches evaluateSystemAward)
+          const [anyRow] = await db
+            .select({ count: sql<number>`count(DISTINCT ${userAwards.awardId})` })
+            .from(userAwards)
+            .where(and(
+              eq(userAwards.userId, userId),
+              sql`${userAwards.awardId} <> ${award.id}`
+            ));
+          current = Number(anyRow?.count || 0);
+        }
+        break;
+
+      case 'store':
+        // Store-purchase award: 0 or 1 — purchase = earned
+        if (award.referenceId) {
+          const [storeRow] = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(productEnrollments)
+            .where(and(
+              or(
+                eq(productEnrollments.accountHolderId, userId),
+                eq(productEnrollments.profileId, userId)
+              ),
+              eq(productEnrollments.programId, award.referenceId),
+              eq(productEnrollments.status, 'active')
+            ));
+          current = Number(storeRow?.count || 0) > 0 ? 1 : 0;
+        }
+        break;
     }
 
-    const percentage = threshold > 0 ? Math.min(100, Math.round((current / threshold) * 100)) : 0;
-    progress.set(award.id, { current, target: threshold, percentage });
+    const effectiveTarget = threshold > 0 ? threshold : (category === 'store' ? 1 : 0);
+    const percentage = effectiveTarget > 0 ? Math.min(100, Math.round((current / effectiveTarget) * 100)) : 0;
+    progress.set(award.id, { current, target: effectiveTarget, percentage });
   }
 
   return progress;

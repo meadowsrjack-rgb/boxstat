@@ -14672,22 +14672,55 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
     toast({ title: `Duplicated "${team.name}"` });
   };
 
-  const isEnrolledPlayer = (p: any) => p.status !== 'invited' && p.hasRegistered !== false;
+  // True when the player's own user account has been registered/claimed
+  // (i.e. NOT an unclaimed invite). Child profiles created through a
+  // parent's "Add Player" flow stay `invited`/`hasRegistered=false` for
+  // life because the child never logs in themselves — so this is NOT a
+  // reliable signal of active roster status by itself for program-bound
+  // teams. The `getTeamPlayers` / `getPendingInvitePlayers` helpers below
+  // (defined after `isPlayerEnrolledForTeam`) prefer enrollment status
+  // when available.
+  const isAccountRegistered = (p: any) =>
+    p.status !== 'invited' && p.hasRegistered !== false;
+
+  // Backwards-compatible name kept for any external usage of the old
+  // semantics ("the player's account has been claimed").
+  const isEnrolledPlayer = isAccountRegistered;
+
+  const onTeamRoster = (p: any, team: any) => {
+    const ids = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
+    return ids.includes(team.id) || p.teamId === team.id;
+  };
+
+  const isPlayerEnrolledForTeam = (playerId: string, team: any) => {
+    if (!team?.programId) return true;
+    return enrollments.some((e: any) =>
+      String(e.profileId) === String(playerId) &&
+      String(e.programId) === String(team.programId) &&
+      e.status === 'active'
+    );
+  };
+
+  // Source of truth for "is this player on the active roster of this team?".
+  // For program-bound teams, an active enrollment for that program is what
+  // makes a player a paid, on-roster member — regardless of whether their
+  // own user account has been claimed (e.g. parent-managed child profiles
+  // like Nivaan that stay `invited`/`hasRegistered=false` for life). For
+  // teams without an attached program we fall back to the registration
+  // check so genuinely unclaimed invites still surface as pending.
+  const isActiveRosterPlayer = (p: any, team: any) => {
+    if (team?.programId) {
+      return isPlayerEnrolledForTeam(p.id, team);
+    }
+    return isAccountRegistered(p);
+  };
 
   const getTeamPlayers = (team: any) => {
-    return players.filter((p: any) => {
-      const ids = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
-      const onTeam = ids.includes(team.id) || p.teamId === team.id;
-      return onTeam && isEnrolledPlayer(p);
-    });
+    return players.filter((p: any) => onTeamRoster(p, team) && isActiveRosterPlayer(p, team));
   };
 
   const getPendingInvitePlayers = (team: any) => {
-    return players.filter((p: any) => {
-      const ids = Array.isArray(p.teamIds) ? p.teamIds : p.teamId ? [p.teamId] : [];
-      const onTeam = ids.includes(team.id) || p.teamId === team.id;
-      return onTeam && !isEnrolledPlayer(p);
-    });
+    return players.filter((p: any) => onTeamRoster(p, team) && !isActiveRosterPlayer(p, team));
   };
 
   const filteredTeams = searchQuery.trim()
@@ -14837,15 +14870,6 @@ function TeamsByProgramTab({ programs: allPrograms, teams, organization, users, 
       const msg = err?.message || "Failed to update roster";
       toast({ title: msg, variant: "destructive" });
     }
-  };
-
-  const isPlayerEnrolledForTeam = (playerId: string, team: any) => {
-    if (!team?.programId) return true;
-    return enrollments.some((e: any) => 
-      String(e.profileId) === String(playerId) && 
-      String(e.programId) === String(team.programId) && 
-      e.status === 'active'
-    );
   };
 
   // Task #243: Returns enrollment status tag including 'unpaid' for active

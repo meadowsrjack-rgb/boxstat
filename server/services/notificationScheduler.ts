@@ -104,6 +104,16 @@ export class NotificationScheduler {
     });
     this.jobs.set('strandedOnboardingDigest', strandedOnboardingDigestJob);
 
+    // Daily reminder to parents whose linked player profiles haven't
+    // opened the player dashboard recently (or ever). Runs at 11 AM
+    // local server time so it doesn't stack with the 9–10 AM digests.
+    const inactivePlayerRemindersJob = cron.schedule('0 11 * * *', async () => {
+      await this.processInactivePlayerReminders();
+    }, {
+      scheduled: false
+    });
+    this.jobs.set('inactivePlayerReminders', inactivePlayerRemindersJob);
+
     this.jobs.set('eventReminders', eventReminderJob);
     this.jobs.set('checkinAvailable', checkinAvailableJob);
     this.jobs.set('rsvpClosing', rsvpClosingJob);
@@ -1674,6 +1684,145 @@ export class NotificationScheduler {
       console.log('[Stranded Onboarding] Daily digest complete');
     } catch (err) {
       console.error('[Stranded Onboarding] Fatal error:', err);
+    }
+  }
+
+  // Reminds parents whose linked player profiles haven't opened the
+  // player dashboard recently. Targets parent-managed child profiles
+  // (accountHolderId set, and != the player's own id) on at least one
+  // team, who either never logged in (lastLogin null and createdAt at
+  // least 7 days ago) or whose lastLogin is older than 14 days.
+  // Re-fires every ~14 days using a period-bucket dedup title.
+  private async processInactivePlayerReminders() {
+    try {
+      const INACTIVITY_DAYS = 14;
+      const NEW_PLAYER_GRACE_DAYS = 7;
+      const PERIOD_DAYS = 14;
+      const now = new Date();
+      const inactivityCutoff = new Date(now.getTime() - INACTIVITY_DAYS * 24 * 60 * 60 * 1000);
+      const graceCutoff = new Date(now.getTime() - NEW_PLAYER_GRACE_DAYS * 24 * 60 * 60 * 1000);
+
+      console.log('[Inactive Player Reminders] Starting daily check');
+
+      // Pull candidate player profiles directly via SQL so we can join
+      // team_memberships + teams (only active teams should drive these
+      // reminders) and filter parent-managed accounts in one shot.
+      const candidates = await db.execute(sql`
+        SELECT DISTINCT
+          u.id,
+          u.first_name,
+          u.last_name,
+          u.account_holder_id,
+          u.organization_id,
+          u.last_login,
+          u.created_at
+        FROM users u
+        INNER JOIN team_memberships tm
+          ON tm.profile_id = u.id
+         AND tm.role = 'player'
+         AND tm.status = 'active'
+        INNER JOIN teams t
+          ON t.id = tm.team_id
+         AND COALESCE(t.active, true) = true
+        WHERE u.role = 'player'
+          AND u.account_holder_id IS NOT NULL
+          AND u.account_holder_id <> u.id
+          AND COALESCE(u.is_active, true) = true
+          AND u.created_at < ${graceCutoff.toISOString()}
+          AND (
+            u.last_login IS NULL
+            OR u.last_login < ${inactivityCutoff.toISOString()}
+          )
+      `);
+
+      const rows = ((candidates as any).rows || candidates) as Array<{
+        id: string;
+        first_name: string | null;
+        last_name: string | null;
+        account_holder_id: string | null;
+        organization_id: string | null;
+        last_login: string | Date | null;
+        created_at: string | Date | null;
+      }>;
+
+      console.log(`[Inactive Player Reminders] Found ${rows.length} inactive player profile(s)`);
+
+      let sent = 0;
+      let skipped = 0;
+
+      for (const row of rows) {
+        try {
+          if (!row.account_holder_id || !row.organization_id) {
+            skipped++;
+            continue;
+          }
+
+          // Make sure the parent account still exists, is active, and is
+          // not the same record (defensive — already filtered in SQL).
+          const parent = await storage.getUser(row.account_holder_id);
+          if (!parent || parent.id === row.id || (parent as any).isActive === false) {
+            skipped++;
+            continue;
+          }
+
+          const lastActivity = row.last_login
+            ? new Date(row.last_login as any)
+            : new Date(row.created_at as any);
+          const daysInactive = Math.max(
+            INACTIVITY_DAYS,
+            Math.floor((now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24))
+          );
+          // Period bucket: increments every PERIOD_DAYS so the reminder
+          // re-fires roughly every 2 weeks until the player logs in.
+          const period = Math.floor(daysInactive / PERIOD_DAYS);
+
+          const playerFirst = (row.first_name || '').trim() || 'Your player';
+          const neverLoggedIn = !row.last_login;
+          // Dedup token does NOT include the player's name so renaming
+          // the profile mid-period can't cause a second send.
+          const dedupTitle = `[system:player-inactive-${row.id}-p${period}] Encourage your player to check their dashboard`;
+          const message = neverLoggedIn
+            ? `${playerFirst} hasn't signed in to their player dashboard yet. Have them log in to RSVP for events, check in, and view their progress.`
+            : `${playerFirst} hasn't opened their player dashboard in ${daysInactive} days. Have them log in to RSVP for events, check in, and view their progress.`;
+
+          // Per-period dedup so we never double-fire for the same window.
+          const existing = await db.select({ id: notifications.id })
+            .from(notifications)
+            .where(
+              and(
+                eq(notifications.organizationId, row.organization_id),
+                eq(notifications.title, dedupTitle)
+              )
+            )
+            .limit(1);
+
+          if (existing.length > 0) {
+            skipped++;
+            continue;
+          }
+
+          await adminNotificationService.createNotification({
+            organizationId: row.organization_id,
+            types: ['notification'],
+            title: dedupTitle,
+            message,
+            recipientTarget: 'users',
+            recipientUserIds: [row.account_holder_id],
+            deliveryChannels: ['in_app', 'push'],
+            sentBy: 'system',
+            status: 'sent',
+          }, { url: '/home', playerId: row.id, kind: 'player-inactive' });
+
+          sent++;
+          console.log(`[Inactive Player Reminders] Reminded parent ${row.account_holder_id} about ${playerFirst} (${daysInactive}d inactive, period ${period})`);
+        } catch (rowErr) {
+          console.error(`[Inactive Player Reminders] Failed for player ${row.id}:`, rowErr);
+        }
+      }
+
+      console.log(`[Inactive Player Reminders] Done — sent ${sent}, skipped ${skipped}`);
+    } catch (err) {
+      console.error('[Inactive Player Reminders] Fatal error:', err);
     }
   }
 }

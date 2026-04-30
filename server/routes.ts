@@ -1486,7 +1486,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.userId = user.id;
       req.session.organizationId = user.organizationId;
       req.session.role = user.role;
-      
+
+      // Bump lastLogin so the player-dashboard inactivity reminder job
+      // (notificationScheduler.processInactivePlayerReminders) can tell
+      // when a player profile was last actively used. Best-effort; never
+      // block the login response on this.
+      try {
+        await storage.updateUser(user.id, { lastLogin: new Date().toISOString() } as any);
+      } catch (loginStampErr) {
+        console.error('[Auth Login] Failed to update lastLogin:', loginStampErr);
+      }
+
       // Generate JWT token (for mobile app)
       const token = jwt.sign(
         {
@@ -2106,7 +2116,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.userId = user.id;
       req.session.organizationId = user.organizationId;
       req.session.role = user.role;
-      
+
+      // Bump lastLogin so the player-dashboard inactivity reminder job
+      // sees the magic-link sign-in as activity. Best-effort.
+      try {
+        await storage.updateUser(user.id, { lastLogin: new Date().toISOString() } as any);
+      } catch (loginStampErr) {
+        console.error('[Magic Link Login] Failed to update lastLogin:', loginStampErr);
+      }
+
       // Generate a one-time app redirect token (valid for 60 seconds)
       const appRedirectToken = crypto.randomBytes(32).toString('hex');
       appRedirectTokens.set(appRedirectToken, {

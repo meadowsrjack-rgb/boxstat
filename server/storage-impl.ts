@@ -3546,6 +3546,9 @@ class DatabaseStorage implements IStorage {
       subscriptionEndDate: updates.subscriptionEndDate,
       parentEmail: updates.parentEmail,
       skillLevel: updates.skillLevel,
+      lastLogin: (updates as any).lastLogin instanceof Date
+        ? (updates as any).lastLogin.toISOString()
+        : (updates as any).lastLogin,
       updatedAt: new Date().toISOString(),
     };
 

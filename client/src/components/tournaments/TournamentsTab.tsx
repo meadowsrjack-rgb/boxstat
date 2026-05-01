@@ -115,7 +115,15 @@ export default function TournamentsTab({ organization, teams, facilities, curren
       facilities={facilities}
       editTournamentId={activeTournamentId ?? undefined}
       onCancel={() => setView(activeTournamentId ? "detail" : "hub")}
-      onCreated={(id: number) => { setActiveTournamentId(id); setView("detail"); }}
+      onCreated={(id: number, opts?: { goToDetail?: boolean }) => {
+        // For new drafts we send the user back to the Hub so they
+        // immediately see their tournament card in the list (the original
+        // "I created one but it didn't appear anywhere" complaint).
+        // For publishes/edits we open the Detail view so they land on the
+        // bracket/schedule that just became useful.
+        if (opts?.goToDetail) { setActiveTournamentId(id); setView("detail"); }
+        else { setActiveTournamentId(null); setView("hub"); }
+      }}
     />;
   }
 
@@ -151,14 +159,14 @@ function TournamentHub({
   const pendingRequests = joinRequests.filter(r => r.status === "pending");
 
   return (
-    <div className="bg-zinc-950 -mx-4 lg:-mx-8 -my-4 lg:-my-8 px-4 lg:px-8 py-6 lg:py-8 min-h-[calc(100vh-200px)]" data-testid="tournament-hub">
+    <div className="bg-white -mx-4 lg:-mx-8 -my-4 lg:-my-8 px-4 lg:px-8 py-6 lg:py-8 min-h-[calc(100vh-200px)]" data-testid="tournament-hub">
       {/* Hero */}
-      <div className="rounded-3xl overflow-hidden border border-red-600/40 mb-6 relative" style={{ background: "linear-gradient(135deg,rgba(226,18,36,0.18),rgba(226,18,36,0.04) 50%,rgba(0,0,0,0.6))" }}>
+      <div className="rounded-3xl overflow-hidden border border-red-600/40 mb-6 relative" style={{ background: "linear-gradient(135deg,rgba(226,18,36,0.10),rgba(226,18,36,0.04) 50%,rgba(255,255,255,0.6))" }}>
         <div className="grid lg:grid-cols-[1.4fr_1fr] gap-0">
           <div className="p-8 flex flex-col gap-4 justify-between relative z-10">
             <div>
-              <p className="text-xs font-bold tracking-widest text-red-400 uppercase mb-2">Tournament Hub</p>
-              <h1 className="text-4xl lg:text-5xl font-bold text-white leading-tight" style={{ letterSpacing: "-0.02em" }}>
+              <p className="text-xs font-bold tracking-widest text-red-600 uppercase mb-2">Tournament Hub</p>
+              <h1 className="text-4xl lg:text-5xl font-bold text-zinc-900 leading-tight" style={{ letterSpacing: "-0.02em" }}>
                 Build the next great tournament.
               </h1>
               <p className="text-zinc-400 mt-3 max-w-xl">
@@ -169,24 +177,24 @@ function TournamentHub({
               <Button onClick={onNew} className="bg-red-600 hover:bg-red-700 text-white" data-testid="button-new-tournament">
                 <Sparkles className="w-4 h-4 mr-2" /> New Tournament
               </Button>
-              <Button variant="outline" onClick={() => setShowRequests(true)} className="bg-white/5 border-white/20 text-white hover:bg-white/10">
+              <Button variant="outline" onClick={() => setShowRequests(true)} className="bg-zinc-100 border-zinc-300 text-zinc-900 hover:bg-zinc-200">
                 <Inbox className="w-4 h-4 mr-2" /> Join Requests
                 {pendingRequests.length > 0 && <Badge className="ml-2 bg-red-600">{pendingRequests.length}</Badge>}
               </Button>
-              <Button variant="outline" onClick={() => setShowListings(true)} className="bg-white/5 border-white/20 text-white hover:bg-white/10">
+              <Button variant="outline" onClick={() => setShowListings(true)} className="bg-zinc-100 border-zinc-300 text-zinc-900 hover:bg-zinc-200">
                 <Globe className="w-4 h-4 mr-2" /> External Listings
               </Button>
               <Button
                 variant="outline"
                 onClick={() => navigate("/marketplace")}
-                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+                className="bg-zinc-100 border-zinc-300 text-zinc-900 hover:bg-zinc-200"
                 data-testid="button-open-marketplace"
               >
                 <ExternalLink className="w-4 h-4 mr-2" /> Open Marketplace
               </Button>
             </div>
           </div>
-          <div className="p-8 bg-black/40 backdrop-blur border-l border-white/5 relative z-10">
+          <div className="p-8 bg-zinc-100 backdrop-blur border-l border-zinc-200 relative z-10">
             <p className="text-xs font-bold tracking-widest text-zinc-500 uppercase mb-3">At a Glance</p>
             <div className="grid grid-cols-2 gap-4">
               <Stat label="Total" value={tournaments.length} />
@@ -207,8 +215,8 @@ function TournamentHub({
             data-testid={`filter-${f}`}
             className={`px-3.5 py-2 rounded-full text-[11px] font-bold tracking-widest uppercase transition-all ${
               filter === f
-                ? "bg-red-600/20 text-red-400 border border-red-600/40"
-                : "bg-white/[0.02] text-white/60 border border-white/10 hover:border-white/20"
+                ? "bg-red-600/15 text-red-700 border border-red-600/40"
+                : "bg-zinc-50 text-zinc-900/60 border border-zinc-200 hover:border-zinc-300"
             }`}
           >
             {f}
@@ -225,23 +233,23 @@ function TournamentHub({
           style={{ background: "radial-gradient(circle at center,rgba(226,18,36,0.08),transparent 70%)" }}
         >
           <Plus className="w-9 h-9 text-red-500 mb-3" />
-          <p className="text-white font-bold text-lg">Create new</p>
+          <p className="text-zinc-900 font-bold text-lg">Create new</p>
           <p className="text-zinc-500 text-xs mt-1">AI guided in 4 steps</p>
         </button>
 
         {isLoading ? (
           [0, 1, 2].map(i => (
-            <div key={i} className="rounded-2xl border border-white/10 p-5 space-y-3" style={{ background: "linear-gradient(145deg,rgba(255,255,255,0.03),rgba(255,255,255,0.005))" }}>
-              <Skeleton className="h-6 w-3/4 bg-white/5" />
-              <Skeleton className="h-4 w-1/2 bg-white/5" />
-              <Skeleton className="h-16 w-full bg-white/5" />
+            <div key={i} className="rounded-2xl border border-zinc-200 p-5 space-y-3" style={{ background: "linear-gradient(145deg,rgba(255,255,255,0.03),rgba(255,255,255,0.005))" }}>
+              <Skeleton className="h-6 w-3/4 bg-zinc-100" />
+              <Skeleton className="h-4 w-1/2 bg-zinc-100" />
+              <Skeleton className="h-16 w-full bg-zinc-100" />
             </div>
           ))
         ) : filtered.length === 0 ? (
-          <div className="col-span-full rounded-xl border border-dashed border-white/10 bg-zinc-900/40 p-10 text-center" data-testid="hub-empty-state">
-            <Trophy className="w-10 h-10 text-zinc-600 mx-auto mb-3" />
-            <p className="text-white font-bold mb-1">No tournaments yet</p>
-            <p className="text-zinc-500 text-sm">Click <span className="text-white">Create new</span> to launch one with the AI builder.</p>
+          <div className="col-span-full rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-10 text-center" data-testid="hub-empty-state">
+            <Trophy className="w-10 h-10 text-zinc-400 mx-auto mb-3" />
+            <p className="text-zinc-900 font-bold mb-1">No tournaments yet</p>
+            <p className="text-zinc-500 text-sm">Click <span className="text-zinc-900">Create new</span> to launch one with the AI builder.</p>
           </div>
         ) : (
           filtered.map(t => (
@@ -268,7 +276,7 @@ function TournamentHub({
 function Stat({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
   return (
     <div>
-      <p className={`text-3xl font-bold ${accent ? "text-red-500" : "text-white"}`} style={{ letterSpacing: "-0.02em" }}>{value}</p>
+      <p className={`text-3xl font-bold ${accent ? "text-red-500" : "text-zinc-900"}`} style={{ letterSpacing: "-0.02em" }}>{value}</p>
       <p className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase mt-1">{label}</p>
     </div>
   );
@@ -281,30 +289,30 @@ function TournamentCard({ tournament, onOpen }: { tournament: Tournament; onOpen
     <button
       onClick={onOpen}
       data-testid={`tournament-card-${tournament.id}`}
-      className="text-left rounded-2xl p-5 border border-white/10 transition-all hover:-translate-y-1 hover:border-red-600/40"
-      style={{ background: "linear-gradient(145deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))" }}
+      className="text-left rounded-2xl p-5 border border-zinc-200 transition-all hover:-translate-y-1 hover:border-red-600/40"
+      style={{ background: "linear-gradient(145deg,rgba(0,0,0,0.04),rgba(0,0,0,0.01))" }}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex gap-3">
-          <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-2xl">{sport?.icon || "🏆"}</div>
+          <div className="w-10 h-10 rounded-lg bg-zinc-100 flex items-center justify-center text-2xl">{sport?.icon || "🏆"}</div>
           <div>
-            <h3 className="text-white font-bold text-lg leading-tight" style={{ letterSpacing: "-0.02em" }}>{tournament.name}</h3>
+            <h3 className="text-zinc-900 font-bold text-lg leading-tight" style={{ letterSpacing: "-0.02em" }}>{tournament.name}</h3>
             <p className="text-zinc-500 text-[11px] uppercase tracking-wider mt-1">{sport?.label} · {tournament.ageGroup || "All ages"}</p>
           </div>
         </div>
         <StatusPill status={tournament.status} />
       </div>
-      <div className="grid grid-cols-3 gap-3 pt-3 border-t border-white/5 mt-3">
+      <div className="grid grid-cols-3 gap-3 pt-3 border-t border-zinc-200 mt-3">
         <div>
-          <p className="text-white text-sm font-bold">{start.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</p>
+          <p className="text-zinc-900 text-sm font-bold">{start.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</p>
           <p className="text-[10px] tracking-widest text-zinc-500 uppercase mt-0.5">Starts</p>
         </div>
         <div>
-          <p className="text-white text-sm font-bold capitalize">{(tournament.format || "—").replace("_", " ")}</p>
+          <p className="text-zinc-900 text-sm font-bold capitalize">{(tournament.format || "—").replace("_", " ")}</p>
           <p className="text-[10px] tracking-widest text-zinc-500 uppercase mt-0.5">Format</p>
         </div>
         <div>
-          <p className="text-white text-sm font-bold">{tournament.venue || "—"}</p>
+          <p className="text-zinc-900 text-sm font-bold">{tournament.venue || "—"}</p>
           <p className="text-[10px] tracking-widest text-zinc-500 uppercase mt-0.5">Venue</p>
         </div>
       </div>
@@ -314,10 +322,10 @@ function TournamentCard({ tournament, onOpen }: { tournament: Tournament; onOpen
 
 function StatusPill({ status }: { status: string }) {
   const map: Record<string, string> = {
-    draft: "bg-zinc-700 text-zinc-300",
-    upcoming: "bg-blue-600/20 text-blue-300 border-blue-600/40",
-    live: "bg-green-600/20 text-green-300 border-green-600/40",
-    completed: "bg-purple-600/20 text-purple-300 border-purple-600/40",
+    draft: "bg-zinc-200 text-zinc-700 border-zinc-300",
+    upcoming: "bg-blue-100 text-blue-700 border-blue-300",
+    live: "bg-green-100 text-green-700 border-green-300",
+    completed: "bg-purple-100 text-purple-700 border-purple-300",
   };
   return (
     <span className={`px-2 py-1 rounded text-[10px] font-bold tracking-widest uppercase border ${map[status] || map.draft}`}>
@@ -424,6 +432,24 @@ function TournamentWizard({ organization, teams, facilities, editTournamentId, o
   const createMutation = useMutation({
     mutationFn: async (opts: { publish?: boolean } = {}) => {
       let tournament: any;
+      // Build the list of team-add payloads so the create vs edit branches
+      // share one error-tolerant fan-out below.
+      const teamPayloads = (existingPairs?: any[]) =>
+        state.teams.flatMap((t: any, i: number) => {
+          if (existingPairs) {
+            const already = existingPairs.find((et: any) =>
+              (t.id && et.teamId === t.id) || (!t.id && et.externalName === t.name)
+            );
+            if (already) return [];
+          }
+          return [{
+            seed: i + 1,
+            data: t.isExternal
+              ? { externalName: t.name, externalEmail: t.externalContactEmail || null, seed: i + 1 }
+              : { teamId: t.id, externalName: t.name, seed: i + 1 },
+          }];
+        });
+
       if (isEdit) {
         tournament = await apiRequest(`/api/tournaments/${editTournamentId}`, {
           method: "PATCH",
@@ -440,19 +466,6 @@ function TournamentWizard({ organization, teams, facilities, editTournamentId, o
             isPublic: state.isPublic,
           },
         });
-        // Reconcile teams: best-effort — add any new ones the user added.
-        const existing = (existingTeams || []) as any[];
-        for (let i = 0; i < state.teams.length; i++) {
-          const t = state.teams[i];
-          const already = existing.find(et => (t.id && et.teamId === t.id) || (!t.id && et.externalName === t.name));
-          if (already) continue;
-          await apiRequest(`/api/tournaments/${tournament.id}/teams`, {
-            method: "POST",
-            data: t.isExternal
-              ? { externalName: t.name, externalEmail: t.externalContactEmail || null, seed: i + 1 }
-              : { teamId: t.id, externalName: t.name, seed: i + 1 },
-          });
-        }
       } else {
         tournament = await apiRequest("/api/tournaments", {
           method: "POST",
@@ -470,36 +483,72 @@ function TournamentWizard({ organization, teams, facilities, editTournamentId, o
             status: "draft",
           },
         });
-        for (let i = 0; i < state.teams.length; i++) {
-          const t = state.teams[i];
-          await apiRequest(`/api/tournaments/${tournament.id}/teams`, {
-            method: "POST",
-            data: t.isExternal
-              ? { externalName: t.name, externalEmail: t.externalContactEmail || null, seed: i + 1 }
-              : { teamId: t.id, externalName: t.name, seed: i + 1 },
-          });
-        }
       }
+
+      // Add teams in parallel and tolerate per-team failures so a single bad
+      // payload doesn't roll back the whole create from the user's POV (the
+      // tournament row is already persisted at this point).
+      const payloads = teamPayloads(isEdit ? (existingTeams || []) : undefined);
+      let teamsFailed = 0;
+      if (payloads.length) {
+        const results = await Promise.allSettled(
+          payloads.map((p: any) => apiRequest(`/api/tournaments/${tournament.id}/teams`, { method: "POST", data: p.data }))
+        );
+        teamsFailed = results.filter(r => r.status === "rejected").length;
+      }
+
       // Optional: publish immediately. The server-side publish endpoint
       // creates an event per match and fans out pending RSVPs to both
-      // rosters in a single transaction.
-      if (opts.publish) {
-        await apiRequest(`/api/tournaments/${tournament.id}/publish`, { method: "POST" });
+      // rosters in a single transaction. Only attempt publish if all teams
+      // were added — otherwise the bracket would be incomplete.
+      let publishedOk = false;
+      if (opts.publish && teamsFailed === 0) {
+        try {
+          await apiRequest(`/api/tournaments/${tournament.id}/publish`, { method: "POST" });
+          publishedOk = true;
+        } catch (e: any) {
+          // Surface as a warning; the tournament + teams are already saved.
+          toast({ title: "Saved as draft", description: `Could not publish: ${e?.message || e}`, variant: "destructive" });
+        }
       }
-      return { tournament, published: !!opts.publish };
+      return { tournament, published: publishedOk, teamsFailed, attemptedPublish: !!opts.publish };
     },
-    onSuccess: ({ tournament, published }) => {
+    onSuccess: ({ tournament, published, teamsFailed, attemptedPublish }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments", tournament.id] });
+      // Routing: drafts land back on the Hub (so the new card is visible);
+      // publishes, edits, attempted-publishes (even if publish failed), and
+      // partial team-add failures all go to the Detail page so the user can
+      // see the bracket / fix what's broken.
+      const goToDetail = published || isEdit || teamsFailed > 0 || attemptedPublish;
+      const title = isEdit
+        ? "Tournament updated"
+        : published
+          ? "Tournament published"
+          : "Tournament created";
+      // Build description from actual outcome + actual destination so the
+      // toast never claims "find it in the Hub" while we're routing to Detail.
+      let description: string;
+      if (published) {
+        description = `${tournament.name} is live — match events and invites have been sent.`;
+      } else if (isEdit) {
+        description = `${tournament.name} has been saved.`;
+      } else if (attemptedPublish && !published) {
+        description = `${tournament.name} is saved as a draft. Opening the tournament so you can resolve the publish issue.`;
+      } else if (goToDetail) {
+        description = `${tournament.name} is saved. Opening the tournament so you can finish setting it up.`;
+      } else {
+        description = `${tournament.name} is saved as a draft. You'll find it in the Hub list.`;
+      }
+      if (teamsFailed > 0) {
+        description += ` (${teamsFailed} team${teamsFailed === 1 ? '' : 's'} failed to add — retry from the team list.)`;
+      }
       toast({
-        title: isEdit ? "Tournament updated" : published ? "Tournament published" : "Tournament created",
-        description: published
-          ? `${tournament.name} is live — match events and invites have been sent.`
-          : isEdit
-            ? `${tournament.name} has been saved.`
-            : `${tournament.name} is saved as a draft.`,
+        title,
+        description,
+        variant: teamsFailed > 0 ? "destructive" : "default",
       });
-      onCreated(tournament.id);
+      onCreated(tournament.id, { goToDetail });
     },
     onError: (e: any) => toast({ title: isEdit ? "Could not update" : "Could not create", description: e.message, variant: "destructive" }),
   });
@@ -521,11 +570,11 @@ function TournamentWizard({ organization, teams, facilities, editTournamentId, o
   }, [step, state]);
 
   return (
-    <div className="bg-black -mx-4 lg:-mx-8 -my-4 lg:-my-8 min-h-[calc(100vh-150px)] grid grid-cols-1 lg:grid-cols-[260px_1fr_320px]" data-testid="tournament-wizard">
+    <div className="bg-white -mx-4 lg:-mx-8 -my-4 lg:-my-8 min-h-[calc(100vh-150px)] grid grid-cols-1 lg:grid-cols-[260px_1fr_320px]" data-testid="tournament-wizard">
       {/* Steps sidebar */}
-      <aside className="p-6 border-r border-white/5 bg-zinc-950">
+      <aside className="p-6 border-r border-zinc-200 bg-white">
         <div className="flex items-center gap-2 mb-6">
-          <Button size="sm" variant="ghost" onClick={onCancel} className="text-zinc-400 hover:text-white">
+          <Button size="sm" variant="ghost" onClick={onCancel} className="text-zinc-400 hover:text-zinc-900">
             <ArrowLeft className="w-4 h-4 mr-1" /> Cancel
           </Button>
         </div>
@@ -537,11 +586,11 @@ function TournamentWizard({ organization, teams, facilities, editTournamentId, o
               onClick={() => i < step && setStep(i)}
               data-testid={`wizard-step-${i}`}
               className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left text-sm font-semibold ${
-                i === step ? "bg-red-600/10 text-white" : i < step ? "text-zinc-300 hover:bg-white/5" : "text-zinc-600"
+                i === step ? "bg-red-600/10 text-red-700" : i < step ? "text-zinc-700 hover:bg-zinc-100" : "text-zinc-400"
               }`}
             >
               <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                i === step ? "bg-red-600 text-white" : i < step ? "bg-green-600/20 text-green-400 border border-green-600/40" : "border border-white/15 text-zinc-500"
+                i === step ? "bg-red-600 text-white" : i < step ? "bg-green-600/20 text-green-700 border border-green-600/40" : "border border-zinc-300 text-zinc-500"
               }`}>
                 {i < step ? <Check className="w-3.5 h-3.5" /> : i + 1}
               </span>
@@ -557,7 +606,7 @@ function TournamentWizard({ organization, teams, facilities, editTournamentId, o
         {step === 1 && <StepTeams state={state} setState={setState} teams={teams} />}
         {step === 2 && <StepSchedule state={state} setState={setState} />}
         {step === 3 && <StepReview state={state} />}
-        <div className="mt-10 flex justify-between border-t border-white/5 pt-6">
+        <div className="mt-10 flex justify-between border-t border-zinc-200 pt-6">
           <Button variant="ghost" disabled={step === 0} onClick={() => setStep(s => Math.max(0, s - 1))} className="text-zinc-400">
             <ArrowLeft className="w-4 h-4 mr-1" /> Back
           </Button>
@@ -567,7 +616,7 @@ function TournamentWizard({ organization, teams, facilities, editTournamentId, o
             </Button>
           ) : (
             <div className="flex gap-2">
-              <Button onClick={() => createMutation.mutate({})} disabled={createMutation.isPending} variant="outline" className="bg-white/5 border-white/20 text-white hover:bg-white/10" data-testid="wizard-create">
+              <Button onClick={() => createMutation.mutate({})} disabled={createMutation.isPending} variant="outline" className="bg-zinc-100 border-zinc-300 text-zinc-900 hover:bg-zinc-200" data-testid="wizard-create">
                 {createMutation.isPending ? "Saving…" : isEdit ? "Save Changes" : "Save as Draft"}
               </Button>
               {!isEdit && (
@@ -581,44 +630,44 @@ function TournamentWizard({ organization, teams, facilities, editTournamentId, o
       </main>
 
       {/* AI side panel */}
-      <aside className="p-6 border-l border-red-600/20 overflow-y-auto" style={{ background: "linear-gradient(180deg,rgba(226,18,36,0.05),rgba(0,0,0,0.4))" }}>
+      <aside className="p-6 border-l border-red-600/20 overflow-y-auto" style={{ background: "linear-gradient(180deg,rgba(226,18,36,0.05),rgba(255,255,255,0.6))" }}>
         <div className="flex items-center gap-3 mb-4">
           <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center shadow-[0_0_20px_rgba(226,18,36,0.5)]">
             <Sparkles className="w-4 h-4 text-white" />
           </div>
           <div>
-            <p className="text-white font-bold text-sm">AI Assistant</p>
+            <p className="text-zinc-900 font-bold text-sm">AI Assistant</p>
             <p className="text-zinc-500 text-[11px]">Tournament copilot</p>
           </div>
         </div>
-        <div className="rounded-xl bg-white/[0.03] border border-white/10 p-4 mb-3">
-          <p className="text-zinc-300 text-sm leading-relaxed">
+        <div className="rounded-xl bg-zinc-50 border border-zinc-200 p-4 mb-3">
+          <p className="text-zinc-700 text-sm leading-relaxed">
             Hi — I'll help you build a great tournament. Tell me about your teams, dates, and goals, and I'll suggest the best format and schedule.
           </p>
         </div>
-        <Button size="sm" variant="outline" onClick={requestSuggestion} className="bg-white/5 border-white/15 text-white hover:bg-white/10 mb-3" disabled={aiMutation.isPending} data-testid="ai-suggest">
+        <Button size="sm" variant="outline" onClick={requestSuggestion} className="bg-zinc-100 border-zinc-300 text-zinc-900 hover:bg-zinc-200 mb-3" disabled={aiMutation.isPending} data-testid="ai-suggest">
           <Sparkles className="w-3.5 h-3.5 mr-1.5" /> {aiMutation.isPending ? "Thinking…" : "Suggest format"}
         </Button>
         {aiSuggestion && (
-          <div className="rounded-xl bg-black/30 border border-red-600/20 p-3 mb-4 space-y-2">
-            <p className="text-[10px] uppercase tracking-widest text-red-400 font-bold">Apply suggestion</p>
+          <div className="rounded-xl bg-zinc-100 border border-red-600/20 p-3 mb-4 space-y-2">
+            <p className="text-[10px] uppercase tracking-widest text-red-600 font-bold">Apply suggestion</p>
             {aiSuggestion.recommendedFormat && (
-              <button onClick={applyFormat} data-testid="ai-apply-format" className="w-full text-left text-xs text-white px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10">
+              <button onClick={applyFormat} data-testid="ai-apply-format" className="w-full text-left text-xs text-zinc-900 px-3 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 border border-zinc-200">
                 Use {String(aiSuggestion.recommendedFormat).replace('_', ' ')} format
               </button>
             )}
             {Array.isArray(aiSuggestion.seedingOrder) && aiSuggestion.seedingOrder.length > 0 && (
-              <button onClick={applySeeding} data-testid="ai-apply-seeding" className="w-full text-left text-xs text-white px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10">
+              <button onClick={applySeeding} data-testid="ai-apply-seeding" className="w-full text-left text-xs text-zinc-900 px-3 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 border border-zinc-200">
                 Apply seeding ({aiSuggestion.seedingOrder.length} teams)
               </button>
             )}
             {aiSuggestion?.schedule?.courtsCount > 0 && (
-              <button onClick={applyCourts} data-testid="ai-apply-courts" className="w-full text-left text-xs text-white px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10">
+              <button onClick={applyCourts} data-testid="ai-apply-courts" className="w-full text-left text-xs text-zinc-900 px-3 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 border border-zinc-200">
                 Provision {aiSuggestion.schedule.courtsCount} court(s)
               </button>
             )}
             {Array.isArray(aiSuggestion.warnings) && aiSuggestion.warnings.length > 0 && (
-              <div className="text-[11px] text-amber-300 mt-2 space-y-1">
+              <div className="text-[11px] text-amber-700 mt-2 space-y-1">
                 {aiSuggestion.warnings.map((w: string, i: number) => <p key={i}>• {w}</p>)}
               </div>
             )}
@@ -627,20 +676,20 @@ function TournamentWizard({ organization, teams, facilities, editTournamentId, o
         <div className="space-y-2 mb-3">
           {aiMessages.map((m, i) => (
             <div key={i} className={`p-3 rounded-xl text-sm ${
-              m.from === "user" ? "bg-white/[0.06] text-white ml-auto max-w-[85%]" :
-              "bg-red-600/[0.08] border border-red-600/20 text-zinc-200"
+              m.from === "user" ? "bg-zinc-100 text-zinc-900 ml-auto max-w-[85%]" :
+              "bg-red-600/[0.08] border border-red-600/20 text-zinc-800"
             }`}>
               {m.text}
             </div>
           ))}
         </div>
-        <div className="flex gap-2 p-2 bg-white/5 border border-white/10 rounded-xl items-center">
+        <div className="flex gap-2 p-2 bg-zinc-100 border border-zinc-200 rounded-xl items-center">
           <input
             value={aiInput}
             onChange={e => setAiInput(e.target.value)}
             onKeyDown={e => e.key === "Enter" && sendChat()}
             placeholder="Ask the assistant…"
-            className="bg-transparent border-0 outline-none text-white text-sm flex-1 px-2"
+            className="bg-transparent border-0 outline-none text-zinc-900 text-sm flex-1 px-2"
             data-testid="ai-input"
           />
           <button onClick={sendChat} className="w-8 h-8 rounded-lg bg-red-600 hover:bg-red-700 flex items-center justify-center text-white">
@@ -656,8 +705,8 @@ function StepFormat({ state, setState }: any) {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-[11px] font-bold tracking-widest text-red-400 uppercase mb-1">Step 1 of 4</p>
-        <h2 className="text-3xl font-bold text-white" style={{ letterSpacing: "-0.02em" }}>Name & format</h2>
+        <p className="text-[11px] font-bold tracking-widest text-red-600 uppercase mb-1">Step 1 of 4</p>
+        <h2 className="text-3xl font-bold text-zinc-900" style={{ letterSpacing: "-0.02em" }}>Name & format</h2>
         <p className="text-zinc-400 mt-2">Pick a sport, name your event, then choose how teams will compete.</p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -667,7 +716,7 @@ function StepFormat({ state, setState }: any) {
             value={state.name}
             onChange={e => setState((s: any) => ({ ...s, name: e.target.value }))}
             placeholder="e.g. Spring Showdown 2026"
-            className="bg-white/5 border-white/10 text-white"
+            className="bg-zinc-100 border-zinc-200 text-zinc-900"
             data-testid="input-name"
           />
         </div>
@@ -677,7 +726,7 @@ function StepFormat({ state, setState }: any) {
             value={state.ageGroup}
             onChange={e => setState((s: any) => ({ ...s, ageGroup: e.target.value }))}
             placeholder="U14, 12U, Open..."
-            className="bg-white/5 border-white/10 text-white"
+            className="bg-zinc-100 border-zinc-200 text-zinc-900"
           />
         </div>
       </div>
@@ -691,7 +740,7 @@ function StepFormat({ state, setState }: any) {
               onClick={() => setState((st: any) => ({ ...st, sport: s.value }))}
               data-testid={`sport-${s.value}`}
               className={`px-4 py-2.5 rounded-lg flex items-center gap-2 text-sm font-semibold border ${
-                state.sport === s.value ? "bg-red-600 text-white border-red-600" : "bg-white/5 text-zinc-300 border-white/10 hover:border-white/20"
+                state.sport === s.value ? "bg-red-600 text-white border-red-600" : "bg-zinc-100 text-zinc-700 border-zinc-200 hover:border-zinc-300"
               }`}
             >
               <span>{s.icon}</span> {s.label}
@@ -711,10 +760,10 @@ function StepFormat({ state, setState }: any) {
               className={`text-left p-5 rounded-xl border transition-all ${
                 state.format === f.value
                   ? "border-red-600 bg-gradient-to-br from-red-600/15 to-red-600/[0.02]"
-                  : "border-white/10 bg-white/[0.03] hover:border-white/20"
+                  : "border-zinc-200 bg-zinc-50 hover:border-zinc-300"
               }`}
             >
-              <h4 className="text-white font-bold mb-1">{f.label}</h4>
+              <h4 className="text-zinc-900 font-bold mb-1">{f.label}</h4>
               <p className="text-zinc-500 text-xs leading-relaxed">{f.desc}</p>
             </button>
           ))}
@@ -738,30 +787,30 @@ function StepTeams({ state, setState, teams }: any) {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-[11px] font-bold tracking-widest text-red-400 uppercase mb-1">Step 2 of 4</p>
-        <h2 className="text-3xl font-bold text-white" style={{ letterSpacing: "-0.02em" }}>Add teams</h2>
+        <p className="text-[11px] font-bold tracking-widest text-red-600 uppercase mb-1">Step 2 of 4</p>
+        <h2 className="text-3xl font-bold text-zinc-900" style={{ letterSpacing: "-0.02em" }}>Add teams</h2>
         <p className="text-zinc-400 mt-2">Pull in your own teams or add external invites. Drag to reorder seeds in the bracket later.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
-          <h4 className="text-white font-bold text-sm mb-3 flex items-center gap-2">Available teams <span className="text-zinc-500 text-xs">({(teams || []).length})</span></h4>
+          <h4 className="text-zinc-900 font-bold text-sm mb-3 flex items-center gap-2">Available teams <span className="text-zinc-500 text-xs">({(teams || []).length})</span></h4>
           <div className="space-y-1.5 max-h-96 overflow-y-auto">
             {(teams || []).map((t: any) => {
               const added = ownIds.has(t.id);
               return (
                 <div
                   key={t.id}
-                  className={`flex items-center gap-3 p-2.5 rounded-lg border ${added ? "bg-red-600/[0.08] border-red-600/30" : "bg-white/[0.03] border-white/5"}`}
+                  className={`flex items-center gap-3 p-2.5 rounded-lg border ${added ? "bg-red-600/[0.08] border-red-600/30" : "bg-zinc-50 border-zinc-200"}`}
                   data-testid={`available-team-${t.id}`}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-zinc-700 flex items-center justify-center text-xs text-white font-bold">
+                  <div className="w-8 h-8 rounded-lg bg-zinc-200 flex items-center justify-center text-xs text-zinc-700 font-bold">
                     {(t.name || "?").substring(0, 2).toUpperCase()}
                   </div>
-                  <p className="text-sm text-white font-semibold flex-1">{t.name}</p>
+                  <p className="text-sm text-zinc-900 font-semibold flex-1">{t.name}</p>
                   <button
                     onClick={() => added ? removeTeam(state.teams.findIndex((x: any) => x.id === t.id)) : addTeam({ id: t.id, name: t.name })}
-                    className={`w-7 h-7 rounded-md flex items-center justify-center ${added ? "bg-red-600 text-white" : "bg-white/5 text-zinc-300 hover:bg-white/10"}`}
+                    className={`w-7 h-7 rounded-md flex items-center justify-center ${added ? "bg-red-600 text-white" : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"}`}
                   >
                     {added ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
                   </button>
@@ -769,14 +818,14 @@ function StepTeams({ state, setState, teams }: any) {
               );
             })}
           </div>
-          <div className="mt-4 pt-4 border-t border-white/5">
+          <div className="mt-4 pt-4 border-t border-zinc-200">
             <p className="text-xs text-zinc-500 mb-2">Or add an external team by name</p>
             <div className="space-y-2">
               <Input
                 value={externalName}
                 onChange={e => setExternalName(e.target.value)}
                 placeholder="Team name"
-                className="bg-white/5 border-white/10 text-white"
+                className="bg-zinc-100 border-zinc-200 text-zinc-900"
                 data-testid="input-external-team-name"
               />
               <div className="flex gap-2">
@@ -784,7 +833,7 @@ function StepTeams({ state, setState, teams }: any) {
                   value={externalEmail}
                   onChange={e => setExternalEmail(e.target.value)}
                   placeholder="Contact email (we'll send an invite)"
-                  className="bg-white/5 border-white/10 text-white"
+                  className="bg-zinc-100 border-zinc-200 text-zinc-900"
                   data-testid="input-external-team-email"
                 />
                 <Button
@@ -804,17 +853,17 @@ function StepTeams({ state, setState, teams }: any) {
         </div>
 
         <div>
-          <h4 className="text-white font-bold text-sm mb-3 flex items-center gap-2">In tournament <span className="text-zinc-500 text-xs">({state.teams.length})</span></h4>
+          <h4 className="text-zinc-900 font-bold text-sm mb-3 flex items-center gap-2">In tournament <span className="text-zinc-500 text-xs">({state.teams.length})</span></h4>
           <div className="space-y-1.5 max-h-96 overflow-y-auto">
             {state.teams.length === 0 && <p className="text-zinc-500 text-sm py-4 text-center">No teams added yet</p>}
             {state.teams.map((t: any, i: number) => (
-              <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.03] border border-white/5">
+              <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-zinc-50 border border-zinc-200">
                 <span className="text-zinc-500 text-xs font-mono w-6">#{i + 1}</span>
-                <div className="w-8 h-8 rounded-lg bg-red-600/30 flex items-center justify-center text-xs text-white font-bold">
+                <div className="w-8 h-8 rounded-lg bg-red-600/30 flex items-center justify-center text-xs text-red-700 font-bold">
                   {(t.name || "?").substring(0, 2).toUpperCase()}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-white font-semibold">{t.name}</p>
+                  <p className="text-sm text-zinc-900 font-semibold">{t.name}</p>
                   {t.isExternal && <p className="text-[10px] text-zinc-500 uppercase">External</p>}
                 </div>
                 <button onClick={() => removeTeam(i)} className="text-zinc-500 hover:text-red-500">
@@ -840,8 +889,8 @@ function StepSchedule({ state, setState }: any) {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-[11px] font-bold tracking-widest text-red-400 uppercase mb-1">Step 3 of 4</p>
-        <h2 className="text-3xl font-bold text-white" style={{ letterSpacing: "-0.02em" }}>Schedule & venue</h2>
+        <p className="text-[11px] font-bold tracking-widest text-red-600 uppercase mb-1">Step 3 of 4</p>
+        <h2 className="text-3xl font-bold text-zinc-900" style={{ letterSpacing: "-0.02em" }}>Schedule & venue</h2>
         <p className="text-zinc-400 mt-2">Set window, location, and courts so we can pack the schedule for you.</p>
       </div>
 
@@ -852,7 +901,7 @@ function StepSchedule({ state, setState }: any) {
             type="date"
             value={state.startDate?.slice(0, 10) || ""}
             onChange={e => setState((s: any) => ({ ...s, startDate: e.target.value }))}
-            className="bg-white/5 border-white/10 text-white"
+            className="bg-zinc-100 border-zinc-200 text-zinc-900"
             data-testid="input-start-date"
           />
         </div>
@@ -862,7 +911,7 @@ function StepSchedule({ state, setState }: any) {
             type="date"
             value={state.endDate?.slice(0, 10) || ""}
             onChange={e => setState((s: any) => ({ ...s, endDate: e.target.value }))}
-            className="bg-white/5 border-white/10 text-white"
+            className="bg-zinc-100 border-zinc-200 text-zinc-900"
             data-testid="input-end-date"
           />
         </div>
@@ -872,7 +921,7 @@ function StepSchedule({ state, setState }: any) {
             value={state.venue}
             onChange={e => setState((s: any) => ({ ...s, venue: e.target.value }))}
             placeholder="e.g. North Sports Complex"
-            className="bg-white/5 border-white/10 text-white"
+            className="bg-zinc-100 border-zinc-200 text-zinc-900"
             data-testid="input-venue"
           />
         </div>
@@ -883,14 +932,14 @@ function StepSchedule({ state, setState }: any) {
               value={court}
               onChange={e => setCourt(e.target.value)}
               placeholder="Court 1"
-              className="bg-white/5 border-white/10 text-white"
+              className="bg-zinc-100 border-zinc-200 text-zinc-900"
               onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addCourt())}
             />
             <Button onClick={addCourt} className="bg-red-600 hover:bg-red-700">Add</Button>
           </div>
           <div className="flex gap-2 flex-wrap mt-3">
             {state.courts.map((c: string, i: number) => (
-              <span key={i} className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 font-mono text-xs flex items-center gap-2 text-white">
+              <span key={i} className="px-3 py-1.5 rounded-full bg-zinc-100 border border-zinc-200 font-mono text-xs flex items-center gap-2 text-zinc-900">
                 <MapPin className="w-3 h-3 text-zinc-500" /> {c}
                 <button onClick={() => setState((s: any) => ({ ...s, courts: s.courts.filter((_: any, j: number) => j !== i) }))}>
                   <X className="w-3 h-3 text-zinc-500 hover:text-red-500" />
@@ -906,7 +955,7 @@ function StepSchedule({ state, setState }: any) {
             onChange={e => setState((s: any) => ({ ...s, description: e.target.value }))}
             placeholder="Tell teams what to expect."
             rows={3}
-            className="bg-white/5 border-white/10 text-white"
+            className="bg-zinc-100 border-zinc-200 text-zinc-900"
           />
         </div>
         <div className="lg:col-span-2 flex items-center gap-3">
@@ -917,7 +966,7 @@ function StepSchedule({ state, setState }: any) {
             onChange={e => setState((s: any) => ({ ...s, isPublic: e.target.checked }))}
             className="w-4 h-4 accent-red-600"
           />
-          <label htmlFor="isPublic" className="text-zinc-300 text-sm">Publish to BoxStat Marketplace once live</label>
+          <label htmlFor="isPublic" className="text-zinc-700 text-sm">Publish to BoxStat Marketplace once live</label>
         </div>
       </div>
     </div>
@@ -930,12 +979,12 @@ function StepReview({ state }: any) {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-[11px] font-bold tracking-widest text-red-400 uppercase mb-1">Step 4 of 4</p>
-        <h2 className="text-3xl font-bold text-white" style={{ letterSpacing: "-0.02em" }}>Review</h2>
+        <p className="text-[11px] font-bold tracking-widest text-red-600 uppercase mb-1">Step 4 of 4</p>
+        <h2 className="text-3xl font-bold text-zinc-900" style={{ letterSpacing: "-0.02em" }}>Review</h2>
         <p className="text-zinc-400 mt-2">Looks great. Confirm and we'll save as a draft.</p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl p-6 border border-white/10" style={{ background: "linear-gradient(145deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))" }}>
+        <div className="rounded-2xl p-6 border border-zinc-200" style={{ background: "linear-gradient(145deg,rgba(0,0,0,0.04),rgba(0,0,0,0.01))" }}>
           {[
             ["Name", state.name],
             ["Sport", `${sp?.icon} ${sp?.label}`],
@@ -946,18 +995,17 @@ function StepReview({ state }: any) {
             ["Venue", state.venue],
             ["Courts", state.courts.join(", ") || "—"],
           ].map(([k, v]) => (
-            <div key={k as string} className="flex justify-between py-2.5 border-b border-white/5 last:border-0">
+            <div key={k as string} className="flex justify-between py-2.5 border-b border-zinc-200 last:border-0">
               <span className="text-zinc-500 text-sm">{k}</span>
-              <span className="text-white text-sm font-semibold">{String(v)}</span>
+              <span className="text-zinc-900 text-sm font-semibold">{String(v)}</span>
             </div>
           ))}
         </div>
-        <div className="rounded-2xl p-6 border border-white/10 bg-white/[0.03]">
+        <div className="rounded-2xl p-6 border border-zinc-200 bg-zinc-50">
           <p className="text-xs font-bold tracking-widest text-zinc-500 uppercase mb-3">After creation</p>
-          <ul className="space-y-2 text-sm text-zinc-300">
-            <li className="flex gap-2"><Check className="w-4 h-4 text-green-500 flex-shrink-0" /> Saved to your Tournament Hub as a draft.</li>
-            <li className="flex gap-2"><Check className="w-4 h-4 text-green-500 flex-shrink-0" /> You'll be taken to the bracket editor.</li>
-            <li className="flex gap-2"><Check className="w-4 h-4 text-green-500 flex-shrink-0" /> Publishing creates real game events with RSVP & check-in.</li>
+          <ul className="space-y-2 text-sm text-zinc-700">
+            <li className="flex gap-2"><Check className="w-4 h-4 text-green-500 flex-shrink-0" /> <span><strong>Save Draft</strong> returns you to the Hub with the new tournament card visible.</span></li>
+            <li className="flex gap-2"><Check className="w-4 h-4 text-green-500 flex-shrink-0" /> <span><strong>Save & Publish</strong> opens the bracket editor and creates real game events with RSVP & check-in.</span></li>
             {state.isPublic && <li className="flex gap-2"><Check className="w-4 h-4 text-green-500 flex-shrink-0" /> Listed on the public Marketplace.</li>}
           </ul>
         </div>
@@ -995,13 +1043,13 @@ function TournamentDetail({ tournamentId, teams, onBack, onEdit }: { tournamentI
 
   if (isLoading || !snapshot) {
     return (
-      <div className="bg-zinc-950 -mx-4 lg:-mx-8 -my-4 lg:-my-8 p-8 min-h-[calc(100vh-200px)] space-y-4" data-testid="tournament-loading">
-        <Skeleton className="h-8 w-1/3 bg-white/5" />
-        <Skeleton className="h-24 w-full bg-white/5" />
+      <div className="bg-white -mx-4 lg:-mx-8 -my-4 lg:-my-8 p-8 min-h-[calc(100vh-200px)] space-y-4" data-testid="tournament-loading">
+        <Skeleton className="h-8 w-1/3 bg-zinc-100" />
+        <Skeleton className="h-24 w-full bg-zinc-100" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Skeleton className="h-48 bg-white/5" />
-          <Skeleton className="h-48 bg-white/5" />
-          <Skeleton className="h-48 bg-white/5" />
+          <Skeleton className="h-48 bg-zinc-100" />
+          <Skeleton className="h-48 bg-zinc-100" />
+          <Skeleton className="h-48 bg-zinc-100" />
         </div>
       </div>
     );
@@ -1009,14 +1057,14 @@ function TournamentDetail({ tournamentId, teams, onBack, onEdit }: { tournamentI
   const { tournament, matches, kpi, standings, topScorers, teams: tTeams, events } = snapshot;
 
   return (
-    <div className="bg-zinc-950 -mx-4 lg:-mx-8 -my-4 lg:-my-8 px-4 lg:px-8 py-6 lg:py-8 min-h-[calc(100vh-200px)]" data-testid="tournament-detail">
+    <div className="bg-white -mx-4 lg:-mx-8 -my-4 lg:-my-8 px-4 lg:px-8 py-6 lg:py-8 min-h-[calc(100vh-200px)]" data-testid="tournament-detail">
       <div className="flex items-center justify-between mb-6">
-        <Button variant="ghost" onClick={onBack} className="text-zinc-400 hover:text-white">
+        <Button variant="ghost" onClick={onBack} className="text-zinc-400 hover:text-zinc-900">
           <ArrowLeft className="w-4 h-4 mr-1" /> Back to Hub
         </Button>
         <div className="flex gap-2">
           {onEdit && (
-            <Button onClick={onEdit} variant="outline" className="bg-white/5 border-white/20 text-white hover:bg-white/10" data-testid="button-edit-tournament">
+            <Button onClick={onEdit} variant="outline" className="bg-zinc-100 border-zinc-300 text-zinc-900 hover:bg-zinc-200" data-testid="button-edit-tournament">
               Edit
             </Button>
           )}
@@ -1028,20 +1076,20 @@ function TournamentDetail({ tournamentId, teams, onBack, onEdit }: { tournamentI
           <Button variant="outline" onClick={() => {
             const m = prompt("Broadcast message");
             if (m) broadcastMutation.mutate(m);
-          }} className="bg-white/5 border-white/15 text-white hover:bg-white/10">
+          }} className="bg-zinc-100 border-zinc-300 text-zinc-900 hover:bg-zinc-200">
             <Megaphone className="w-4 h-4 mr-1.5" /> Broadcast
           </Button>
         </div>
       </div>
 
       {/* Hero */}
-      <div className="rounded-2xl border border-red-600/40 p-7 mb-5 relative overflow-hidden" style={{ background: "linear-gradient(135deg,rgba(226,18,36,0.18),rgba(0,0,0,0.6))" }}>
+      <div className="rounded-2xl border border-red-600/40 p-7 mb-5 relative overflow-hidden" style={{ background: "linear-gradient(135deg,rgba(226,18,36,0.10),rgba(255,255,255,0.6))" }}>
         <div className="flex items-start justify-between gap-4 relative z-10">
           <div>
-            <p className="text-[11px] font-bold tracking-widest text-red-400 uppercase mb-2 flex items-center gap-2">
+            <p className="text-[11px] font-bold tracking-widest text-red-600 uppercase mb-2 flex items-center gap-2">
               <StatusPill status={tournament.status} /> {tournament.sport}
             </p>
-            <h1 className="text-4xl font-bold text-white" style={{ letterSpacing: "-0.02em" }}>{tournament.name}</h1>
+            <h1 className="text-4xl font-bold text-zinc-900" style={{ letterSpacing: "-0.02em" }}>{tournament.name}</h1>
             <p className="text-zinc-400 mt-1">
               {new Date(tournament.startDate).toLocaleDateString()} — {new Date(tournament.endDate).toLocaleDateString()} · {tournament.venue || "TBD"}
             </p>
@@ -1055,8 +1103,8 @@ function TournamentDetail({ tournamentId, teams, onBack, onEdit }: { tournamentI
         </div>
       </div>
 
-      <Tabs defaultValue={tournament.status === 'live' ? 'live' : 'bracket'} className="text-white">
-        <TabsList className="bg-zinc-900 border border-white/10">
+      <Tabs defaultValue={tournament.status === 'live' ? 'live' : 'bracket'} className="text-zinc-900">
+        <TabsList className="bg-zinc-100 border border-zinc-200">
           <TabsTrigger value="live" data-testid="tab-live">Live</TabsTrigger>
           <TabsTrigger value="bracket">Bracket</TabsTrigger>
           <TabsTrigger value="schedule">Schedule</TabsTrigger>
@@ -1091,7 +1139,7 @@ function TournamentDetail({ tournamentId, teams, onBack, onEdit }: { tournamentI
 function KPI({ label, value, accent, sub }: { label: string; value: any; accent?: boolean; sub?: string }) {
   return (
     <div>
-      <p className={`text-3xl font-bold ${accent ? "text-red-500" : "text-white"}`} style={{ letterSpacing: "-0.02em" }}>{value}{sub && <em className="text-base text-red-400 not-italic ml-1">{sub}</em>}</p>
+      <p className={`text-3xl font-bold ${accent ? "text-red-500" : "text-zinc-900"}`} style={{ letterSpacing: "-0.02em" }}>{value}{sub && <em className="text-base text-red-600 not-italic ml-1">{sub}</em>}</p>
       <p className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase mt-1">{label}</p>
     </div>
   );
@@ -1116,45 +1164,45 @@ function LiveConsoleView({ snapshot, tournament, matches, standings, kpi, tourna
       {/* KPI strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="rounded-2xl border border-red-600/40 bg-red-600/[0.07] p-4">
-          <p className="text-[10px] font-bold tracking-widest uppercase text-red-400">Now playing</p>
-          <p className="text-3xl font-bold text-white mt-1">{live.length}</p>
+          <p className="text-[10px] font-bold tracking-widest uppercase text-red-600">Now playing</p>
+          <p className="text-3xl font-bold text-zinc-900 mt-1">{live.length}</p>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
           <p className="text-[10px] font-bold tracking-widest uppercase text-zinc-500">Up next</p>
-          <p className="text-3xl font-bold text-white mt-1">{upcoming.length}</p>
+          <p className="text-3xl font-bold text-zinc-900 mt-1">{upcoming.length}</p>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
           <p className="text-[10px] font-bold tracking-widest uppercase text-zinc-500">Completed</p>
-          <p className="text-3xl font-bold text-white mt-1">{kpi?.completedMatches ?? 0}<span className="text-base text-red-400 ml-1">/{kpi?.totalMatches ?? 0}</span></p>
+          <p className="text-3xl font-bold text-zinc-900 mt-1">{kpi?.completedMatches ?? 0}<span className="text-base text-red-600 ml-1">/{kpi?.totalMatches ?? 0}</span></p>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
           <p className="text-[10px] font-bold tracking-widest uppercase text-zinc-500">Total points</p>
-          <p className="text-3xl font-bold text-white mt-1">{kpi?.totalPoints ?? 0}</p>
+          <p className="text-3xl font-bold text-zinc-900 mt-1">{kpi?.totalPoints ?? 0}</p>
         </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Now playing */}
-        <div className="lg:col-span-2 rounded-2xl border border-white/10 bg-zinc-900/50 p-5" data-testid="now-playing-panel">
+        <div className="lg:col-span-2 rounded-2xl border border-zinc-200 bg-white p-5" data-testid="now-playing-panel">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-white font-bold">Now playing</h3>
-            {live.length > 0 && <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-red-400 font-bold"><span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>Live</span>}
+            <h3 className="text-zinc-900 font-bold">Now playing</h3>
+            {live.length > 0 && <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-red-700 font-bold"><span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>Live</span>}
           </div>
           {live.length === 0 ? (
             <p className="text-zinc-500 text-sm py-6 text-center">Nothing live right now.</p>
           ) : (
             <div className="space-y-2">
               {live.map(m => (
-                <div key={m.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-black/40 border border-red-600/20" data-testid={`live-match-${m.id}`}>
+                <div key={m.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-zinc-100 border border-red-600/20" data-testid={`live-match-${m.id}`}>
                   <div className="flex-1">
-                    <p className="text-white font-semibold text-sm">{teamName(m.team1Id)} <span className="text-zinc-500">vs</span> {teamName(m.team2Id)}</p>
+                    <p className="text-zinc-900 font-semibold text-sm">{teamName(m.team1Id)} <span className="text-zinc-500">vs</span> {teamName(m.team2Id)}</p>
                     <p className="text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5">Round {m.round} · {m.court || 'Court TBD'}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-white tabular-nums">{m.team1Score ?? 0}<span className="text-zinc-600 mx-1">–</span>{m.team2Score ?? 0}</p>
+                    <p className="text-2xl font-bold text-zinc-900 tabular-nums">{m.team1Score ?? 0}<span className="text-zinc-400 mx-1">–</span>{m.team2Score ?? 0}</p>
                   </div>
                   {m.eventId && (
-                    <Button size="sm" variant="outline" className="bg-white/5 border-white/15 text-white hover:bg-white/10" onClick={() => navigate(`/game-scoring?eventId=${m.eventId}`)} data-testid={`button-score-${m.id}`}>
+                    <Button size="sm" variant="outline" className="bg-zinc-100 border-zinc-300 text-zinc-900 hover:bg-zinc-200" onClick={() => navigate(`/game-scoring?eventId=${m.eventId}`)} data-testid={`button-score-${m.id}`}>
                       Score
                     </Button>
                   )}
@@ -1163,14 +1211,14 @@ function LiveConsoleView({ snapshot, tournament, matches, standings, kpi, tourna
             </div>
           )}
           <div className="mt-6">
-            <h4 className="text-white font-bold text-sm mb-2">Up next</h4>
+            <h4 className="text-zinc-900 font-bold text-sm mb-2">Up next</h4>
             {upcoming.length === 0 ? (
               <p className="text-zinc-500 text-sm py-3">No upcoming matches.</p>
             ) : (
               <div className="space-y-1.5">
                 {upcoming.map(m => (
-                  <div key={m.id} className="flex items-center justify-between text-sm px-3 py-2 rounded-lg bg-white/[0.02] border border-white/5">
-                    <span className="text-zinc-300">{teamName(m.team1Id)} <span className="text-zinc-600">vs</span> {teamName(m.team2Id)}</span>
+                  <div key={m.id} className="flex items-center justify-between text-sm px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-200">
+                    <span className="text-zinc-700">{teamName(m.team1Id)} <span className="text-zinc-400">vs</span> {teamName(m.team2Id)}</span>
                     <span className="text-[10px] uppercase tracking-widest text-zinc-500">R{m.round} · {m.court || '—'}</span>
                   </div>
                 ))}
@@ -1178,15 +1226,15 @@ function LiveConsoleView({ snapshot, tournament, matches, standings, kpi, tourna
             )}
           </div>
           <div className="mt-6">
-            <h4 className="text-white font-bold text-sm mb-2">Recent finals</h4>
+            <h4 className="text-zinc-900 font-bold text-sm mb-2">Recent finals</h4>
             {recent.length === 0 ? (
               <p className="text-zinc-500 text-sm py-3">No completed matches yet.</p>
             ) : (
               <div className="space-y-1.5">
                 {recent.map(m => (
-                  <div key={m.id} className="flex items-center justify-between text-sm px-3 py-2 rounded-lg bg-white/[0.02] border border-white/5">
-                    <span className="text-zinc-300">{teamName(m.team1Id)} <span className="text-zinc-600">vs</span> {teamName(m.team2Id)}</span>
-                    <span className="text-white font-semibold tabular-nums">{m.team1Score ?? 0}–{m.team2Score ?? 0}</span>
+                  <div key={m.id} className="flex items-center justify-between text-sm px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-200">
+                    <span className="text-zinc-700">{teamName(m.team1Id)} <span className="text-zinc-400">vs</span> {teamName(m.team2Id)}</span>
+                    <span className="text-zinc-900 font-semibold tabular-nums">{m.team1Score ?? 0}–{m.team2Score ?? 0}</span>
                   </div>
                 ))}
               </div>
@@ -1195,26 +1243,26 @@ function LiveConsoleView({ snapshot, tournament, matches, standings, kpi, tourna
         </div>
 
         {/* Standings ladder */}
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-5" data-testid="ladder-panel">
-          <h3 className="text-white font-bold mb-4">Standings ladder</h3>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5" data-testid="ladder-panel">
+          <h3 className="text-zinc-900 font-bold mb-4">Standings ladder</h3>
           {standings.length === 0 ? (
             <p className="text-zinc-500 text-sm py-6 text-center">No standings yet.</p>
           ) : (
             <ol className="space-y-1.5">
               {standings.slice(0, 8).map((s: any, i: number) => (
-                <li key={s.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/5">
+                <li key={s.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-200">
                   <span className="w-6 text-center text-[11px] font-bold text-zinc-500">{i + 1}</span>
-                  <span className="flex-1 text-sm text-white font-semibold truncate">{s.externalName || `Team #${s.teamId}`}</span>
+                  <span className="flex-1 text-sm text-zinc-900 font-semibold truncate">{s.externalName || `Team #${s.teamId}`}</span>
                   <span className="text-[11px] text-zinc-400 tabular-nums">{s.wins || 0}-{s.losses || 0}{s.ties ? `-${s.ties}` : ''}</span>
                 </li>
               ))}
             </ol>
           )}
-          <div className="mt-5 pt-4 border-t border-white/5">
+          <div className="mt-5 pt-4 border-t border-zinc-200">
             <p className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2">Parent preview</p>
             <p className="text-xs text-zinc-400 mb-3">Parents and players see this same live data inside the event card on their dashboard.</p>
             {live[0]?.eventId && (
-              <Button size="sm" variant="outline" className="bg-white/5 border-white/15 text-white hover:bg-white/10 w-full" onClick={() => navigate(`/events/${live[0].eventId}`)} data-testid="button-open-parent-event">
+              <Button size="sm" variant="outline" className="bg-zinc-100 border-zinc-300 text-zinc-900 hover:bg-zinc-200 w-full" onClick={() => navigate(`/events/${live[0].eventId}`)} data-testid="button-open-parent-event">
                 Open a parent's event view
               </Button>
             )}
@@ -1275,9 +1323,9 @@ function BracketView({ matches, teams, tournamentId }: { matches: Match[]; teams
 
   if (matches.length === 0) {
     return (
-      <div className="mt-6 rounded-xl border border-white/10 bg-zinc-900/50 p-12 text-center">
-        <Trophy className="w-10 h-10 text-zinc-600 mx-auto mb-3" />
-        <p className="text-white font-bold mb-1">No bracket yet</p>
+      <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-12 text-center">
+        <Trophy className="w-10 h-10 text-zinc-400 mx-auto mb-3" />
+        <p className="text-zinc-900 font-bold mb-1">No bracket yet</p>
         <p className="text-zinc-500 text-sm">Click Publish & Schedule to generate the bracket.</p>
       </div>
     );
@@ -1294,13 +1342,13 @@ function BracketView({ matches, teams, tournamentId }: { matches: Match[]; teams
 
   return (
     <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
-      <div className="rounded-xl border border-white/10 bg-zinc-900/50 p-6 overflow-x-auto" style={{ backgroundImage: "radial-gradient(circle at 1px 1px,rgba(255,255,255,0.05) 1px,transparent 0)", backgroundSize: "24px 24px" }}>
+      <div className="rounded-xl border border-zinc-200 bg-white p-6 overflow-x-auto" style={{ backgroundImage: "radial-gradient(circle at 1px 1px,rgba(0,0,0,0.06) 1px,transparent 0)", backgroundSize: "24px 24px" }}>
         <div className="flex items-center justify-between mb-4 min-w-max">
           <p className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">Bracket</p>
           <Button
             size="sm"
             variant="outline"
-            className="border-white/10 bg-white/5 text-white hover:bg-white/10"
+            className="border-zinc-200 bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
             disabled={reseed.isPending}
             onClick={() => {
               if (confirm("AI re-seed will reshuffle round-1 matchups based on team strength. Existing scores stay intact. Continue?")) {
@@ -1322,16 +1370,16 @@ function BracketView({ matches, teams, tournamentId }: { matches: Match[]; teams
                   onClick={() => openMatch(m)}
                   data-testid={`match-${m.id}`}
                   className={`rounded-lg p-3 text-left border transition-all ${
-                    selectedMatch?.id === m.id ? "border-red-600 shadow-[0_0_8px_rgba(226,18,36,0.4)]" : "border-white/10"
+                    selectedMatch?.id === m.id ? "border-red-600 shadow-[0_0_8px_rgba(226,18,36,0.4)]" : "border-zinc-200"
                   }`}
-                  style={{ background: "rgba(20,20,22,0.95)" }}
+                  style={{ background: "rgba(255,255,255,1)" }}
                 >
                   <p className="text-[9px] font-bold tracking-widest text-zinc-500 uppercase mb-1.5">M{m.matchNumber} · {m.status}</p>
-                  <div className={`flex justify-between text-sm py-1 ${m.winnerTeamId === m.team1Id ? "text-green-400 font-bold" : "text-white"}`}>
+                  <div className={`flex justify-between text-sm py-1 ${m.winnerTeamId === m.team1Id ? "text-green-700 font-bold" : "text-zinc-900"}`}>
                     <span className="truncate pr-2">{teamName(m.team1Id)}</span>
                     <span className="font-mono">{m.team1Score ?? "-"}</span>
                   </div>
-                  <div className={`flex justify-between text-sm py-1 border-t border-white/5 ${m.winnerTeamId === m.team2Id ? "text-green-400 font-bold" : "text-white"}`}>
+                  <div className={`flex justify-between text-sm py-1 border-t border-zinc-200 ${m.winnerTeamId === m.team2Id ? "text-green-700 font-bold" : "text-zinc-900"}`}>
                     <span className="truncate pr-2">{teamName(m.team2Id)}</span>
                     <span className="font-mono">{m.team2Score ?? "-"}</span>
                   </div>
@@ -1342,17 +1390,17 @@ function BracketView({ matches, teams, tournamentId }: { matches: Match[]; teams
         </div>
       </div>
 
-      <aside className="rounded-xl border border-white/10 bg-zinc-900/50 p-5">
+      <aside className="rounded-xl border border-zinc-200 bg-white p-5">
         {selectedMatch ? (
           <div>
             <p className="text-[11px] font-bold tracking-widest text-zinc-500 uppercase mb-3">Match {selectedMatch.matchNumber}</p>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg bg-white/5 p-3 text-center">
+                <div className="rounded-lg bg-zinc-100 p-3 text-center">
                   <p className="text-zinc-500 text-[10px] uppercase tracking-widest mb-1">{teamName(selectedMatch.team1Id)}</p>
                   <p className="text-3xl font-bold tabular-nums">{selectedMatch.team1Score ?? "—"}</p>
                 </div>
-                <div className="rounded-lg bg-white/5 p-3 text-center">
+                <div className="rounded-lg bg-zinc-100 p-3 text-center">
                   <p className="text-zinc-500 text-[10px] uppercase tracking-widest mb-1">{teamName(selectedMatch.team2Id)}</p>
                   <p className="text-3xl font-bold tabular-nums">{selectedMatch.team2Score ?? "—"}</p>
                 </div>
@@ -1365,12 +1413,12 @@ function BracketView({ matches, teams, tournamentId }: { matches: Match[]; teams
                 <Input
                   value={draft.court}
                   onChange={e => setDraft(d => ({ ...d, court: e.target.value }))}
-                  className="bg-white/5 border-white/10 text-white"
+                  className="bg-zinc-100 border-zinc-200 text-zinc-900"
                   data-testid="inspector-court"
                 />
               </div>
               <Button
-                className="w-full bg-white/10 hover:bg-white/20 text-white"
+                className="w-full bg-zinc-200 hover:bg-zinc-300 text-zinc-900"
                 onClick={() => updateMatch.mutate({ id: selectedMatch.id, data: { court: draft.court || null } })}
                 disabled={updateMatch.isPending}
                 data-testid="inspector-save"
@@ -1511,12 +1559,12 @@ function ScheduleView({ matches, events, tournament, readOnly }: { matches: Matc
   }
 
   return (
-    <div className="mt-6 rounded-xl border border-white/10 bg-zinc-900/50 p-5 overflow-x-auto">
+    <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-5 overflow-x-auto">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <p className="text-[11px] font-bold tracking-widest text-zinc-500 uppercase">Schedule grid</p>
           {conflictIds.size > 0 && (
-            <Badge className="bg-red-600/30 text-red-300 border border-red-600/40" data-testid="schedule-conflicts">
+            <Badge className="bg-red-100 text-red-700 border border-red-300" data-testid="schedule-conflicts">
               {conflictIds.size / 2 > 0 ? `${Math.ceil(conflictIds.size / 2)} conflict${conflictIds.size === 2 ? '' : 's'}` : ''}
             </Badge>
           )}
@@ -1536,29 +1584,29 @@ function ScheduleView({ matches, events, tournament, readOnly }: { matches: Matc
       <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${courts.length}, minmax(240px, 1fr))` }}>
         {groupedMatches.map(g => (
           <div key={g.court}>
-            <p className="text-white font-bold text-sm mb-3 px-2">{g.court}</p>
+            <p className="text-zinc-900 font-bold text-sm mb-3 px-2">{g.court}</p>
             <div className="space-y-2">
-              {g.matches.length === 0 && <p className="text-zinc-600 text-xs text-center py-3">No matches</p>}
+              {g.matches.length === 0 && <p className="text-zinc-400 text-xs text-center py-3">No matches</p>}
               {g.matches.map(m => {
                 const ev = m.eventId ? eventById[Number(m.eventId)] : null;
                 const inConflict = conflictIds.has(m.id);
                 return (
                   <div key={m.id} className={`rounded-lg p-3 text-xs border ${
                     inConflict ? "border-red-500/60 bg-red-500/[0.06]" :
-                    m.status === "live" ? "border-green-500/40 bg-green-500/[0.06]" : "border-white/10 bg-white/[0.03]"
+                    m.status === "live" ? "border-green-500/40 bg-green-500/[0.06]" : "border-zinc-200 bg-zinc-50"
                   }`}>
                     <div className="flex justify-between mb-1">
                       <span className="text-[9px] font-bold tracking-widest text-zinc-500 uppercase">R{m.round} · M{m.matchNumber}</span>
                       <span className="text-[9px] text-zinc-500">{m.status}</span>
                     </div>
-                    <p className="text-white font-semibold leading-tight">{ev?.title?.split(":")?.[1]?.trim() || `Match #${m.matchNumber}`}</p>
+                    <p className="text-zinc-900 font-semibold leading-tight">{ev?.title?.split(":")?.[1]?.trim() || `Match #${m.matchNumber}`}</p>
                     {inConflict && (
-                      <p className="text-red-400 text-[10px] mt-1">Conflicts with another match on this court.</p>
+                      <p className="text-red-700 text-[10px] mt-1">Conflicts with another match on this court.</p>
                     )}
                     {!readOnly && (
                       <div className="mt-2 space-y-1.5">
                         <select
-                          className="w-full bg-white/5 border border-white/10 rounded px-1 py-1 text-[10px] text-white"
+                          className="w-full bg-zinc-100 border border-zinc-200 rounded px-1 py-1 text-[10px] text-zinc-900"
                           value={courtFor(m)}
                           onChange={e => setEdit(m.id, { court: e.target.value })}
                           data-testid={`schedule-court-${m.id}`}
@@ -1569,14 +1617,14 @@ function ScheduleView({ matches, events, tournament, readOnly }: { matches: Matc
                           <>
                             <input
                               type="datetime-local"
-                              className="w-full bg-white/5 border border-white/10 rounded px-1 py-1 text-[10px] text-white"
+                              className="w-full bg-zinc-100 border border-zinc-200 rounded px-1 py-1 text-[10px] text-zinc-900"
                               value={startFor(m) || ''}
                               onChange={e => setEdit(m.id, { startTime: e.target.value })}
                               data-testid={`schedule-start-${m.id}`}
                             />
                             <input
                               type="datetime-local"
-                              className="w-full bg-white/5 border border-white/10 rounded px-1 py-1 text-[10px] text-white"
+                              className="w-full bg-zinc-100 border border-zinc-200 rounded px-1 py-1 text-[10px] text-zinc-900"
                               value={endFor(m) || ''}
                               onChange={e => setEdit(m.id, { endTime: e.target.value })}
                               data-testid={`schedule-end-${m.id}`}
@@ -1600,7 +1648,7 @@ function ScheduleView({ matches, events, tournament, readOnly }: { matches: Matc
           <p className="text-zinc-500 text-xs mb-2">Unassigned ({noCourtMatches.length})</p>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
             {noCourtMatches.map(m => (
-              <div key={m.id} className="rounded-lg p-3 text-xs border border-dashed border-white/15 bg-white/[0.02]">
+              <div key={m.id} className="rounded-lg p-3 text-xs border border-dashed border-zinc-300 bg-zinc-50">
                 <div className="flex items-center justify-between mb-1">
                   <span>R{m.round} M{m.matchNumber}</span>
                   <span className="text-zinc-500">{m.status}</span>
@@ -1608,7 +1656,7 @@ function ScheduleView({ matches, events, tournament, readOnly }: { matches: Matc
                 {!readOnly && (
                   <div className="mt-1">
                     <select
-                      className="w-full bg-white/5 border border-white/10 rounded px-1 py-1 text-[10px] text-white"
+                      className="w-full bg-zinc-100 border border-zinc-200 rounded px-1 py-1 text-[10px] text-zinc-900"
                       value={courtFor(m)}
                       onChange={e => setEdit(m.id, { court: e.target.value })}
                     >
@@ -1627,7 +1675,7 @@ function ScheduleView({ matches, events, tournament, readOnly }: { matches: Matc
 
 function StandingsView({ standings }: { standings: any[] }) {
   return (
-    <div className="mt-6 rounded-xl border border-white/10 bg-zinc-900/50 p-5">
+    <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-5">
       <table className="w-full text-sm">
         <thead>
           <tr className="text-zinc-500 text-[10px] tracking-widest uppercase">
@@ -1641,13 +1689,13 @@ function StandingsView({ standings }: { standings: any[] }) {
         </thead>
         <tbody>
           {standings.map((s, i) => (
-            <tr key={s.id} className="border-t border-white/5">
-              <td className={`py-2 font-mono ${i === 0 ? "text-yellow-400" : "text-zinc-400"}`}>{i + 1}</td>
-              <td className="text-white font-semibold">{s.externalName || `Team #${s.teamId}`}</td>
-              <td className="text-right text-white">{s.played}</td>
-              <td className="text-right text-white">{s.wins || 0}</td>
-              <td className="text-right text-white">{s.losses || 0}</td>
-              <td className={`text-right font-bold ${s.gd > 0 ? "text-green-400" : s.gd < 0 ? "text-red-400" : "text-zinc-400"}`}>{s.gd > 0 ? "+" : ""}{s.gd}</td>
+            <tr key={s.id} className="border-t border-zinc-200">
+              <td className={`py-2 font-mono ${i === 0 ? "text-amber-600 font-bold" : "text-zinc-500"}`}>{i + 1}</td>
+              <td className="text-zinc-900 font-semibold">{s.externalName || `Team #${s.teamId}`}</td>
+              <td className="text-right text-zinc-900">{s.played}</td>
+              <td className="text-right text-zinc-900">{s.wins || 0}</td>
+              <td className="text-right text-zinc-900">{s.losses || 0}</td>
+              <td className={`text-right font-bold ${s.gd > 0 ? "text-green-700" : s.gd < 0 ? "text-red-600" : "text-zinc-400"}`}>{s.gd > 0 ? "+" : ""}{s.gd}</td>
             </tr>
           ))}
         </tbody>
@@ -1658,19 +1706,19 @@ function StandingsView({ standings }: { standings: any[] }) {
 
 function LeadersView({ topScorers }: { topScorers: any[] }) {
   if (!topScorers || topScorers.length === 0) {
-    return <div className="mt-6 text-zinc-500 text-center p-12 rounded-xl border border-white/10 bg-zinc-900/50">No scoring data yet</div>;
+    return <div className="mt-6 text-zinc-500 text-center p-12 rounded-xl border border-zinc-200 bg-white">No scoring data yet</div>;
   }
   return (
-    <div className="mt-6 rounded-xl border border-white/10 bg-zinc-900/50 p-5 space-y-2">
+    <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-5 space-y-2">
       {topScorers.map((p, i) => (
-        <div key={p.playerId} className="flex items-center gap-4 p-3 rounded-lg bg-white/[0.03]">
-          <span className={`font-bold text-2xl w-7 ${i === 0 ? "text-yellow-400" : "text-zinc-600"}`}>{i + 1}</span>
+        <div key={p.playerId} className="flex items-center gap-4 p-3 rounded-lg bg-zinc-50">
+          <span className={`font-bold text-2xl w-7 ${i === 0 ? "text-amber-600 font-bold" : "text-zinc-500"}`}>{i + 1}</span>
           <div className="flex-1">
-            <p className="text-white font-bold">{p.playerName}</p>
+            <p className="text-zinc-900 font-bold">{p.playerName}</p>
             <p className="text-zinc-500 text-xs">{p.games} games</p>
           </div>
           <div className="text-right">
-            <p className="text-white text-2xl font-bold">{p.points}</p>
+            <p className="text-zinc-900 text-2xl font-bold">{p.points}</p>
             <p className="text-zinc-500 text-[10px] tracking-widest uppercase">PTS</p>
           </div>
         </div>
@@ -1698,18 +1746,18 @@ function SettingsView({ tournament }: { tournament: Tournament }) {
     },
   });
   return (
-    <div className="mt-6 rounded-xl border border-white/10 bg-zinc-900/50 p-6 space-y-4 max-w-2xl">
+    <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-6 space-y-4 max-w-2xl">
       <div>
         <Label className="text-zinc-400 text-xs uppercase tracking-wider mb-1 block">Name</Label>
-        <Input value={edit.name} onChange={e => setEdit(s => ({ ...s, name: e.target.value }))} className="bg-white/5 border-white/10 text-white" />
+        <Input value={edit.name} onChange={e => setEdit(s => ({ ...s, name: e.target.value }))} className="bg-zinc-100 border-zinc-200 text-zinc-900" />
       </div>
       <div>
         <Label className="text-zinc-400 text-xs uppercase tracking-wider mb-1 block">Venue</Label>
-        <Input value={edit.venue} onChange={e => setEdit(s => ({ ...s, venue: e.target.value }))} className="bg-white/5 border-white/10 text-white" />
+        <Input value={edit.venue} onChange={e => setEdit(s => ({ ...s, venue: e.target.value }))} className="bg-zinc-100 border-zinc-200 text-zinc-900" />
       </div>
       <div>
         <Label className="text-zinc-400 text-xs uppercase tracking-wider mb-1 block">Description</Label>
-        <Textarea value={edit.description} onChange={e => setEdit(s => ({ ...s, description: e.target.value }))} rows={4} className="bg-white/5 border-white/10 text-white" />
+        <Textarea value={edit.description} onChange={e => setEdit(s => ({ ...s, description: e.target.value }))} rows={4} className="bg-zinc-100 border-zinc-200 text-zinc-900" />
       </div>
       <div className="flex items-center gap-3">
         <input
@@ -1718,7 +1766,7 @@ function SettingsView({ tournament }: { tournament: Tournament }) {
           onChange={e => setEdit(s => ({ ...s, isPublic: e.target.checked }))}
           className="w-4 h-4 accent-red-600"
         />
-        <span className="text-zinc-300 text-sm">List on public Marketplace</span>
+        <span className="text-zinc-700 text-sm">List on public Marketplace</span>
       </div>
       <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending} className="bg-red-600 hover:bg-red-700">
         {updateMutation.isPending ? "Saving…" : "Save Settings"}
@@ -1753,36 +1801,36 @@ function JoinRequestsDrawer({ requests, tournaments, teams, onClose }: { request
 
   return (
     <div className="fixed inset-0 z-50 flex" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/70" />
-      <div className="relative ml-auto w-full max-w-md bg-zinc-950 border-l border-white/10 p-6 overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="absolute inset-0 bg-zinc-900/30" />
+      <div className="relative ml-auto w-full max-w-md bg-white border-l border-zinc-200 p-6 overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-white text-xl font-bold">Join Requests</h3>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white"><X className="w-5 h-5" /></button>
+          <h3 className="text-zinc-900 text-xl font-bold">Join Requests</h3>
+          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-900"><X className="w-5 h-5" /></button>
         </div>
         {requests.length === 0 ? (
           <p className="text-zinc-500 text-sm text-center py-12">No requests yet</p>
         ) : (
           <div className="space-y-3">
             {requests.map(r => (
-              <div key={r.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <div key={r.id} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <p className="text-white font-bold">{teamName(r.requesterTeamId)}</p>
-                    <p className="text-zinc-400 text-xs mt-0.5">wants to join <span className="text-white">{tournamentName(r.tournamentId)}</span></p>
-                    {r.createdAt && <p className="text-zinc-600 text-[11px] mt-1">Requested {fmtDate(r.createdAt)}</p>}
+                    <p className="text-zinc-900 font-bold">{teamName(r.requesterTeamId)}</p>
+                    <p className="text-zinc-400 text-xs mt-0.5">wants to join <span className="text-zinc-900">{tournamentName(r.tournamentId)}</span></p>
+                    {r.createdAt && <p className="text-zinc-400 text-[11px] mt-1">Requested {fmtDate(r.createdAt)}</p>}
                   </div>
                   <StatusPill status={r.status} />
                 </div>
-                {r.message && <p className="text-zinc-300 text-sm mt-2 italic">"{r.message}"</p>}
+                {r.message && <p className="text-zinc-700 text-sm mt-2 italic">"{r.message}"</p>}
                 {r.status !== "pending" && r.respondedAt && (
-                  <p className="text-zinc-600 text-[11px] mt-2">Responded {fmtDate(r.respondedAt)}</p>
+                  <p className="text-zinc-400 text-[11px] mt-2">Responded {fmtDate(r.respondedAt)}</p>
                 )}
                 {r.status === "pending" && (
                   <div className="flex gap-2 mt-3">
                     <Button size="sm" className="bg-green-600 hover:bg-green-700 flex-1" onClick={() => respondMutation.mutate({ id: r.id, status: "approved" })}>
                       <Check className="w-3.5 h-3.5 mr-1" /> Approve
                     </Button>
-                    <Button size="sm" variant="outline" className="bg-white/5 border-white/15 text-white hover:bg-white/10 flex-1" onClick={() => respondMutation.mutate({ id: r.id, status: "denied" })}>
+                    <Button size="sm" variant="outline" className="bg-zinc-100 border-zinc-300 text-zinc-900 hover:bg-zinc-200 flex-1" onClick={() => respondMutation.mutate({ id: r.id, status: "denied" })}>
                       <X className="w-3.5 h-3.5 mr-1" /> Deny
                     </Button>
                   </div>
@@ -1846,14 +1894,14 @@ function ExternalListingsDrawer({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/70" />
-      <div className="relative ml-auto w-full max-w-xl bg-zinc-950 border-l border-white/10 p-6 overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="absolute inset-0 bg-zinc-900/30" />
+      <div className="relative ml-auto w-full max-w-xl bg-white border-l border-zinc-200 p-6 overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-white text-xl font-bold">{showForm ? (editingId ? "Edit listing" : "New listing") : "External Listings"}</h3>
+            <h3 className="text-zinc-900 text-xl font-bold">{showForm ? (editingId ? "Edit listing" : "New listing") : "External Listings"}</h3>
             <p className="text-zinc-500 text-xs mt-1">Promote tournaments hosted outside BoxStat to the Marketplace.</p>
           </div>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-900"><X className="w-5 h-5" /></button>
         </div>
 
         {!showForm ? (
@@ -1864,20 +1912,20 @@ function ExternalListingsDrawer({ onClose }: { onClose: () => void }) {
             <div className="space-y-3">
               {listings.length === 0 && <p className="text-zinc-500 text-sm text-center py-8">No listings yet</p>}
               {listings.map(l => (
-                <div key={l.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <div key={l.id} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-white font-bold">{l.name}</p>
+                      <p className="text-zinc-900 font-bold">{l.name}</p>
                       <p className="text-zinc-500 text-xs mt-1">{l.sport} · {l.location}</p>
                       <p className="text-zinc-500 text-xs">{new Date(l.startDate).toLocaleDateString()}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => startEdit(l)} className="text-zinc-500 hover:text-white" title="Edit" data-testid={`edit-listing-${l.id}`}><Edit className="w-4 h-4" /></button>
+                      <button onClick={() => startEdit(l)} className="text-zinc-500 hover:text-zinc-900" title="Edit" data-testid={`edit-listing-${l.id}`}><Edit className="w-4 h-4" /></button>
                       <button onClick={() => remove.mutate(l.id)} className="text-zinc-500 hover:text-red-500" title="Delete" data-testid={`delete-listing-${l.id}`}><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </div>
                   {l.registrationUrl && (
-                    <a href={l.registrationUrl} target="_blank" rel="noopener" className="text-red-400 text-xs flex items-center gap-1 mt-2">
+                    <a href={l.registrationUrl} target="_blank" rel="noopener" className="text-red-600 text-xs flex items-center gap-1 mt-2">
                       Registration <ExternalLink className="w-3 h-3" />
                     </a>
                   )}
@@ -1887,25 +1935,25 @@ function ExternalListingsDrawer({ onClose }: { onClose: () => void }) {
           </>
         ) : (
           <div className="space-y-3">
-            <Input placeholder="Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="bg-white/5 border-white/10 text-white" />
+            <Input placeholder="Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="bg-zinc-100 border-zinc-200 text-zinc-900" />
             <Select value={form.sport} onValueChange={v => setForm(f => ({ ...f, sport: v }))}>
-              <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="bg-zinc-100 border-zinc-200 text-zinc-900"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {SPORT_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.icon} {s.label}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Input placeholder="Age group" value={form.ageGroup} onChange={e => setForm(f => ({ ...f, ageGroup: e.target.value }))} className="bg-white/5 border-white/10 text-white" />
+            <Input placeholder="Age group" value={form.ageGroup} onChange={e => setForm(f => ({ ...f, ageGroup: e.target.value }))} className="bg-zinc-100 border-zinc-200 text-zinc-900" />
             <div className="grid grid-cols-2 gap-2">
-              <Input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} className="bg-white/5 border-white/10 text-white" />
-              <Input type="date" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} className="bg-white/5 border-white/10 text-white" />
+              <Input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} className="bg-zinc-100 border-zinc-200 text-zinc-900" />
+              <Input type="date" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} className="bg-zinc-100 border-zinc-200 text-zinc-900" />
             </div>
-            <Input placeholder="Location" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} className="bg-white/5 border-white/10 text-white" />
-            <Input placeholder="Host name" value={form.hostName} onChange={e => setForm(f => ({ ...f, hostName: e.target.value }))} className="bg-white/5 border-white/10 text-white" />
-            <Input placeholder="Registration URL" value={form.registrationUrl} onChange={e => setForm(f => ({ ...f, registrationUrl: e.target.value }))} className="bg-white/5 border-white/10 text-white" />
-            <Input placeholder="Contact email" value={form.contactEmail} onChange={e => setForm(f => ({ ...f, contactEmail: e.target.value }))} className="bg-white/5 border-white/10 text-white" />
-            <Textarea placeholder="Description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className="bg-white/5 border-white/10 text-white" />
+            <Input placeholder="Location" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} className="bg-zinc-100 border-zinc-200 text-zinc-900" />
+            <Input placeholder="Host name" value={form.hostName} onChange={e => setForm(f => ({ ...f, hostName: e.target.value }))} className="bg-zinc-100 border-zinc-200 text-zinc-900" />
+            <Input placeholder="Registration URL" value={form.registrationUrl} onChange={e => setForm(f => ({ ...f, registrationUrl: e.target.value }))} className="bg-zinc-100 border-zinc-200 text-zinc-900" />
+            <Input placeholder="Contact email" value={form.contactEmail} onChange={e => setForm(f => ({ ...f, contactEmail: e.target.value }))} className="bg-zinc-100 border-zinc-200 text-zinc-900" />
+            <Textarea placeholder="Description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className="bg-zinc-100 border-zinc-200 text-zinc-900" />
             <div className="flex gap-2">
-              <Button variant="outline" onClick={reset} className="bg-white/5 border-white/15 text-white hover:bg-white/10 flex-1">Cancel</Button>
+              <Button variant="outline" onClick={reset} className="bg-zinc-100 border-zinc-300 text-zinc-900 hover:bg-zinc-200 flex-1">Cancel</Button>
               <Button onClick={() => save.mutate()} disabled={save.isPending || !form.name || !form.startDate || !form.endDate || !form.location || !form.hostName || !form.registrationUrl} className="bg-red-600 hover:bg-red-700 flex-1" data-testid="save-listing">
                 {save.isPending ? "Saving…" : (editingId ? "Update" : "Save")}
               </Button>

@@ -64,6 +64,7 @@ import { analyzePlayerAttendance, getTeamCoachIds, getOrgAdminIds, triggerRealTi
 import { db } from "./db";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards, platformSettings, organizations, attendances, rsvpResponses, contactManagementMessages, payments, messages as messagesTable, gameSessions, gamePlayerStats, events } from "@shared/schema";
+import * as schema from "@shared/schema";
 import type { User } from "@shared/schema";
 import type { InviteRecord } from "@shared/types/migration";
 import { computeAccessStatus, type AccessStatusInput } from "@shared/access-status";
@@ -21830,6 +21831,1090 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
+  });
+
+  // =============================================
+  // Task #357: TOURNAMENTS, MARKETPLACE, JOIN REQUESTS
+  // =============================================
+
+  // ---- Auth helpers for tournament-scoped resources ----
+  type AuthUser = { id: string; organizationId: string; role: string };
+  type TournamentRow = typeof schema.tournaments.$inferSelect;
+  type ListingRow = typeof schema.tournamentExternalListings.$inferSelect;
+  type AuthGuardResult =
+    | { ok: true; tournament: TournamentRow }
+    | { ok: false; status: number; message: string };
+  type ListingGuardResult =
+    | { ok: true; listing: ListingRow }
+    | { ok: false; status: number; message: string };
+
+  async function requireTournamentOrgOwner(tournamentId: number, user: AuthUser): Promise<AuthGuardResult> {
+    if (!tournamentId || isNaN(tournamentId)) return { ok: false, status: 400, message: 'Invalid tournament id' };
+    const t = await storage.getTournament(tournamentId);
+    if (!t) return { ok: false, status: 404, message: 'Tournament not found' };
+    if (t.organizationId !== user.organizationId) return { ok: false, status: 403, message: 'Forbidden' };
+    if (user.role !== 'admin' && user.role !== 'coach') return { ok: false, status: 403, message: 'Forbidden' };
+    return { ok: true, tournament: t };
+  }
+  async function requireMatchOrgOwner(matchId: number, user: AuthUser): Promise<AuthGuardResult> {
+    if (!matchId || isNaN(matchId)) return { ok: false, status: 400, message: 'Invalid match id' };
+    const [m] = await db.select().from(schema.tournamentMatches).where(eq(schema.tournamentMatches.id, matchId));
+    if (!m) return { ok: false, status: 404, message: 'Match not found' };
+    return requireTournamentOrgOwner(m.tournamentId, user);
+  }
+  async function requireTeamOrgOwner(teamRowId: number, user: AuthUser): Promise<AuthGuardResult> {
+    if (!teamRowId || isNaN(teamRowId)) return { ok: false, status: 400, message: 'Invalid team id' };
+    const [tt] = await db.select().from(schema.tournamentTeams).where(eq(schema.tournamentTeams.id, teamRowId));
+    if (!tt) return { ok: false, status: 404, message: 'Team not found' };
+    return requireTournamentOrgOwner(tt.tournamentId, user);
+  }
+  async function requireListingOrgOwner(listingId: number, user: AuthUser): Promise<ListingGuardResult> {
+    if (!listingId || isNaN(listingId)) return { ok: false, status: 400, message: 'Invalid listing id' };
+    const [l] = await db.select().from(schema.tournamentExternalListings).where(eq(schema.tournamentExternalListings.id, listingId));
+    if (!l) return { ok: false, status: 404, message: 'Listing not found' };
+    if (l.organizationId !== user.organizationId) return { ok: false, status: 403, message: 'Forbidden' };
+    if (user.role !== 'admin' && user.role !== 'coach') return { ok: false, status: 403, message: 'Forbidden' };
+    return { ok: true, listing: l };
+  }
+
+  // ---- AI Builder helper (deterministic with optional LLM enhancement) ----
+  async function buildAiSuggestion(state: any, history: any[]): Promise<any> {
+    const teamCount = Array.isArray(state.teams) ? state.teams.length : 0;
+    const days = (state.startDate && state.endDate) ?
+      Math.max(1, Math.ceil((new Date(state.endDate).getTime() - new Date(state.startDate).getTime()) / 86400000) + 1) : 1;
+    let recommendedFormat = 'single_elim';
+    if (teamCount >= 12) recommendedFormat = 'groups_knockouts';
+    else if (teamCount >= 8 && days >= 2) recommendedFormat = 'double_elim';
+    else if (teamCount <= 6 && days >= 2) recommendedFormat = 'round_robin';
+    const courtsCount = (state.courts || []).length || 1;
+    const totalSlotsPerDay = 8;
+    const matchesNeeded = Math.max(0, teamCount - 1);
+    const tip = `Based on your ${teamCount}-team field over ${days} day(s), I recommend a ${recommendedFormat.replace('_', ' ')} format. With ${courtsCount} court(s) you can run ~${courtsCount * totalSlotsPerDay} games per day.`;
+    const seedingOrder = (state.teams || []).map((t: any, i: number) => ({ ...t, seed: i + 1 }));
+    // Conflict detection: same-org early matchups
+    const warnings: string[] = [];
+    if (teamCount >= 2) {
+      const orgs = new Map<string, number>();
+      for (const t of state.teams || []) {
+        const k = t.organizationId || t.externalContactEmail || 'unknown';
+        orgs.set(k, (orgs.get(k) || 0) + 1);
+      }
+      for (const [k, n] of orgs) if (n > 1) warnings.push(`${n} teams share host "${k}" — re-seed to avoid early matchup.`);
+    }
+    return {
+      tip,
+      recommendedFormat,
+      seedingOrder,
+      schedule: { matchesNeeded, courtsCount, days },
+      warnings,
+      historyCount: history.length,
+    };
+  }
+
+  // Optional LLM-backed chat enrichment using OpenAI-compatible env keys.
+  // Falls back to deterministic helper text when no key is configured.
+  async function llmChatReply(message: string, context: unknown): Promise<string | null> {
+    const apiKey = process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY;
+    if (!apiKey || !message) return null;
+    try {
+      if (process.env.OPENAI_API_KEY) {
+        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: 'You are an assistant inside a tournament builder. Reply tersely (≤2 sentences) with concrete next-step advice. Context JSON: ' + JSON.stringify(context).slice(0, 1500) },
+              { role: 'user', content: String(message).slice(0, 1000) },
+            ],
+            max_tokens: 200,
+            temperature: 0.4,
+          }),
+        });
+        if (resp.ok) {
+          const j = await resp.json() as { choices?: Array<{ message?: { content?: string } }> };
+          return j.choices?.[0]?.message?.content?.trim() || null;
+        }
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn('AI builder LLM call failed, falling back:', msg);
+    }
+    return null;
+  }
+
+  app.post('/api/tournaments/ai-builder', requireAuth, async (req: any, res) => {
+    try {
+      const { state, action, message } = req.body;
+      const orgId = req.user.organizationId;
+      const history = await storage.getTournamentsByOrganization(orgId);
+      const suggestion = await buildAiSuggestion(state || {}, history);
+      let chatReply: string | undefined;
+      if (action === 'chat' && message) {
+        const llm = await llmChatReply(message, { state, suggestion });
+        chatReply = llm || `${suggestion.tip} (You asked: "${String(message).slice(0, 160)}")`;
+      }
+      res.json({ ...suggestion, chatReply, llmEnabled: !!process.env.OPENAI_API_KEY });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // ---- Tournament CRUD ----
+  app.get('/api/tournaments', requireAuth, async (req: any, res) => {
+    try {
+      const list = await storage.getTournamentsByOrganization(req.user.organizationId);
+      res.json(list);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.get('/api/tournaments/:id', optionalAuth, async (req: any, res) => {
+    try {
+      const t = await storage.getTournament(parseInt(req.params.id));
+      if (!t) return res.status(404).json({ message: 'Not found' });
+      const userOrgId = req.user?.organizationId;
+      const isOwner = userOrgId && userOrgId === t.organizationId;
+      const isVisible = t.status !== 'draft' && t.isPublic === true;
+      if (!isOwner && !isVisible) return res.status(404).json({ message: 'Not found' });
+      if (!isOwner) {
+        const { courts: _c, ...publicT } = t;
+        return res.json({ ...publicT, _public: true });
+      }
+      res.json(t);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post('/api/tournaments', requireAuth, async (req: any, res) => {
+    try {
+      const { role, id: userId, organizationId } = req.user;
+      if (role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+      const data = { ...req.body, organizationId, createdBy: userId };
+      const t = await storage.createTournament(data);
+      res.json(t);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.patch('/api/tournaments/:id', requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin' && req.user.role !== 'coach') return res.status(403).json({ message: 'Forbidden' });
+      const t = await storage.getTournament(parseInt(req.params.id));
+      if (!t || t.organizationId !== req.user.organizationId) return res.status(404).json({ message: 'Not found' });
+      // Whitelist editable fields so callers can't escalate org/owner/etc.
+      const allowed = [
+        'name', 'description', 'sport', 'format', 'ageGroup', 'startDate', 'endDate',
+        'facilityId', 'venue', 'courts', 'rules', 'status', 'isPublic',
+        'hostName', 'registrationUrl', 'contactEmail', 'bracketSize',
+      ];
+      const patch: Record<string, any> = {};
+      for (const k of allowed) {
+        if (Object.prototype.hasOwnProperty.call(req.body, k)) patch[k] = req.body[k];
+      }
+      const updated = await storage.updateTournament(parseInt(req.params.id), patch);
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.delete('/api/tournaments/:id', requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin') return res.status(403).json({ message: 'Forbidden' });
+      const t = await storage.getTournament(parseInt(req.params.id));
+      if (!t || t.organizationId !== req.user.organizationId) return res.status(404).json({ message: 'Not found' });
+      await storage.deleteTournament(parseInt(req.params.id));
+      res.json({ ok: true });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ---- Tournament Teams ----
+  app.get('/api/tournaments/:id/teams', optionalAuth, async (req: any, res) => {
+    try {
+      const tid = parseInt(req.params.id);
+      const t = await storage.getTournament(tid);
+      if (!t) return res.status(404).json({ message: 'Not found' });
+      const userOrgId = req.user?.organizationId;
+      const isOwner = userOrgId && userOrgId === t.organizationId;
+      const isVisible = t.status !== 'draft' && t.isPublic === true;
+      if (!isOwner && !isVisible) return res.status(404).json({ message: 'Not found' });
+      const teams = await storage.getTournamentTeams(tid);
+      res.json(teams);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post('/api/tournaments/:id/teams', requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin' && req.user.role !== 'coach') return res.status(403).json({ message: 'Forbidden' });
+      const t = await storage.getTournament(parseInt(req.params.id));
+      if (!t || t.organizationId !== req.user.organizationId) return res.status(404).json({ message: 'Not found' });
+      const data = { ...req.body, tournamentId: parseInt(req.params.id) };
+      // External invites start in 'invited' status; internal teams 'confirmed'.
+      if (!data.teamId && data.externalName) data.status = data.status || 'invited';
+      const team = await storage.createTournamentTeam(data);
+      // Send an invite email to external contact when one is provided so
+      // the host org can recruit teams from outside their roster.
+      if (!data.teamId && data.externalEmail) {
+        try {
+          await emailService.sendNotificationEmail({
+            email: data.externalEmail,
+            firstName: data.externalContact || data.externalName || '',
+            title: `You're invited to ${t.name}`,
+            message: `${t.name} (${new Date(t.startDate).toLocaleDateString()} – ${new Date(t.endDate).toLocaleDateString()} at ${t.venue || 'TBD'}) has invited "${data.externalName}" to join. Reply to confirm or visit the BoxStat marketplace.`,
+            actionUrl: `/marketplace`,
+          });
+        } catch (emailErr: any) {
+          console.error('External-team invite email failed (non-fatal):', emailErr?.message || emailErr);
+        }
+      }
+      res.json(team);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.patch('/api/tournaments/teams/:teamId', requireAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.teamId);
+      const auth = await requireTeamOrgOwner(id, req.user);
+      if (!auth.ok) return res.status(auth.status!).json({ message: auth.message });
+      const team = await storage.updateTournamentTeam(id, req.body);
+      res.json(team);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.delete('/api/tournaments/teams/:teamId', requireAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.teamId);
+      const auth = await requireTeamOrgOwner(id, req.user);
+      if (!auth.ok) return res.status(auth.status!).json({ message: auth.message });
+      await storage.deleteTournamentTeam(id);
+      res.json({ ok: true });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ---- Tournament Matches ----
+  app.get('/api/tournaments/:id/matches', optionalAuth, async (req: any, res) => {
+    try {
+      const tid = parseInt(req.params.id);
+      const t = await storage.getTournament(tid);
+      if (!t) return res.status(404).json({ message: 'Not found' });
+      const userOrgId = req.user?.organizationId;
+      const isOwner = userOrgId && userOrgId === t.organizationId;
+      const isVisible = t.status !== 'draft' && t.isPublic === true;
+      if (!isOwner && !isVisible) return res.status(404).json({ message: 'Not found' });
+      const matches = await storage.getTournamentMatches(tid);
+      res.json(matches);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post('/api/tournaments/:id/matches', requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin' && req.user.role !== 'coach') return res.status(403).json({ message: 'Forbidden' });
+      const t = await storage.getTournament(parseInt(req.params.id));
+      if (!t || t.organizationId !== req.user.organizationId) return res.status(404).json({ message: 'Not found' });
+      const data = { ...req.body, tournamentId: parseInt(req.params.id) };
+      const match = await storage.createTournamentMatch(data);
+      res.json(match);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.patch('/api/tournaments/matches/:matchId', requireAuth, async (req: any, res) => {
+    try {
+      const matchId = parseInt(req.params.matchId);
+      const auth = await requireMatchOrgOwner(matchId, req.user);
+      if (!auth.ok) return res.status(auth.status!).json({ message: auth.message });
+      // Whitelist editable fields. Scores are owned by the existing
+      // game_sessions flow; do not allow direct score writes here.
+      // Times live on the linked events row (PATCH /api/events/:id) — they
+      // are intentionally NOT in this allowlist because tournament_matches
+      // does not define scheduledStart/scheduledEnd columns.
+      const allowed = ['team1Id', 'team2Id', 'court', 'status', 'nextMatchId', 'nextMatchSlot'];
+      const updates: any = {};
+      for (const k of allowed) if (k in req.body) updates[k] = req.body[k];
+      const match = await storage.updateTournamentMatch(matchId, updates);
+      res.json(match);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ---- Publish: create matches + events transactionally ----
+  app.post('/api/tournaments/:id/publish', requireAuth, async (req: any, res) => {
+    try {
+      const tid = parseInt(req.params.id);
+      const auth = await requireTournamentOrgOwner(tid, req.user);
+      if (!auth.ok) return res.status(auth.status!).json({ message: auth.message });
+      const t = auth.tournament;
+      const teams = await storage.getTournamentTeams(t.id);
+      if (teams.length < 2) return res.status(400).json({ message: 'Need at least 2 teams to publish' });
+      const courts: string[] = (t.courts && t.courts.length) ? t.courts : ['Court 1'];
+      const dayMs = 86400000;
+      const startDate = new Date(t.startDate);
+      const endDate = new Date(t.endDate);
+      const totalDays = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / dayMs) + 1);
+
+      // Format-specific bracket generation. The wizard's chosen format
+      // deterministically changes the match graph here:
+      //   - single_elim:        nextPow2 bracket, log2 rounds, win-feed links.
+      //   - double_elim:        single-elim upper bracket plus a parallel
+      //                         lower bracket of the same size (no cross-feed
+      //                         lines, but each match has bracketSide so the
+      //                         UI can render WB/LB columns).
+      //   - round_robin:        every team plays every other team once
+      //                         (no advancement links).
+      //   - groups_knockouts:   teams split into pools of ~4 for round-robin
+      //                         play, then top 2 per pool feed a single-elim
+      //                         knockout stage (round-only seeding; explicit
+      //                         team assignment happens after pool standings
+      //                         are decided).
+      const seeds = [...teams].sort((a, b) => (a.seed || 99) - (b.seed || 99));
+      const fmt = String(t.format || 'single_elim');
+
+      // Run match + event creation atomically. If any insert fails, the whole publish rolls back.
+      const result = await db.transaction(async (tx) => {
+        type TMatchRow = typeof schema.tournamentMatches.$inferSelect;
+        type TMatchInsert = typeof schema.tournamentMatches.$inferInsert;
+        type SeedTeam = typeof schema.tournamentTeams.$inferSelect;
+        const existingMatches = await tx.select().from(schema.tournamentMatches)
+          .where(eq(schema.tournamentMatches.tournamentId, t.id));
+        const matches: TMatchRow[] = [...existingMatches];
+        if (existingMatches.length === 0) {
+          let matchNumber = 1;
+          const insertMatch = async (data: Omit<TMatchInsert, 'tournamentId' | 'matchNumber'>) => {
+            const [m] = await tx.insert(schema.tournamentMatches).values({
+              tournamentId: t.id, matchNumber: matchNumber++, ...data,
+            }).returning();
+            matches.push(m);
+            return m;
+          };
+
+          if (fmt === 'round_robin') {
+            // Standard circle method: every team plays each other once.
+            const list: (SeedTeam | null)[] = [...seeds];
+            if (list.length % 2 === 1) list.push(null);
+            const n = list.length;
+            const rounds = n - 1;
+            for (let r = 1; r <= rounds; r++) {
+              for (let p = 0; p < n / 2; p++) {
+                const a = list[p];
+                const b = list[n - 1 - p];
+                if (!a || !b) continue;
+                await insertMatch({
+                  round: r,
+                  positionInRound: p,
+                  team1Id: a.id,
+                  team2Id: b.id,
+                  status: 'scheduled',
+                });
+              }
+              // rotate (keep first fixed)
+              const fixed = list[0];
+              const rest = list.slice(1);
+              rest.unshift(rest.pop()!);
+              list.splice(0, list.length, fixed, ...rest);
+            }
+          } else if (fmt === 'groups_knockouts') {
+            // Pools of ~4 round-robin, then a single-elim stage sized to the
+            // total number of qualifiers (top 2 per pool).
+            const groupSize = 4;
+            const numGroups = Math.max(1, Math.ceil(seeds.length / groupSize));
+            const groups: SeedTeam[][] = Array.from({ length: numGroups }, () => []);
+            seeds.forEach((s, i) => groups[i % numGroups].push(s));
+            for (let gi = 0; gi < groups.length; gi++) {
+              const groupName = `Group ${String.fromCharCode(65 + gi)}`;
+              await tx.update(schema.tournamentTeams).set({ groupName })
+                .where(inArray(schema.tournamentTeams.id, groups[gi].map(g => g.id)));
+              const list: (SeedTeam | null)[] = [...groups[gi]];
+              if (list.length % 2 === 1) list.push(null);
+              const n = list.length;
+              const rounds = n - 1;
+              for (let r = 1; r <= rounds; r++) {
+                for (let p = 0; p < n / 2; p++) {
+                  const a = list[p];
+                  const b = list[n - 1 - p];
+                  if (!a || !b) continue;
+                  await insertMatch({
+                    round: r,
+                    positionInRound: gi * 100 + p,
+                    team1Id: a.id,
+                    team2Id: b.id,
+                    bracketSide: groupName,
+                    status: 'scheduled',
+                  });
+                }
+                const fixed = list[0];
+                const rest = list.slice(1);
+                rest.unshift(rest.pop()!);
+                list.splice(0, list.length, fixed, ...rest);
+              }
+            }
+            // Knockout shell from top-2-per-pool.
+            const koTeams = numGroups * 2;
+            const nextPow2 = (n: number) => { let p = 1; while (p < n) p *= 2; return p; };
+            const koSize = Math.max(2, nextPow2(koTeams));
+            const koRounds = Math.log2(koSize);
+            const koStartRound = 100;
+            const koRoundMatches: TMatchRow[][] = [];
+            for (let r = 1; r <= koRounds; r++) {
+              const count = koSize / Math.pow(2, r);
+              const arr: TMatchRow[] = [];
+              for (let p = 0; p < count; p++) {
+                arr.push(await insertMatch({
+                  round: koStartRound + r,
+                  positionInRound: p,
+                  bracketSide: 'knockout',
+                  status: 'scheduled',
+                }));
+              }
+              koRoundMatches.push(arr);
+            }
+            for (let r = 0; r < koRoundMatches.length - 1; r++) {
+              for (let p = 0; p < koRoundMatches[r].length; p++) {
+                const next = koRoundMatches[r + 1][Math.floor(p / 2)];
+                await tx.update(schema.tournamentMatches)
+                  .set({ nextMatchId: next.id, nextMatchSlot: p % 2 === 0 ? 1 : 2 })
+                  .where(eq(schema.tournamentMatches.id, koRoundMatches[r][p].id));
+              }
+            }
+          } else {
+            // single_elim or double_elim share the upper-bracket layout.
+            const nextPow2 = (n: number) => { let p = 1; while (p < n) p *= 2; return p; };
+            const bracketSize = nextPow2(seeds.length);
+            const totalRounds = Math.log2(bracketSize);
+            const upperRounds: TMatchRow[][] = [];
+            for (let r = 1; r <= totalRounds; r++) {
+              const count = bracketSize / Math.pow(2, r);
+              const arr: TMatchRow[] = [];
+              for (let p = 0; p < count; p++) {
+                let team1Id: number | null = null, team2Id: number | null = null;
+                if (r === 1) {
+                  team1Id = seeds[p * 2]?.id ?? null;
+                  team2Id = seeds[p * 2 + 1]?.id ?? null;
+                }
+                arr.push(await insertMatch({
+                  round: r,
+                  positionInRound: p,
+                  team1Id, team2Id,
+                  bracketSide: fmt === 'double_elim' ? 'upper' : null,
+                  status: (r === 1 && (!team1Id || !team2Id)) ? 'bye' : 'scheduled',
+                }));
+              }
+              upperRounds.push(arr);
+            }
+            for (let r = 0; r < upperRounds.length - 1; r++) {
+              for (let p = 0; p < upperRounds[r].length; p++) {
+                const next = upperRounds[r + 1][Math.floor(p / 2)];
+                await tx.update(schema.tournamentMatches)
+                  .set({ nextMatchId: next.id, nextMatchSlot: p % 2 === 0 ? 1 : 2 })
+                  .where(eq(schema.tournamentMatches.id, upperRounds[r][p].id));
+              }
+            }
+            // Lower bracket shell for double_elim — same shape, marked side='lower'.
+            if (fmt === 'double_elim') {
+              const lowerRounds: TMatchRow[][] = [];
+              for (let r = 1; r <= totalRounds; r++) {
+                const count = bracketSize / Math.pow(2, r);
+                const arr: TMatchRow[] = [];
+                for (let p = 0; p < count; p++) {
+                  arr.push(await insertMatch({
+                    round: r,
+                    positionInRound: p + 1000,
+                    bracketSide: 'lower',
+                    status: 'scheduled',
+                  }));
+                }
+                lowerRounds.push(arr);
+              }
+              for (let r = 0; r < lowerRounds.length - 1; r++) {
+                for (let p = 0; p < lowerRounds[r].length; p++) {
+                  const next = lowerRounds[r + 1][Math.floor(p / 2)];
+                  await tx.update(schema.tournamentMatches)
+                    .set({ nextMatchId: next.id, nextMatchSlot: p % 2 === 0 ? 1 : 2 })
+                    .where(eq(schema.tournamentMatches.id, lowerRounds[r][p].id));
+                }
+              }
+            }
+          }
+        }
+
+        const realMatches = matches.filter(m => m.status !== 'bye');
+        let createdEvents = 0;
+        for (const m of realMatches) {
+          if (m.eventId) continue;
+          const dayOffset = Math.floor(createdEvents / (courts.length * 4));
+          const slotInDay = createdEvents % (courts.length * 4);
+          const court = courts[slotInDay % courts.length];
+          const slot = Math.floor(slotInDay / courts.length);
+          const matchDate = new Date(startDate.getTime() + Math.min(dayOffset, totalDays - 1) * dayMs);
+          matchDate.setHours(9 + slot * 2, 0, 0, 0);
+          const start = matchDate.toISOString();
+          const end = new Date(matchDate.getTime() + 90 * 60 * 1000).toISOString();
+          const team1 = teams.find(tt => tt.id === m.team1Id);
+          const team2 = teams.find(tt => tt.id === m.team2Id);
+          const t1name = team1?.externalName || (team1?.teamId ? `Team #${team1.teamId}` : 'TBD');
+          const t2name = team2?.externalName || (team2?.teamId ? `Team #${team2.teamId}` : 'TBD');
+          const [event] = await tx.insert(schema.events).values({
+            organizationId: t.organizationId,
+            title: `${t.name} R${m.round} M${m.matchNumber}: ${t1name} vs ${t2name}`,
+            eventType: 'game',
+            startTime: start,
+            endTime: end,
+            location: `${t.venue || ''} ${court}`.trim(),
+            createdBy: req.user.id,
+            status: 'active',
+            isActive: true,
+            tournamentId: t.id,
+            allowCheckIn: true,
+            rsvpRequired: true,
+            sendNotifications: true,
+            teamId: team1?.teamId ?? null,
+            opponentTeam: t2name,
+            courtName: court,
+          }).returning();
+          await tx.update(schema.tournamentMatches)
+            .set({ eventId: event.id, court })
+            .where(eq(schema.tournamentMatches.id, m.id));
+          // Auto-create RSVP invitation rows for both teams' rosters so parents/players
+          // see the new matches in their RSVP lists.
+          const inviteForTeam = async (tt: SeedTeam | undefined) => {
+            if (!tt?.teamId) return;
+            const memberships = await tx.select().from(teamMemberships)
+              .where(eq(teamMemberships.teamId, tt.teamId));
+            for (const mem of memberships) {
+              await tx.insert(schema.rsvpResponses).values({
+                eventId: event.id,
+                userId: mem.profileId,
+                // Canonical RsvpResponse domain ("attending" | "not_attending" | "no_response").
+                // Newly fanned-out invites start as "no_response" so existing RSVP screens,
+                // counts, and reminder jobs treat them like any other un-answered invite.
+                response: 'no_response',
+              }).onConflictDoNothing();
+            }
+          };
+          await inviteForTeam(team1);
+          await inviteForTeam(team2);
+          createdEvents++;
+        }
+
+        await tx.update(schema.tournaments).set({ status: 'upcoming' })
+          .where(eq(schema.tournaments.id, t.id));
+        return { createdEvents };
+      });
+
+      const finalT = await storage.getTournament(t.id);
+      res.json({ tournament: finalT, createdEvents: result.createdEvents });
+    } catch (e: any) {
+      console.error('Publish tournament error:', e);
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // ---- Tournament Live KPI snapshot for live console ----
+  app.get('/api/tournaments/:id/snapshot', optionalAuth, async (req: any, res) => {
+    try {
+      const tid = parseInt(req.params.id);
+      const t = await storage.getTournament(tid);
+      if (!t) return res.status(404).json({ message: 'Not found' });
+      const userOrgId = req.user?.organizationId;
+      const isOwner = userOrgId && userOrgId === t.organizationId;
+      const isVisible = t.status !== 'draft' && t.isPublic === true;
+      if (!isOwner && !isVisible) return res.status(404).json({ message: 'Not found' });
+      // Persist derived match/standings only for the host org's admins/coaches
+      // so anonymous public traffic on this endpoint stays read-only.
+      const canPersist = isOwner && (req.user?.role === 'admin' || req.user?.role === 'coach');
+      const teams = await storage.getTournamentTeams(tid);
+      const rawMatches = await storage.getTournamentMatches(tid);
+      const eventIds = rawMatches.map(m => m.eventId).filter(Boolean) as number[];
+      const events = await Promise.all(eventIds.map(id => storage.getEvent(String(id))));
+      // Live-derive each match's score and status from the most recent
+      // game_sessions row tied to the same eventId. team_score corresponds to
+      // the home team (team1Id), opponent_score to team2. Persist any change
+      // back to tournament_matches so the bracket page (and any cached
+      // snapshot) stays in sync without manual editing in this UI.
+      type MatchRow = typeof schema.tournamentMatches.$inferSelect;
+      type GameSession = typeof gameSessions.$inferSelect;
+      const matches: (MatchRow & { team1Score: number | null; team2Score: number | null; status: string | null; winnerTeamId: number | null })[] = [];
+      let sessionsByEvent = new Map<number, GameSession>();
+      if (eventIds.length) {
+        const sessions = await db.select().from(gameSessions)
+          .where(inArray(gameSessions.eventId, eventIds))
+          .orderBy(desc(gameSessions.updatedAt));
+        for (const s of sessions) {
+          if (!sessionsByEvent.has(s.eventId)) sessionsByEvent.set(s.eventId, s);
+        }
+      }
+      for (const m of rawMatches) {
+        const sess = m.eventId ? sessionsByEvent.get(m.eventId) : undefined;
+        if (!sess) { matches.push(m); continue; }
+        const t1 = sess.teamScore ?? 0;
+        const t2 = sess.opponentScore ?? 0;
+        let nextStatus = m.status;
+        if (sess.status === 'in_progress' || sess.status === 'live') nextStatus = 'live';
+        else if (sess.status === 'completed' || sess.status === 'final' || sess.approvedAt) nextStatus = 'completed';
+        let winner: number | null = m.winnerTeamId ?? null;
+        if (nextStatus === 'completed') winner = t1 > t2 ? m.team1Id : t2 > t1 ? m.team2Id : null;
+        const merged = { ...m, team1Score: t1, team2Score: t2, status: nextStatus, winnerTeamId: winner };
+        matches.push(merged);
+        // Best-effort persistence so other consumers see the same numbers.
+        // Only the host org's admins/coaches trigger the write so anonymous
+        // public reads of /snapshot remain side-effect-free.
+        if (canPersist && (m.team1Score !== t1 || m.team2Score !== t2 || m.status !== nextStatus || m.winnerTeamId !== winner)) {
+          try {
+            await storage.updateTournamentMatch(m.id, { team1Score: t1, team2Score: t2, status: nextStatus, winnerTeamId: winner });
+          } catch (writeErr: any) {
+            console.warn('Tournament match score persist failed (non-fatal):', writeErr?.message || writeErr);
+          }
+        }
+      }
+      const completedMatches = matches.filter(m => m.status === 'completed').length;
+      const liveMatches = matches.filter(m => m.status === 'live').length;
+      const totalPoints = matches.reduce((sum, m) => sum + (m.team1Score || 0) + (m.team2Score || 0), 0);
+      // Standings — derive authoritatively from completed matches so the
+      // ladder reflects real results (and persist back to tournament_teams
+      // so other consumers don't need to recompute).
+      const aggregates = new Map<number, { wins: number; losses: number; ties: number; pf: number; pa: number }>();
+      for (const tt of teams) aggregates.set(tt.id, { wins: 0, losses: 0, ties: 0, pf: 0, pa: 0 });
+      for (const m of matches) {
+        if (m.status !== 'completed' || !m.team1Id || !m.team2Id) continue;
+        const a = aggregates.get(m.team1Id); const b = aggregates.get(m.team2Id);
+        if (!a || !b) continue;
+        const s1 = m.team1Score || 0; const s2 = m.team2Score || 0;
+        a.pf += s1; a.pa += s2; b.pf += s2; b.pa += s1;
+        if (s1 > s2) { a.wins++; b.losses++; }
+        else if (s2 > s1) { b.wins++; a.losses++; }
+        else { a.ties++; b.ties++; }
+      }
+      const standings = teams.map(team => {
+        const agg = aggregates.get(team.id) || { wins: 0, losses: 0, ties: 0, pf: 0, pa: 0 };
+        return {
+          ...team,
+          wins: agg.wins,
+          losses: agg.losses,
+          ties: agg.ties,
+          pointsFor: agg.pf,
+          pointsAgainst: agg.pa,
+          played: agg.wins + agg.losses + agg.ties,
+          gd: agg.pf - agg.pa,
+        };
+      }).sort((a, b) => (b.wins || 0) - (a.wins || 0) || (b.gd - a.gd) || ((b.pointsFor || 0) - (a.pointsFor || 0)));
+      // Best-effort persistence so admin views and other endpoints reflect
+      // these aggregates without recomputing. Anonymous/public traffic on
+      // this endpoint stays read-only — only host admins/coaches write.
+      if (canPersist) {
+        for (const s of standings) {
+          const orig = teams.find(tt => tt.id === s.id);
+          if (!orig) continue;
+          if ((orig.wins || 0) !== s.wins || (orig.losses || 0) !== s.losses ||
+              (orig.ties || 0) !== s.ties || (orig.pointsFor || 0) !== s.pointsFor ||
+              (orig.pointsAgainst || 0) !== s.pointsAgainst) {
+            try {
+              await db.update(schema.tournamentTeams).set({
+                wins: s.wins, losses: s.losses, ties: s.ties,
+                pointsFor: s.pointsFor, pointsAgainst: s.pointsAgainst,
+              }).where(eq(schema.tournamentTeams.id, s.id));
+            } catch (writeErr: any) {
+              console.warn('Tournament standings persist failed (non-fatal):', writeErr?.message || writeErr);
+            }
+          }
+        }
+      }
+      // Top scorers from game_player_stats
+      type TopScorer = { playerId: string; playerName: string | null; points: number; games: number };
+      let topScorers: TopScorer[] = [];
+      try {
+        if (eventIds.length) {
+          const eventIdsArr = eventIds.map(Number);
+          const sessions = await db.select().from(gameSessions)
+            .where(inArray(gameSessions.eventId, eventIdsArr));
+          if (sessions.length) {
+            const sessionIds = sessions.map(s => s.id);
+            const stats = await db.select().from(gamePlayerStats)
+              .where(inArray(gamePlayerStats.gameSessionId, sessionIds));
+            const byPlayer = new Map<string, TopScorer>();
+            for (const s of stats) {
+              const points = (s.fgm || 0) * 2 + (s.tpm || 0) + (s.ftm || 0);
+              const cur = byPlayer.get(s.playerId) || { playerId: s.playerId, playerName: s.playerName, points: 0, games: 0 };
+              cur.points += points;
+              cur.games += 1;
+              byPlayer.set(s.playerId, cur);
+            }
+            topScorers = Array.from(byPlayer.values()).sort((a, b) => b.points - a.points).slice(0, 10);
+          }
+        }
+      } catch (statsErr: any) {
+        console.warn('Tournament top-scorers aggregation failed (non-fatal):', statsErr?.message || statsErr);
+      }
+      res.json({
+        tournament: t,
+        teams,
+        matches,
+        events,
+        kpi: {
+          totalMatches: matches.length,
+          completedMatches,
+          liveMatches,
+          totalPoints,
+          completionRate: matches.length ? Math.round(completedMatches / matches.length * 100) : 0,
+        },
+        standings,
+        topScorers,
+      });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ---- Schedule batch save ----
+  app.post('/api/tournaments/:id/schedule', requireAuth, async (req: any, res) => {
+    try {
+      const tid = parseInt(req.params.id);
+      if (req.user.role !== 'admin' && req.user.role !== 'coach') return res.status(403).json({ message: 'Forbidden' });
+      const t = await storage.getTournament(tid);
+      if (!t || t.organizationId !== req.user.organizationId) return res.status(404).json({ message: 'Not found' });
+      const updates: Array<{ matchId: number; eventId?: number; court?: string; startTime?: string; endTime?: string }> = req.body.updates || [];
+      // Conflict detection: for each (court, day) bucket flag overlapping
+      // [start,end) ranges so the caller can warn the user. We compute this
+      // on the merged set of (existing match times + incoming patches) so
+      // newly proposed times are checked against everything else too.
+      const allMatches = await storage.getTournamentMatches(parseInt(req.params.id));
+      const eventIds = allMatches.map(m => m.eventId).filter(Boolean) as number[];
+      const liveEvents = await Promise.all(eventIds.map(id => storage.getEvent(String(id))));
+      type TimeWindow = { matchId: number; court: string; start: number; end: number };
+      const windows: TimeWindow[] = [];
+      const updateByMatch = new Map(updates.map(u => [u.matchId, u]));
+      for (const m of allMatches) {
+        const u = updateByMatch.get(m.id);
+        const ev = m.eventId ? liveEvents.find(e => e && Number(e.id) === Number(m.eventId)) : null;
+        const court = u?.court ?? m.court ?? '';
+        const startStr = u?.startTime ?? (ev?.startTime ? String(ev.startTime) : '');
+        const endStr = u?.endTime ?? (ev?.endTime ? String(ev.endTime) : '');
+        if (!court || !startStr || !endStr) continue;
+        const start = new Date(startStr).getTime();
+        const end = new Date(endStr).getTime();
+        if (!isFinite(start) || !isFinite(end) || end <= start) continue;
+        windows.push({ matchId: m.id, court, start, end });
+      }
+      const conflicts: Array<{ a: number; b: number; court: string }> = [];
+      for (let i = 0; i < windows.length; i++) {
+        for (let j = i + 1; j < windows.length; j++) {
+          const a = windows[i]; const b = windows[j];
+          if (a.court === b.court && a.start < b.end && b.start < a.end) {
+            conflicts.push({ a: a.matchId, b: b.matchId, court: a.court });
+          }
+        }
+      }
+      for (const u of updates) {
+        if (u.matchId) await storage.updateTournamentMatch(u.matchId, { court: u.court });
+        if (u.eventId && (u.startTime || u.endTime || u.court)) {
+          await storage.updateEvent(String(u.eventId), {
+            startTime: u.startTime ? new Date(u.startTime) : undefined,
+            endTime: u.endTime ? new Date(u.endTime) : undefined,
+            courtName: u.court,
+          });
+        }
+      }
+      res.json({ ok: true, conflicts });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ---- AI Re-seed (deterministic) ----
+  // Recomputes seeds for all teams based on existing tournament results
+  // (wins, then point differential), then reorders round-1 matches so
+  // strongest plays weakest. Does not touch matches that already have
+  // a recorded score, so playoff progression stays intact.
+  app.post('/api/tournaments/:id/ai-reseed', requireAuth, async (req: any, res) => {
+    try {
+      const tid = parseInt(req.params.id);
+      if (req.user.role !== 'admin' && req.user.role !== 'coach') return res.status(403).json({ message: 'Forbidden' });
+      const t = await storage.getTournament(tid);
+      if (!t || t.organizationId !== req.user.organizationId) return res.status(404).json({ message: 'Not found' });
+      const teams = await storage.getTournamentTeams(tid);
+      const matches = await storage.getTournamentMatches(tid);
+      // Rank teams: wins desc, then PF-PA desc, then name asc.
+      const ranked = [...teams].sort((a, b) => {
+        const w = (b.wins || 0) - (a.wins || 0);
+        if (w) return w;
+        const gd = ((b.pointsFor || 0) - (b.pointsAgainst || 0)) - ((a.pointsFor || 0) - (a.pointsAgainst || 0));
+        if (gd) return gd;
+        return String(a.externalName || '').localeCompare(String(b.externalName || ''));
+      });
+      // Persist new seed numbers.
+      for (let i = 0; i < ranked.length; i++) {
+        const newSeed = i + 1;
+        if ((ranked[i].seed || 0) !== newSeed) {
+          await storage.updateTournamentTeam(ranked[i].id, { seed: newSeed }).catch((err: unknown) => {
+            console.warn('AI re-seed seed update failed (non-fatal):', err instanceof Error ? err.message : err);
+          });
+        }
+      }
+      // Reseed round-1 matchups (strong vs weak) for matches that have
+      // not yet been played.
+      const round1 = matches
+        .filter((m) => m.round === 1 && m.status !== 'completed' && m.status !== 'live')
+        .sort((a, b) => (a.positionInRound || 0) - (b.positionInRound || 0));
+      for (let i = 0; i < round1.length; i++) {
+        const top = ranked[i];
+        const bot = ranked[ranked.length - 1 - i];
+        if (!top || !bot || top.id === bot.id) continue;
+        await storage.updateTournamentMatch(round1[i].id, {
+          team1Id: top.id,
+          team2Id: bot.id,
+          status: 'scheduled',
+        }).catch((err: unknown) => {
+          console.warn('AI re-seed match update failed (non-fatal):', err instanceof Error ? err.message : err);
+        });
+      }
+      res.json({ ok: true, reseeded: round1.length });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ---- Tournament Broadcast ----
+  app.post('/api/tournaments/:id/broadcast', requireAuth, async (req: any, res) => {
+    try {
+      const tid = parseInt(req.params.id);
+      if (req.user.role !== 'admin' && req.user.role !== 'coach') return res.status(403).json({ message: 'Forbidden' });
+      const t = await storage.getTournament(tid);
+      if (!t || t.organizationId !== req.user.organizationId) return res.status(404).json({ message: 'Not found' });
+      const message = req.body.message || `${t.name}: live update`;
+      // One notification with everyone-targeting so the existing in-app
+      // delivery + recipients-fanout pipeline handles the org's members.
+      try {
+        await storage.createNotification({
+          organizationId: t.organizationId,
+          types: ['announcement'],
+          title: t.name,
+          message,
+          recipientTarget: 'everyone',
+          deliveryChannels: ['in_app'],
+          status: 'sent',
+          sentBy: req.user.id,
+        });
+      } catch (notifErr: any) {
+        console.error('Tournament broadcast notification failed (non-fatal):', notifErr?.message || notifErr);
+      }
+      res.json({ ok: true });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ---- Join Requests ----
+  app.get('/api/tournament-join-requests', requireAuth, async (req: any, res) => {
+    try {
+      // Inbox is host-side: only admins/coaches see incoming join requests.
+      if (req.user.role !== 'admin' && req.user.role !== 'coach') {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+      const list = await storage.getTournamentJoinRequestsByOrg(req.user.organizationId);
+      res.json(list);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post('/api/tournament-join-requests', requireAuth, async (req: any, res) => {
+    try {
+      // Only org admins/coaches may submit a join-request on behalf of their org.
+      if (req.user.role !== 'admin' && req.user.role !== 'coach') {
+        return res.status(403).json({ message: 'Only admins or coaches may submit join requests' });
+      }
+      const { tournamentId, requesterTeamId, message } = req.body;
+      if (!tournamentId || !requesterTeamId) return res.status(400).json({ message: 'tournamentId and requesterTeamId required' });
+      // Verify the team actually belongs to the requester's organization
+      const team = await storage.getTeam(String(requesterTeamId));
+      if (!team) return res.status(404).json({ message: 'Team not found' });
+      if (team.organizationId !== req.user.organizationId) {
+        return res.status(403).json({ message: 'You can only request to join with a team owned by your organization' });
+      }
+      // Verify the target tournament exists, is open and not in the requester's own org
+      const t = await storage.getTournament(tournamentId);
+      if (!t) return res.status(404).json({ message: 'Tournament not found' });
+      if (t.organizationId === req.user.organizationId) {
+        return res.status(400).json({ message: 'Use the internal team picker for tournaments your org owns' });
+      }
+      if (t.status === 'draft' || t.isPublic !== true) {
+        return res.status(404).json({ message: 'Tournament not found' });
+      }
+      // Idempotency: do not create another pending request for the same team+tournament.
+      const existing = await db.select().from(schema.tournamentJoinRequests)
+        .where(and(
+          eq(schema.tournamentJoinRequests.tournamentId, tournamentId),
+          eq(schema.tournamentJoinRequests.requesterTeamId, requesterTeamId),
+          eq(schema.tournamentJoinRequests.status, 'pending'),
+        ));
+      if (existing.length) return res.json(existing[0]);
+      // Also block if the team is already on the bracket.
+      const alreadyTeam = await db.select().from(schema.tournamentTeams)
+        .where(and(
+          eq(schema.tournamentTeams.tournamentId, tournamentId),
+          eq(schema.tournamentTeams.teamId, requesterTeamId),
+        ));
+      if (alreadyTeam.length) return res.status(409).json({ message: 'Team is already in this tournament' });
+      const created = await storage.createTournamentJoinRequest({
+        tournamentId,
+        requesterTeamId,
+        requesterOrganizationId: req.user.organizationId,
+        requesterUserId: req.user.id,
+        message,
+      });
+      // Notify host org admins via in-app notification + email so they
+      // can act on the request without polling the inbox drawer.
+      const requesterTeamName = team.name || `Team ${requesterTeamId}`;
+      try {
+        const hostUsers = await storage.getUsersByOrganization(t.organizationId);
+        const hostAdmins = hostUsers.filter((u) => u.role === 'admin' || u.role === 'coach');
+        if (hostAdmins.length) {
+          await storage.createNotification({
+            organizationId: t.organizationId,
+            types: ['notification'],
+            title: `${requesterTeamName} wants to join ${t.name}`,
+            message: message || `A new team has requested to join your tournament.`,
+            recipientTarget: 'users',
+            recipientUserIds: hostAdmins.map((u) => u.id),
+            deliveryChannels: ['in_app'],
+            status: 'sent',
+            sentBy: req.user.id,
+          });
+        }
+        for (const u of hostAdmins) {
+          if (!u.email) continue;
+          try {
+            await emailService.sendNotificationEmail({
+              email: u.email,
+              firstName: u.firstName || '',
+              title: `New join request: ${requesterTeamName}`,
+              message: `${requesterTeamName} has requested to join your tournament "${t.name}".${message ? `\n\nMessage from requester: ${message}` : ''}\n\nOpen BoxStat to approve or deny.`,
+              actionUrl: `/admin?tab=tournaments`,
+            });
+          } catch (emailErr: any) {
+            console.error('Tournament join-request email failed for', u.email, '(non-fatal):', emailErr?.message || emailErr);
+          }
+        }
+      } catch (notifErr: any) {
+        console.error('Tournament join-request notification failed (non-fatal):', notifErr?.message || notifErr);
+      }
+      res.json(created);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.patch('/api/tournament-join-requests/:id', requireAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const status = req.body.status; // approved | denied
+      if (!['approved', 'denied'].includes(status)) return res.status(400).json({ message: 'Invalid status' });
+      const [reqRow] = await db.select().from(schema.tournamentJoinRequests)
+        .where(eq(schema.tournamentJoinRequests.id, id));
+      if (!reqRow) return res.status(404).json({ message: 'Request not found' });
+      const auth = await requireTournamentOrgOwner(reqRow.tournamentId, req.user);
+      if (!auth.ok) return res.status(auth.status!).json({ message: auth.message });
+      const updated = await storage.updateTournamentJoinRequest(id, {
+        status,
+        respondedAt: new Date().toISOString(),
+        respondedByUserId: req.user.id,
+      });
+      // If approved, add as a tournament team using the requester team (idempotent).
+      if (status === 'approved' && updated) {
+        try {
+          const dupes = await db.select().from(schema.tournamentTeams)
+            .where(and(
+              eq(schema.tournamentTeams.tournamentId, updated.tournamentId),
+              eq(schema.tournamentTeams.teamId, updated.requesterTeamId),
+            ));
+          if (dupes.length === 0) {
+            const team = await storage.getTeam(String(updated.requesterTeamId));
+            await storage.createTournamentTeam({
+              tournamentId: updated.tournamentId,
+              teamId: updated.requesterTeamId,
+              externalName: team?.name,
+              status: 'confirmed',
+            });
+          }
+        } catch (addErr: any) {
+          console.error('Failed to add approved team to tournament (non-fatal):', addErr?.message || addErr);
+        }
+      }
+      // Notify requester via in-app + email so they get a clear
+      // confirmation of the decision.
+      try {
+        if (updated?.requesterUserId) {
+          await storage.createNotification({
+            organizationId: updated.requesterOrganizationId,
+            types: ['notification'],
+            title: status === 'approved' ? 'Join request approved' : 'Join request denied',
+            message: `Your request to join ${auth.tournament.name} was ${status}.`,
+            recipientTarget: 'users',
+            recipientUserIds: [updated.requesterUserId],
+            deliveryChannels: ['in_app'],
+            status: 'sent',
+            sentBy: req.user.id,
+          });
+          try {
+            const requester = await storage.getUser?.(updated.requesterUserId);
+            if (requester?.email) {
+              await emailService.sendNotificationEmail({
+                email: requester.email,
+                firstName: requester.firstName || '',
+                title: status === 'approved' ? `Approved: ${auth.tournament.name}` : `Update on your join request`,
+                message: `Your request to join "${auth.tournament.name}" was ${status}.`,
+                actionUrl: `/marketplace`,
+              });
+            }
+          } catch (emailErr: any) {
+            console.error('Join-response email failed (non-fatal):', emailErr?.message || emailErr);
+          }
+        }
+      } catch (notifErr: any) {
+        console.error('Join-response notification failed (non-fatal):', notifErr?.message || notifErr);
+      }
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ---- External Listings ----
+  app.get('/api/tournament-external-listings', requireAuth, async (req: any, res) => {
+    try {
+      const list = await storage.getTournamentExternalListings(req.user.organizationId);
+      res.json(list);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post('/api/tournament-external-listings', requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin' && req.user.role !== 'coach') return res.status(403).json({ message: 'Forbidden' });
+      const data = { ...req.body, organizationId: req.user.organizationId, createdBy: req.user.id };
+      const row = await storage.createTournamentExternalListing(data);
+      res.json(row);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.patch('/api/tournament-external-listings/:id', requireAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const auth = await requireListingOrgOwner(id, req.user);
+      if (!auth.ok) return res.status(auth.status!).json({ message: auth.message });
+      const allowed = [
+        'name', 'sport', 'ageGroup', 'startDate', 'endDate', 'location',
+        'hostName', 'registrationUrl', 'description', 'contactEmail', 'isActive',
+      ];
+      const patch: Record<string, any> = {};
+      for (const k of allowed) {
+        if (Object.prototype.hasOwnProperty.call(req.body, k)) patch[k] = req.body[k];
+      }
+      const row = await storage.updateTournamentExternalListing(id, patch);
+      res.json(row);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.delete('/api/tournament-external-listings/:id', requireAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const auth = await requireListingOrgOwner(id, req.user);
+      if (!auth.ok) return res.status(auth.status!).json({ message: auth.message });
+      await storage.deleteTournamentExternalListing(id);
+      res.json({ ok: true });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ---- Public Marketplace ----
+  app.get('/api/marketplace', async (req: any, res) => {
+    try {
+      const tournaments = await storage.getAllPublishedTournaments();
+      const listings = await storage.getAllActiveExternalListings();
+      const items: any[] = [
+        ...tournaments.map(t => ({ ...t, source: 'boxstat' as const })),
+        ...listings.map(l => ({ ...l, source: 'external' as const })),
+      ];
+      res.json(items);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
   // =============================================

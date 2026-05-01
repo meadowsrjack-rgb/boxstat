@@ -1,5 +1,6 @@
 import CheckInButton, { UypEvent } from '@/components/CheckInButton';
 import QrScannerModal from '@/components/QrScannerModal';
+import TournamentBlock from '@/components/tournaments/TournamentBlock';
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -297,6 +298,13 @@ export default function EventDetailPanel({
                 checkinCloseTime={checkinTimes.close}
               />
             </div>
+
+            {/* Task #357: Tournament context block — appears AFTER all standard event sections */}
+            {event.tournamentId && (
+              <div className="border-t pt-4">
+                <TournamentBlock tournamentId={event.tournamentId} currentEventId={event.id} />
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

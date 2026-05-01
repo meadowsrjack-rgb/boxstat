@@ -116,6 +116,7 @@ import {
   Sun,
   Moon,
   MoreVertical,
+  Swords,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -165,6 +166,7 @@ import { DateOfBirthPicker } from "@/components/DateOfBirthPicker";
 import { MigrationWizard } from "@/components/migration/MigrationWizard";
 import { useTheme } from "@/components/ThemeProvider";
 import OpenBoxStatPrompt from "@/components/OpenBoxStatPrompt";
+import TournamentsTab from "@/components/tournaments/TournamentsTab";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -420,7 +422,7 @@ function RosterChip({
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const adminTabValues = ['overview','users','programs','teams','events','awards','store','waivers','messages','facilities','migrations'];
+  const adminTabValues = ['overview','users','programs','teams','events','tournaments','awards','store','waivers','messages','facilities','migrations'];
 
   const getInitialTab = () => {
     if (typeof window !== 'undefined') {
@@ -971,6 +973,10 @@ export default function AdminDashboard() {
                 <Calendar className="w-4 h-4 mr-2 lg:w-3.5 lg:h-3.5" />
                 Events
               </TabsTrigger>
+              <TabsTrigger value="tournaments" data-testid="tab-tournaments" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 lg:border-b-0 lg:border-l-2 lg:data-[state=active]:border-l-red-600 lg:data-[state=active]:bg-red-50 lg:justify-start lg:w-full lg:px-3 lg:py-3 lg:text-sm lg:rounded-r-md">
+                <Swords className="w-4 h-4 mr-2 lg:w-3.5 lg:h-3.5" />
+                Tournaments
+              </TabsTrigger>
               <TabsTrigger value="awards" data-testid="tab-awards" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3 lg:border-b-0 lg:border-l-2 lg:data-[state=active]:border-l-red-600 lg:data-[state=active]:bg-red-50 lg:justify-start lg:w-full lg:px-3 lg:py-3 lg:text-sm lg:rounded-r-md">
                 <Trophy className="w-4 h-4 mr-2 lg:w-3.5 lg:h-3.5" />
                 Awards
@@ -1197,6 +1203,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="events">
             <EventsTab events={events} teams={teams} programs={programs} organization={organization} currentUser={currentUser} users={users} facilities={facilities} initialEventId={deepLinkEventId} onDeepLinkHandled={() => setDeepLinkEventId(null)} />
+          </TabsContent>
+
+          <TabsContent value="tournaments">
+            <TournamentsTab organization={organization} teams={teams} facilities={facilities} currentUser={currentUser} />
           </TabsContent>
 
           <TabsContent value="awards">

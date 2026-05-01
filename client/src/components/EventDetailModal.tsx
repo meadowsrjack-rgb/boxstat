@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import TournamentBlock from '@/components/tournaments/TournamentBlock';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
@@ -1547,6 +1548,11 @@ export default function EventDetailModal({
                   })}
                 </div>
               </div>
+            )}
+
+            {/* Task #357: Tournament context block — appears AFTER all standard event sections */}
+            {event.tournamentId && (
+              <TournamentBlock tournamentId={event.tournamentId} currentEventId={event.id} />
             )}
           </div>
         </DialogContent>

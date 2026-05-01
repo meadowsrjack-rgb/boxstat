@@ -147,6 +147,35 @@ export interface IStorage {
   createEventsBatch(events: InsertEvent[]): Promise<Event[]>;
   updateEvent(id: string, updates: Partial<Event>): Promise<Event | undefined>;
   deleteEvent(id: string): Promise<void>;
+
+  // Task #357: Tournament operations
+  getTournament(id: number): Promise<schema.Tournament | undefined>;
+  getTournamentsByOrganization(organizationId: string): Promise<schema.Tournament[]>;
+  getAllPublishedTournaments(): Promise<schema.Tournament[]>;
+  createTournament(data: typeof schema.tournaments.$inferInsert): Promise<schema.Tournament>;
+  updateTournament(id: number, updates: Partial<typeof schema.tournaments.$inferInsert>): Promise<schema.Tournament | undefined>;
+  deleteTournament(id: number): Promise<void>;
+
+  getTournamentTeams(tournamentId: number): Promise<schema.TournamentTeam[]>;
+  createTournamentTeam(data: typeof schema.tournamentTeams.$inferInsert): Promise<schema.TournamentTeam>;
+  updateTournamentTeam(id: number, updates: Partial<typeof schema.tournamentTeams.$inferInsert>): Promise<schema.TournamentTeam | undefined>;
+  deleteTournamentTeam(id: number): Promise<void>;
+
+  getTournamentMatches(tournamentId: number): Promise<schema.TournamentMatch[]>;
+  getTournamentMatchByEventId(eventId: number): Promise<schema.TournamentMatch | undefined>;
+  createTournamentMatch(data: typeof schema.tournamentMatches.$inferInsert): Promise<schema.TournamentMatch>;
+  updateTournamentMatch(id: number, updates: Partial<typeof schema.tournamentMatches.$inferInsert>): Promise<schema.TournamentMatch | undefined>;
+
+  getTournamentJoinRequests(tournamentId: number): Promise<schema.TournamentJoinRequest[]>;
+  getTournamentJoinRequestsByOrg(organizationId: string): Promise<(schema.TournamentJoinRequest & { tournament: schema.Tournament })[]>;
+  createTournamentJoinRequest(data: typeof schema.tournamentJoinRequests.$inferInsert): Promise<schema.TournamentJoinRequest>;
+  updateTournamentJoinRequest(id: number, updates: Partial<typeof schema.tournamentJoinRequests.$inferInsert>): Promise<schema.TournamentJoinRequest | undefined>;
+
+  getTournamentExternalListings(organizationId: string): Promise<schema.TournamentExternalListing[]>;
+  getAllActiveExternalListings(): Promise<schema.TournamentExternalListing[]>;
+  createTournamentExternalListing(data: typeof schema.tournamentExternalListings.$inferInsert): Promise<schema.TournamentExternalListing>;
+  updateTournamentExternalListing(id: number, updates: Partial<typeof schema.tournamentExternalListings.$inferInsert>): Promise<schema.TournamentExternalListing | undefined>;
+  deleteTournamentExternalListing(id: number): Promise<void>;
   
   // Attendance operations
   getAttendance(eventId: string, userId: string): Promise<Attendance | undefined>;
@@ -3916,6 +3945,7 @@ class DatabaseStorage implements IStorage {
       programId: (event as any).programId ?? undefined,
       facilityId: (event as any).facilityId ?? null,
       courtName: (event as any).courtName ?? null,
+      tournamentId: (event as any).tournamentId ?? null,
     };
 
     const results = await db.insert(schema.events).values(dbEvent).returning();
@@ -3955,6 +3985,7 @@ class DatabaseStorage implements IStorage {
       programId: (event as any).programId ?? undefined,
       facilityId: (event as any).facilityId ?? null,
       courtName: (event as any).courtName ?? null,
+      tournamentId: (event as any).tournamentId ?? null,
     };
   }
 
@@ -3993,6 +4024,7 @@ class DatabaseStorage implements IStorage {
       status: updates.status,
       facilityId: (updates as any).facilityId,
       courtName: (updates as any).courtName,
+      tournamentId: (updates as any).tournamentId,
     };
 
     if ('scheduleRequestSource' in updates) {
@@ -6187,6 +6219,7 @@ class DatabaseStorage implements IStorage {
       scheduleRequestNote: dbEvent.scheduleRequestNote ?? undefined,
       facilityId: dbEvent.facilityId ?? null,
       courtName: dbEvent.courtName ?? null,
+      tournamentId: dbEvent.tournamentId ?? null,
     };
   }
 
@@ -6960,6 +6993,142 @@ class DatabaseStorage implements IStorage {
 
   async deleteProgramCategory(id: number, organizationId: string): Promise<void> {
     await db.delete(programCategories).where(and(eq(programCategories.id, id), eq(programCategories.organizationId, organizationId)));
+  }
+
+  // ============================================
+  // Task #357: Tournament operations
+  // Drizzle-derived row + insert types are used end-to-end so callers
+  // get full IDE/type help and storage methods reject unknown columns.
+  // ============================================
+  async getTournament(id: number): Promise<schema.Tournament | undefined> {
+    const rows = await db.select().from(schema.tournaments).where(eq(schema.tournaments.id, id));
+    return rows[0];
+  }
+  async getTournamentsByOrganization(organizationId: string): Promise<schema.Tournament[]> {
+    return db.select().from(schema.tournaments)
+      .where(eq(schema.tournaments.organizationId, organizationId))
+      .orderBy(desc(schema.tournaments.startDate));
+  }
+  async getAllPublishedTournaments(): Promise<schema.Tournament[]> {
+    return db.select().from(schema.tournaments)
+      .where(and(
+        eq(schema.tournaments.isPublic, true),
+        sql`${schema.tournaments.status} <> 'draft'`,
+      ))
+      .orderBy(desc(schema.tournaments.startDate));
+  }
+  async createTournament(data: typeof schema.tournaments.$inferInsert): Promise<schema.Tournament> {
+    const [row] = await db.insert(schema.tournaments).values(data).returning();
+    return row;
+  }
+  async updateTournament(id: number, updates: Partial<typeof schema.tournaments.$inferInsert>): Promise<schema.Tournament | undefined> {
+    const cleaned: Record<string, unknown> = { ...updates, updatedAt: new Date().toISOString() };
+    Object.keys(cleaned).forEach(k => cleaned[k] === undefined && delete cleaned[k]);
+    const [row] = await db.update(schema.tournaments).set(cleaned)
+      .where(eq(schema.tournaments.id, id)).returning();
+    return row;
+  }
+  async deleteTournament(id: number): Promise<void> {
+    await db.delete(schema.tournamentMatches).where(eq(schema.tournamentMatches.tournamentId, id));
+    await db.delete(schema.tournamentTeams).where(eq(schema.tournamentTeams.tournamentId, id));
+    await db.delete(schema.tournamentJoinRequests).where(eq(schema.tournamentJoinRequests.tournamentId, id));
+    await db.update(schema.events).set({ tournamentId: null })
+      .where(eq(schema.events.tournamentId, id));
+    await db.delete(schema.tournaments).where(eq(schema.tournaments.id, id));
+  }
+
+  async getTournamentTeams(tournamentId: number): Promise<schema.TournamentTeam[]> {
+    return db.select().from(schema.tournamentTeams)
+      .where(eq(schema.tournamentTeams.tournamentId, tournamentId))
+      .orderBy(schema.tournamentTeams.seed);
+  }
+  async createTournamentTeam(data: typeof schema.tournamentTeams.$inferInsert): Promise<schema.TournamentTeam> {
+    const [row] = await db.insert(schema.tournamentTeams).values(data).returning();
+    return row;
+  }
+  async updateTournamentTeam(id: number, updates: Partial<typeof schema.tournamentTeams.$inferInsert>): Promise<schema.TournamentTeam | undefined> {
+    const cleaned: Record<string, unknown> = { ...updates };
+    Object.keys(cleaned).forEach(k => cleaned[k] === undefined && delete cleaned[k]);
+    const [row] = await db.update(schema.tournamentTeams).set(cleaned)
+      .where(eq(schema.tournamentTeams.id, id)).returning();
+    return row;
+  }
+  async deleteTournamentTeam(id: number): Promise<void> {
+    await db.delete(schema.tournamentTeams).where(eq(schema.tournamentTeams.id, id));
+  }
+
+  async getTournamentMatches(tournamentId: number): Promise<schema.TournamentMatch[]> {
+    return db.select().from(schema.tournamentMatches)
+      .where(eq(schema.tournamentMatches.tournamentId, tournamentId))
+      .orderBy(schema.tournamentMatches.matchNumber);
+  }
+  async getTournamentMatchByEventId(eventId: number): Promise<schema.TournamentMatch | undefined> {
+    const rows = await db.select().from(schema.tournamentMatches)
+      .where(eq(schema.tournamentMatches.eventId, eventId));
+    return rows[0];
+  }
+  async createTournamentMatch(data: typeof schema.tournamentMatches.$inferInsert): Promise<schema.TournamentMatch> {
+    const [row] = await db.insert(schema.tournamentMatches).values(data).returning();
+    return row;
+  }
+  async updateTournamentMatch(id: number, updates: Partial<typeof schema.tournamentMatches.$inferInsert>): Promise<schema.TournamentMatch | undefined> {
+    const cleaned: Record<string, unknown> = { ...updates };
+    Object.keys(cleaned).forEach(k => cleaned[k] === undefined && delete cleaned[k]);
+    const [row] = await db.update(schema.tournamentMatches).set(cleaned)
+      .where(eq(schema.tournamentMatches.id, id)).returning();
+    return row;
+  }
+
+  async getTournamentJoinRequests(tournamentId: number): Promise<schema.TournamentJoinRequest[]> {
+    return db.select().from(schema.tournamentJoinRequests)
+      .where(eq(schema.tournamentJoinRequests.tournamentId, tournamentId))
+      .orderBy(desc(schema.tournamentJoinRequests.createdAt));
+  }
+  async getTournamentJoinRequestsByOrg(organizationId: string): Promise<(schema.TournamentJoinRequest & { tournament: schema.Tournament })[]> {
+    const rows = await db.select({
+      req: schema.tournamentJoinRequests,
+      tournament: schema.tournaments,
+    }).from(schema.tournamentJoinRequests)
+      .innerJoin(schema.tournaments, eq(schema.tournamentJoinRequests.tournamentId, schema.tournaments.id))
+      .where(eq(schema.tournaments.organizationId, organizationId))
+      .orderBy(desc(schema.tournamentJoinRequests.createdAt));
+    return rows.map(r => ({ ...r.req, tournament: r.tournament }));
+  }
+  async createTournamentJoinRequest(data: typeof schema.tournamentJoinRequests.$inferInsert): Promise<schema.TournamentJoinRequest> {
+    const [row] = await db.insert(schema.tournamentJoinRequests).values(data).returning();
+    return row;
+  }
+  async updateTournamentJoinRequest(id: number, updates: Partial<typeof schema.tournamentJoinRequests.$inferInsert>): Promise<schema.TournamentJoinRequest | undefined> {
+    const cleaned: Record<string, unknown> = { ...updates };
+    Object.keys(cleaned).forEach(k => cleaned[k] === undefined && delete cleaned[k]);
+    const [row] = await db.update(schema.tournamentJoinRequests).set(cleaned)
+      .where(eq(schema.tournamentJoinRequests.id, id)).returning();
+    return row;
+  }
+
+  async getTournamentExternalListings(organizationId: string): Promise<schema.TournamentExternalListing[]> {
+    return db.select().from(schema.tournamentExternalListings)
+      .where(eq(schema.tournamentExternalListings.organizationId, organizationId))
+      .orderBy(desc(schema.tournamentExternalListings.startDate));
+  }
+  async getAllActiveExternalListings(): Promise<schema.TournamentExternalListing[]> {
+    return db.select().from(schema.tournamentExternalListings)
+      .where(eq(schema.tournamentExternalListings.isActive, true))
+      .orderBy(desc(schema.tournamentExternalListings.startDate));
+  }
+  async createTournamentExternalListing(data: typeof schema.tournamentExternalListings.$inferInsert): Promise<schema.TournamentExternalListing> {
+    const [row] = await db.insert(schema.tournamentExternalListings).values(data).returning();
+    return row;
+  }
+  async updateTournamentExternalListing(id: number, updates: Partial<typeof schema.tournamentExternalListings.$inferInsert>): Promise<schema.TournamentExternalListing | undefined> {
+    const cleaned: Record<string, unknown> = { ...updates, updatedAt: new Date().toISOString() };
+    Object.keys(cleaned).forEach(k => cleaned[k] === undefined && delete cleaned[k]);
+    const [row] = await db.update(schema.tournamentExternalListings).set(cleaned)
+      .where(eq(schema.tournamentExternalListings.id, id)).returning();
+    return row;
+  }
+  async deleteTournamentExternalListing(id: number): Promise<void> {
+    await db.delete(schema.tournamentExternalListings).where(eq(schema.tournamentExternalListings.id, id));
   }
 }
 

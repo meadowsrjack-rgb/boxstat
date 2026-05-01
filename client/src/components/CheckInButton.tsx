@@ -19,6 +19,7 @@ export type UypEvent = {
   location: string;
   latitude?: number;
   longitude?: number;
+  tournamentId?: number | null; // Task #357: links to a tournament
 };
 
 type Props = {

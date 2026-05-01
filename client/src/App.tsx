@@ -16,6 +16,8 @@ import Pricing from "@/pages/pricing";
 import Demo from "@/pages/demo";
 import Terms from "@/pages/terms";
 import Migrations from "@/pages/migrations";
+import Marketplace from "@/pages/marketplace";
+import TournamentPublic from "@/pages/tournament-public";
 import AccountSetup from "@/pages/account-setup";
 import PlayerDashboard from "@/pages/player-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
@@ -604,6 +606,8 @@ function AppRouter() {
       <Route path="/store-buy/:productId" component={StoreBuy} />
       <Route path="/store-checkout-success" component={StoreCheckoutSuccess} />
       <Route path="/store-checkout-cancel" component={StoreCheckoutCancel} />
+      <Route path="/marketplace" component={Marketplace} />
+      <Route path="/tournaments/:id" component={TournamentPublic} />
       
       {/* Landing page - marketing for web, app landing for iOS */}
       <Route path="/" component={PlatformAwareLanding} />

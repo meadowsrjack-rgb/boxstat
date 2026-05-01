@@ -764,6 +764,7 @@ export const events = pgTable("events", {
   scheduleRequestNote: text("schedule_request_note"), // Optional note from parent
   facilityId: integer("facility_id"), // Links to facilities table for location/court info
   courtName: varchar("court_name"), // Specific court/field within the facility (e.g. "Court 3")
+  tournamentId: integer("tournament_id"), // Task #357: links match events to a tournament
 });
 
 // Event Targets table (normalized targeting for events)
@@ -1539,6 +1540,7 @@ export interface Event {
   facilityId?: number | null;
   courtName?: string | null;
   facilityName?: string;
+  tournamentId?: number | null;
   createdAt: Date;
 }
 
@@ -1585,6 +1587,7 @@ export const insertEventSchema = z.object({
   isRecurring: z.boolean().optional().default(false),
   recurringType: z.string().nullable().optional(),
   recurringEndDate: z.string().nullable().optional(),
+  tournamentId: z.number().nullable().optional(),
 });
 
 export type InsertEvent = z.infer<typeof insertEventSchema>;
@@ -2823,3 +2826,137 @@ export const insertOrphanParentReminderSchema = createInsertSchema(orphanParentR
 });
 export type InsertOrphanParentReminder = z.infer<typeof insertOrphanParentReminderSchema>;
 export type OrphanParentReminder = typeof orphanParentReminders.$inferSelect;
+
+// =============================================
+// Task #357: Tournaments + Marketplace
+// =============================================
+
+export const tournaments = pgTable("tournaments", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  name: varchar().notNull(),
+  sport: varchar().notNull(), // basketball | football | soccer | volleyball
+  format: varchar().notNull(), // single_elim | double_elim | round_robin | groups_knockouts
+  ageGroup: varchar("age_group"),
+  startDate: timestamp("start_date", { mode: 'string' }).notNull(),
+  endDate: timestamp("end_date", { mode: 'string' }).notNull(),
+  facilityId: integer("facility_id"),
+  venue: varchar(),
+  courts: text().array(),
+  rules: jsonb(), // { quarterLength, otLength, foulLimit, etc }
+  status: varchar().default('draft').notNull(), // draft | upcoming | live | completed
+  isPublic: boolean("is_public").default(true),
+  description: text(),
+  hostName: varchar("host_name"),
+  registrationUrl: varchar("registration_url"),
+  contactEmail: varchar("contact_email"),
+  bracketSize: integer("bracket_size"), // 4, 8, 16, 32 etc
+  createdBy: varchar("created_by"),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+});
+
+export const tournamentTeams = pgTable("tournament_teams", {
+  id: serial().primaryKey().notNull(),
+  tournamentId: integer("tournament_id").notNull(),
+  teamId: integer("team_id"), // nullable for external clubs
+  externalName: varchar("external_name"),
+  externalContact: varchar("external_contact"),
+  externalEmail: varchar("external_email"),
+  seed: integer(),
+  // Group/pool name when groups_knockouts format
+  groupName: varchar("group_name"),
+  // Stored stats for standings
+  wins: integer().default(0),
+  losses: integer().default(0),
+  ties: integer().default(0),
+  pointsFor: integer("points_for").default(0),
+  pointsAgainst: integer("points_against").default(0),
+  status: varchar().default('confirmed'), // invited | confirmed | declined
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+export const tournamentMatches = pgTable("tournament_matches", {
+  id: serial().primaryKey().notNull(),
+  tournamentId: integer("tournament_id").notNull(),
+  eventId: integer("event_id"), // links to events row of type 'game'
+  round: integer().notNull(), // 1=first, 2=QF, 3=SF, 4=F, etc.
+  matchNumber: integer("match_number").notNull(), // global match # within tournament
+  positionInRound: integer("position_in_round").notNull(),
+  bracketSide: varchar("bracket_side"), // 'upper' | 'lower' | null
+  team1Id: integer("team1_id"), // tournament_teams.id
+  team2Id: integer("team2_id"),
+  team1Score: integer("team1_score"),
+  team2Score: integer("team2_score"),
+  winnerTeamId: integer("winner_team_id"),
+  // Pointer to next match this winner advances into
+  nextMatchId: integer("next_match_id"),
+  nextMatchSlot: integer("next_match_slot"), // 1 or 2
+  court: varchar(),
+  status: varchar().default('scheduled'), // scheduled | live | completed | bye
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+export const tournamentJoinRequests = pgTable("tournament_join_requests", {
+  id: serial().primaryKey().notNull(),
+  tournamentId: integer("tournament_id").notNull(),
+  // Requesting org+team
+  requesterOrganizationId: varchar("requester_organization_id").notNull(),
+  requesterTeamId: integer("requester_team_id").notNull(),
+  requesterUserId: varchar("requester_user_id").notNull(),
+  message: text(),
+  status: varchar().default('pending').notNull(), // pending | approved | denied
+  respondedByUserId: varchar("responded_by_user_id"),
+  respondedAt: timestamp("responded_at", { mode: 'string' }),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+export const tournamentExternalListings = pgTable("tournament_external_listings", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  name: varchar().notNull(),
+  sport: varchar().notNull(),
+  ageGroup: varchar("age_group"),
+  startDate: timestamp("start_date", { mode: 'string' }).notNull(),
+  endDate: timestamp("end_date", { mode: 'string' }).notNull(),
+  location: varchar().notNull(),
+  hostName: varchar("host_name").notNull(),
+  registrationUrl: varchar("registration_url").notNull(),
+  description: text(),
+  contactEmail: varchar("contact_email"),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by"),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+});
+
+// Insert schemas
+export const insertTournamentSchema = createInsertSchema(tournaments).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+export type InsertTournament = z.infer<typeof insertTournamentSchema>;
+export type Tournament = typeof tournaments.$inferSelect;
+
+export const insertTournamentTeamSchema = createInsertSchema(tournamentTeams).omit({
+  id: true, createdAt: true,
+});
+export type InsertTournamentTeam = z.infer<typeof insertTournamentTeamSchema>;
+export type TournamentTeam = typeof tournamentTeams.$inferSelect;
+
+export const insertTournamentMatchSchema = createInsertSchema(tournamentMatches).omit({
+  id: true, createdAt: true,
+});
+export type InsertTournamentMatch = z.infer<typeof insertTournamentMatchSchema>;
+export type TournamentMatch = typeof tournamentMatches.$inferSelect;
+
+export const insertTournamentJoinRequestSchema = createInsertSchema(tournamentJoinRequests).omit({
+  id: true, createdAt: true, respondedAt: true, respondedByUserId: true, status: true,
+});
+export type InsertTournamentJoinRequest = z.infer<typeof insertTournamentJoinRequestSchema>;
+export type TournamentJoinRequest = typeof tournamentJoinRequests.$inferSelect;
+
+export const insertTournamentExternalListingSchema = createInsertSchema(tournamentExternalListings).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+export type InsertTournamentExternalListing = z.infer<typeof insertTournamentExternalListingSchema>;
+export type TournamentExternalListing = typeof tournamentExternalListings.$inferSelect;

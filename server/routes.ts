@@ -11396,10 +11396,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const alerts: any[] = [];
 
-      // 1. Low credit balance (active enrollments with credits <= 2)
+      // 1. Low credit balance.
+      // Only fire when credits have ACTUALLY been used down — a brand-new
+      // 1/1 or 2/2 pack should not trigger "low credit". We require:
+      //   - at least one credit has been consumed (remaining < total), AND
+      //   - the original pack was at least 3 credits (avoids tiny trial packs
+      //     immediately reading as low), AND
+      //   - 2 or fewer credits remain.
       const allEnrollments = await storage.getProductEnrollmentsByOrganization(organizationId);
-      const lowCreditEnrollments = allEnrollments.filter(
-        (e: any) => e.status === 'active' && e.totalCredits != null && e.remainingCredits != null && e.remainingCredits <= 2
+      const lowCreditEnrollments = allEnrollments.filter((e: any) =>
+        e.status === 'active'
+        && e.totalCredits != null
+        && e.remainingCredits != null
+        && e.totalCredits >= 3
+        && e.remainingCredits < e.totalCredits
+        && e.remainingCredits <= 2
       );
       if (lowCreditEnrollments.length > 0) {
         const details = [];
@@ -11549,13 +11560,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Task #262: Invited users who haven't claimed their account.
+      // Dedupe by email: if any other active+registered user shares the same
+      // email (typical when a coach/admin/parent gets invited under multiple
+      // role rows but already claimed one of them), the leftover invited rows
+      // are stale and shouldn't nag.
       try {
-        const invitedNotClaimed = orgUsers.filter((u: any) =>
-          u.isActive !== false &&
-          u.approvalStatus !== 'pending' &&
-          u.approvalStatus !== 'rejected' &&
-          (u.status === 'invited' || u.hasRegistered === false)
+        const claimedEmails = new Set(
+          orgUsers
+            .filter((u: any) =>
+              u.isActive !== false
+              && u.hasRegistered === true
+              && u.status !== 'invited'
+              && u.approvalStatus !== 'pending'
+              && u.approvalStatus !== 'rejected'
+              && typeof u.email === 'string'
+              && u.email.trim().length > 0
+            )
+            .map((u: any) => u.email.trim().toLowerCase())
         );
+        const invitedNotClaimed = orgUsers.filter((u: any) => {
+          if (u.isActive === false) return false;
+          if (u.approvalStatus === 'pending' || u.approvalStatus === 'rejected') return false;
+          if (!(u.status === 'invited' || u.hasRegistered === false)) return false;
+          const email = typeof u.email === 'string' ? u.email.trim().toLowerCase() : '';
+          if (email.length > 0 && claimedEmails.has(email)) return false;
+          return true;
+        });
         if (invitedNotClaimed.length > 0) {
           alerts.push({
             type: 'invited_not_claimed',

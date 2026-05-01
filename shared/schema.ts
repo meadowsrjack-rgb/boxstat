@@ -2754,3 +2754,72 @@ export const insertGamePlayerStatSchema = createInsertSchema(gamePlayerStats).om
 });
 export type InsertGamePlayerStat = z.infer<typeof insertGamePlayerStatSchema>;
 export type GamePlayerStat = typeof gamePlayerStats.$inferSelect;
+
+// =============================================
+// Task #353: Org-scoped removal audit + orphan parent reminder pipeline
+// =============================================
+
+// Audit log of admin "remove from this club" actions and orphan auto-cleanup.
+// Org-scoped so each org only sees its own removals.
+export const adminRemovalAudits = pgTable("admin_removal_audits", {
+  id: serial().primaryKey().notNull(),
+  // Nullable so org-less orphan auto-cleanups (users who never finished
+  // joining an org) can still be audited. Manual admin removals always
+  // have an org.
+  organizationId: varchar("organization_id"),
+  // 'remove_parent_from_org', 'remove_player_from_org', 'orphan_auto_soft_delete'
+  action: varchar().notNull(),
+  // Admin who triggered. NULL for system-driven orphan cleanup.
+  actorId: varchar("actor_id"),
+  // The user the action targeted (parent for parent removal, player for
+  // single-player removal, parent for orphan auto-delete).
+  targetUserId: varchar("target_user_id").notNull(),
+  // Snapshot of impact: { playerIds: string[], playerNames: string[],
+  //   enrollmentIds: number[], teamMembershipIds: number[],
+  //   stripeSubscriptionsCancelled: number, otherOrgPlayerCount: number,
+  //   remindersSent?: number, registrationDate?: string }
+  details: jsonb().default('{}'),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+export const insertAdminRemovalAuditSchema = createInsertSchema(adminRemovalAudits).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertAdminRemovalAudit = z.infer<typeof insertAdminRemovalAuditSchema>;
+export type AdminRemovalAudit = typeof adminRemovalAudits.$inferSelect;
+
+// Tracks the orphan-parent reminder + cleanup state machine. One row per
+// orphan parent currently in the pipeline. Cleared (deleted) when the
+// parent adds a player so the schedule resets cleanly.
+export const orphanParentReminders = pgTable("orphan_parent_reminders", {
+  id: serial().primaryKey().notNull(),
+  // The parent user.id this row tracks. Unique so we don't accidentally
+  // double-track a parent.
+  userId: varchar("user_id").notNull().unique(),
+  // The starting point we measure reminder timing from. This is the
+  // parent's registration completion date when known, otherwise the row
+  // creation time. Captured up front so re-runs are deterministic.
+  baselineAt: timestamp("baseline_at", { mode: 'string' }).notNull(),
+  // 0 = none yet, 1 = day-3 sent, 2 = day-14 sent, 3 = day-30 final warning sent
+  remindersSent: integer("reminders_sent").default(0).notNull(),
+  lastReminderAt: timestamp("last_reminder_at", { mode: 'string' }),
+  // Set when the parent has been auto-soft-deleted. Subsequent runs skip it.
+  softDeletedAt: timestamp("soft_deleted_at", { mode: 'string' }),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+  foreignKey({
+    columns: [table.userId],
+    foreignColumns: [users.id],
+    name: "orphan_parent_reminders_user_id_fkey",
+  }).onDelete("cascade"),
+]);
+
+export const insertOrphanParentReminderSchema = createInsertSchema(orphanParentReminders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertOrphanParentReminder = z.infer<typeof insertOrphanParentReminderSchema>;
+export type OrphanParentReminder = typeof orphanParentReminders.$inferSelect;

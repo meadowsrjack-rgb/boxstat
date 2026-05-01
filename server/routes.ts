@@ -8519,7 +8519,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!isAdminUser && !(role === 'coach' && flagOnlyUpdate)) {
       return res.status(403).json({ message: 'Only admins can update users (coaches can only flag players)' });
     }
-    
+
+    // Task #353: enforce strict org scoping on the PATCH target. Admins
+    // can only patch users that belong to their own org. Org-less rows
+    // (organizationId IS NULL) are NOT a bypass — the only exception is
+    // a child row directly linked to a household whose account holder
+    // belongs to the admin's org (e.g. a freshly added child still
+    // pending org assignment that the admin themself manages).
+    const targetUser = await storage.getUser(userId);
+    if (!targetUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    let allowedAsOrglessLinked = false;
+    if (!targetUser.organizationId && targetUser.accountHolderId) {
+      const holder = await storage.getUser(targetUser.accountHolderId);
+      if (holder && holder.organizationId === organizationId) {
+        allowedAsOrglessLinked = true;
+      }
+    }
+    if (targetUser.organizationId !== organizationId && !allowedAsOrglessLinked) {
+      return res.status(403).json({
+        message: 'Cannot update a user that does not belong to your organization',
+      });
+    }
+
     if (updateData.role) {
       updateData.userType = updateData.role;
     } else {
@@ -9154,17 +9177,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!isAdminUser) {
       return res.status(403).json({ message: 'Only admins can delete users' });
     }
-    
+
     const userId = req.params.id;
     const profileOnly = req.query.profileOnly === 'true';
-    
+
     // Get the user being deleted
     const user = await storage.getUser(userId);
-    
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    
+
+    // Task #353: lock down the legacy global-cascade delete. Admins must use
+    // POST /api/admin/users/:id/remove-from-org which is org-scoped and
+    // produces an audit row. We keep this endpoint usable only for the
+    // narrow profile-only case where admins need to scrub a single role
+    // record, and only when the target lives in the caller's org so we
+    // never wipe across club boundaries.
+    if (!profileOnly) {
+      return res.status(410).json({
+        message:
+          'Global delete is no longer supported. Use POST /api/admin/users/:id/remove-from-org to remove a member from your club.',
+        replacement: `/api/admin/users/${userId}/remove-from-org`,
+      });
+    }
+
+    // Task #353: strict org scoping. The profile-only branch is the only
+    // remaining usable path here, and it must require the target to be
+    // a member of the admin's org. Org-less rows are blocked unless they
+    // are a child directly linked to a household holder in the admin's
+    // org (matches the PATCH carve-out).
+    let allowedAsOrglessChild = false;
+    if (!user.organizationId && user.accountHolderId) {
+      const holder = await storage.getUser(user.accountHolderId);
+      if (holder && holder.organizationId === organizationId) {
+        allowedAsOrglessChild = true;
+      }
+    }
+    if (user.organizationId !== organizationId && !allowedAsOrglessChild) {
+      return res.status(403).json({
+        message: 'Cannot delete a user that does not belong to your organization',
+      });
+    }
+
     try {
       const allUsers = await storage.getUsersByOrganization(user.organizationId);
       const deletedIds = new Set<string>();
@@ -9234,7 +9289,191 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to delete user', error: error.message });
     }
   });
-  
+
+  // Task #353: org-scoped removal preview + executor.
+  // GET returns the impact summary the admin sees in the confirm dialog.
+  // POST applies it. Both are admin-only and strictly org-scoped.
+  app.get('/api/admin/users/:id/removal-preview', requireAuth, async (req: any, res) => {
+    try {
+      const { id: requesterId, organizationId } = req.user;
+      const isAdminUser =
+        req.user.role === 'admin' || (await hasAdminProfile(requesterId, organizationId));
+      if (!isAdminUser) {
+        return res.status(403).json({ message: 'Only admins can preview removals' });
+      }
+      const targetId = req.params.id;
+      const target = await storage.getUser(targetId);
+      if (!target) return res.status(404).json({ message: 'User not found' });
+      // Role gating: this admin flow only manages parent/player accounts.
+      // Coaches and admins must be managed through the team-staff /
+      // org-admin tooling so we never accidentally detach them via this
+      // path.
+      if (target.role !== 'parent' && target.role !== 'player') {
+        return res.status(400).json({
+          message:
+            'Only parent or player accounts can be removed from a club via this endpoint.',
+        });
+      }
+      // Hard org boundary mirroring the POST endpoint: target must be in
+      // this org (directly OR through a linked in-org child). We check
+      // even when target.organizationId is null to prevent IDOR against
+      // dangling/unaffiliated user rows.
+      const targetIsInOrg = target.organizationId === organizationId;
+      if (!targetIsInOrg) {
+        const inOrgChildExists = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(
+            and(
+              eq(users.organizationId, organizationId),
+              sql`(${users.accountHolderId} = ${targetId} OR ${users.parentId} = ${targetId} OR ${users.guardianId} = ${targetId})`,
+            ),
+          )
+          .limit(1);
+        if (inOrgChildExists.length === 0) {
+          return res
+            .status(403)
+            .json({ message: 'User does not belong to your organization' });
+        }
+      }
+      const { previewRemoval } = await import('./lib/org-removal');
+      // Scope must match the target's role so the preview describes
+      // what the executor will actually do. A scope query param can
+      // override (e.g. "?scope=player") for an explicit player-only
+      // preview against a player target.
+      const scopeParam = (req.query.scope as string | undefined) === 'player' ? 'player' : null;
+      const previewScope: 'parent' | 'player' = scopeParam ?? (target.role === 'player' ? 'player' : 'parent');
+      const preview = await previewRemoval(targetId, organizationId, previewScope);
+      if (!preview) return res.status(404).json({ message: 'User not found' });
+      res.json(preview);
+    } catch (error: any) {
+      console.error('[remove-from-org preview] error', error);
+      res.status(500).json({ message: error?.message || 'Failed to build removal preview' });
+    }
+  });
+
+  // Task #353: read-only stats for the orphan-parent reminder pipeline.
+  // Powers the small admin-dashboard insight tile.
+  app.get('/api/admin/orphan-pipeline-stats', requireAuth, async (req: any, res) => {
+    try {
+      const { id: requesterId, organizationId } = req.user;
+      const isAdminUser =
+        req.user.role === 'admin' || (await hasAdminProfile(requesterId, organizationId));
+      if (!isAdminUser) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      const result = await db.execute(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE opr.soft_deleted_at IS NULL AND opr.reminders_sent = 0) AS pending,
+          COUNT(*) FILTER (WHERE opr.soft_deleted_at IS NULL AND opr.reminders_sent = 1) AS sent_day3,
+          COUNT(*) FILTER (WHERE opr.soft_deleted_at IS NULL AND opr.reminders_sent = 2) AS sent_day14,
+          COUNT(*) FILTER (WHERE opr.soft_deleted_at IS NULL AND opr.reminders_sent = 3) AS sent_day30,
+          COUNT(*) FILTER (WHERE opr.soft_deleted_at IS NOT NULL) AS soft_deleted
+        FROM orphan_parent_reminders opr
+        INNER JOIN users u ON u.id = opr.user_id
+        WHERE u.organization_id = ${organizationId}
+      `);
+      const row = ((result as any).rows || (result as any) || [])[0] || {};
+      const num = (v: unknown) => {
+        const n = parseInt(String(v ?? '0'), 10);
+        return Number.isFinite(n) ? n : 0;
+      };
+      const pending = num(row.pending);
+      const day3 = num(row.sent_day3);
+      const day14 = num(row.sent_day14);
+      const day30 = num(row.sent_day30);
+      const softDeleted = num(row.soft_deleted);
+      res.json({
+        pending,
+        sentDay3: day3,
+        sentDay14: day14,
+        sentDay30: day30,
+        softDeleted,
+        activePipeline: pending + day3 + day14 + day30,
+        total: pending + day3 + day14 + day30 + softDeleted,
+      });
+    } catch (error: any) {
+      console.error('[orphan-pipeline-stats] error', error);
+      res.status(500).json({ message: error?.message || 'Failed to load orphan stats' });
+    }
+  });
+
+  app.post('/api/admin/users/:id/remove-from-org', requireAuth, async (req: any, res) => {
+    try {
+      const { id: requesterId, organizationId } = req.user;
+      const isAdminUser =
+        req.user.role === 'admin' || (await hasAdminProfile(requesterId, organizationId));
+      if (!isAdminUser) {
+        return res.status(403).json({ message: 'Only admins can remove users from the club' });
+      }
+      const targetId = req.params.id;
+      if (targetId === requesterId) {
+        return res.status(400).json({ message: 'You cannot remove yourself' });
+      }
+      const target = await storage.getUser(targetId);
+      if (!target) return res.status(404).json({ message: 'User not found' });
+      // Role gating: this admin flow only manages parent/player accounts.
+      // Coaches and admins must be managed through the team-staff /
+      // org-admin tooling so we never accidentally detach them via this
+      // path.
+      if (target.role !== 'parent' && target.role !== 'player') {
+        return res.status(400).json({
+          message:
+            'Only parent or player accounts can be removed from a club via this endpoint.',
+        });
+      }
+      const isPlayerOnly = req.body?.scope === 'player';
+      // Scope must match the target's role: parent scope only against a
+      // parent; player scope only against a player. Mismatches are
+      // rejected so a "remove this player" call can never accidentally
+      // tear down a parent's whole household.
+      if (isPlayerOnly && target.role !== 'player') {
+        return res
+          .status(400)
+          .json({ message: 'Player-scope removal is only valid for player accounts.' });
+      }
+      if (!isPlayerOnly && target.role !== 'parent') {
+        return res
+          .status(400)
+          .json({ message: 'Parent-scope removal is only valid for parent accounts.' });
+      }
+      // Hard org boundary: target must be in this org (directly OR
+      // through a linked in-org child). We check even when
+      // target.organizationId is null to prevent IDOR against
+      // dangling/unaffiliated user rows.
+      const targetIsInOrg = target.organizationId === organizationId;
+      if (!targetIsInOrg) {
+        const inOrgChildExists = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(
+            and(
+              eq(users.organizationId, organizationId),
+              sql`(${users.accountHolderId} = ${targetId} OR ${users.parentId} = ${targetId} OR ${users.guardianId} = ${targetId})`,
+            ),
+          )
+          .limit(1);
+        if (inOrgChildExists.length === 0) {
+          return res
+            .status(403)
+            .json({ message: 'User does not belong to your organization' });
+        }
+      }
+
+      const { removeParentFromOrg, removePlayerFromOrg } = await import('./lib/org-removal');
+      // Manual flow: NEVER soft-delete (softDeleteIfFinalOrg=false). This
+      // primitive is reserved for the day-45 orphan auto-cleanup which
+      // passes the flag explicitly.
+      const summary = isPlayerOnly
+        ? await removePlayerFromOrg(targetId, organizationId, requesterId, { getStripeForOrg })
+        : await removeParentFromOrg(targetId, organizationId, requesterId, { getStripeForOrg });
+      res.json({ success: true, summary });
+    } catch (error: any) {
+      console.error('[remove-from-org] error', error);
+      res.status(500).json({ message: error?.message || 'Failed to remove user' });
+    }
+  });
+
   // Get user's team information (returns single team for backward compatibility)
   app.get('/api/users/:userId/team', requireAuth, async (req: any, res) => {
     try {

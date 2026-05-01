@@ -36,6 +36,20 @@
       "when": 1777000000000,
       "tag": "0014_payments_selected_size",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1777100000000,
+      "tag": "0015_org_scoped_removal",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1777200000000,
+      "tag": "0016_admin_audit_nullable_org",
+      "breakpoints": true
     }
   ]
 }

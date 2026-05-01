@@ -767,3 +767,115 @@ ${DOMAIN}
     return { success: false, error: error instanceof Error ? error.message : 'Failed to send welcome email' };
   }
 }
+
+// ===== Task #353: Orphan Parent Reminder Emails =====
+// Three-stage nudge sequence sent to parent accounts that registered but
+// never added a player. Day 3 = friendly nudge, day 14 = stronger reminder,
+// day 30 = "we'll close this" warning. Day 45 triggers a soft-delete with no
+// further email — handled by the scheduler.
+
+export type OrphanReminderStage = 'day3' | 'day14' | 'day30';
+
+export interface SendOrphanReminderEmailParams {
+  email: string;
+  firstName: string | null;
+  organizationName: string;
+  stage: OrphanReminderStage;
+}
+
+const ORPHAN_COPY: Record<
+  OrphanReminderStage,
+  { subject: (org: string) => string; intro: string; body: string; cta: string }
+> = {
+  day3: {
+    subject: (org) => `Add your player to ${org} on BoxStat`,
+    intro: 'Welcome! We noticed you set up your BoxStat account but haven’t added a player yet.',
+    body: 'Adding your player only takes a minute and unlocks rosters, schedules, RSVPs, and payments for your family.',
+    cta: 'Add your player',
+  },
+  day14: {
+    subject: (org) => `Reminder: add your player to ${org}`,
+    intro: 'Your BoxStat account is ready, but it still doesn’t have a player attached.',
+    body: 'Without a player, you’ll miss team announcements, schedules, and any registration windows your club has open.',
+    cta: 'Add your player now',
+  },
+  day30: {
+    subject: (org) => `Final reminder before we close your ${org} account`,
+    intro: 'You set up a BoxStat account a month ago but haven’t added a player.',
+    body: 'To keep things tidy, we’ll automatically close inactive parent accounts after 45 days. Add a player in the next two weeks to keep your account.',
+    cta: 'Add your player and keep your account',
+  },
+};
+
+export async function sendOrphanReminderEmail({
+  email,
+  firstName,
+  organizationName,
+  stage,
+}: SendOrphanReminderEmailParams): Promise<{ success: boolean; error?: string }> {
+  const displayName = firstName || 'there';
+  const copy = ORPHAN_COPY[stage];
+  const orgName = organizationName || 'your club';
+  const appUrl = `https://${DOMAIN}`;
+  const ctaUrl = `${appUrl}/profile-gateway?action=add-player`;
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: copy.subject(orgName),
+      text: `Hi ${displayName},
+
+${copy.intro}
+
+${copy.body}
+
+${copy.cta}: ${ctaUrl}
+
+If you no longer need a BoxStat account, you can ignore this email.
+
+— The BoxStat Team
+${DOMAIN}
+`,
+      html: `
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;line-height:1.6;color:#333;background:#f5f5f5;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f5f5f5;">
+              <tr><td style="padding:40px 20px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;margin:0 auto;background:#fff;">
+                  <tr><td style="padding:16px 40px 8px;text-align:center;"><img src="https://${DOMAIN}/assets/logo" alt="BoxStat" style="width:120px;height:120px;display:block;margin:0 auto;"/></td></tr>
+                  <tr><td style="padding:30px 40px;">
+                    <h2 style="margin:0 0 16px;font-size:20px;font-weight:600;color:#111827;text-align:center;">${copy.subject(orgName)}</h2>
+                    <p style="margin:0 0 16px;font-size:16px;color:#374151;">Hi ${displayName},</p>
+                    <p style="margin:0 0 16px;font-size:16px;color:#374151;">${copy.intro}</p>
+                    <p style="margin:0 0 24px;font-size:16px;color:#374151;">${copy.body}</p>
+                    <p style="text-align:center;margin:0 0 24px;">
+                      <a href="${ctaUrl}" style="display:inline-block;background:#dc2626;color:#fff;font-size:16px;font-weight:600;text-decoration:none;padding:14px 28px;border-radius:6px;">${copy.cta}</a>
+                    </p>
+                    <p style="margin:0;font-size:13px;color:#6b7280;">If you no longer need a BoxStat account, you can ignore this email.</p>
+                  </td></tr>
+                  <tr><td style="padding:24px 40px;background:#f9fafb;text-align:center;">
+                    <p style="margin:0;font-size:13px;color:#6b7280;">&copy; ${new Date().getFullYear()} BoxStat</p>
+                  </td></tr>
+                </table>
+              </td></tr>
+            </table>
+          </body>
+        </html>
+      `,
+    });
+    console.log(`[Orphan Reminder] ${stage} email sent to ${email}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[Orphan Reminder] send failed', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send orphan reminder email',
+    };
+  }
+}

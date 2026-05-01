@@ -1177,6 +1177,9 @@ export default function AdminDashboard() {
                 queue now lives inside the Users tab as a "Pending approval"
                 tag/filter and the existing user detail dialog. */}
 
+            {/* Task #353: orphan parent reminder pipeline at-a-glance. */}
+            <OrphanPipelineCard />
+
             <RecentTransactionsCard payments={payments} users={users} programs={programs} isAdmin={currentUser?.role === 'admin' || hasAdminProfile} />
           </TabsContent>
 
@@ -2279,6 +2282,16 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   const [showAddRoleDialog, setShowAddRoleDialog] = useState(false);
   const [selectedRoleToAdd, setSelectedRoleToAdd] = useState<string>("");
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<any>(null);
+  // Task #353: org-scoped two-step "Remove from this club" flow.
+  // Step 1 shows the impact preview; step 2 requires the admin to type
+  // the user's name to confirm.
+  const [removeFromOrgUser, setRemoveFromOrgUser] = useState<any>(null);
+  const [removeFromOrgStep, setRemoveFromOrgStep] = useState<1 | 2>(1);
+  const [removeFromOrgConfirmText, setRemoveFromOrgConfirmText] = useState('');
+  // Bulk-remove dialog state mirrors the single-remove flow.
+  const [bulkRemoveOpen, setBulkRemoveOpen] = useState(false);
+  const [bulkRemoveStep, setBulkRemoveStep] = useState<1 | 2>(1);
+  const [bulkRemoveConfirmText, setBulkRemoveConfirmText] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [filterRoles, setFilterRoles] = useState<Set<string>>(new Set());
   const [filterStatuses, setFilterStatuses] = useState<Set<string>>(() => {
@@ -2561,15 +2574,96 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
 
   const bulkDeleteUsers = useMutation({
     mutationFn: async (ids: string[]) => {
-      await Promise.all(ids.map(id => apiRequest("DELETE", `/api/users/${id}`, {})));
+      // Task #353: bulk action uses the org-scoped removal endpoint and
+      // sends the correct scope per target role (parent or player).
+      // Coach/admin rows are skipped entirely — they must be managed via
+      // their dedicated tooling.
+      type EligibleRow = { id: string; role: 'parent' | 'player' };
+      const eligible: EligibleRow[] = ids.flatMap((id) => {
+        const row = users.find((u: { id: string }) => u.id === id) as
+          | { id: string; role?: string }
+          | undefined;
+        if (!row || (row.role !== 'parent' && row.role !== 'player')) return [];
+        return [{ id: row.id, role: row.role }];
+      });
+      const skipped = ids.length - eligible.length;
+      await Promise.all(
+        eligible.map((u) =>
+          apiRequest('POST', `/api/admin/users/${u.id}/remove-from-org`, { scope: u.role }),
+        ),
+      );
+      return { processed: eligible.length, skipped };
     },
-    onSuccess: () => {
+    onSuccess: ({ processed, skipped }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setSelectedUserIds(new Set());
-      toast({ title: `${selectedUserIds.size} user(s) deleted successfully` });
+      const skippedNote = skipped > 0 ? ` (${skipped} non-parent/player row${skipped === 1 ? '' : 's'} skipped)` : '';
+      toast({
+        title: `${processed} user${processed === 1 ? '' : 's'} removed from this club${skippedNote}`,
+        description: 'Other clubs were not affected.',
+      });
     },
     onError: () => {
-      toast({ title: "Failed to delete some users", variant: "destructive" });
+      toast({ title: "Failed to remove some users", variant: "destructive" });
+    },
+  });
+
+  // Task #353: org-scoped removal preview + executor for the two-step UI.
+  type RemovalSummary = {
+    targetUserId: string;
+    targetName: string;
+    targetEmail: string | null;
+    removedPlayers: Array<{ id: string; name: string }>;
+    cancelledEnrollmentIds: string[];
+    endedTeamMembershipCount: number;
+    cancelledStripeSubscriptionCount: number;
+    parentSoftDeleted: boolean;
+    parentReassignedToOrgId: string | null;
+    parentDetached: boolean;
+    childrenSoftDeleted: number;
+    childrenDetached: number;
+    otherOrgPlayerCount: number;
+    otherOrgPlayerNames: string[];
+    otherOrgNames: string[];
+  };
+  const removalPreviewQuery = useQuery<RemovalSummary>({
+    queryKey: ['/api/admin/users', removeFromOrgUser?.id, 'removal-preview'],
+    enabled: !!removeFromOrgUser?.id,
+  });
+
+  const removeFromOrg = useMutation({
+    mutationFn: async ({ id, scope }: { id: string; scope?: 'parent' | 'player' }) => {
+      const data = await apiRequest("POST", `/api/admin/users/${id}/remove-from-org`, { scope });
+      return data as { success: boolean; summary: RemovalSummary };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orphan-pipeline-stats'] });
+      const s = data?.summary || {};
+      const parts: string[] = [];
+      if (s.removedPlayers?.length > 0) parts.push(`${s.removedPlayers.length} player${s.removedPlayers.length === 1 ? '' : 's'}`);
+      if (s.cancelledEnrollmentIds?.length > 0) parts.push(`${s.cancelledEnrollmentIds.length} enrollment${s.cancelledEnrollmentIds.length === 1 ? '' : 's'} cancelled`);
+      if (s.cancelledStripeSubscriptionCount > 0) parts.push(`${s.cancelledStripeSubscriptionCount} Stripe sub${s.cancelledStripeSubscriptionCount === 1 ? '' : 's'} cancelled`);
+      const summaryLine = parts.length > 0 ? parts.join(' · ') : 'Done.';
+      const otherOrgNote =
+        (s.otherOrgPlayerCount ?? 0) > 0
+          ? ' Other clubs were not affected.'
+          : ' No other clubs were affected.';
+      toast({
+        title: 'Removed from this club',
+        description: `${summaryLine}${otherOrgNote}`,
+      });
+      setRemoveFromOrgUser(null);
+      setRemoveFromOrgStep(1);
+      setRemoveFromOrgConfirmText('');
+      setViewingUser(null);
+    },
+    onError: (err: any) => {
+      toast({
+        title: 'Failed to remove from club',
+        description: err?.message || 'Try again in a moment.',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -4795,14 +4889,19 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                 variant="destructive"
                 size="sm"
                 onClick={() => {
-                  if (confirm(`Are you sure you want to delete ${selectedUserIds.size} user(s)?`)) {
-                    bulkDeleteUsers.mutate(Array.from(selectedUserIds));
-                  }
+                  // Task #353: bulk removal now opens the same two-step
+                  // confirmation dialog used for single removals so the
+                  // admin sees the impact and types-to-confirm before
+                  // anything is cancelled.
+                  setBulkRemoveStep(1);
+                  setBulkRemoveConfirmText('');
+                  setBulkRemoveOpen(true);
                 }}
                 disabled={bulkDeleteUsers.isPending}
+                data-testid="button-bulk-remove-from-club"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
-                {bulkDeleteUsers.isPending ? "Deleting..." : "Delete Selected"}
+                {bulkDeleteUsers.isPending ? "Removing..." : "Remove from this club"}
               </Button>
               <Button
                 variant="ghost"
@@ -5490,16 +5589,22 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       <UserPlus className="w-4 h-4" />
                       Add Role
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setDeleteConfirmUser(viewingUser)}
-                      className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                      data-testid="button-delete-user"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete
-                    </Button>
+                    {(viewingUser?.role === 'parent' || viewingUser?.role === 'player') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setRemoveFromOrgUser(viewingUser);
+                          setRemoveFromOrgStep(1);
+                          setRemoveFromOrgConfirmText('');
+                        }}
+                        className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                        data-testid="button-remove-from-club"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Remove from this club
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -6133,7 +6238,305 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
         </DialogContent>
       </Dialog>
       
-      {/* Delete User Confirmation Dialog */}
+      {/* Task #353: Two-step "Remove from this club" dialog. Replaces the
+          legacy global Delete dialog for normal admin removal flows. */}
+      <AlertDialog
+        open={!!removeFromOrgUser}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRemoveFromOrgUser(null);
+            setRemoveFromOrgStep(1);
+            setRemoveFromOrgConfirmText('');
+          }
+        }}
+      >
+        <AlertDialogContent className="max-w-lg">
+          {(() => {
+            const target = removeFromOrgUser;
+            const preview = removalPreviewQuery.data as
+              | undefined
+              | {
+                  targetName: string;
+                  targetEmail: string | null;
+                  removedPlayers: Array<{ id: string; name: string }>;
+                  cancelledEnrollmentIds: number[];
+                  endedTeamMembershipCount: number;
+                  cancelledStripeSubscriptionCount: number;
+                  parentSoftDeleted: boolean;
+                  parentDetached?: boolean;
+                  childrenSoftDeleted: number;
+                  childrenDetached?: number;
+                  otherOrgPlayerCount: number;
+                  otherOrgPlayerNames: string[];
+                  otherOrgNames?: string[];
+                };
+            const targetName = preview?.targetName || `${target?.firstName || ''} ${target?.lastName || ''}`.trim() || 'this user';
+            const expected = targetName.trim().toLowerCase();
+            // Accept either the user's full name OR the literal "remove"
+            // sentinel — the latter is helpful for users with awkward
+            // characters in their name (umlauts, hyphens, etc.).
+            const typed = removeFromOrgConfirmText.trim().toLowerCase();
+            const typedOk = (typed === expected && expected.length > 0) || typed === 'remove';
+            return (
+              <>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-red-600 flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5" />
+                    Remove {targetName} from this club
+                  </AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-3 text-sm text-gray-700">
+                      {removeFromOrgStep === 1 ? (
+                        removalPreviewQuery.isLoading ? (
+                          <p>Building impact summary…</p>
+                        ) : !preview ? (
+                          <p className="text-red-600">Couldn't load preview. Try again.</p>
+                        ) : (
+                          <>
+                            <p>
+                              This is scoped to <strong>this club only</strong>. The user's account is{' '}
+                              <strong>not closed</strong> — only their link to this club, plus org-scoped
+                              enrollments, subscriptions, and team memberships, are removed. Other clubs are
+                              unaffected.
+                            </p>
+                            <div className="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-1">
+                              <div>
+                                <span className="text-gray-500">Players removed from this club: </span>
+                                <strong>{preview.removedPlayers.length}</strong>
+                                {preview.removedPlayers.length > 0 && (
+                                  <ul className="mt-1 ml-4 list-disc text-gray-700">
+                                    {preview.removedPlayers.slice(0, 8).map((p) => (
+                                      <li key={p.id}>{p.name}</li>
+                                    ))}
+                                    {preview.removedPlayers.length > 8 && (
+                                      <li className="text-gray-500">+ {preview.removedPlayers.length - 8} more</li>
+                                    )}
+                                  </ul>
+                                )}
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Enrollments cancelled: </span>
+                                <strong>{preview.cancelledEnrollmentIds.length}</strong>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Team memberships ended: </span>
+                                <strong>{preview.endedTeamMembershipCount}</strong>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Stripe subscriptions cancelled (best-effort): </span>
+                                <strong>{preview.cancelledStripeSubscriptionCount}</strong>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Account status: </span>
+                                <strong>
+                                  Kept active{preview.otherOrgPlayerCount > 0
+                                    ? ' (linked to other clubs)'
+                                    : ' (no other clubs — will be unlinked from any org)'}
+                                </strong>
+                              </div>
+                            </div>
+                            {preview.otherOrgPlayerCount > 0 && (
+                              <div className="rounded-md border border-amber-300 bg-amber-50 p-3">
+                                <p className="font-medium text-amber-800">
+                                  Active in {(preview.otherOrgNames?.length ?? 0)} other club{(preview.otherOrgNames?.length ?? 0) === 1 ? '' : 's'}
+                                  {' '}({preview.otherOrgPlayerCount} player{preview.otherOrgPlayerCount === 1 ? '' : 's'}):
+                                </p>
+                                {(preview.otherOrgNames?.length ?? 0) > 0 && (
+                                  <ul className="mt-1 ml-4 list-disc text-amber-700">
+                                    {preview.otherOrgNames!.slice(0, 5).map((n, i) => (
+                                      <li key={i}>{n}</li>
+                                    ))}
+                                    {(preview.otherOrgNames!.length > 5) && (
+                                      <li>+ {preview.otherOrgNames!.length - 5} more</li>
+                                    )}
+                                  </ul>
+                                )}
+                                <p className="mt-2 text-xs text-amber-700">
+                                  Those other-club players will <strong>not</strong> be touched.
+                                </p>
+                              </div>
+                            )}
+                          </>
+                        )
+                      ) : (
+                        <>
+                          <p>
+                            To confirm, type the user's name <em>or</em> the word{' '}
+                            <span className="font-mono bg-gray-100 rounded px-2 py-0.5">REMOVE</span>:
+                          </p>
+                          <p className="font-mono text-sm bg-gray-100 rounded px-2 py-1 inline-block">{targetName}</p>
+                          <Input
+                            value={removeFromOrgConfirmText}
+                            onChange={(e) => setRemoveFromOrgConfirmText(e.target.value)}
+                            placeholder='Type name or "REMOVE"'
+                            className="mt-2"
+                            data-testid="input-remove-confirm"
+                            autoFocus
+                          />
+                          <p className="text-xs text-gray-500">
+                            This cancels their in-club enrollments and ends team memberships. Their historical records (payments, waivers) stay intact for your audit.
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={removeFromOrg.isPending}>Cancel</AlertDialogCancel>
+                  {removeFromOrgStep === 1 ? (
+                    <AlertDialogAction
+                      className="bg-red-600 hover:bg-red-700"
+                      disabled={!preview || removalPreviewQuery.isLoading}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setRemoveFromOrgStep(2);
+                      }}
+                      data-testid="button-remove-next"
+                    >
+                      Continue
+                    </AlertDialogAction>
+                  ) : (
+                    <AlertDialogAction
+                      className="bg-red-600 hover:bg-red-700"
+                      disabled={!typedOk || removeFromOrg.isPending}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (!removeFromOrgUser) return;
+                        const scope =
+                          removeFromOrgUser.role === 'parent' ? 'parent' : 'player';
+                        removeFromOrg.mutate({ id: removeFromOrgUser.id, scope });
+                      }}
+                      data-testid="button-remove-confirm"
+                    >
+                      {removeFromOrg.isPending ? 'Removing…' : 'Remove from this club'}
+                    </AlertDialogAction>
+                  )}
+                </AlertDialogFooter>
+              </>
+            );
+          })()}
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Task #353: bulk "Remove from this club" two-step confirmation. */}
+      <AlertDialog
+        open={bulkRemoveOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBulkRemoveOpen(false);
+            setBulkRemoveStep(1);
+            setBulkRemoveConfirmText('');
+          }
+        }}
+      >
+        <AlertDialogContent className="max-w-lg">
+          {(() => {
+            const ids = Array.from(selectedUserIds);
+            const selectedUsers = users.filter((u: any) => ids.includes(u.id));
+            const sample = selectedUsers
+              .slice(0, 5)
+              .map((u: any) =>
+                `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || u.id,
+              );
+            const expected = `remove ${ids.length}`;
+            const typedOk =
+              bulkRemoveConfirmText.trim().toLowerCase() === expected && ids.length > 0;
+            return (
+              <>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-red-600 flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5" />
+                    Remove {ids.length} user{ids.length === 1 ? '' : 's'} from this club
+                  </AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-3 text-sm text-gray-700">
+                      {bulkRemoveStep === 1 ? (
+                        <>
+                          <p>
+                            This is scoped to <strong>this club only</strong>. Each user's account
+                            is preserved if they're active in another club.
+                          </p>
+                          <div className="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-1">
+                            <p className="text-xs text-gray-500">Selected users:</p>
+                            <ul className="ml-4 list-disc">
+                              {sample.map((n, i) => (
+                                <li key={i}>{n}</li>
+                              ))}
+                              {ids.length > 5 && (
+                                <li className="text-gray-500">+ {ids.length - 5} more</li>
+                              )}
+                            </ul>
+                          </div>
+                          <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+                            <p>For each selected user we will:</p>
+                            <ul className="mt-1 ml-4 list-disc">
+                              <li>Cancel their in-club enrollments and active Stripe subscriptions tied to this org.</li>
+                              <li>End their in-club team memberships.</li>
+                              <li>Detach them (and any in-club children) from this club. Their underlying account stays active so they can rejoin later or remain in another club.</li>
+                              <li>Coach and admin accounts in your selection are skipped — manage them through their dedicated tooling.</li>
+                            </ul>
+                            <p className="mt-2">Bulk removal cannot be undone in one click.</p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p>
+                            Type <span className="font-mono bg-gray-100 rounded px-2 py-0.5">remove {ids.length}</span> to confirm bulk removal of <strong>{ids.length}</strong> user{ids.length === 1 ? '' : 's'}.
+                          </p>
+                          <Input
+                            value={bulkRemoveConfirmText}
+                            onChange={(e) => setBulkRemoveConfirmText(e.target.value)}
+                            placeholder={`remove ${ids.length}`}
+                            className="mt-1"
+                            data-testid="input-bulk-remove-confirm"
+                            autoFocus
+                          />
+                        </>
+                      )}
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={bulkDeleteUsers.isPending}>Cancel</AlertDialogCancel>
+                  {bulkRemoveStep === 1 ? (
+                    <AlertDialogAction
+                      className="bg-red-600 hover:bg-red-700"
+                      disabled={ids.length === 0}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setBulkRemoveStep(2);
+                      }}
+                      data-testid="button-bulk-remove-next"
+                    >
+                      Continue
+                    </AlertDialogAction>
+                  ) : (
+                    <AlertDialogAction
+                      className="bg-red-600 hover:bg-red-700"
+                      disabled={!typedOk || bulkDeleteUsers.isPending}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        bulkDeleteUsers.mutate(ids);
+                        setBulkRemoveOpen(false);
+                        setBulkRemoveStep(1);
+                        setBulkRemoveConfirmText('');
+                      }}
+                      data-testid="button-bulk-remove-confirm"
+                    >
+                      {bulkDeleteUsers.isPending
+                        ? 'Removing…'
+                        : `Remove ${ids.length} from this club`}
+                    </AlertDialogAction>
+                  )}
+                </AlertDialogFooter>
+              </>
+            );
+          })()}
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Legacy Delete dialog kept for any callers (e.g. profile-only scrub).
+          The button on the user detail panel now opens the Remove dialog above. */}
       <AlertDialog open={!!deleteConfirmUser} onOpenChange={(open) => !open && setDeleteConfirmUser(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -17866,3 +18269,59 @@ function FacilitiesTab({ organization }: { organization: any }) {
 // approved/rejected from the existing user detail dialog. Existing
 // notification deep links are rewritten by the legacy hash redirect
 // useEffect near the top of this file.
+
+// Task #353: Orphan parent reminder pipeline at-a-glance card
+function OrphanPipelineCard() {
+  const { data, isLoading } = useQuery<{
+    pending: number;
+    sentDay3: number;
+    sentDay14: number;
+    sentDay30: number;
+    softDeleted: number;
+    activePipeline: number;
+    total: number;
+  }>({
+    queryKey: ['/api/admin/orphan-pipeline-stats'],
+  });
+
+  if (isLoading || !data) return null;
+  if ((data.total || 0) === 0) return null;
+
+  return (
+    <Card data-testid="card-orphan-pipeline">
+      <CardContent className="py-4 px-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-semibold text-gray-900">Orphan parent cleanup</p>
+          <span className="text-xs text-gray-500">Daily reminders + day-45 cleanup</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div data-testid="stat-orphan-active">
+            <p className="text-xs text-gray-500">In pipeline</p>
+            <p className="text-lg font-bold text-gray-900">{data.activePipeline}</p>
+          </div>
+          <div data-testid="stat-orphan-pending">
+            <p className="text-xs text-gray-500">Awaiting day-3 reminder</p>
+            <p className="text-lg font-bold text-gray-900">{data.pending}</p>
+          </div>
+          <div data-testid="stat-orphan-day3">
+            <p className="text-xs text-gray-500">Day 3 sent</p>
+            <p className="text-lg font-bold text-gray-900">{data.sentDay3}</p>
+          </div>
+          <div data-testid="stat-orphan-day14">
+            <p className="text-xs text-gray-500">Day 14 sent</p>
+            <p className="text-lg font-bold text-gray-900">{data.sentDay14}</p>
+          </div>
+          <div data-testid="stat-orphan-day30">
+            <p className="text-xs text-gray-500">Day 30 sent</p>
+            <p className="text-lg font-bold text-gray-900">{data.sentDay30}</p>
+          </div>
+        </div>
+        {data.softDeleted > 0 && (
+          <p className="mt-3 text-xs text-gray-500">
+            <span className="font-semibold text-gray-700">{data.softDeleted}</span> auto-removed at day 45 (lifetime).
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

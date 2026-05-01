@@ -5,8 +5,8 @@ import { pushNotifications, resolveEventParticipants } from './pushNotificationH
 import { analyzePlayerAttendance, getOrgPlayers, getTeamCoachIds, getOrgAdminIds } from './attendanceTracker';
 import type { Event } from '@shared/schema';
 import { db } from '../db';
-import { notifications, notificationRecipients, productEnrollments, products, users, teamMemberships, teams } from '@shared/schema';
-import { eq, and, sql, lte, gte, gt, lt, inArray, isNotNull } from 'drizzle-orm';
+import { notifications, notificationRecipients, productEnrollments, products, users, teamMemberships, teams, orphanParentReminders, adminRemovalAudits } from '@shared/schema';
+import { eq, and, sql, lte, gte, gt, lt, inArray, isNotNull, isNull, or } from 'drizzle-orm';
 import { adminNotificationService } from './adminNotificationService';
 import { normalizeTitleKey } from './notificationDedup';
 
@@ -113,6 +113,18 @@ export class NotificationScheduler {
       scheduled: false
     });
     this.jobs.set('inactivePlayerReminders', inactivePlayerRemindersJob);
+
+    // Task #353: orphan parent reminder pipeline. Runs daily at 10:30 AM
+    // local server time. Sends day-3, day-14, day-30 nudges to parents who
+    // never added a player, and soft-deletes them on day 45. State is
+    // tracked in `orphan_parent_reminders` and reset (row deleted) the
+    // first time a player is added to that parent.
+    const orphanParentReminderJob = cron.schedule('30 10 * * *', async () => {
+      await this.processOrphanParentReminders();
+    }, {
+      scheduled: false
+    });
+    this.jobs.set('orphanParentReminders', orphanParentReminderJob);
 
     this.jobs.set('eventReminders', eventReminderJob);
     this.jobs.set('checkinAvailable', checkinAvailableJob);
@@ -1823,6 +1835,270 @@ export class NotificationScheduler {
       console.log(`[Inactive Player Reminders] Done — sent ${sent}, skipped ${skipped}`);
     } catch (err) {
       console.error('[Inactive Player Reminders] Fatal error:', err);
+    }
+  }
+
+  // Task #353: testing/manual-trigger entry point for the orphan reminder
+  // pipeline. Production runs are driven by the daily cron above.
+  async triggerOrphanParentReminders() {
+    await this.processOrphanParentReminders();
+  }
+
+  private async processOrphanParentReminders() {
+    try {
+      console.log('[Orphan Parent Reminders] Starting daily sweep...');
+      const now = new Date();
+      const DAY_MS = 24 * 60 * 60 * 1000;
+      // Day-3, day-14, day-30 emails. Day-45 triggers an auto soft-delete.
+      const STAGE_THRESHOLDS = [3, 14, 30];
+      const SOFT_DELETE_AFTER_DAYS = 45;
+
+      // Step 1 — refresh the pipeline. Find any parent who has fully
+      // registered, has no active player linked, and is not yet tracked.
+      // Insert a tracking row with their activation date (or createdAt
+      // fallback) as the baseline. Eligibility is strictly limited to
+      // `hasRegistered = true` so we never enroll a parent who is still
+      // in the middle of the signup flow.
+      const untrackedOrphans = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          createdAt: users.createdAt,
+          activatedAt: users.activatedAt,
+        })
+        .from(users)
+        .leftJoin(orphanParentReminders, eq(orphanParentReminders.userId, users.id))
+        .where(
+          and(
+            isNull(orphanParentReminders.id),
+            eq(users.isActive, true),
+            eq(users.hasRegistered, true),
+            sql`(${users.role} = 'parent' OR ${users.userType} = 'parent')`,
+            // No active children currently linked to this parent.
+            sql`NOT EXISTS (
+              SELECT 1 FROM users c
+              WHERE (c.account_holder_id = ${users.id}
+                  OR c.parent_id = ${users.id}
+                  OR c.guardian_id = ${users.id})
+                AND c.is_active = true
+                AND c.id <> ${users.id}
+            )`,
+          ),
+        );
+
+      let inserted = 0;
+      for (const u of untrackedOrphans) {
+        // Newly-registered orphans baseline off their actual registration
+        // timestamp so day-3/14/30 reminders fire on the spec'd cadence
+        // from registration. Pre-existing backlog (registered more than
+        // 2 days ago — they would otherwise be insta-past day-3 with no
+        // notice) gets a fresh "today" baseline so they still receive
+        // the full day-3/14/30 notice window before day-45 cleanup.
+        const regTs = new Date(u.activatedAt || u.createdAt || now.toISOString());
+        const ageDaysAtEnroll = (now.getTime() - regTs.getTime()) / DAY_MS;
+        const baseline =
+          ageDaysAtEnroll > 2 ? now.toISOString() : regTs.toISOString();
+        try {
+          await db
+            .insert(orphanParentReminders)
+            .values({
+              userId: u.id,
+              baselineAt: baseline,
+              remindersSent: 0,
+            })
+            .onConflictDoNothing();
+          inserted++;
+        } catch (e) {
+          console.error(`[Orphan Parent Reminders] failed to enroll ${u.id}:`, e);
+        }
+      }
+      if (inserted > 0) {
+        console.log(`[Orphan Parent Reminders] Enrolled ${inserted} new orphan(s).`);
+      }
+
+      // Step 2 — clear the pipeline for parents who have since added a
+      // player. Removing the row resets the schedule cleanly.
+      const recovered = await db.execute(sql`
+        DELETE FROM orphan_parent_reminders opr
+        WHERE opr.soft_deleted_at IS NULL
+          AND EXISTS (
+            SELECT 1 FROM users c
+            WHERE (c.account_holder_id = opr.user_id
+                OR c.parent_id = opr.user_id
+                OR c.guardian_id = opr.user_id)
+              AND c.is_active = true
+              AND c.id <> opr.user_id
+          )
+        RETURNING opr.user_id
+      `);
+      const recoveredRows = (recovered as any).rows || (recovered as any) || [];
+      if (recoveredRows.length > 0) {
+        console.log(`[Orphan Parent Reminders] Recovered ${recoveredRows.length} parent(s) (added a player).`);
+      }
+
+      // Step 3 — process the pipeline.
+      const pipeline = await db
+        .select({
+          id: orphanParentReminders.id,
+          userId: orphanParentReminders.userId,
+          baselineAt: orphanParentReminders.baselineAt,
+          remindersSent: orphanParentReminders.remindersSent,
+          lastReminderAt: orphanParentReminders.lastReminderAt,
+        })
+        .from(orphanParentReminders)
+        .where(isNull(orphanParentReminders.softDeletedAt));
+
+      const { sendOrphanReminderEmail } = await import('../email');
+      const { removeParentFromOrg } = await import('../lib/org-removal');
+      const orgNameCache = new Map<string, string>();
+
+      let sent = 0;
+      let softDeleted = 0;
+      let skipped = 0;
+
+      for (const row of pipeline) {
+        try {
+          const [u] = await db.select().from(users).where(eq(users.id, row.userId));
+          if (!u || u.isActive === false) {
+            // User was removed/inactive elsewhere — drop the row.
+            await db.delete(orphanParentReminders).where(eq(orphanParentReminders.id, row.id));
+            skipped++;
+            continue;
+          }
+
+          const ageDays = (now.getTime() - new Date(row.baselineAt).getTime()) / DAY_MS;
+
+          // Auto soft-delete on day 45. If the user still has an org we
+          // route through removeParentFromOrg so enrollments/memberships
+          // are cancelled with full audit summary; if the user has no
+          // org context (e.g. a pending invite that never finished) we
+          // just close the account directly via the soft-delete primitive
+          // so they still get cleaned up.
+          if (ageDays >= SOFT_DELETE_AFTER_DAYS) {
+            const { softDeleteUserRow } = await import('../lib/org-removal');
+            let summary: unknown = null;
+            if (u.organizationId) {
+              // System cleanup: opt in to soft-delete on final org so the
+              // account is actually retired (manual flow detaches only).
+              summary = await removeParentFromOrg(u.id, u.organizationId, null, {
+                softDeleteIfFinalOrg: true,
+              });
+            } else {
+              await softDeleteUserRow(db, u.id, u.email ?? null);
+              summary = { directSoftDelete: true, reason: 'no_organization' };
+            }
+            await db
+              .update(orphanParentReminders)
+              .set({ softDeletedAt: now.toISOString(), updatedAt: now.toISOString() })
+              .where(eq(orphanParentReminders.id, row.id));
+            // Always write an audit row for day-45 auto-cleanup so every
+            // automated removal is observable, even for org-less users
+            // (admin_removal_audits.organizationId is nullable for this
+            // case).
+            await db.insert(adminRemovalAudits).values({
+              organizationId: u.organizationId ?? null,
+              action: 'orphan_auto_soft_delete',
+              actorId: null,
+              targetUserId: u.id,
+              details: {
+                ageDays: Math.round(ageDays),
+                remindersSent: row.remindersSent,
+                baselineAt: row.baselineAt,
+                hadOrganization: !!u.organizationId,
+                summary,
+              } as Record<string, unknown>,
+            });
+            softDeleted++;
+            continue;
+          }
+
+          // Pick the next stage to send (if any).
+          const nextStageIdx = row.remindersSent;
+          if (nextStageIdx >= STAGE_THRESHOLDS.length) {
+            skipped++;
+            continue;
+          }
+          const threshold = STAGE_THRESHOLDS[nextStageIdx];
+          if (ageDays < threshold) {
+            skipped++;
+            continue;
+          }
+
+          // Avoid double-sends within a 12-hour window if the cron is
+          // re-triggered manually.
+          if (row.lastReminderAt) {
+            const sinceLast = now.getTime() - new Date(row.lastReminderAt).getTime();
+            if (sinceLast < 12 * 60 * 60 * 1000) {
+              skipped++;
+              continue;
+            }
+          }
+
+          if (!u.email) {
+            // Truly no way to reach them — advance the pipeline so the
+            // day-45 cleanup still applies.
+            await db
+              .update(orphanParentReminders)
+              .set({
+                remindersSent: row.remindersSent + 1,
+                lastReminderAt: now.toISOString(),
+                updatedAt: now.toISOString(),
+              })
+              .where(eq(orphanParentReminders.id, row.id));
+            skipped++;
+            continue;
+          }
+
+          // Org-less orphans still get the 3/14/30 reminder cadence.
+          // The email uses a generic "your club" fallback when no org
+          // name is available.
+          let orgName = 'your club';
+          if (u.organizationId) {
+            const cached = orgNameCache.get(u.organizationId);
+            if (cached) {
+              orgName = cached;
+            } else {
+              const org = await storage.getOrganization(u.organizationId);
+              orgName = org?.name || 'your club';
+              orgNameCache.set(u.organizationId, orgName);
+            }
+          }
+
+          const stage = (['day3', 'day14', 'day30'] as const)[nextStageIdx];
+          const result = await sendOrphanReminderEmail({
+            email: u.email,
+            firstName: u.firstName ?? null,
+            organizationName: orgName,
+            stage,
+          });
+
+          if (result.success) {
+            await db
+              .update(orphanParentReminders)
+              .set({
+                remindersSent: row.remindersSent + 1,
+                lastReminderAt: now.toISOString(),
+                updatedAt: now.toISOString(),
+              })
+              .where(eq(orphanParentReminders.id, row.id));
+            sent++;
+          } else {
+            console.error(
+              `[Orphan Parent Reminders] Email failed for ${u.id} (${u.email}): ${result.error}`,
+            );
+            skipped++;
+          }
+        } catch (rowErr) {
+          console.error(`[Orphan Parent Reminders] Row failed (${row.userId}):`, rowErr);
+        }
+      }
+
+      console.log(
+        `[Orphan Parent Reminders] Done — sent ${sent}, soft-deleted ${softDeleted}, skipped ${skipped}, pipeline size ${pipeline.length}`,
+      );
+    } catch (err) {
+      console.error('[Orphan Parent Reminders] Fatal error:', err);
     }
   }
 }

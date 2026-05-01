@@ -566,11 +566,22 @@ export class NotificationService {
         
         if (fcmTokens.length > 0 && firebaseServiceAccount) {
           try {
+            // FCM requires all data values to be strings. Coerce every field
+            // from pushData so the Capacitor pushNotificationActionPerformed
+            // listener on Android receives data.url (and friends) and can
+            // deep-link the user to the correct event/screen.
+            const fcmData: Record<string, string> = {};
+            for (const [k, v] of Object.entries(pushData)) {
+              if (v === undefined || v === null) continue;
+              fcmData[k] = typeof v === 'string' ? v : String(v);
+            }
+
             const fcmMessage: any = {
               notification: {
                 title: title,
                 body: message,
               },
+              data: fcmData,
               tokens: fcmTokens,
             };
             if (collapseKey) {
@@ -920,7 +931,11 @@ export class NotificationService {
       title: `Event Reminder: ${eventTitle}`,
       message: `Your event "${eventTitle}" starts ${timeUntil}. Don't forget to check in!`,
       type: 'event_reminder',
-      data: { eventId, eventTitle },
+      // url is consumed by the native push handler and service worker so tapping
+      // the notification opens the app on /home?eventId=<id>. DashboardDispatcher
+      // forwards the eventId to the correct dashboard, which auto-opens
+      // EventDetailModal for that event.
+      data: { eventId, eventTitle, notificationType: 'event', url: `/home?eventId=${eventId}` },
       channels: ['in_app', 'push']
     });
   }
@@ -931,7 +946,7 @@ export class NotificationService {
       title: 'Check-In Now Available',
       message: `Check-in is now open for "${eventTitle}". Tap to check in!`,
       type: 'event_checkin_available',
-      data: { eventId, eventTitle },
+      data: { eventId, eventTitle, notificationType: 'event', url: `/home?eventId=${eventId}` },
       channels: ['in_app', 'push']
     });
   }
@@ -942,7 +957,7 @@ export class NotificationService {
       title: 'RSVP Closing Soon',
       message: `RSVP for "${eventTitle}" closes in ${timeUntil}. Let us know if you're attending!`,
       type: 'event_rsvp_closing',
-      data: { eventId, eventTitle },
+      data: { eventId, eventTitle, notificationType: 'event', url: `/home?eventId=${eventId}` },
       channels: ['in_app', 'push']
     });
   }
@@ -962,7 +977,7 @@ export class NotificationService {
       title: `Event Updated: ${eventTitle}`,
       message: changeSummary,
       type: 'event_updated',
-      data: { eventId, eventTitle },
+      data: { eventId, eventTitle, notificationType: 'event', url: `/home?eventId=${eventId}` },
       channels: ['in_app', 'push']
     });
   }

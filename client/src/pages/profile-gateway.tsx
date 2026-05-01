@@ -385,7 +385,29 @@ export default function ProfileGateway() {
 
   const handleSelectProfile = async (type: string, playerId?: string) => {
     localStorage.setItem("lastViewedProfileType", type);
-    
+
+    // Forward any push-notification deep-link eventId to the chosen
+    // dashboard so tapping an event reminder still opens the event after
+    // the user picks a profile. The stash is only cleared after a
+    // successful navigation so that an aborted role-switch doesn't drop
+    // the deep-link context.
+    let pendingEventId: string | null = null;
+    try {
+      pendingEventId =
+        new URLSearchParams(window.location.search).get("eventId") ||
+        sessionStorage.getItem("pendingEventId");
+    } catch { /* noop */ }
+
+    const consumePendingEventId = () => {
+      try { sessionStorage.removeItem("pendingEventId"); } catch { /* noop */ }
+    };
+
+    const join = (path: string) => {
+      if (!pendingEventId) return path;
+      const sep = path.includes("?") ? "&" : "?";
+      return `${path}${sep}eventId=${encodeURIComponent(pendingEventId)}`;
+    };
+
     if (type === "account") {
       localStorage.removeItem("selectedPlayerId");
       localStorage.removeItem("viewingAsParent");
@@ -394,34 +416,40 @@ export default function ProfileGateway() {
         const ok = await switchToRole("parent");
         if (!ok) return;
       }
-      setLocation("/parent-dashboard");
+      setLocation(join("/parent-dashboard"));
+      consumePendingEventId();
     } else if (type === "coach") {
       const coachProfile = accountProfiles.find((p: any) => p.role === "coach");
       if (coachProfile && userRole !== "coach") {
         const ok = await switchToRole("coach");
         if (!ok) return;
       }
-      setLocation("/coach-dashboard");
+      setLocation(join("/coach-dashboard"));
+      consumePendingEventId();
     } else if (type === "admin") {
       const adminProfile = accountProfiles.find((p: any) => p.role === "admin");
       if (adminProfile && userRole !== "admin") {
         const ok = await switchToRole("admin");
         if (!ok) return;
       }
-      setLocation("/admin-dashboard");
+      setLocation(join("/admin-dashboard"));
+      consumePendingEventId();
     } else if (type === "player" && playerId) {
       localStorage.setItem("selectedPlayerId", playerId);
       localStorage.setItem("viewingAsParent", "true");
       // Task #255: Players approved without an expiry date are flagged
       // payment_due — route the parent straight into the payments wizard
-      // so they can complete payment before using the profile.
+      // so they can complete payment before using the profile. We
+      // intentionally do NOT consume pendingEventId here so the deep-link
+      // is preserved for after the parent finishes payment.
       const target = players.find((p: any) => p.id === playerId);
       const targetTag = target?.statusTag || (target?.paymentStatus === "pending" ? "payment_due" : "none");
       if (targetTag === "payment_due") {
         setLocation(`/unified-account?tab=payments&openPayment=true&profileId=${playerId}`);
         return;
       }
-      setLocation("/player-dashboard");
+      setLocation(join("/player-dashboard"));
+      consumePendingEventId();
     }
   };
 

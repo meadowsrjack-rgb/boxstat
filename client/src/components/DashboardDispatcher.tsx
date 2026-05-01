@@ -90,11 +90,19 @@ export default function DashboardDispatcher() {
       }
     }
 
+    // Stash the deep-link eventId so /profile-gateway can forward it to the
+    // dashboard the user picks. Without this, tapping a push notification when
+    // there's no defaultDashboardView/lastViewedProfileType (e.g. brand-new
+    // session) would land on profile-gateway and silently lose the eventId.
+    if (eventId) {
+      try { sessionStorage.setItem("pendingEventId", eventId); } catch { /* noop */ }
+    }
+
     if (isAdmin || isCoach) {
-      setLocation("/profile-gateway");
+      setLocation(`/profile-gateway${eventSuffix}`);
     } else if (isParent) {
       // Always send parents to profile gateway - they'll see empty state if no players
-      setLocation("/profile-gateway");
+      setLocation(`/profile-gateway${eventSuffix}`);
     } else if (isPlayer) {
       goToPlayerDashboard(userId, false);
     } else {

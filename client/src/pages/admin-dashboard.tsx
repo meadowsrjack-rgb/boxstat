@@ -493,6 +493,21 @@ export default function AdminDashboard() {
     const hash = window.location.hash;
     if (!hash || hash.length < 2) return;
     const id = hash.slice(1);
+    // The pending-player-approvals card was removed in favor of
+    // the Users-table queue. Rewrite older deep links (still living in
+    // notification emails / push payloads) so they land on the Users tab
+    // with the Pending approval filter applied instead of trying to scroll
+    // to a card that no longer exists.
+    if (id === 'pending-player-approvals-card') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', 'users');
+      url.searchParams.set('filter', 'pending_approval');
+      url.hash = '';
+      window.history.replaceState({}, '', url.toString());
+      setActiveTab('users');
+      window.dispatchEvent(new CustomEvent('admin-users-apply-filter', { detail: { filter: 'pending_approval' } }));
+      return;
+    }
     const tryScroll = (attempt: number) => {
       const el = document.getElementById(id);
       if (el) {
@@ -764,11 +779,15 @@ export default function AdminDashboard() {
                 window.history.replaceState({}, '', url.toString());
                 window.dispatchEvent(new CustomEvent('admin-users-apply-filter', { detail: { filter: 'invited' } }));
               } else if (alert.type === 'pending_player_approvals') {
-                setActiveTab('overview');
-                setTimeout(() => {
-                  const el = document.getElementById('pending-player-approvals-card');
-                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 100);
+                // Pending approvals now live in the Users table.
+                // Open the Users tab with the "Pending approval" filter
+                // applied so admins land directly on the queue.
+                setActiveTab('users');
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', 'users');
+                url.searchParams.set('filter', 'pending_approval');
+                window.history.replaceState({}, '', url.toString());
+                window.dispatchEvent(new CustomEvent('admin-users-apply-filter', { detail: { filter: 'pending_approval' } }));
               } else if (alert.type === 'pending_self_claims') {
                 setActiveTab('users');
                 const url = new URL(window.location.href);
@@ -987,20 +1006,9 @@ export default function AdminDashboard() {
 
           <div className="lg:flex-1 lg:min-w-0 lg:overflow-x-hidden lg:ml-48">
 
-          {/* Always-visible pending player approvals banner (shown across all tabs) */}
-          <PendingApprovalsBanner
-            onJump={() => {
-              setActiveTab('overview');
-              setTimeout(() => {
-                const el = document.getElementById('pending-player-approvals-card');
-                if (el) {
-                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  el.classList.add('ring-2', 'ring-amber-400', 'rounded-lg');
-                  setTimeout(() => el.classList.remove('ring-2', 'ring-amber-400', 'rounded-lg'), 2500);
-                }
-              }, 100);
-            }}
-          />
+          {/* The dedicated pending-approval banner was removed; the
+              admin alerts area still surfaces the same count and now deep-links
+              to the Users tab with the Pending approval filter applied. */}
 
           {/* Alert banners — always inside the content column so they respect lg:ml-48 */}
           <div className="mb-4">{alertBannersJSX}</div>
@@ -1165,9 +1173,9 @@ export default function AdminDashboard() {
               />
             )}
 
-            <div id="pending-player-approvals-card" className="scroll-mt-24">
-              <PendingPlayerApprovalsCard />
-            </div>
+            {/* The Pending Player Approvals card was removed; the
+                queue now lives inside the Users tab as a "Pending approval"
+                tag/filter and the existing user detail dialog. */}
 
             <RecentTransactionsCard payments={payments} users={users} programs={programs} isAdmin={currentUser?.role === 'admin' || hasAdminProfile} />
           </TabsContent>
@@ -2141,6 +2149,116 @@ function RecentTransactionsCard({ payments, users, programs, isAdmin }: any) {
   );
 }
 
+// Inline Approve / Approve-with-expiry / Reject controls used at the top of
+// the user detail dialog. Replaces the standalone PendingPlayerApprovalsCard
+// that previously lived on the Overview tab. Self-contained (own mutations +
+// state) so the surrounding dialog stays focused on regular profile fields.
+function PendingApprovalSection({ user, teams, programs, onResolved }: { user: any; teams: any[]; programs?: any[]; onResolved: (outcome: 'approved' | 'rejected') => void }) {
+  const { toast } = useToast();
+  const [expiryDate, setExpiryDate] = useState<string>('');
+  const requestedTeam = (teams || []).find((t: any) => t.id === user.requestedTeamId);
+  const requestedProgram = requestedTeam?.programId
+    ? (programs || []).find((p: any) => String(p.id) === String(requestedTeam.programId))
+    : null;
+
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/admin/pending-player-approvals'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/admin/alerts'] });
+  };
+
+  const approve = useMutation({
+    mutationFn: async (payload: { expiryDate?: string }) => {
+      return await apiRequest('POST', `/api/admin/pending-player-approvals/${user.id}/approve`, payload);
+    },
+    onSuccess: () => {
+      toast({ title: 'Player approved' });
+      invalidateAll();
+      // Keep the user dialog open and let the parent patch the editingUser
+      // in place so admins see the pending row transition to its post-
+      // approval state without losing their context.
+      onResolved('approved');
+    },
+    onError: (err: any) => {
+      toast({ title: 'Approval failed', description: err?.message || 'Please try again', variant: 'destructive' });
+    },
+  });
+
+  const reject = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('POST', `/api/admin/pending-player-approvals/${user.id}/reject`, {});
+    },
+    onSuccess: () => {
+      toast({ title: 'Request rejected' });
+      invalidateAll();
+      onResolved('rejected');
+    },
+    onError: (err: any) => {
+      toast({ title: 'Reject failed', description: err?.message || 'Please try again', variant: 'destructive' });
+    },
+  });
+
+  const busy = approve.isPending || reject.isPending;
+
+  return (
+    <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 space-y-3" data-testid="section-pending-approval">
+      <div className="flex items-start gap-2">
+        <UserPlus className="w-4 h-4 mt-0.5 text-amber-700 shrink-0" />
+        <div className="flex-1">
+          <div className="text-sm font-semibold text-amber-900">Approval request</div>
+          <div className="text-xs text-amber-800 mt-0.5">
+            This player is awaiting approval to join
+            {requestedTeam ? <> <span className="font-medium">{requestedTeam.name}</span></> : ' a team'}
+            {requestedProgram ? <> in <span className="font-medium">{requestedProgram.name}</span></> : null}
+            . Approving without an end date sends the parent to checkout. Approving with an end date
+            grants access through that date with no payment required.
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-col sm:flex-row sm:items-end gap-2">
+        <div className="flex-1">
+          <Label htmlFor="approval-expiry" className="text-xs text-amber-900">End date (optional)</Label>
+          <Input
+            id="approval-expiry"
+            type="date"
+            value={expiryDate}
+            onChange={(e) => setExpiryDate(e.target.value)}
+            disabled={busy}
+            data-testid="input-approval-expiry"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            className="bg-green-600 hover:bg-green-700 text-white"
+            disabled={busy}
+            onClick={() => approve.mutate(expiryDate ? { expiryDate } : {})}
+            data-testid="button-approve-pending"
+          >
+            {approve.isPending ? 'Approving…' : (expiryDate ? 'Approve with end date' : 'Approve')}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="border-red-300 text-red-700 hover:bg-red-50"
+            disabled={busy}
+            onClick={() => {
+              if (confirm('Reject this approval request? The parent will be notified.')) {
+                reject.mutate();
+              }
+            }}
+            data-testid="button-reject-pending"
+          >
+            {reject.isPending ? 'Rejecting…' : 'Reject'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Users Tab Component  
 function UsersTab({ users, teams, programs, divisions, organization, enrollments }: any) {
   const { toast } = useToast();
@@ -2170,35 +2288,87 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     }
     return new Set();
   });
+  // Dedicated quick filter for the pending-approval queue. Lives outside
+  // `filterStatuses` because pending-approval is a separate axis from the
+  // enrollment-derived status labels (a pending player can also be e.g.
+  // "No Enrollment" or "Unpaid" once approved).
+  const [filterPendingApproval, setFilterPendingApproval] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('filter') === 'pending_approval') return true;
+    }
+    return false;
+  });
+  const [highlightUserId, setHighlightUserId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('playerId');
+    }
+    return null;
+  });
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
 
-  // Task #262: Allow alert tiles to apply the Invited filter dynamically.
+  // Task #262 / #352: Allow alert tiles and legacy deep links to apply the
+  // Invited / Self-Claimed / Pending approval filters dynamically.
   useEffect(() => {
     const handler = (e: any) => {
       if (e?.detail?.filter === 'invited') {
         setFilterStatuses(new Set(['Invited']));
+        setFilterPendingApproval(false);
       } else if (e?.detail?.filter === 'self_claimed') {
         setFilterStatuses(new Set(['Self-Claimed']));
+        setFilterPendingApproval(false);
+      } else if (e?.detail?.filter === 'pending_approval') {
+        setFilterPendingApproval(true);
+        setFilterStatuses(new Set());
+      }
+      if (e?.detail?.playerId) {
+        setHighlightUserId(String(e.detail.playerId));
       }
     };
     window.addEventListener('admin-users-apply-filter', handler);
     return () => window.removeEventListener('admin-users-apply-filter', handler);
   }, []);
 
-  // Strip the ?filter=invited query param after we apply it once so other
+  // Strip the ?filter=... query param after we apply it once so other
   // navigations don't keep re-applying it.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const f = params.get('filter');
-    if (f === 'invited' || f === 'self_claimed') {
+    if (f === 'invited' || f === 'self_claimed' || f === 'pending_approval') {
       if (f === 'self_claimed') setFilterStatuses(new Set(['Self-Claimed']));
+      if (f === 'pending_approval') setFilterPendingApproval(true);
       params.delete('filter');
+      params.delete('playerId');
       const search = params.toString();
       const newUrl = window.location.pathname + (search ? `?${search}` : '') + window.location.hash;
       window.history.replaceState({}, '', newUrl);
     }
   }, []);
+
+  // Once the highlight target appears in the rendered table, scroll to it
+  // and briefly flash a ring around the row so admins can find a specific
+  // player they were deep-linked to. Cleared after the flash so re-renders
+  // don't keep re-highlighting the same row.
+  useEffect(() => {
+    if (!highlightUserId || typeof window === 'undefined') return;
+    let attempts = 0;
+    const tryHighlight = () => {
+      const el = document.querySelector(`[data-testid="row-user-${highlightUserId}"]`) as HTMLElement | null;
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('ring-2', 'ring-amber-400');
+        setTimeout(() => {
+          el.classList.remove('ring-2', 'ring-amber-400');
+          setHighlightUserId(null);
+        }, 2500);
+        return;
+      }
+      if (attempts++ < 12) setTimeout(tryHighlight, 250);
+    };
+    tryHighlight();
+  }, [highlightUserId]);
   const [usersPage, setUsersPage] = useState(1);
   const USERS_PAGE_SIZE = 50;
   const tableRef = useDragScroll();
@@ -2913,7 +3083,36 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   // to know "does this player belong to this household?".
   const householdCtx = buildHouseholdContext(users, getDisplayEmail);
   const householdPlayersFor = (u: any): any[] => householdPlayersForCtx(u, householdCtx);
-  const groupedUsers = groupUsersByHousehold(sortedUsers, householdCtx);
+  const groupedUsersBase = groupUsersByHousehold(sortedUsers, householdCtx);
+
+  // Pending-approval players (and the household they sit in) sort to the top
+  // of the table by default so admins still see the queue front and center
+  // after the dedicated Overview card was removed. We only bubble when the
+  // user hasn't picked an explicit sort column — that way picking e.g. Name
+  // asc still gives the expected pure alphabetical order.
+  const isDefaultSort = sortField === 'createdAt' && sortDirection === 'desc';
+  const groupedUsers = (() => {
+    if (!isDefaultSort) return groupedUsersBase;
+    const pendingHouseholdRoots = new Set<string>();
+    for (const u of users || []) {
+      if (u?.approvalStatus === 'pending') {
+        const key = `root:${(u.accountHolderId && (householdCtx.userById.get(u.accountHolderId)?.id)) || u.accountHolderId || u.id}`;
+        pendingHouseholdRoots.add(key);
+      }
+    }
+    if (pendingHouseholdRoots.size === 0) return groupedUsersBase;
+    const top: any[] = [];
+    const rest: any[] = [];
+    for (const u of groupedUsersBase) {
+      const isPendingPlayer = u?.approvalStatus === 'pending';
+      // Match either the player themselves or the household they belong to.
+      const inPendingHousehold = isPendingPlayer
+        || (u.id && pendingHouseholdRoots.has(`root:${u.id}`))
+        || (u.accountHolderId && pendingHouseholdRoots.has(`root:${u.accountHolderId}`));
+      if (inPendingHousehold) top.push(u); else rest.push(u);
+    }
+    return [...top, ...rest];
+  })();
 
   // Helper: derive enrollment status label for a user
   const deriveUserStatus = (user: any): string => {
@@ -3049,6 +3248,10 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
       const matches = filterStatuses.has(status) || (filterStatuses.has('Invited') && isInvited);
       if (!matches) return false;
     }
+    // Pending approval is a separate filter axis from the enrollment-derived
+    // status labels above, so applying it narrows to just the approval queue
+    // regardless of the other status filters.
+    if (filterPendingApproval && user.approvalStatus !== 'pending') return false;
     return true;
   });
 
@@ -3056,7 +3259,7 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
   const safeUsersPage = Math.min(usersPage, totalUsersPages);
   const paginatedUsers = filteredUsers.slice((safeUsersPage - 1) * USERS_PAGE_SIZE, safeUsersPage * USERS_PAGE_SIZE);
 
-  useEffect(() => { setUsersPage(1); }, [userSearchTerm, filterRoles, filterStatuses, sortField, sortDirection]);
+  useEffect(() => { setUsersPage(1); }, [userSearchTerm, filterRoles, filterStatuses, filterPendingApproval, sortField, sortDirection]);
 
   const downloadUsersData = () => {
     const csvHeaders = "First name,Last name,Email,Phone,Role,Status,Team";
@@ -3577,6 +3780,28 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
               </DialogHeader>
               {editingUser && (
                 <div className="space-y-4">
+                  {/* Approval-request actions live at the top of the user
+                      dialog so admins can review/approve/reject from the
+                      same place they manage every other user attribute,
+                      replacing the deleted Pending Player Approvals card. */}
+                  {editingUser.approvalStatus === 'pending' && (
+                    <PendingApprovalSection
+                      user={editingUser}
+                      teams={teams}
+                      programs={programs}
+                      onResolved={(outcome) => {
+                        // Approve: keep the dialog open so admins can keep
+                        // editing the now-active profile. Reject: the backend
+                        // deletes the user record, so the dialog must close —
+                        // otherwise admins would be staring at a stale form.
+                        if (outcome === 'rejected') {
+                          setEditingUser(null);
+                        } else {
+                          setEditingUser({ ...editingUser, approvalStatus: outcome });
+                        }
+                      }}
+                    />
+                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="edit-firstname" data-testid="label-edit-firstname">First Name</Label>
@@ -4602,6 +4827,31 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                 data-testid="input-search-users"
               />
             </div>
+            {/* Quick chip for the pending-approval queue. Lives next to the
+                filter button so admins always have a one-click jump into
+                the queue (replacing the deleted Overview card). */}
+            {(() => {
+              const pendingCount = (users || []).filter((u: any) => u?.approvalStatus === 'pending').length;
+              if (pendingCount === 0 && !filterPendingApproval) return null;
+              return (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className={`flex items-center gap-1.5 shrink-0 ${filterPendingApproval ? 'border-amber-500 text-amber-700 bg-amber-50' : 'border-amber-300 text-amber-700 hover:bg-amber-50'}`}
+                  data-testid="button-filter-pending-approval"
+                  onClick={() => setFilterPendingApproval((v) => !v)}
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Pending approval
+                  {pendingCount > 0 && (
+                    <span className="ml-1 bg-amber-500 text-white rounded-full text-xs min-w-[1rem] h-4 px-1 flex items-center justify-center font-medium">
+                      {pendingCount}
+                    </span>
+                  )}
+                </Button>
+              );
+            })()}
             <Popover open={filterPopoverOpen} onOpenChange={setFilterPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -4701,8 +4951,21 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
             </Popover>
           </div>
           {/* Active filter chips */}
-          {(filterRoles.size > 0 || filterStatuses.size > 0) && (
+          {(filterRoles.size > 0 || filterStatuses.size > 0 || filterPendingApproval) && (
             <div className="flex flex-wrap gap-1.5 mt-2">
+              {filterPendingApproval && (
+                <span className="flex items-center gap-1 bg-amber-100 text-amber-800 rounded-full px-2 py-0.5 text-xs font-medium">
+                  Pending approval
+                  <button
+                    onClick={() => setFilterPendingApproval(false)}
+                    className="ml-0.5 hover:text-amber-900"
+                    aria-label="Remove pending approval filter"
+                    data-testid="chip-remove-pending-approval"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
               {Array.from(filterRoles).map((role) => (
                 <span key={role} className="flex items-center gap-1 bg-blue-100 text-blue-700 rounded-full px-2 py-0.5 text-xs font-medium capitalize">
                   {role}
@@ -4728,14 +4991,14 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                 </span>
               ))}
               <button
-                onClick={() => { setFilterRoles(new Set()); setFilterStatuses(new Set()); }}
+                onClick={() => { setFilterRoles(new Set()); setFilterStatuses(new Set()); setFilterPendingApproval(false); }}
                 className="text-xs text-gray-500 hover:text-gray-700 underline ml-1"
               >
                 Clear all
               </button>
             </div>
           )}
-          {(userSearchTerm || filterRoles.size > 0 || filterStatuses.size > 0) && (
+          {(userSearchTerm || filterRoles.size > 0 || filterStatuses.size > 0 || filterPendingApproval) && (
             <p className="text-xs text-gray-500 mt-1">
               Showing {filteredUsers.length} of {users.length} users
             </p>
@@ -4961,8 +5224,20 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                       />
                     </TableCell>
                     <TableCell className="px-2 py-1.5" data-testid={`text-name-${user.id}`}>
-                      <div className="font-medium text-sm flex items-center gap-1.5">
+                      <div className="font-medium text-sm flex items-center gap-1.5 flex-wrap">
                         {user.firstName || ""} {user.lastName || ""}
+                        {/* Surface the pending-approval queue inline in the
+                            Users table now that the dedicated Overview card
+                            has been removed. */}
+                        {user.approvalStatus === 'pending' && (
+                          <span
+                            className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0 rounded"
+                            title="This player is awaiting admin approval. Open this user to approve or reject."
+                            data-testid={`pending-approval-tag-${user.id}`}
+                          >
+                            <UserPlus className="w-2.5 h-2.5" /> Pending approval
+                          </span>
+                        )}
                         {user.flaggedForRosterChange && (
                           <span 
                             className="inline-flex items-center gap-0.5 text-[10px] bg-red-100 text-red-700 px-1 py-0 rounded cursor-help" 
@@ -17584,219 +17859,10 @@ function FacilitiesTab({ organization }: { organization: any }) {
   );
 }
 
-// Task #255: Pending player approval admin card
-function PendingPlayerApprovalsCard() {
-  const { data, isLoading } = useQuery<{ success: boolean; pending: any[] }>({
-    queryKey: ["/api/admin/pending-player-approvals"],
-  });
-  const pending = data?.pending || [];
-
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<any | null>(null);
-  const [expiry, setExpiry] = useState<string>("");
-
-  const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-player-approvals"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/admin/alerts"] });
-  };
-
-  const approveMutation = useMutation({
-    mutationFn: async (vars: { playerId: string; expiryDate?: string }) =>
-      apiRequest(`/api/admin/pending-player-approvals/${vars.playerId}/approve`, {
-        method: "POST",
-        data: { expiryDate: vars.expiryDate || undefined },
-      }),
-    onSuccess: () => {
-      refresh();
-      setOpen(false);
-      setSelected(null);
-      setExpiry("");
-    },
-  });
-
-  const rejectMutation = useMutation({
-    mutationFn: async (playerId: string) =>
-      apiRequest(`/api/admin/pending-player-approvals/${playerId}/reject`, {
-        method: "POST",
-      }),
-    onSuccess: () => {
-      refresh();
-      setOpen(false);
-      setSelected(null);
-    },
-  });
-
-  if (!isLoading && pending.length === 0) return null;
-
-  return (
-    <Card data-testid="card-pending-player-approvals">
-      <CardHeader>
-        <CardTitle>Players awaiting approval</CardTitle>
-        <CardDescription>
-          New player profiles requested from the parent gateway. Approve with an expiry date to enroll the player automatically, approve without to ask the parent to complete payment, or reject to remove the request.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : (
-          pending.map((p) => {
-            const isApproving = approveMutation.isPending && approveMutation.variables?.playerId === p.id;
-            const isRejecting = rejectMutation.isPending && rejectMutation.variables === p.id;
-            const isBusy = isApproving || isRejecting;
-            return (
-              <div
-                key={p.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-amber-50 px-3 py-2"
-                data-testid={`row-pending-${p.id}`}
-              >
-                <div className="min-w-0">
-                  <p className="font-medium text-gray-900">
-                    {p.firstName} {p.lastName}
-                  </p>
-                  <p className="text-xs text-gray-600 truncate">
-                    Parent: {p.parentName || p.parentEmail || "Unknown"} · Team: {p.requestedTeamName || "—"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-green-300 text-green-700 hover:bg-green-50"
-                    disabled={isBusy}
-                    onClick={() => approveMutation.mutate({ playerId: p.id })}
-                    data-testid={`button-inline-approve-${p.id}`}
-                  >
-                    {isApproving ? "Approving…" : "Approve"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-red-300 text-red-700 hover:bg-red-50"
-                    disabled={isBusy}
-                    onClick={() => {
-                      if (confirm(`Reject ${p.firstName} ${p.lastName}? This removes the request.`)) {
-                        rejectMutation.mutate(p.id);
-                      }
-                    }}
-                    data-testid={`button-inline-reject-${p.id}`}
-                  >
-                    {isRejecting ? "Rejecting…" : "Reject"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={isBusy}
-                    onClick={() => {
-                      setSelected(p);
-                      setExpiry("");
-                      setOpen(true);
-                    }}
-                    data-testid={`button-review-${p.id}`}
-                  >
-                    More…
-                  </Button>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </CardContent>
-
-      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setSelected(null); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Review player request</DialogTitle>
-            <DialogDescription>
-              {selected
-                ? `${selected.firstName} ${selected.lastName} — ${selected.requestedTeamName || "team"}`
-                : ""}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Approve with expiry date</label>
-              <Input
-                type="date"
-                value={expiry}
-                onChange={(e) => setExpiry(e.target.value)}
-                data-testid="input-approval-expiry"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Setting an expiry creates an enrollment that ends on that date and adds the player to the team roster.
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter className="flex flex-wrap gap-2">
-            <Button
-              variant="destructive"
-              onClick={() => selected && rejectMutation.mutate(selected.id)}
-              disabled={!selected || rejectMutation.isPending}
-              data-testid="button-reject-approval"
-            >
-              {rejectMutation.isPending ? "Rejecting…" : "Reject"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => selected && approveMutation.mutate({ playerId: selected.id })}
-              disabled={!selected || approveMutation.isPending}
-              data-testid="button-approve-no-expiry"
-            >
-              {approveMutation.isPending && !expiry ? "Approving…" : "Approve without expiry"}
-            </Button>
-            <Button
-              onClick={() => selected && approveMutation.mutate({ playerId: selected.id, expiryDate: expiry })}
-              disabled={!selected || !expiry || approveMutation.isPending}
-              data-testid="button-approve-with-expiry"
-            >
-              {approveMutation.isPending && expiry ? "Approving…" : "Approve with expiry"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>
-  );
-}
-
-// Task #297: Always-visible high-visibility banner for pending player approvals.
-function PendingApprovalsBanner({ onJump }: { onJump: () => void }) {
-  const { data } = useQuery<{ success: boolean; pending: any[] }>({
-    queryKey: ["/api/admin/pending-player-approvals"],
-  });
-  const pending = data?.pending || [];
-  if (pending.length === 0) return null;
-  const count = pending.length;
-  const names = pending.slice(0, 3).map((p) => `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim()).filter(Boolean);
-  const more = pending.length - names.length;
-  return (
-    <div
-      className="mb-4 rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-3 shadow-sm flex items-center gap-3"
-      role="alert"
-      data-testid="banner-pending-player-approvals"
-    >
-      <div className="shrink-0 rounded-full bg-amber-100 p-2">
-        <UserPlus className="w-5 h-5 text-amber-700" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-amber-900">
-          {count === 1 ? '1 player awaiting your approval' : `${count} players awaiting your approval`}
-        </p>
-        {names.length > 0 && (
-          <p className="text-xs text-amber-800 truncate">
-            {names.join(', ')}{more > 0 ? ` +${more} more` : ''}
-          </p>
-        )}
-      </div>
-      <Button
-        size="sm"
-        className="bg-amber-600 hover:bg-amber-700 text-white shrink-0"
-        onClick={onJump}
-        data-testid="button-jump-pending-approvals"
-      >
-        Review now
-      </Button>
-    </div>
-  );
-}
+// PendingPlayerApprovalsCard and PendingApprovalsBanner were removed. The
+// pending-approval queue now lives inline in the Users tab — each pending
+// player shows a "Pending approval" tag in the table, sorts to the top,
+// can be filtered down to with the Pending approval chip, and can be
+// approved/rejected from the existing user detail dialog. Existing
+// notification deep links are rewritten by the legacy hash redirect
+// useEffect near the top of this file.

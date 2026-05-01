@@ -141,4 +141,126 @@ describe("EnrollmentExpiryBanner — Task #326 banner suppression", () => {
     expect(screen.getByTestId(`banner-access-${PLAYER.id}`)).toBeInTheDocument();
     expect(screen.getByTestId(`banner-no-expiry-${PLAYER.id}`)).toBeInTheDocument();
   });
+
+  // Jeremy Zhang regression: parent paid for the program, but the original
+  // paid enrollment row got cancelled (refund flow / admin replaced it /
+  // billing hiccup) and an admin courtesy grant was issued on top. The
+  // unified status used to flip to "admin_grant" and the parent saw
+  // "Access pending — pay to keep playing" PLUS the no-expiry nag, even
+  // though the payment is on file.
+  it("hides BOTH banners when the active enrollment is an admin grant on top of a CANCELLED paid enrollment", () => {
+    const enrollments: Enrollment[] = [
+      // The original paid Youth Club enrollment — got cancelled but the
+      // payment is still attached.
+      {
+        id: 96,
+        programId: "youth-club",
+        profileId: PLAYER.id,
+        endDate: null,
+        gracePeriodEndDate: null,
+        status: "cancelled",
+        source: "direct",
+        paymentId: "pi_paid",
+        stripeSubscriptionId: null,
+      },
+      // Admin granted courtesy access a week later.
+      {
+        id: 120,
+        programId: "youth-club",
+        profileId: PLAYER.id,
+        endDate: null,
+        gracePeriodEndDate: null,
+        status: "active",
+        source: "admin",
+        paymentId: null,
+        stripeSubscriptionId: null,
+      },
+    ];
+    renderBanner(enrollments, [PLAYER]);
+    expect(screen.queryByTestId(`banner-access-${PLAYER.id}`)).toBeNull();
+    expect(screen.queryByTestId(`banner-no-expiry-${PLAYER.id}`)).toBeNull();
+  });
+
+  // Locks in the .every(...) semantics in adminGrantCoveredByPaid:
+  // suppression only fires when EVERY active admin grant has a paid sibling
+  // for the same program. If even one grant is uncovered, the banner must
+  // still show.
+  it("STILL shows the access banner when one admin grant is covered by a paid sibling but a second admin grant is not", () => {
+    const enrollments: Enrollment[] = [
+      // Paid sibling for program A.
+      {
+        id: 1,
+        programId: "program-A",
+        profileId: PLAYER.id,
+        endDate: null,
+        gracePeriodEndDate: null,
+        status: "cancelled",
+        source: "direct",
+        paymentId: "pi_paid_A",
+        stripeSubscriptionId: null,
+      },
+      // Admin grant for program A — covered by the paid sibling above.
+      {
+        id: 2,
+        programId: "program-A",
+        profileId: PLAYER.id,
+        endDate: null,
+        gracePeriodEndDate: null,
+        status: "active",
+        source: "admin",
+        paymentId: null,
+        stripeSubscriptionId: null,
+      },
+      // Genuine uncovered admin grant for program C — should still nag.
+      {
+        id: 3,
+        programId: "program-C",
+        profileId: PLAYER.id,
+        endDate: null,
+        gracePeriodEndDate: null,
+        status: "active",
+        source: "admin",
+        paymentId: null,
+        stripeSubscriptionId: null,
+      },
+    ];
+    renderBanner(enrollments, [PLAYER]);
+    expect(screen.getByTestId(`banner-access-${PLAYER.id}`)).toBeInTheDocument();
+  });
+
+  // Architect-requested false-positive guard. Paid history for one program
+  // must NOT silence a genuine unpaid admin grant for a different program.
+  // Otherwise a parent who paid for program A would never see the "pay to
+  // keep playing" banner for the unrelated program B their kid is on.
+  it("STILL shows the access banner for an admin grant whose program has no paid sibling, even if the player paid for an UNRELATED program", () => {
+    const enrollments: Enrollment[] = [
+      // Paid for program A.
+      {
+        id: 1,
+        programId: "program-A",
+        profileId: PLAYER.id,
+        endDate: null,
+        gracePeriodEndDate: null,
+        status: "cancelled",
+        source: "direct",
+        paymentId: "pi_paid_A",
+        stripeSubscriptionId: null,
+      },
+      // Genuine unpaid admin grant for program B — must still nag.
+      {
+        id: 2,
+        programId: "program-B",
+        profileId: PLAYER.id,
+        endDate: null,
+        gracePeriodEndDate: null,
+        status: "active",
+        source: "admin",
+        paymentId: null,
+        stripeSubscriptionId: null,
+      },
+    ];
+    renderBanner(enrollments, [PLAYER]);
+    expect(screen.getByTestId(`banner-access-${PLAYER.id}`)).toBeInTheDocument();
+    expect(screen.getByTestId(`banner-no-expiry-${PLAYER.id}`)).toBeInTheDocument();
+  });
 });

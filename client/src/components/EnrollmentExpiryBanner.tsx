@@ -68,6 +68,26 @@ export function EnrollmentExpiryBanner() {
     playerStatuses.set(key, computeAccessStatus(list as AccessStatusInput[]));
   }
 
+  // Jeremy Zhang fix: an active admin grant whose program already has a
+  // sibling enrollment with proof of payment shouldn't nag the parent. We
+  // scope this strictly to (player, program) pairs so a paid history for
+  // one program never silences a genuine unpaid grant for a different one.
+  const adminGrantCoveredByPaid = (key: string): boolean => {
+    const list = groups.get(key) || [];
+    const adminGrants = list.filter(
+      (e) => e.status === "active" && !e.paymentId && !e.stripeSubscriptionId,
+    );
+    if (adminGrants.length === 0) return false;
+    return adminGrants.every((g) =>
+      list.some(
+        (x) =>
+          x.id !== g.id &&
+          x.programId === g.programId &&
+          (x.paymentId || x.stripeSubscriptionId),
+      ),
+    );
+  };
+
   const banners = Array.from(groups.entries())
     .map(([key, _list]) => {
       const status = playerStatuses.get(key)!;
@@ -87,7 +107,9 @@ export function EnrollmentExpiryBanner() {
         iconClass = "text-yellow-600";
         cta = "Re-enroll";
       } else if (status.reason === "admin_grant") {
-        show = true;
+        // Suppress only if EVERY active admin grant for this player is
+        // already covered by a paid sibling for the same program.
+        show = !adminGrantCoveredByPaid(key);
       } else if (status.reason === "paid" && days !== null && days <= 7 && days >= 0) {
         show = true;
       }
@@ -129,12 +151,28 @@ export function EnrollmentExpiryBanner() {
   // unpaid admin_assignment / self_claim row with no end date keeps tripping
   // the banner even though a separate paid enrollment for the same program
   // already covers the player.
+  //
+  // Jeremy Zhang fix: also skip when the player has any sibling enrollment
+  // with proof of payment (paymentId / stripeSubscriptionId) for the same
+  // program — even if that paid row was later cancelled. This prevents the
+  // "no expiry on file" nag from firing on admin courtesy grants that were
+  // issued on top of an already-paid (but cancelled) enrollment.
+  const playerHasPaidForProgram = (key: string, programId: string): boolean => {
+    const list = groups.get(key) || [];
+    return list.some(
+      (x) => x.programId === programId && (x.paymentId || x.stripeSubscriptionId),
+    );
+  };
+
   const noExpiryGroups = new Map<string, string[]>();
   for (const e of enrollments) {
     if (e.status !== "active" || e.endDate) continue;
     const key = e.profileId || SELF_KEY;
     const playerStatus = playerStatuses.get(key);
     if (playerStatus && (playerStatus.reason === "paid" || playerStatus.reason === "grace")) {
+      continue;
+    }
+    if (playerHasPaidForProgram(key, e.programId)) {
       continue;
     }
     const programLabel = e.programId || "your program";

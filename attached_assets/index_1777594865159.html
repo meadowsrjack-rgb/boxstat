@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>BoxStat — Tournaments</title>
+<link rel="stylesheet" href="shared.css" />
+<style>
+  /* HUB */
+  .hub{display:flex;flex-direction:column;gap:24px;}
+  .hub__hero{display:grid;grid-template-columns:1.4fr 1fr;gap:0;border-radius:24px;overflow:hidden;border:1px solid rgba(226,18,36,0.4);background:linear-gradient(135deg,rgba(226,18,36,0.18),rgba(226,18,36,0.04) 50%,rgba(0,0,0,0.6));position:relative;min-height:280px;}
+  .hub__hero::before{content:"";position:absolute;right:-150px;top:-100px;width:500px;height:500px;background:radial-gradient(circle,rgba(226,18,36,0.45),transparent 60%);filter:blur(40px);pointer-events:none;}
+  .hub__hero-l{padding:32px;display:flex;flex-direction:column;gap:14px;justify-content:space-between;position:relative;z-index:1;}
+  .hub__hero-r{padding:32px;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);display:flex;flex-direction:column;gap:14px;border-left:1px solid rgba(255,255,255,0.06);position:relative;z-index:1;}
+  .hub__filters{display:flex;gap:8px;flex-wrap:wrap;}
+  .hub__filter{padding:8px 14px;border-radius:999px;font-weight:700;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.02);cursor:pointer;}
+  .hub__filter.active{background:rgba(226,18,36,0.15);color:var(--bx-red);border-color:rgba(226,18,36,0.4);}
+  .hub__grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;}
+  .t-card{background:linear-gradient(145deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:20px;cursor:pointer;transition:all .35s cubic-bezier(0.16,1,0.3,1);position:relative;overflow:hidden;}
+  .t-card:hover{transform:translateY(-3px);border-color:rgba(226,18,36,0.4);}
+  .t-card__head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px;}
+  .t-card__sport{width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:20px;}
+  .t-card__title{font-family:var(--bx-font-display);font-size:20px;letter-spacing:-0.02em;color:#fff;margin:0 0 4px;line-height:1.15;}
+  .t-card__sub{font-family:var(--bx-font-mono);font-size:11px;color:rgba(255,255,255,0.5);letter-spacing:0.06em;}
+  .t-card__meta{display:flex;gap:18px;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06);}
+  .t-card__stat{display:flex;flex-direction:column;gap:2px;}
+  .t-card__stat-num{font-family:var(--bx-font-display);font-size:18px;letter-spacing:-0.02em;color:#fff;}
+  .t-card__stat-lbl{font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.4);}
+  .t-card--new{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border-style:dashed;border-color:rgba(226,18,36,0.4);background:radial-gradient(circle at center,rgba(226,18,36,0.08),transparent 70%);min-height:228px;}
+  .t-card--new svg{width:36px;height:36px;color:var(--bx-red);margin-bottom:12px;}
+
+  /* WIZARD */
+  .wiz{display:grid;grid-template-columns:280px 1fr 360px;height:100%;background:#000;}
+  .wiz__steps{padding:32px 24px;border-right:1px solid rgba(255,255,255,0.06);}
+  .wiz__step{display:flex;align-items:center;gap:14px;padding:14px 12px;border-radius:10px;color:rgba(255,255,255,0.5);font-weight:600;font-size:13px;cursor:pointer;transition:all .3s;}
+  .wiz__step.active{background:rgba(226,18,36,0.1);color:#fff;}
+  .wiz__step.done{color:rgba(255,255,255,0.7);}
+  .wiz__step-num{width:30px;height:30px;border-radius:999px;border:1px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-family:var(--bx-font-mono);font-size:12px;font-weight:700;flex-shrink:0;}
+  .wiz__step.active .wiz__step-num{background:var(--bx-red);border-color:var(--bx-red);color:#fff;}
+  .wiz__step.done .wiz__step-num{background:rgba(34,197,94,0.18);border-color:rgba(34,197,94,0.4);color:#22c55e;}
+  .wiz__step-num svg{width:14px;height:14px;}
+  .wiz__step-sub{font-size:11px;color:rgba(255,255,255,0.4);font-weight:500;margin-top:2px;}
+  .wiz__main{padding:48px 56px;overflow-y:auto;display:flex;flex-direction:column;gap:24px;position:relative;z-index:1;}
+  .wiz__panel{display:none;flex-direction:column;gap:24px;}
+  .wiz__panel.active{display:flex;animation:tfade .4s cubic-bezier(0.16,1,0.3,1) forwards;}
+  @keyframes tfade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  .wiz__nav{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-top:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);position:sticky;bottom:0;}
+
+  .ai{padding:24px;border-left:1px solid rgba(226,18,36,0.2);background:linear-gradient(180deg,rgba(226,18,36,0.05),rgba(0,0,0,0.4));overflow-y:auto;display:flex;flex-direction:column;gap:14px;}
+  .ai__head{display:flex;align-items:center;gap:10px;}
+  .ai__icon{width:32px;height:32px;border-radius:10px;background:var(--bx-grad-cta);display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(226,18,36,0.5);}
+  .ai__icon svg{width:16px;height:16px;color:#fff;}
+  .ai__suggest{padding:14px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);font-size:13px;color:rgba(255,255,255,0.85);line-height:1.55;}
+  .ai__suggest strong{color:var(--bx-red);font-weight:700;}
+  .ai__chat{display:flex;gap:8px;padding:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;align-items:center;}
+  .ai__chat input{background:none;border:none;outline:none;color:#fff;flex:1;font-size:13px;}
+  .ai__send{width:30px;height:30px;border-radius:8px;background:var(--bx-red);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;}
+  .ai__send svg{width:14px;height:14px;}
+  .ai__msg{padding:12px 14px;border-radius:12px;font-size:13px;line-height:1.5;animation:tfade .3s forwards;}
+  .ai__msg--user{background:rgba(255,255,255,0.06);color:#fff;align-self:flex-end;max-width:85%;}
+  .ai__msg--ai{background:linear-gradient(145deg,rgba(226,18,36,0.1),rgba(226,18,36,0.02));border:1px solid rgba(226,18,36,0.2);color:rgba(255,255,255,0.9);}
+  .ai__toast{position:fixed;bottom:32px;right:32px;padding:14px 18px;border-radius:12px;background:linear-gradient(145deg,#22c55e,#16a34a);color:#fff;font-weight:700;font-size:13px;box-shadow:0 10px 40px rgba(34,197,94,0.3);z-index:9999;animation:tfade .3s;}
+
+  /* Format cards */
+  .fmt-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+  .fmt{padding:20px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);cursor:pointer;transition:all .3s cubic-bezier(0.16,1,0.3,1);position:relative;}
+  .fmt:hover{border-color:rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);}
+  .fmt.selected{border-color:var(--bx-red);background:linear-gradient(145deg,rgba(226,18,36,0.15),rgba(226,18,36,0.02));}
+  .fmt.selected::after{content:"✓";position:absolute;top:14px;right:14px;width:22px;height:22px;border-radius:999px;background:var(--bx-red);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
+  .fmt__sport-row{display:flex;gap:6px;margin-bottom:10px;}
+  .fmt h4{font-family:var(--bx-font-display);font-size:18px;letter-spacing:-0.02em;color:#fff;margin:0 0 4px;}
+  .fmt p{font-size:12px;color:rgba(255,255,255,0.55);margin:0;line-height:1.5;}
+
+  .sport-pick{display:flex;gap:8px;flex-wrap:wrap;}
+  .sport-pick button{padding:10px 16px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);font-weight:600;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;}
+  .sport-pick button.active{background:var(--bx-red);color:#fff;border-color:var(--bx-red);}
+
+  /* Teams */
+  .teams-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+  .teams-col h4{font-family:var(--bx-font-display);font-size:14px;color:#fff;margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+  .teams-col h4 .count{font-family:var(--bx-font-mono);font-size:11px;color:rgba(255,255,255,0.4);font-weight:600;}
+  .team-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);margin-bottom:6px;cursor:pointer;transition:all .2s;}
+  .team-row:hover{background:rgba(255,255,255,0.06);}
+  .team-row.added{background:rgba(226,18,36,0.08);border-color:rgba(226,18,36,0.3);}
+  .team-row__crest{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#fff;flex-shrink:0;font-family:var(--bx-font-mono);}
+  .team-row__name{font-weight:600;font-size:13px;color:#fff;flex:1;}
+  .team-row__sub{font-size:11px;color:rgba(255,255,255,0.4);}
+  .team-row__act{width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.7);}
+  .team-row__act svg{width:12px;height:12px;}
+  .team-row.added .team-row__act{background:var(--bx-red);color:#fff;}
+
+  /* Schedule (wiz step) */
+  .sched-form{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .sched-form .full{grid-column:span 2;}
+  .court-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .court-chip{padding:8px 14px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);font-family:var(--bx-font-mono);font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;}
+  .court-chip svg{width:12px;height:12px;cursor:pointer;color:rgba(255,255,255,0.4);}
+
+  .wnd-presets{display:flex;flex-direction:column;gap:8px;}
+  .wnd-preset{padding:14px 16px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .2s;}
+  .wnd-preset.selected{background:linear-gradient(145deg,rgba(226,18,36,0.12),rgba(226,18,36,0.02));border-color:rgba(226,18,36,0.4);}
+  .wnd-preset__radio{width:18px;height:18px;border-radius:999px;border:2px solid rgba(255,255,255,0.2);position:relative;flex-shrink:0;}
+  .wnd-preset.selected .wnd-preset__radio{border-color:var(--bx-red);}
+  .wnd-preset.selected .wnd-preset__radio::after{content:"";position:absolute;inset:3px;border-radius:999px;background:var(--bx-red);}
+
+  /* Review */
+  .rev{display:grid;grid-template-columns:1.2fr 1fr;gap:24px;}
+  .rev__card{padding:24px;border-radius:16px;background:linear-gradient(145deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.08);}
+  .rev__row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dashed rgba(255,255,255,0.06);font-size:13px;}
+  .rev__row:last-child{border-bottom:none;}
+  .rev__row .k{color:rgba(255,255,255,0.5);font-weight:500;}
+  .rev__row .v{color:#fff;font-weight:600;}
+
+  /* BRACKET CANVAS — fixed layout (no overlap) */
+  .brk{display:grid;grid-template-columns:280px 1fr 320px;height:100%;}
+  .brk__teams{padding:24px;border-right:1px solid rgba(255,255,255,0.06);overflow-y:auto;display:flex;flex-direction:column;gap:6px;}
+  .brk__teams h4{font-family:var(--bx-font-display);font-size:14px;color:#fff;margin:0 0 14px;display:flex;justify-content:space-between;align-items:center;}
+  .brk__teams h4 span{font-family:var(--bx-font-mono);font-size:10px;color:rgba(255,255,255,0.4);font-weight:600;}
+  .brk__seed{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);cursor:grab;transition:all .2s;}
+  .brk__seed:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.15);}
+  .brk__seed.dragging{opacity:0.4;}
+  .brk__seed.placed{opacity:0.4;cursor:not-allowed;}
+  .brk__seed-num{font-family:var(--bx-font-mono);font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);width:18px;}
+  .brk__seed-crest{width:26px;height:26px;border-radius:6px;font-family:var(--bx-font-mono);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;}
+  .brk__seed-name{font-size:12px;font-weight:600;flex:1;}
+  .brk__seed-grip{color:rgba(255,255,255,0.3);}
+  .brk__seed-grip svg{width:12px;height:12px;}
+
+  .brk__canvas{position:relative;overflow:auto;padding:32px;background-image:radial-gradient(circle at 1px 1px,rgba(255,255,255,0.06) 1px,transparent 0);background-size:24px 24px;}
+  /* SVG bracket — sized so connectors live BETWEEN columns, no overlap */
+  .brk__svg{display:block;}
+  .brk__match{cursor:pointer;}
+  .brk__match-bg{fill:rgba(20,20,22,0.95);stroke:rgba(255,255,255,0.1);stroke-width:1;}
+  .brk__match.selected .brk__match-bg{stroke:var(--bx-red);stroke-width:2;filter:drop-shadow(0 0 8px rgba(226,18,36,0.4));}
+  .brk__match-num{fill:rgba(255,255,255,0.4);font-family:ui-monospace,monospace;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;}
+  .brk__match-divider{stroke:rgba(255,255,255,0.06);stroke-width:1;}
+  .brk__slot{cursor:pointer;}
+  .brk__slot rect{fill:transparent;}
+  .brk__slot.drop-target rect{fill:rgba(226,18,36,0.2);stroke:var(--bx-red);stroke-dasharray:4 3;stroke-width:1;}
+  .brk__slot.winner rect{fill:rgba(34,197,94,0.06);}
+  .brk__slot-seed{fill:rgba(255,255,255,0.4);font-family:ui-monospace,monospace;font-size:10px;font-weight:700;}
+  .brk__slot-name{fill:#fff;font-family:var(--bx-font-product);font-size:12px;font-weight:600;}
+  .brk__slot-name.tbd{fill:rgba(255,255,255,0.3);font-style:italic;}
+  .brk__slot.winner .brk__slot-name{fill:#22c55e;}
+  .brk__slot-score{fill:rgba(255,255,255,0.7);font-family:ui-monospace,monospace;font-size:13px;font-weight:700;}
+  .brk__slot.winner .brk__slot-score{fill:#22c55e;}
+  .brk__round-label{fill:rgba(255,255,255,0.4);font-family:ui-monospace,monospace;font-size:11px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;}
+  .brk__connector{stroke:rgba(255,255,255,0.18);stroke-width:1.5;fill:none;}
+
+  .brk__inspect{padding:24px;border-left:1px solid rgba(255,255,255,0.06);overflow-y:auto;display:flex;flex-direction:column;gap:14px;}
+  .brk__inspect-team{display:flex;justify-content:space-between;align-items:center;padding:8px 0;}
+  .brk__inspect-team-l{display:flex;gap:8px;align-items:center;}
+
+  /* SCHEDULE */
+  .sch{padding:24px;height:100%;display:flex;flex-direction:column;gap:18px;}
+  .sch__head{display:flex;justify-content:space-between;align-items:center;}
+  .sch__grid{flex:1;overflow:auto;border:1px solid rgba(255,255,255,0.08);border-radius:14px;background:rgba(0,0,0,0.4);}
+  .sch__table{display:grid;min-width:900px;}
+  .sch__table-head{display:grid;position:sticky;top:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);z-index:2;}
+  .sch__col-h{padding:14px;font-family:var(--bx-font-mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.6);border-right:1px solid rgba(255,255,255,0.08);border-bottom:1px solid rgba(255,255,255,0.1);font-weight:700;}
+  .sch__row{display:grid;border-bottom:1px solid rgba(255,255,255,0.04);}
+  .sch__time{padding:14px;font-family:var(--bx-font-mono);font-size:12px;font-weight:700;color:rgba(255,255,255,0.6);border-right:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);display:flex;align-items:center;}
+  .sch__cell{padding:6px;border-right:1px solid rgba(255,255,255,0.04);min-height:64px;}
+  .sch__cell.drop-target{background:rgba(226,18,36,0.1);border:1px dashed var(--bx-red);}
+  .sch__match{padding:8px 10px;border-radius:8px;background:linear-gradient(145deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.1);height:100%;display:flex;flex-direction:column;justify-content:space-between;cursor:grab;font-size:11px;}
+  .sch__match.knockout{border-color:rgba(226,18,36,0.4);background:linear-gradient(145deg,rgba(226,18,36,0.15),rgba(226,18,36,0.04));}
+  .sch__match.live{border-color:rgba(34,197,94,0.6);background:linear-gradient(145deg,rgba(34,197,94,0.18),rgba(34,197,94,0.04));}
+  .sch__match-tag{font-family:var(--bx-font-mono);font-size:9px;letter-spacing:0.1em;color:rgba(255,255,255,0.5);font-weight:700;text-transform:uppercase;}
+  .sch__match-teams{font-weight:700;font-size:12px;line-height:1.2;}
+
+  /* DETAIL */
+  .det{display:grid;grid-template-columns:2fr 1fr;gap:20px;}
+  .det__hero{grid-column:span 2;border-radius:18px;background:linear-gradient(135deg,rgba(226,18,36,0.18),rgba(0,0,0,0.6));border:1px solid rgba(226,18,36,0.4);padding:28px;position:relative;overflow:hidden;}
+  .det__hero::before{content:"";position:absolute;right:-100px;top:-100px;width:500px;height:500px;background:radial-gradient(circle,rgba(226,18,36,0.4),transparent 60%);filter:blur(40px);pointer-events:none;}
+  .det__hero-row{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;position:relative;z-index:1;}
+  .det__hero-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:24px;position:relative;z-index:1;}
+  .det__stat{display:flex;flex-direction:column;gap:6px;}
+  .det__stat-num{font-family:var(--bx-font-display);font-size:32px;letter-spacing:-0.02em;line-height:1;color:#fff;}
+  .det__stat-num em{font-style:normal;color:var(--bx-red);font-size:18px;}
+  .det__stat-lbl{font-family:var(--bx-font-mono);font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.5);}
+  .det__game{padding:14px;border-radius:12px;background:linear-gradient(145deg,rgba(34,197,94,0.1),rgba(0,0,0,0.4));border:1px solid rgba(34,197,94,0.3);}
+  .det__game-meta{font-family:var(--bx-font-mono);font-size:10px;letter-spacing:0.14em;color:#22c55e;text-transform:uppercase;display:flex;align-items:center;gap:6px;font-weight:700;}
+  .det__game-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
+  .det__game-team{font-weight:700;font-size:14px;}
+  .det__game-score{font-family:var(--bx-font-display);font-size:20px;letter-spacing:-0.02em;}
+
+  .lader{display:flex;flex-direction:column;}
+  .lader__row{display:grid;grid-template-columns:24px 32px 1fr repeat(4,40px);gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid rgba(255,255,255,0.04);font-family:var(--bx-font-mono);}
+  .lader__row.head{font-size:9px;color:rgba(255,255,255,0.4);letter-spacing:0.14em;text-transform:uppercase;font-weight:700;}
+  .lader__row.first .lader__rank{color:#fbbf24;}
+  .lader__rank{font-size:13px;font-weight:700;}
+  .lader__name{font-size:13px;color:#fff;font-weight:700;font-family:var(--bx-font-product);}
+  .lader__num{font-size:13px;text-align:right;color:rgba(255,255,255,0.8);}
+  .lader__num.gd-pos{color:#22c55e;}
+  .lader__num.gd-neg{color:#ef4444;}
+
+  .topscore{display:flex;flex-direction:column;gap:8px;}
+  .topscore__row{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;background:rgba(255,255,255,0.03);}
+  .topscore__rank{font-family:var(--bx-font-display);font-size:18px;letter-spacing:-0.02em;color:rgba(255,255,255,0.3);width:24px;}
+  .topscore__row.first .topscore__rank{color:#fbbf24;}
+  .topscore__avatar{width:32px;height:32px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:11px;font-family:var(--bx-font-mono);}
+  .topscore__name{font-weight:700;font-size:13px;}
+  .topscore__team{font-size:10px;color:rgba(255,255,255,0.5);font-family:var(--bx-font-mono);letter-spacing:0.06em;}
+  .topscore__pts{font-family:var(--bx-font-display);font-size:18px;letter-spacing:-0.02em;color:var(--bx-red);}
+
+  /* ===== PARENT VIEW — matches existing EventDetailPanel light dialog ===== */
+  .pv-shell{padding:32px;display:flex;align-items:flex-start;justify-content:center;min-height:100%;}
+  .pv-card{width:560px;max-width:100%;background:#fff;color:#0f0f10;border-radius:16px;box-shadow:0 30px 80px -10px rgba(0,0,0,0.5);overflow:hidden;display:flex;flex-direction:column;max-height:calc(100vh - 140px);}
+  .pv-card__head{padding:24px 24px 16px;border-bottom:1px solid #f1f1f3;}
+  .pv-card__title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+  .pv-card__title{font-family:var(--bx-font-display);font-size:22px;letter-spacing:-0.02em;color:#0f0f10;margin:0;line-height:1.15;}
+  .pv-card__close{width:30px;height:30px;border-radius:8px;background:#f5f5f7;color:#666;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .pv-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;margin-top:8px;}
+  .pv-badge--game{background:#fee2e2;color:#991b1b;}
+  .pv-badge--tournament{background:#f3e8ff;color:#6b21a8;}
+  .pv-badge--live{background:#dcfce7;color:#166534;display:inline-flex;align-items:center;gap:6px;}
+  .pv-badge--live::before{content:"";width:6px;height:6px;border-radius:999px;background:#16a34a;animation:t-pulse 2s ease-in-out infinite;}
+  .pv-card__body{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:20px;}
+  .pv-card__section{display:flex;flex-direction:column;gap:10px;}
+  .pv-card__section + .pv-card__section{padding-top:18px;border-top:1px solid #f1f1f3;}
+  .pv-card__h{font-weight:600;font-size:14px;color:#0f0f10;margin:0 0 4px;}
+  .pv-row{display:flex;align-items:center;gap:10px;font-size:14px;color:#3f3f46;}
+  .pv-row svg{width:16px;height:16px;color:#888;flex-shrink:0;}
+  .pv-row--start{align-items:flex-start;}
+  .pv-row--start svg{margin-top:2px;}
+  .pv-rsvp{padding:12px 14px;border-radius:10px;background:#dcfce7;color:#166534;display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;}
+  .pv-rsvp svg{width:18px;height:18px;}
+  .pv-btn{padding:10px 16px;border-radius:8px;background:#0f0f10;color:#fff;font-weight:600;font-size:14px;cursor:pointer;width:100%;text-align:center;}
+  .pv-btn--outline{background:#fff;color:#0f0f10;border:1px solid #d4d4d8;}
+  .pv-btn--cta{background:linear-gradient(145deg,#E21224,#c01020);color:#fff;}
+
+  /* Tournament-only section (purple-accented, since tournament badge is purple) */
+  .pv-trn{padding:18px;border-radius:12px;background:linear-gradient(145deg,#faf5ff,#f3e8ff);border:1px solid #e9d5ff;display:flex;flex-direction:column;gap:14px;}
+  .pv-trn__h{display:flex;justify-content:space-between;align-items:center;}
+  .pv-trn__h h4{font-family:var(--bx-font-display);font-size:16px;letter-spacing:-0.01em;color:#581c87;margin:0;}
+  .pv-trn__sub{font-size:11px;color:#6b21a8;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;}
+
+  /* Live score card inside parent */
+  .pv-live{padding:14px;border-radius:10px;background:#0f0f10;color:#fff;display:flex;flex-direction:column;gap:8px;}
+  .pv-live__meta{font-family:var(--bx-font-mono);font-size:10px;letter-spacing:0.14em;color:#22c55e;font-weight:700;display:flex;align-items:center;gap:6px;text-transform:uppercase;}
+  .pv-live__meta::before{content:"";width:6px;height:6px;border-radius:999px;background:#22c55e;animation:t-pulse 2s ease-in-out infinite;}
+  .pv-live__row{display:flex;justify-content:space-between;align-items:center;}
+  .pv-live__team{display:flex;align-items:center;gap:10px;font-weight:700;font-size:13px;}
+  .pv-live__score{font-family:var(--bx-font-display);font-size:24px;letter-spacing:-0.02em;line-height:1;}
+  .pv-live__score.lead{color:#FF4D5E;}
+
+  /* Tabs (light) */
+  .pv-tabs{display:flex;gap:4px;background:#f5f5f7;padding:3px;border-radius:8px;}
+  .pv-tab{flex:1;padding:8px;text-align:center;border-radius:6px;font-weight:600;font-size:12px;color:#71717a;cursor:pointer;border:none;background:none;}
+  .pv-tab.active{background:#fff;color:#0f0f10;box-shadow:0 1px 2px rgba(0,0,0,0.06);}
+  .pv-tabbody{display:none;flex-direction:column;gap:10px;}
+  .pv-tabbody.active{display:flex;}
+
+  /* Mini bracket inside parent */
+  .pv-mini{padding:12px;border-radius:10px;background:#fafafa;border:1px solid #f1f1f3;overflow-x:auto;}
+  .pv-mini svg{width:100%;min-width:380px;height:auto;display:block;}
+  .pv-mini-cap{font-size:12px;color:#71717a;text-align:center;padding:8px 0 0;}
+
+  .pv-game-line{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;background:#fafafa;border:1px solid #f1f1f3;font-size:13px;}
+  .pv-game-line.mine{background:#fef2f2;border-color:#fecaca;}
+  .pv-game-when{font-family:var(--bx-font-mono);font-size:10px;color:#71717a;}
+  .pv-game-teams{font-weight:600;font-size:13px;margin-top:2px;}
+  .pv-game-result{font-family:var(--bx-font-display);font-size:16px;letter-spacing:-0.02em;}
+  .pv-game-result.win{color:#16a34a;}
+
+  .pv-stand{display:flex;flex-direction:column;}
+  .pv-stand__row{display:grid;grid-template-columns:24px 28px 1fr 32px 32px 36px;gap:8px;align-items:center;padding:8px 4px;font-size:12px;font-family:var(--bx-font-mono);}
+  .pv-stand__row.head{color:#71717a;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;font-weight:700;border-bottom:1px solid #f1f1f3;}
+  .pv-stand__row.mine{background:#fef2f2;border-radius:6px;}
+  .pv-stand__row.first .pv-stand__rank{color:#d97706;}
+  .pv-stand__rank{font-weight:700;}
+  .pv-stand__name{font-weight:600;color:#0f0f10;font-family:var(--bx-font-product);font-size:12px;}
+  .pv-stand__num{text-align:right;}
+
+  .pv-leader{display:flex;flex-direction:column;gap:6px;}
+  .pv-leader__row{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:#fafafa;}
+  .pv-leader__row.mine{background:#fef2f2;border:1px solid #fecaca;}
+  .pv-leader__rank{font-family:var(--bx-font-display);font-size:16px;color:#71717a;width:20px;}
+  .pv-leader__row.first .pv-leader__rank{color:#d97706;}
+  .pv-leader__avatar{width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:10px;font-family:var(--bx-font-mono);}
+  .pv-leader__name{font-weight:600;font-size:13px;color:#0f0f10;flex:1;}
+  .pv-leader__team{font-size:10px;color:#71717a;font-family:var(--bx-font-mono);}
+  .pv-leader__pts{font-family:var(--bx-font-display);font-size:16px;color:#E21224;letter-spacing:-0.02em;}
+
+  /* Modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:1000;display:none;align-items:center;justify-content:center;padding:32px;}
+  .modal-overlay.open{display:flex;animation:tfade .2s;}
+  .modal{background:#0a0a0b;border:1px solid rgba(255,255,255,0.1);border-radius:16px;width:540px;max-width:100%;max-height:calc(100vh - 64px);overflow:auto;color:#fff;display:flex;flex-direction:column;}
+  .modal__head{padding:20px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.06);}
+  .modal__title{font-family:var(--bx-font-display);font-size:20px;letter-spacing:-0.02em;margin:0;}
+  .modal__body{padding:20px 24px;display:flex;flex-direction:column;gap:18px;}
+  .modal__foot{padding:16px 24px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:flex-end;gap:8px;}
+
+  /* Scoresheet */
+  .ss{display:flex;flex-direction:column;gap:14px;}
+  .ss__period{display:flex;gap:6px;background:rgba(255,255,255,0.04);padding:3px;border-radius:8px;}
+  .ss__period button{flex:1;padding:8px;border-radius:6px;background:none;color:rgba(255,255,255,0.5);font-weight:700;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;}
+  .ss__period button.active{background:var(--bx-red);color:#fff;}
+  .ss__teams{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .ss__team{padding:18px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);text-align:center;}
+  .ss__team-name{font-weight:700;font-size:14px;margin-bottom:8px;}
+  .ss__score{font-family:var(--bx-font-display);font-size:54px;letter-spacing:-0.03em;line-height:1;color:var(--bx-red);margin:8px 0;}
+  .ss__score-ctrls{display:flex;gap:6px;justify-content:center;}
+  .ss__score-ctrls button{width:38px;height:38px;border-radius:8px;background:rgba(255,255,255,0.06);font-weight:700;font-size:14px;color:#fff;cursor:pointer;border:1px solid rgba(255,255,255,0.08);}
+  .ss__score-ctrls button:hover{background:rgba(226,18,36,0.2);border-color:var(--bx-red);}
+  .ss__clock{display:flex;justify-content:center;align-items:center;gap:14px;padding:14px;border-radius:10px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);}
+  .ss__clock-time{font-family:var(--bx-font-display);font-size:32px;letter-spacing:-0.02em;color:#22c55e;}
+
+  .scr{display:none;height:100%;flex-direction:column;}
+  .scr.active{display:flex;}
+  .sport-i{font-size:18px;}
+  @media (max-width:1100px){.det__hero-stats{grid-template-columns:repeat(2,1fr);}.wiz{grid-template-columns:240px 1fr 320px;}}
+</style>
+</head>
+<body>
+
+<div class="t-app">
+  <aside class="t-sb">
+    <div class="t-sb__brand">
+      <img src="../assets/boxstat-logo.png" alt="" />
+      <span>BoxStat</span>
+    </div>
+    <div class="t-sb__org">
+      <div class="t-sb__org-icon">RP</div>
+      <div>
+        <div class="t-sb__org-name">Riverside Panthers</div>
+        <div class="t-sb__org-role">Admin</div>
+      </div>
+    </div>
+    <div class="t-sb__label">Workspace</div>
+    <a class="t-sb__item" href="#" data-nav="hub-dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+    <a class="t-sb__item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Schedule</a>
+    <a class="t-sb__item active" href="#" data-nav="hub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>Tournaments<span class="t-sb__badge">2</span></a>
+    <a class="t-sb__item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Members</a>
+    <a class="t-sb__item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>Stats</a>
+  </aside>
+
+  <main class="t-main">
+    <div class="t-canvas-bg"></div>
+    <div id="screen-host" style="flex:1;display:flex;flex-direction:column;min-height:0;position:relative;z-index:1;"></div>
+  </main>
+</div>
+
+<!-- Modals -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<script>
+/* ============================================================
+   STATE
+   ============================================================ */
+const TEAMS = [
+  {n:"Riverside Panthers U14",  c:"#E21224",a:"RP", o:"Internal", rec:"12-2"},
+  {n:"Eastside Hawks U14",      c:"#1E40AF",a:"EH", o:"Internal", rec:"10-4"},
+  {n:"North Hill Wolves U14",   c:"#0F766E",a:"NH", o:"Internal", rec:"9-5"},
+  {n:"Westend Bears U14",       c:"#9333EA",a:"WB", o:"Internal", rec:"7-7"},
+  {n:"Lakeside Lightning",      c:"#F59E0B",a:"LL", o:"External", rec:"11-3"},
+  {n:"Forge United",            c:"#0EA5E9",a:"FU", o:"External", rec:"8-6"},
+  {n:"Crosstown Cardinals",     c:"#DC2626",a:"CC", o:"External", rec:"10-4"},
+  {n:"Bay Area Sharks",         c:"#0891B2",a:"BS", o:"External", rec:"13-1"},
+];
+
+// Bracket state — array of matches; each has top/bot slot data and scores
+const BRACKET = {
+  matches: [
+    {id:1, round:'QF', label:'Match 1', top:{seed:1,t:TEAMS[7]}, bot:{seed:8,t:TEAMS[3]}, topScore:64, botScore:52, winner:'top', when:'Fri Apr 28 · 6:00 PM', court:'Court 1', refs:'A. Brooks, M. Diaz', live:false, x:0, y:0},
+    {id:2, round:'QF', label:'Match 2', top:{seed:4,t:TEAMS[0]}, bot:{seed:5,t:TEAMS[1]}, topScore:42, botScore:38, winner:null, when:'Sat Apr 29 · 2:00 PM', court:'Court 1', refs:'A. Brooks, M. Diaz', live:true, x:0, y:1},
+    {id:3, round:'QF', label:'Match 3', top:{seed:3,t:TEAMS[6]}, bot:{seed:6,t:TEAMS[5]}, topScore:null, botScore:null, winner:null, when:'Sat Apr 29 · 10:30 AM', court:'Court 2', refs:'TBD', live:false, x:0, y:2},
+    {id:4, round:'QF', label:'Match 4', top:{seed:2,t:TEAMS[4]}, bot:{seed:7,t:TEAMS[2]}, topScore:null, botScore:null, winner:null, when:'Sat Apr 29 · 10:30 AM', court:'Court 3', refs:'TBD', live:false, x:0, y:3},
+    {id:5, round:'SF', label:'Semifinal 1', top:{seed:1,t:TEAMS[7]}, bot:null, topScore:null, botScore:null, winner:null, when:'Sat Apr 29 · 1:30 PM', court:'Court 1', refs:'TBD', live:false, x:1, y:0},
+    {id:6, round:'SF', label:'Semifinal 2', top:null, bot:null, topScore:null, botScore:null, winner:null, when:'Sat Apr 29 · 1:30 PM', court:'Court 3', refs:'TBD', live:false, x:1, y:1},
+    {id:7, round:'F',  label:'Championship', top:null, bot:null, topScore:null, botScore:null, winner:null, when:'Sun Apr 30 · 5:00 PM', court:'Court 1 (Center)', refs:'TBD', live:false, x:2, y:0},
+  ]
+};
+
+let selectedMatchId = 2;
+let placedTeams = new Set([0,1,2,3,4,5,6,7]); // all already seeded
+
+/* ============================================================
+   ROUTER
+   ============================================================ */
+const screens = {};
+const host = document.getElementById('screen-host');
+
+function navigate(name){
+  if(!screens[name]) name = 'hub';
+  host.innerHTML = '<div class="scr active">'+screens[name]()+'</div>';
+  host.scrollTop = 0;
+  document.querySelectorAll('.t-sb__item').forEach(el=>{
+    el.classList.toggle('active', el.dataset.nav==='hub');
+  });
+  bindAll();
+  history.replaceState(name, '', '#'+name);
+}
+
+function bindAll(){
+  // Generic [data-go] links
+  host.querySelectorAll('[data-go]').forEach(el=>{
+    el.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); navigate(el.dataset.go); });
+  });
+  // Filters
+  host.querySelectorAll('.hub__filter').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      host.querySelectorAll('.hub__filter').forEach(o=>o.classList.remove('active'));
+      el.classList.add('active');
+    });
+  });
+  bindWizard();
+  bindBracket();
+  bindSchedule();
+  bindParent();
+}
+
+/* ============================================================
+   HUB
+   ============================================================ */
+screens.hub = () => `
+  <div class="t-top">
+    <div>
+      <div class="t-top__crumbs"><span>Riverside Panthers</span><span class="sep">/</span><span class="here">Tournaments</span></div>
+      <div class="t-top__title">Tournaments</div>
+    </div>
+    <div class="t-top__actions">
+      <button class="t-iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
+      <button class="t-btn t-btn--primary" data-go="wizard">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        New Tournament
+      </button>
+    </div>
+  </div>
+  <div class="t-body">
+    <div class="hub">
+      <div class="hub__hero">
+        <div class="hub__hero-l">
+          <div>
+            <div class="t-row" style="gap:10px;">
+              <span class="t-chip t-chip--live"><span class="t-dot"></span>Live now</span>
+              <span class="t-chip">Round of 8 · Day 2 of 3</span>
+            </div>
+            <h2 class="t-h1" style="font-size:42px;margin-top:14px;">Spring Showdown<br/><span style="color:rgba(255,255,255,0.5);font-size:28px;">Basketball · U14</span></h2>
+            <div style="font-family:var(--bx-font-mono);font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;">8 teams · Single elim · Riverside Sportsplex</div>
+          </div>
+          <div class="t-row" style="gap:8px;">
+            <button class="t-btn t-btn--primary" data-go="detail">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              Open Live Console
+            </button>
+            <button class="t-btn t-btn--glass" data-go="parent">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              Preview as Parent
+            </button>
+          </div>
+        </div>
+        <div class="hub__hero-r">
+          <div class="t-eyebrow">Currently playing</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:10px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);">
+              <div>
+                <div style="font-family:var(--bx-font-mono);font-size:9px;letter-spacing:0.14em;color:#22c55e;font-weight:700;">Q3 · 4:18</div>
+                <div style="font-weight:700;font-size:13px;margin-top:4px;">Riverside vs Hawks</div>
+              </div>
+              <div style="font-family:var(--bx-font-display);font-size:24px;letter-spacing:-0.03em;"><span style="color:var(--bx-red);">42</span><span style="color:rgba(255,255,255,0.4);font-size:16px;"> — </span><span>38</span></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.04);">
+              <div>
+                <div style="font-family:var(--bx-font-mono);font-size:9px;letter-spacing:0.14em;color:rgba(255,255,255,0.5);font-weight:700;">Court 2 · Q1 7:42</div>
+                <div style="font-weight:700;font-size:13px;margin-top:4px;">Wolves vs Bears</div>
+              </div>
+              <div style="font-family:var(--bx-font-display);font-size:22px;letter-spacing:-0.03em;color:rgba(255,255,255,0.7);">12 — 9</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hub__filters">
+        <button class="hub__filter active">All</button>
+        <button class="hub__filter">Live · 1</button>
+        <button class="hub__filter">Upcoming · 3</button>
+        <button class="hub__filter">Drafts · 1</button>
+        <button class="hub__filter">Completed · 4</button>
+      </div>
+
+      <div class="hub__grid">
+        <button class="t-card t-card--new" data-go="wizard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <div style="font-family:var(--bx-font-display);font-size:18px;color:#fff;margin-bottom:4px;">New Tournament</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.5);max-width:200px;">Use the AI builder. Format, teams, schedule — ready in minutes.</div>
+        </button>
+        <div class="t-card" data-go="bracket">
+          <div class="t-card__head"><div class="t-card__sport">🏀</div><span class="t-chip t-chip--draft">Draft</span></div>
+          <h3 class="t-card__title">Memorial Day Classic</h3><div class="t-card__sub">Basketball · U16 · May 24-26</div>
+          <div class="t-card__meta"><div class="t-card__stat"><div class="t-card__stat-num">12</div><div class="t-card__stat-lbl">Teams</div></div><div class="t-card__stat"><div class="t-card__stat-num">—</div><div class="t-card__stat-lbl">Bracket</div></div><div class="t-card__stat"><div class="t-card__stat-num">2</div><div class="t-card__stat-lbl">Courts</div></div></div>
+        </div>
+        <div class="t-card" data-go="detail">
+          <div class="t-card__head"><div class="t-card__sport">🏀</div><span class="t-chip t-chip--live"><span class="t-dot"></span>Live</span></div>
+          <h3 class="t-card__title">Spring Showdown</h3><div class="t-card__sub">Basketball · U14 · Apr 28-30</div>
+          <div class="t-card__meta"><div class="t-card__stat"><div class="t-card__stat-num">8</div><div class="t-card__stat-lbl">Teams</div></div><div class="t-card__stat"><div class="t-card__stat-num">QF</div><div class="t-card__stat-lbl">Round</div></div><div class="t-card__stat"><div class="t-card__stat-num">3</div><div class="t-card__stat-lbl">Courts</div></div></div>
+        </div>
+        <div class="t-card">
+          <div class="t-card__head"><div class="t-card__sport">⚽</div><span class="t-chip">Upcoming</span></div>
+          <h3 class="t-card__title">Founders Cup</h3><div class="t-card__sub">Soccer · U12 · Jun 7-9</div>
+          <div class="t-card__meta"><div class="t-card__stat"><div class="t-card__stat-num">16</div><div class="t-card__stat-lbl">Teams</div></div><div class="t-card__stat"><div class="t-card__stat-num">G→K</div><div class="t-card__stat-lbl">Format</div></div><div class="t-card__stat"><div class="t-card__stat-num">4</div><div class="t-card__stat-lbl">Fields</div></div></div>
+        </div>
+        <div class="t-card">
+          <div class="t-card__head"><div class="t-card__sport">🏐</div><span class="t-chip">Upcoming</span></div>
+          <h3 class="t-card__title">Coastal Volleyball Open</h3><div class="t-card__sub">Volleyball · U16 · Jun 14-15</div>
+          <div class="t-card__meta"><div class="t-card__stat"><div class="t-card__stat-num">10</div><div class="t-card__stat-lbl">Teams</div></div><div class="t-card__stat"><div class="t-card__stat-num">RR</div><div class="t-card__stat-lbl">Format</div></div><div class="t-card__stat"><div class="t-card__stat-num">2</div><div class="t-card__stat-lbl">Courts</div></div></div>
+        </div>
+        <div class="t-card">
+          <div class="t-card__head"><div class="t-card__sport">🏈</div><span class="t-chip">Upcoming</span></div>
+          <h3 class="t-card__title">Friday Night Lights Invitational</h3><div class="t-card__sub">Football · U14 · Aug 22-24</div>
+          <div class="t-card__meta"><div class="t-card__stat"><div class="t-card__stat-num">8</div><div class="t-card__stat-lbl">Teams</div></div><div class="t-card__stat"><div class="t-card__stat-num">SE</div><div class="t-card__stat-lbl">Format</div></div><div class="t-card__stat"><div class="t-card__stat-num">1</div><div class="t-card__stat-lbl">Field</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+`;
+
+/* ============================================================
+   WIZARD — full 4-step state-driven
+   ============================================================ */
+let wizState = { step:1, sport:'basketball', format:'single-elim', teams:new Set([0,1,2,3,4,5,7]), windowPreset:'youth' };
+
+const FORMATS = [
+  {id:'single-elim', sports:['🏀','🏈','🏐'], title:'Single Elimination', desc:'Lose once, you\'re out. Cleanest, shortest. Standard for 1-day tournaments.'},
+  {id:'double-elim', sports:['🏀','🏐'], title:'Double Elimination', desc:'Lose once, drop to losers bracket. Lose twice, you\'re out. Best of both.'},
+  {id:'round-robin', sports:['⚽','🏐','🏀'], title:'Round Robin', desc:'Every team plays every team. Pure, fair, longer. Great for league play.'},
+  {id:'group-knock', sports:['⚽','🏈'], title:'Groups → Knockouts', desc:'Pool play seeds the bracket. The classic World Cup format.'},
+];
+
+screens.wizard = () => `
+  <div class="t-top">
+    <div>
+      <div class="t-top__crumbs"><span data-go="hub" style="cursor:pointer;">Tournaments</span><span class="sep">/</span><span class="here">New tournament</span></div>
+      <div class="t-top__title">Build with AI assist</div>
+    </div>
+    <div class="t-top__actions">
+      <button class="t-btn t-btn--ghost" data-go="hub">Cancel</button>
+      <button class="t-btn t-btn--glass" id="wiz-save-draft">Save draft</button>
+    </div>
+  </div>
+  <div class="wiz" style="position:relative;z-index:1;flex:1;min-height:0;">
+    <aside class="wiz__steps">
+      <div class="t-eyebrow" style="margin-bottom:18px;">Set-up</div>
+      ${[1,2,3,4].map(n=>{
+        const titles = ['Format & rules','Teams','Schedule & venue','Review'];
+        const subs   = ['Sport, bracket type, scoring','Internal & external invites','Courts, time slots, windows','Generate events & invites'];
+        return `<div class="wiz__step" data-step="${n}"><div class="wiz__step-num">${n}</div><div>${titles[n-1]}<div class="wiz__step-sub">${subs[n-1]}</div></div></div>`;
+      }).join('')}
+    </aside>
+
+    <section class="wiz__main" id="wiz-main">
+      <!-- panels mounted by renderWizPanel() -->
+    </section>
+
+    <aside class="ai">
+      <div class="ai__head">
+        <div class="ai__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2 9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2Z"/></svg></div>
+        <div><div style="font-weight:800;font-size:14px;">AI Builder</div><div style="font-size:11px;color:rgba(255,255,255,0.5);">Reasoning over your past seasons</div></div>
+      </div>
+      <div id="ai-feed" style="display:flex;flex-direction:column;gap:10px;flex:1;overflow-y:auto;"></div>
+      <div class="ai__chat">
+        <input id="ai-input" placeholder="Ask the AI builder…" />
+        <button class="ai__send" id="ai-send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/></svg></button>
+      </div>
+    </aside>
+  </div>
+`;
+
+function renderWizPanel(){
+  const main = document.getElementById('wiz-main');
+  if(!main) return;
+
+  // Update sidebar step states
+  document.querySelectorAll('.wiz__step').forEach(el=>{
+    const n = parseInt(el.dataset.step);
+    el.classList.remove('active','done');
+    if(n===wizState.step) el.classList.add('active');
+    else if(n<wizState.step) el.classList.add('done');
+  });
+
+  let body='';
+  if(wizState.step===1){
+    body = `
+      <div>
+        <div class="t-kicker">Step 1 of 4</div>
+        <h2 class="t-h2" style="margin-top:10px;">Format & rules</h2>
+        <p style="color:rgba(255,255,255,0.6);font-size:14px;line-height:1.6;margin:8px 0 0;max-width:560px;">Pick your sport and bracket structure. The AI will suggest tiebreakers, period length, and seeding logic from your past tournaments.</p>
+      </div>
+
+      <div>
+        <label class="t-label">Tournament name</label>
+        <input class="t-input" placeholder="e.g. Spring Showdown" value="Memorial Day Classic" id="wiz-name" />
+      </div>
+
+      <div>
+        <label class="t-label">Sport</label>
+        <div class="sport-pick" id="sport-pick">
+          ${[['basketball','🏀','Basketball'],['football','🏈','Football'],['soccer','⚽','Soccer'],['volleyball','🏐','Volleyball']].map(([id,e,n])=>
+            `<button class="${wizState.sport===id?'active':''}" data-sport="${id}"><span class="sport-i">${e}</span>${n}</button>`
+          ).join('')}
+        </div>
+      </div>
+
+      <div>
+        <label class="t-label">Bracket format</label>
+        <div class="fmt-grid">
+          ${FORMATS.map(f=>`
+            <div class="fmt ${wizState.format===f.id?'selected':''}" data-fmt="${f.id}">
+              <div class="fmt__sport-row">${f.sports.map(s=>`<span class="sport-i">${s}</span>`).join('')}</div>
+              <h4>${f.title}</h4><p>${f.desc}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+  else if(wizState.step===2){
+    const internal = TEAMS.map((t,i)=>({...t,i})).filter(t=>t.o==='Internal');
+    const external = TEAMS.map((t,i)=>({...t,i})).filter(t=>t.o==='External');
+    const teamRow = (t)=>`
+      <div class="team-row ${wizState.teams.has(t.i)?'added':''}" data-team-idx="${t.i}">
+        <div class="team-row__crest" style="background:${t.c}">${t.a}</div>
+        <div style="flex:1;"><div class="team-row__name">${t.n}</div><div class="team-row__sub">${t.o} · ${t.rec}</div></div>
+        <div class="team-row__act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">${wizState.teams.has(t.i)?'<path d="M5 12h14"/>':'<path d="M12 5v14M5 12h14"/>'}</svg></div>
+      </div>
+    `;
+    body = `
+      <div>
+        <div class="t-kicker">Step 2 of 4</div>
+        <h2 class="t-h2" style="margin-top:10px;">Who's playing?</h2>
+        <p style="color:rgba(255,255,255,0.6);font-size:14px;line-height:1.6;margin:8px 0 0;max-width:560px;">Pull in your own teams or send invites to outside clubs. Click a team to add or remove. The AI will seed them based on past records.</p>
+      </div>
+      <div class="teams-grid">
+        <div class="teams-col">
+          <h4>Internal teams <span class="count">${internal.filter(t=>wizState.teams.has(t.i)).length} of ${internal.length} added</span></h4>
+          ${internal.map(teamRow).join('')}
+        </div>
+        <div class="teams-col">
+          <h4>External invites <span class="count">${external.filter(t=>wizState.teams.has(t.i)).length} of ${external.length} added</span></h4>
+          ${external.map(teamRow).join('')}
+          <button class="t-btn t-btn--glass" style="width:100%;margin-top:10px;justify-content:center;">+ Invite external club by email</button>
+        </div>
+      </div>
+    `;
+  }
+  else if(wizState.step===3){
+    body = `
+      <div>
+        <div class="t-kicker">Step 3 of 4</div>
+        <h2 class="t-h2" style="margin-top:10px;">Schedule & venue</h2>
+        <p style="color:rgba(255,255,255,0.6);font-size:14px;line-height:1.6;margin:8px 0 0;max-width:560px;">Set when, where, and the same RSVP/check-in windows your other events use.</p>
+      </div>
+      <div class="sched-form">
+        <div><label class="t-label">Start date</label><input class="t-input" value="May 24, 2026" /></div>
+        <div><label class="t-label">End date</label><input class="t-input" value="May 26, 2026" /></div>
+        <div class="full"><label class="t-label">Venue</label><input class="t-input" value="Riverside Sportsplex" /></div>
+        <div class="full">
+          <label class="t-label">Courts / fields</label>
+          <div class="court-chips">
+            ${['Court 1 (Center)','Court 2','Court 3'].map(c=>`<div class="court-chip">${c} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></div>`).join('')}
+            <button class="t-btn t-btn--sm t-btn--ghost">+ Add court</button>
+          </div>
+        </div>
+        <div class="full">
+          <label class="t-label">RSVP & Check-in windows (per match)</label>
+          <div class="wnd-presets">
+            <div class="wnd-preset ${wizState.windowPreset==='youth'?'selected':''}" data-preset="youth">
+              <div class="wnd-preset__radio"></div>
+              <div style="flex:1;"><div style="font-weight:600;font-size:13px;">Typical youth event</div><div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px;">RSVP opens 3d before, closes 1d before · Check-in opens 30min before</div></div>
+            </div>
+            <div class="wnd-preset ${wizState.windowPreset==='tight'?'selected':''}" data-preset="tight">
+              <div class="wnd-preset__radio"></div>
+              <div style="flex:1;"><div style="font-weight:600;font-size:13px;">Tight tournament cadence</div><div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px;">RSVP closes at start of tournament · Check-in opens 15min before each match</div></div>
+            </div>
+            <div class="wnd-preset ${wizState.windowPreset==='custom'?'selected':''}" data-preset="custom">
+              <div class="wnd-preset__radio"></div>
+              <div style="flex:1;"><div style="font-weight:600;font-size:13px;">Custom</div><div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px;">Configure each window manually</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  else if(wizState.step===4){
+    const teamCount = wizState.teams.size;
+    const fmtName = FORMATS.find(f=>f.id===wizState.format)?.title || '';
+    body = `
+      <div>
+        <div class="t-kicker">Step 4 of 4 · Review</div>
+        <h2 class="t-h2" style="margin-top:10px;">Looks good?</h2>
+        <p style="color:rgba(255,255,255,0.6);font-size:14px;line-height:1.6;margin:8px 0 0;max-width:560px;">When you publish, BoxStat creates a tournament event for each match — invites go to all teams, and parents will see live brackets, standings, and scores from inside their event view.</p>
+      </div>
+      <div class="rev">
+        <div class="rev__card">
+          <h4 style="font-family:var(--bx-font-display);margin:0 0 14px;font-size:18px;">Tournament summary</h4>
+          <div class="rev__row"><span class="k">Name</span><span class="v">Memorial Day Classic</span></div>
+          <div class="rev__row"><span class="k">Sport</span><span class="v" style="text-transform:capitalize;">${wizState.sport}</span></div>
+          <div class="rev__row"><span class="k">Format</span><span class="v">${fmtName}</span></div>
+          <div class="rev__row"><span class="k">Teams</span><span class="v">${teamCount}</span></div>
+          <div class="rev__row"><span class="k">Dates</span><span class="v">May 24-26, 2026</span></div>
+          <div class="rev__row"><span class="k">Venue</span><span class="v">Riverside Sportsplex · 3 courts</span></div>
+          <div class="rev__row"><span class="k">Match events</span><span class="v" style="color:#22c55e;">${teamCount-1} will be created</span></div>
+        </div>
+        <div class="rev__card" style="background:linear-gradient(145deg,rgba(226,18,36,0.1),rgba(0,0,0,0.4));border-color:rgba(226,18,36,0.3);">
+          <h4 style="font-family:var(--bx-font-display);margin:0 0 14px;font-size:18px;color:var(--bx-red);">What happens next</h4>
+          <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px;font-size:13px;color:rgba(255,255,255,0.85);line-height:1.5;">
+            <li>✓ ${teamCount-1} match events created on your calendar</li>
+            <li>✓ Invitations sent to ${teamCount} team rosters + their parents</li>
+            <li>✓ Bracket is editable until first match starts</li>
+            <li>✓ Live scoring opens 30 min before tipoff</li>
+          </ul>
+        </div>
+      </div>
+    `;
+  }
+
+  const isLast = wizState.step===4;
+  const isFirst = wizState.step===1;
+  main.innerHTML = `
+    <div class="wiz__panel active">${body}</div>
+    <div class="wiz__nav">
+      <button class="t-btn t-btn--ghost" id="wiz-back" ${isFirst?'disabled style="opacity:0.3;pointer-events:none;"':''}>← Back</button>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <span style="font-family:var(--bx-font-mono);font-size:11px;color:rgba(255,255,255,0.5);">Step ${wizState.step} of 4</span>
+        ${isLast
+          ? `<button class="t-btn t-btn--primary" id="wiz-publish">Publish tournament <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></button>`
+          : `<button class="t-btn t-btn--primary" id="wiz-next">Continue <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>`}
+      </div>
+    </div>
+  `;
+  bindWizPanelInteractions();
+}
+
+const AI_HINTS = {
+  1: [
+    {t:'<strong>Single elimination</strong> fits a 3-day tournament — 7 games for 8 teams. <strong>Group→Knockouts</strong> if you want every team to play at least 3 games.', cta:'Use single elim'},
+    {t:'For basketball U14, suggest 4×8min quarters with 1min between. Standard from your last 6 tournaments.', cta:'Apply rules'}
+  ],
+  2: [
+    {t:'<strong>Bay Area Sharks</strong> (13-1) and <strong>Riverside U14</strong> (12-2) should be top seeds. I can auto-seed all 8 teams.', cta:'Apply seeding'},
+    {t:'<strong>Heads up:</strong> Lakeside Lightning is on a 5-game streak. Worth bumping to a 3-seed.'},
+    {t:'8 teams = clean single-elim. 10 means byes in round 1.'}
+  ],
+  3: [
+    {t:'Based on 7 matches across 3 courts: I can auto-pack the schedule with 90-min slots and a 1hr lunch break.', cta:'Auto-pack schedule'},
+    {t:'Typical youth event windows match your last 12 events. Recommended.', cta:'Apply preset'}
+  ],
+  4: [
+    {t:'Everything checks out. Publishing will email <strong>${count} parent contacts</strong> across all rostered families.'.replace('${count}', '147')},
+    {t:'No conflicts with other org events that weekend.'}
+  ]
+};
+
+function renderAIFeed(){
+  const feed = document.getElementById('ai-feed');
+  if(!feed) return;
+  const hints = AI_HINTS[wizState.step] || [];
+  feed.innerHTML = hints.map(h=>`
+    <div class="ai__msg ai__msg--ai">
+      <div>${h.t}</div>
+      ${h.cta?`<button class="t-btn t-btn--sm t-btn--primary" style="margin-top:8px;padding:5px 11px;font-size:10px;" data-ai-cta="${h.cta}">${h.cta}</button>`:''}
+    </div>
+  `).join('');
+  feed.querySelectorAll('[data-ai-cta]').forEach(b=>{
+    b.addEventListener('click', ()=> showToast(`✓ ${b.dataset.aiCta} applied`));
+  });
+}
+
+function showToast(msg){
+  const t = document.createElement('div');
+  t.className = 'ai__toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(), 300); }, 1800);
+}
+
+function bindWizard(){
+  if(!host.querySelector('.wiz')) return;
+  wizState.step = 1;
+  renderWizPanel();
+  renderAIFeed();
+
+  document.querySelectorAll('.wiz__step').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      wizState.step = parseInt(el.dataset.step);
+      renderWizPanel();
+      renderAIFeed();
+    });
+  });
+
+  // AI chat
+  const send = ()=>{
+    const inp = document.getElementById('ai-input');
+    if(!inp||!inp.value.trim()) return;
+    const feed = document.getElementById('ai-feed');
+    const userMsg = document.createElement('div');
+    userMsg.className='ai__msg ai__msg--user';
+    userMsg.textContent = inp.value;
+    feed.appendChild(userMsg);
+    const aiMsg = document.createElement('div');
+    aiMsg.className='ai__msg ai__msg--ai';
+    aiMsg.innerHTML = `Got it — adjusting based on "<em>${inp.value}</em>". One moment…`;
+    feed.appendChild(aiMsg);
+    feed.scrollTop = feed.scrollHeight;
+    inp.value='';
+  };
+  document.getElementById('ai-send')?.addEventListener('click', send);
+  document.getElementById('ai-input')?.addEventListener('keydown', e=>{ if(e.key==='Enter') send(); });
+
+  document.getElementById('wiz-save-draft')?.addEventListener('click', ()=> showToast('✓ Draft saved'));
+}
+
+function bindWizPanelInteractions(){
+  // Back / Next / Publish
+  document.getElementById('wiz-back')?.addEventListener('click', ()=>{
+    if(wizState.step>1){ wizState.step--; renderWizPanel(); renderAIFeed(); }
+  });
+  document.getElementById('wiz-next')?.addEventListener('click', ()=>{
+    if(wizState.step<4){ wizState.step++; renderWizPanel(); renderAIFeed(); }
+  });
+  document.getElementById('wiz-publish')?.addEventListener('click', ()=>{
+    showToast('✓ Tournament published — 7 events created, 147 invites sent');
+    setTimeout(()=> navigate('detail'), 800);
+  });
+
+  // Step 1: format pick + sport pick
+  document.querySelectorAll('.fmt').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      wizState.format = el.dataset.fmt;
+      document.querySelectorAll('.fmt').forEach(o=>o.classList.remove('selected'));
+      el.classList.add('selected');
+    });
+  });
+  document.querySelectorAll('[data-sport]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      wizState.sport = el.dataset.sport;
+      document.querySelectorAll('[data-sport]').forEach(o=>o.classList.remove('active'));
+      el.classList.add('active');
+    });
+  });
+
+  // Step 2: team toggle
+  document.querySelectorAll('.team-row').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const i = parseInt(el.dataset.teamIdx);
+      if(wizState.teams.has(i)) wizState.teams.delete(i);
+      else wizState.teams.add(i);
+      renderWizPanel();
+    });
+  });
+
+  // Step 3: window preset
+  document.querySelectorAll('.wnd-preset').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      wizState.windowPreset = el.dataset.preset;
+      document.querySelectorAll('.wnd-preset').forEach(o=>o.classList.remove('selected'));
+      el.classList.add('selected');
+    });
+  });
+}
+
+/* ============================================================
+   BRACKET CANVAS — SVG-based, no overlap
+   ============================================================ */
+const BRK_LAYOUT = {
+  matchW: 240, matchH: 64,    // box width / height
+  colGap: 80,                  // horizontal gap between rounds
+  vSpace: 22,                  // vertical gap between QF matches
+  padTop: 40, padLeft: 40,
+};
+
+function bracketSVG(){
+  const L = BRK_LAYOUT;
+  const cols = 3;
+  // QF (col 0): 4 matches stacked
+  // SF (col 1): 2 matches, vertically aligned to mid-point of pairs
+  // F  (col 2): 1 match, vertical mid of SFs
+  function pos(m){
+    const colX = L.padLeft + m.x*(L.matchW + L.colGap);
+    const rowsInCol = m.x===0?4: m.x===1?2:1;
+    const baseSpacing = (L.matchH + L.vSpace);
+    const colHeight = 4*baseSpacing; // QF column total
+    let topY;
+    if(m.x===0){ topY = L.padTop + m.y*baseSpacing; }
+    else if(m.x===1){
+      // each SF spans 2 QFs
+      const mid = L.padTop + (m.y*2*baseSpacing) + (baseSpacing - L.matchH/2);
+      topY = mid - L.matchH/2;
+    } else { // F
+      const midOfSFs = L.padTop + 2*baseSpacing - L.matchH/2;
+      topY = midOfSFs;
+    }
+    return {x:colX, y:topY};
+  }
+
+  const W = L.padLeft*2 + cols*L.matchW + (cols-1)*L.colGap;
+  const H = L.padTop*2 + 4*(L.matchH + L.vSpace);
+
+  // Round labels
+  const labels = [
+    {x: L.padLeft + L.matchW/2, label:'Quarterfinals'},
+    {x: L.padLeft + L.matchW + L.colGap + L.matchW/2, label:'Semifinals'},
+    {x: L.padLeft + 2*(L.matchW + L.colGap) + L.matchW/2, label:'Final'},
+  ];
+
+  // Build connectors (parent → child)
+  const connectors = [];
+  // QF1+QF2 → SF1
+  // QF3+QF4 → SF2
+  // SF1+SF2 → F
+  function connect(parentId, childId){
+    const p = pos(BRACKET.matches[parentId-1]);
+    const c = pos(BRACKET.matches[childId-1]);
+    const x1 = p.x + L.matchW;
+    const y1 = p.y + L.matchH/2;
+    const x2 = c.x;
+    const y2 = c.y + L.matchH/2;
+    const xm = x1 + L.colGap/2;
+    return `<path class="brk__connector" d="M ${x1} ${y1} L ${xm} ${y1} L ${xm} ${y2} L ${x2} ${y2}" />`;
+  }
+  connectors.push(connect(1,5), connect(2,5), connect(3,6), connect(4,6), connect(5,7), connect(6,7));
+
+  function slot(match, side){
+    const slotData = side==='top' ? match.top : match.bot;
+    const p = pos(match);
+    const sy = side==='top' ? p.y : p.y + L.matchH/2;
+    const isWinner = match.winner===side;
+    const score = side==='top' ? match.topScore : match.botScore;
+
+    if(slotData){
+      return `
+        <g class="brk__slot ${isWinner?'winner':''}" data-match="${match.id}" data-side="${side}">
+          <rect x="${p.x}" y="${sy}" width="${L.matchW}" height="${L.matchH/2}" />
+          <text class="brk__slot-seed" x="${p.x+10}" y="${sy + L.matchH/4 + 4}">${slotData.seed}</text>
+          <rect x="${p.x+24}" y="${sy + L.matchH/4 - 11}" width="22" height="22" rx="4" fill="${slotData.t.c}" />
+          <text x="${p.x+35}" y="${sy + L.matchH/4 + 4}" fill="#fff" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" font-weight="700">${slotData.t.a}</text>
+          <text class="brk__slot-name" x="${p.x+54}" y="${sy + L.matchH/4 + 4}">${slotData.t.n.replace(' U14','').replace(' U16','')}</text>
+          ${score!=null?`<text class="brk__slot-score" x="${p.x+L.matchW-12}" y="${sy + L.matchH/4 + 5}" text-anchor="end">${score}</text>`:''}
+        </g>
+      `;
+    }
+    return `
+      <g class="brk__slot" data-match="${match.id}" data-side="${side}">
+        <rect x="${p.x}" y="${sy}" width="${L.matchW}" height="${L.matchH/2}" />
+        <text class="brk__slot-name tbd" x="${p.x+12}" y="${sy + L.matchH/4 + 4}">Awaiting winner</text>
+      </g>
+    `;
+  }
+
+  return `
+    <svg class="brk__svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+      ${connectors.join('')}
+      ${labels.map(l=>`<text class="brk__round-label" x="${l.x}" y="20" text-anchor="middle">${l.label}</text>`).join('')}
+      ${BRACKET.matches.map(m=>{
+        const p = pos(m);
+        const sel = m.id===selectedMatchId ? 'selected' : '';
+        return `
+          <g class="brk__match ${sel}" data-match="${m.id}">
+            <rect class="brk__match-bg" x="${p.x}" y="${p.y}" width="${L.matchW}" height="${L.matchH}" rx="8" />
+            <line class="brk__match-divider" x1="${p.x+8}" y1="${p.y + L.matchH/2}" x2="${p.x + L.matchW - 8}" y2="${p.y + L.matchH/2}" />
+            <text class="brk__match-num" x="${p.x+10}" y="${p.y - 6}">${m.label}${m.live?' · LIVE':''}</text>
+            ${slot(m,'top')}
+            ${slot(m,'bot')}
+          </g>
+        `;
+      }).join('')}
+    </svg>
+  `;
+}
+
+screens.bracket = () => `
+  <div class="t-top">
+    <div>
+      <div class="t-top__crumbs"><span data-go="hub" style="cursor:pointer;">Tournaments</span><span class="sep">/</span><span data-go="detail" style="cursor:pointer;">Spring Showdown</span><span class="sep">/</span><span class="here">Bracket</span></div>
+      <div class="t-top__title">Bracket editor</div>
+    </div>
+    <div class="t-top__actions">
+      <div class="t-row" style="gap:4px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:3px;">
+        <button class="t-btn t-btn--sm" style="background:rgba(255,255,255,0.06);color:#fff;">Bracket</button>
+        <button class="t-btn t-btn--sm t-btn--ghost" data-go="schedule">Schedule</button>
+        <button class="t-btn t-btn--sm t-btn--ghost" data-go="detail">Live</button>
+      </div>
+      <button class="t-btn t-btn--primary">Publish bracket</button>
+    </div>
+  </div>
+  <div class="brk" style="flex:1;min-height:0;">
+    <aside class="brk__teams" id="brk-teams">
+      <h4>Seeds <span>Drag to slot</span></h4>
+      ${TEAMS.map((t,i)=>`
+        <div class="brk__seed ${placedTeams.has(i)?'placed':''}" draggable="${!placedTeams.has(i)}" data-team-idx="${i}">
+          <div class="brk__seed-num">${i+1}</div>
+          <div class="brk__seed-crest" style="background:${t.c}">${t.a}</div>
+          <div class="brk__seed-name">${t.n.replace(' U14','').replace(' U16','')}</div>
+          <div class="brk__seed-grip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/></svg></div>
+        </div>
+      `).join('')}
+      <div style="margin-top:14px;padding:14px;border-radius:12px;background:linear-gradient(145deg,rgba(226,18,36,0.1),rgba(226,18,36,0.02));border:1px solid rgba(226,18,36,0.3);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--bx-red)" stroke-width="2" stroke-linecap="round"><path d="M12 2 9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2Z"/></svg>
+          <div style="font-family:var(--bx-font-mono);font-size:10px;letter-spacing:0.14em;color:var(--bx-red);font-weight:700;">AI re-seed</div>
+        </div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.7);line-height:1.5;">Avoid same-org rematches in QF</div>
+        <button class="t-btn t-btn--sm" id="brk-reseed" style="margin-top:10px;background:rgba(226,18,36,0.2);color:var(--bx-red);border:1px solid rgba(226,18,36,0.3);">Apply</button>
+      </div>
+    </aside>
+
+    <div class="brk__canvas" id="brk-canvas">${bracketSVG()}</div>
+
+    <aside class="brk__inspect" id="brk-inspect">
+      ${renderInspector()}
+    </aside>
+  </div>
+`;
+
+function renderInspector(){
+  const m = BRACKET.matches.find(x=>x.id===selectedMatchId);
+  if(!m) return '';
+  const slot = (sl) => sl ? `
+    <div class="brk__inspect-team">
+      <div class="brk__inspect-team-l">
+        <div class="brk__seed-crest" style="background:${sl.t.c};">${sl.t.a}</div>
+        <div><div style="font-weight:700;font-size:13px;">${sl.t.n.replace(' U14','').replace(' U16','')}</div><div style="font-size:10px;color:rgba(255,255,255,0.5);font-family:var(--bx-font-mono);">Seed ${sl.seed}</div></div>
+      </div>
+    </div>
+  ` : `<div class="brk__inspect-team" style="color:rgba(255,255,255,0.4);font-style:italic;font-size:13px;">Awaiting winner</div>`;
+
+  return `
+    <div class="t-row" style="justify-content:space-between;">
+      <div class="t-eyebrow">${m.label} · ${m.round}${m.live?' · LIVE':''}</div>
+      ${m.live?'<span class="t-chip t-chip--live"><span class="t-dot"></span>Q3 4:18</span>':''}
+    </div>
+
+    <div class="t-glass" style="padding:14px;">
+      ${slot(m.top)}
+      ${m.topScore!=null?`<div style="text-align:right;font-family:var(--bx-font-mono);font-size:22px;font-weight:700;color:${m.winner==='top'?'#22c55e':'rgba(255,255,255,0.7)'};margin-top:-30px;margin-right:8px;">${m.topScore}</div>`:''}
+      <div style="height:1px;background:rgba(255,255,255,0.08);margin:8px 0;"></div>
+      ${slot(m.bot)}
+      ${m.botScore!=null?`<div style="text-align:right;font-family:var(--bx-font-mono);font-size:22px;font-weight:700;color:${m.winner==='bot'?'#22c55e':'rgba(255,255,255,0.7)'};margin-top:-30px;margin-right:8px;">${m.botScore}</div>`:''}
+    </div>
+
+    <div><label class="t-label">When</label><input class="t-input" id="ins-when" value="${m.when}" /></div>
+    <div><label class="t-label">Court</label>
+      <select class="t-input" id="ins-court">
+        <option ${m.court==='Court 1'||m.court==='Court 1 (Center)'?'selected':''}>Court 1 (Center)</option>
+        <option ${m.court==='Court 2'?'selected':''}>Court 2</option>
+        <option ${m.court==='Court 3'?'selected':''}>Court 3</option>
+      </select>
+    </div>
+    <div><label class="t-label">Officials</label><input class="t-input" id="ins-refs" value="${m.refs}" placeholder="Assign referee…" /></div>
+
+    <div style="display:flex;gap:8px;">
+      <button class="t-btn t-btn--glass" id="open-scoring" style="flex:1;justify-content:center;">Open scoring</button>
+      <button class="t-iconbtn" title="More"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
+    </div>
+  `;
+}
+
+function bindBracket(){
+  if(!host.querySelector('.brk')) return;
+
+  let dragTeamIdx = null;
+
+  // Seed drag
+  host.querySelectorAll('.brk__seed[draggable="true"]').forEach(el=>{
+    el.addEventListener('dragstart', e=>{
+      dragTeamIdx = parseInt(el.dataset.teamIdx);
+      el.classList.add('dragging');
+      e.dataTransfer.effectAllowed='move';
+      // Custom drag image with crest
+      const ghost = el.cloneNode(true);
+      ghost.style.position='absolute'; ghost.style.top='-9999px';
+      ghost.style.background='rgba(20,20,22,0.95)'; ghost.style.padding='10px';
+      ghost.style.borderRadius='8px';
+      document.body.appendChild(ghost);
+      e.dataTransfer.setDragImage(ghost, 20, 20);
+      setTimeout(()=>ghost.remove(), 0);
+    });
+    el.addEventListener('dragend', ()=>{ el.classList.remove('dragging'); dragTeamIdx=null; });
+  });
+
+  // SVG slot drop
+  host.querySelectorAll('.brk__slot').forEach(slot=>{
+    slot.addEventListener('dragover', e=>{ e.preventDefault(); slot.classList.add('drop-target'); });
+    slot.addEventListener('dragleave', ()=> slot.classList.remove('drop-target'));
+    slot.addEventListener('drop', e=>{
+      e.preventDefault(); slot.classList.remove('drop-target');
+      if(dragTeamIdx==null) return;
+      const matchId = parseInt(slot.dataset.match);
+      const side = slot.dataset.side;
+      const match = BRACKET.matches.find(m=>m.id===matchId);
+      const t = TEAMS[dragTeamIdx];
+      // Find seed number from index
+      const seed = dragTeamIdx + 1;
+      match[side] = {seed, t};
+      placedTeams.add(dragTeamIdx);
+      // Re-render bracket
+      document.getElementById('brk-canvas').innerHTML = bracketSVG();
+      // Re-render seeds list (mark placed)
+      const teamsAside = document.getElementById('brk-teams');
+      host.querySelectorAll('.brk__seed').forEach(s=>{
+        const i = parseInt(s.dataset.teamIdx);
+        if(placedTeams.has(i)){ s.classList.add('placed'); s.draggable=false; }
+      });
+      bindBracketCanvas();
+      showToast(`✓ ${t.n} placed in ${match.label}`);
+    });
+  });
+
+  bindBracketCanvas();
+
+  // AI re-seed
+  document.getElementById('brk-reseed')?.addEventListener('click', ()=> showToast('✓ Re-seeded — same-org QF rematches avoided'));
+}
+
+function bindBracketCanvas(){
+  // Match click = select
+  host.querySelectorAll('.brk__match').forEach(g=>{
+    g.addEventListener('click', e=>{
+      e.stopPropagation();
+      const id = parseInt(g.dataset.match);
+      selectedMatchId = id;
+      document.getElementById('brk-canvas').innerHTML = bracketSVG();
+      document.getElementById('brk-inspect').innerHTML = renderInspector();
+      bindBracketCanvas();
+      bindInspector();
+    });
+  });
+  bindInspector();
+}
+
+function bindInspector(){
+  document.getElementById('open-scoring')?.addEventListener('click', openScoresheet);
+  document.getElementById('ins-when')?.addEventListener('input', e=>{
+    const m = BRACKET.matches.find(x=>x.id===selectedMatchId);
+    if(m) m.when = e.target.value;
+  });
+  document.getElementById('ins-court')?.addEventListener('change', e=>{
+    const m = BRACKET.matches.find(x=>x.id===selectedMatchId);
+    if(m) m.court = e.target.value;
+    showToast('✓ Court updated');
+  });
+  document.getElementById('ins-refs')?.addEventListener('input', e=>{
+    const m = BRACKET.matches.find(x=>x.id===selectedMatchId);
+    if(m) m.refs = e.target.value;
+  });
+}
+
+/* ============================================================
+   SCORESHEET MODAL
+   ============================================================ */
+let scoreState = { home:42, away:38, period:3, clock:'4:18' };
+
+function openScoresheet(){
+  const m = BRACKET.matches.find(x=>x.id===selectedMatchId);
+  if(!m || !m.top || !m.bot) return showToast('Match needs both teams to score');
+  scoreState.home = m.topScore || 0;
+  scoreState.away = m.botScore || 0;
+
+  document.getElementById('modal-content').innerHTML = `
+    <div class="modal__head">
+      <div>
+        <div class="t-eyebrow" style="margin-bottom:6px;">${m.label} · ${m.round}</div>
+        <h3 class="modal__title">Live scoring</h3>
+      </div>
+      <button class="t-iconbtn" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal__body">
+      <div class="ss">
+        <div class="ss__clock">
+          <span style="font-family:var(--bx-font-mono);font-size:11px;letter-spacing:0.14em;font-weight:700;color:#22c55e;">Q${scoreState.period} · CLOCK</span>
+          <div class="ss__clock-time">${scoreState.clock}</div>
+          <button class="t-btn t-btn--sm" style="background:rgba(34,197,94,0.2);color:#22c55e;border:1px solid rgba(34,197,94,0.3);">Pause</button>
+        </div>
+
+        <div class="ss__period">
+          ${[1,2,3,4].map(p=>`<button class="${p===scoreState.period?'active':''}" data-period="${p}">Q${p}</button>`).join('')}
+        </div>
+
+        <div class="ss__teams">
+          <div class="ss__team">
+            <div class="brk__seed-crest" style="background:${m.top.t.c};margin:0 auto 8px;width:34px;height:34px;border-radius:8px;font-size:12px;">${m.top.t.a}</div>
+            <div class="ss__team-name">${m.top.t.n.replace(' U14','').replace(' U16','')}</div>
+            <div class="ss__score" id="ss-home">${scoreState.home}</div>
+            <div class="ss__score-ctrls">
+              <button data-team="home" data-d="-1">−1</button>
+              <button data-team="home" data-d="1">+1</button>
+              <button data-team="home" data-d="2">+2</button>
+              <button data-team="home" data-d="3">+3</button>
+            </div>
+          </div>
+          <div class="ss__team">
+            <div class="brk__seed-crest" style="background:${m.bot.t.c};margin:0 auto 8px;width:34px;height:34px;border-radius:8px;font-size:12px;">${m.bot.t.a}</div>
+            <div class="ss__team-name">${m.bot.t.n.replace(' U14','').replace(' U16','')}</div>
+            <div class="ss__score" id="ss-away" style="color:rgba(255,255,255,0.85);">${scoreState.away}</div>
+            <div class="ss__score-ctrls">
+              <button data-team="away" data-d="-1">−1</button>
+              <button data-team="away" data-d="1">+1</button>
+              <button data-team="away" data-d="2">+2</button>
+              <button data-team="away" data-d="3">+3</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-family:var(--bx-font-mono);font-size:11px;color:rgba(255,255,255,0.5);text-align:center;">Score broadcasts live to all parents & players watching this event</div>
+      </div>
+    </div>
+    <div class="modal__foot">
+      <button class="t-btn t-btn--ghost" onclick="closeModal()">Close</button>
+      <button class="t-btn t-btn--primary" id="ss-save">Save & broadcast</button>
+    </div>
+  `;
+  document.getElementById('modal-overlay').classList.add('open');
+
+  document.querySelectorAll('[data-period]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      scoreState.period = parseInt(b.dataset.period);
+      document.querySelectorAll('[data-period]').forEach(o=>o.classList.remove('active'));
+      b.classList.add('active');
+    });
+  });
+  document.querySelectorAll('[data-team]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const team = b.dataset.team;
+      const d = parseInt(b.dataset.d);
+      if(team==='home'){
+        scoreState.home = Math.max(0, scoreState.home + d);
+        document.getElementById('ss-home').textContent = scoreState.home;
+      } else {
+        scoreState.away = Math.max(0, scoreState.away + d);
+        document.getElementById('ss-away').textContent = scoreState.away;
+      }
+    });
+  });
+  document.getElementById('ss-save').addEventListener('click', ()=>{
+    m.topScore = scoreState.home;
+    m.botScore = scoreState.away;
+    m.winner = scoreState.home>scoreState.away ? 'top' : scoreState.away>scoreState.home ? 'bot' : null;
+    closeModal();
+    showToast('✓ Score broadcast — 89 parents notified');
+    if(host.querySelector('.brk')){
+      document.getElementById('brk-canvas').innerHTML = bracketSVG();
+      document.getElementById('brk-inspect').innerHTML = renderInspector();
+      bindBracketCanvas();
+    }
+  });
+}
+
+function closeModal(){
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+/* ============================================================
+   SCHEDULE
+   ============================================================ */
+const sCell = (court,time,content="") => `<div class="sch__cell" data-court="${court}" data-time="${time}">${content}</div>`;
+const sMatch = (tag,teams,mod="") => `<div class="sch__match ${mod}" draggable="true"><div class="sch__match-tag">${tag}</div><div class="sch__match-teams">${teams}</div></div>`;
+
+screens.schedule = () => `
+  <div class="t-top">
+    <div>
+      <div class="t-top__crumbs"><span data-go="hub" style="cursor:pointer;">Tournaments</span><span class="sep">/</span><span data-go="bracket" style="cursor:pointer;">Spring Showdown</span><span class="sep">/</span><span class="here">Schedule</span></div>
+      <div class="t-top__title">Court & time grid</div>
+    </div>
+    <div class="t-top__actions">
+      <div class="t-row" style="gap:4px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:3px;">
+        <button class="t-btn t-btn--sm t-btn--ghost" data-go="bracket">Bracket</button>
+        <button class="t-btn t-btn--sm" style="background:rgba(255,255,255,0.06);color:#fff;">Schedule</button>
+        <button class="t-btn t-btn--sm t-btn--ghost" data-go="detail">Live</button>
+      </div>
+      <span class="t-chip" style="color:#22c55e;border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.08);">No conflicts</span>
+      <button class="t-btn t-btn--glass" id="sch-autopack"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2 9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2Z"/></svg>Auto-pack</button>
+      <button class="t-btn t-btn--primary">Save schedule</button>
+    </div>
+  </div>
+  <div class="sch" style="flex:1;min-height:0;">
+    <div class="sch__head">
+      <div class="t-row" style="gap:18px;">
+        <div><div class="t-eyebrow">Day</div>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <button class="t-btn t-btn--sm t-btn--glass">Fri Apr 28</button>
+            <button class="t-btn t-btn--sm" style="background:var(--bx-red);color:#fff;">Sat Apr 29</button>
+            <button class="t-btn t-btn--sm t-btn--glass">Sun Apr 30</button>
+          </div></div>
+        <div><div class="t-eyebrow">Venue</div><div style="font-weight:700;font-size:14px;margin-top:6px;">Riverside Sportsplex · 3 courts</div></div>
+      </div>
+      <div style="font-family:var(--bx-font-mono);font-size:11px;color:rgba(255,255,255,0.5);">7 matches · 5 confirmed · 2 pending</div>
+    </div>
+    <div class="sch__grid">
+      <div class="sch__table">
+        <div class="sch__table-head" style="grid-template-columns:120px repeat(3,1fr);"><div class="sch__col-h">Time</div><div class="sch__col-h">Court 1 <span style="color:rgba(255,255,255,0.3);">· Center</span></div><div class="sch__col-h">Court 2</div><div class="sch__col-h">Court 3</div></div>
+        <div class="sch__row" style="grid-template-columns:120px repeat(3,1fr);"><div class="sch__time">9:00 AM</div>${sCell(1,'9',sMatch('QF · M1','Sharks vs Bears','live'))}${sCell(2,'9',sMatch('QF · M2','Riverside vs Hawks','knockout'))}${sCell(3,'9')}</div>
+        <div class="sch__row" style="grid-template-columns:120px repeat(3,1fr);"><div class="sch__time">10:30 AM</div>${sCell(1,'10','')}${sCell(2,'10',sMatch('QF · M3','Lightning vs Forge','knockout'))}${sCell(3,'10',sMatch('QF · M4','Cardinals vs Wolves','knockout'))}</div>
+        <div class="sch__row" style="grid-template-columns:120px repeat(3,1fr);"><div class="sch__time">12:00 PM</div>${sCell(1,'12','<div style="font-size:10px;color:rgba(255,255,255,0.3);font-family:var(--bx-font-mono);padding:8px;">Lunch break</div>')}${sCell(2,'12','<div style="font-size:10px;color:rgba(255,255,255,0.3);font-family:var(--bx-font-mono);padding:8px;">Lunch break</div>')}${sCell(3,'12','<div style="font-size:10px;color:rgba(255,255,255,0.3);font-family:var(--bx-font-mono);padding:8px;">Lunch break</div>')}</div>
+        <div class="sch__row" style="grid-template-columns:120px repeat(3,1fr);"><div class="sch__time">1:30 PM</div>${sCell(1,'1330',sMatch('SF · M5','Winner M1 vs M4','knockout'))}${sCell(2,'1330','')}${sCell(3,'1330',sMatch('SF · M6','Winner M2 vs M3','knockout'))}</div>
+        <div class="sch__row" style="grid-template-columns:120px repeat(3,1fr);"><div class="sch__time">3:00 PM</div>${sCell(1,'15','')}${sCell(2,'15','')}${sCell(3,'15','')}</div>
+        <div class="sch__row" style="grid-template-columns:120px repeat(3,1fr);"><div class="sch__time">5:00 PM</div>${sCell(1,'17','<div style="padding:6px;height:100%;display:flex;flex-direction:column;justify-content:space-between;border-radius:8px;background:linear-gradient(145deg,rgba(226,18,36,0.18),rgba(226,18,36,0.04));border:1px solid rgba(226,18,36,0.4);"><div style="font-family:var(--bx-font-mono);font-size:9px;letter-spacing:0.1em;color:var(--bx-red);font-weight:700;text-transform:uppercase;">FINAL</div><div style="font-weight:700;font-size:12px;">Champion vs Champion</div></div>')}${sCell(2,'17','')}${sCell(3,'17','')}</div>
+      </div>
+    </div>
+  </div>
+`;
+
+function bindSchedule(){
+  if(!host.querySelector('.sch')) return;
+  let dragMatch = null;
+  host.querySelectorAll('.sch__match').forEach(el=>{
+    el.addEventListener('dragstart', e=>{
+      dragMatch = el; el.style.opacity='0.4';
+      e.dataTransfer.effectAllowed='move';
+    });
+    el.addEventListener('dragend', ()=>{ el.style.opacity='1'; dragMatch=null; });
+  });
+  host.querySelectorAll('.sch__cell').forEach(c=>{
+    c.addEventListener('dragover', e=>{ e.preventDefault(); c.classList.add('drop-target'); });
+    c.addEventListener('dragleave', ()=> c.classList.remove('drop-target'));
+    c.addEventListener('drop', e=>{
+      e.preventDefault(); c.classList.remove('drop-target');
+      if(dragMatch && c.children.length===0){ c.appendChild(dragMatch); showToast('✓ Match moved'); }
+    });
+  });
+  document.getElementById('sch-autopack')?.addEventListener('click', ()=> showToast('✓ Auto-packed — 7 matches across 3 courts, no conflicts'));
+}
+
+/* ============================================================
+   DETAIL
+   ============================================================ */
+screens.detail = () => `
+  <div class="t-top">
+    <div>
+      <div class="t-top__crumbs"><span data-go="hub" style="cursor:pointer;">Tournaments</span><span class="sep">/</span><span class="here">Spring Showdown</span></div>
+      <div class="t-top__title">Live console</div>
+    </div>
+    <div class="t-top__actions">
+      <div class="t-row" style="gap:4px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:3px;">
+        <button class="t-btn t-btn--sm t-btn--ghost" data-go="bracket">Bracket</button>
+        <button class="t-btn t-btn--sm t-btn--ghost" data-go="schedule">Schedule</button>
+        <button class="t-btn t-btn--sm" style="background:rgba(255,255,255,0.06);color:#fff;">Live</button>
+      </div>
+      <button class="t-btn t-btn--glass" id="broadcast-btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 11l18-9v20l-18-9Z"/><path d="M11 6v12"/></svg>Broadcast</button>
+      <button class="t-btn t-btn--primary" data-go="parent">Preview as Parent</button>
+    </div>
+  </div>
+  <div class="t-body">
+    <div class="det">
+      <div class="det__hero">
+        <div class="det__hero-row">
+          <div>
+            <div class="t-row" style="gap:10px;">
+              <span class="t-chip t-chip--live"><span class="t-dot"></span>Day 2 of 3 · Live</span>
+              <span class="t-chip">Quarterfinals · Court 1, 2</span>
+            </div>
+            <h2 class="t-h1" style="margin-top:14px;">Spring Showdown</h2>
+            <div style="font-family:var(--bx-font-mono);font-size:12px;color:rgba(255,255,255,0.6);margin-top:6px;">8 teams · Single elimination · Apr 28-30 · Riverside Sportsplex</div>
+          </div>
+        </div>
+        <div class="det__hero-stats">
+          <div class="det__stat"><div class="det__stat-num">3 <em>/8</em></div><div class="det__stat-lbl">Games complete</div></div>
+          <div class="det__stat"><div class="det__stat-num">12<em>m</em></div><div class="det__stat-lbl">Avg behind schedule</div></div>
+          <div class="det__stat"><div class="det__stat-num">427</div><div class="det__stat-lbl">Total points scored</div></div>
+          <div class="det__stat"><div class="det__stat-num">94<em>%</em></div><div class="det__stat-lbl">Check-in rate</div></div>
+        </div>
+      </div>
+
+      <div class="t-glass" style="padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;"><h3 class="t-h3">Now playing</h3><span class="t-eyebrow">2 active</span></div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="det__game">
+            <div class="det__game-meta"><span class="t-dot"></span>Court 1 · Q3 · 4:18 remaining</div>
+            <div class="det__game-row"><div class="t-row" style="gap:10px;"><div class="brk__seed-crest" style="background:#E21224;">RP</div><div class="det__game-team">Riverside Panthers</div></div><div class="det__game-score" style="color:#22c55e;font-weight:800;">42</div></div>
+            <div class="det__game-row" style="margin-top:6px;"><div class="t-row" style="gap:10px;"><div class="brk__seed-crest" style="background:#1E40AF;">EH</div><div class="det__game-team" style="color:rgba(255,255,255,0.7);">Eastside Hawks</div></div><div class="det__game-score" style="color:rgba(255,255,255,0.7);">38</div></div>
+          </div>
+          <div class="det__game" style="border-color:rgba(34,197,94,0.3);">
+            <div class="det__game-meta"><span class="t-dot"></span>Court 2 · Q1 · 7:42 remaining</div>
+            <div class="det__game-row"><div class="t-row" style="gap:10px;"><div class="brk__seed-crest" style="background:#0F766E;">NH</div><div class="det__game-team">North Hill Wolves</div></div><div class="det__game-score">12</div></div>
+            <div class="det__game-row" style="margin-top:6px;"><div class="t-row" style="gap:10px;"><div class="brk__seed-crest" style="background:#9333EA;">WB</div><div class="det__game-team" style="color:rgba(255,255,255,0.7);">Westend Bears</div></div><div class="det__game-score" style="color:rgba(255,255,255,0.7);">9</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="t-glass" style="padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><h3 class="t-h3">Standings</h3><span class="t-eyebrow">Pool play</span></div>
+        <div class="lader">
+          <div class="lader__row head"><div></div><div></div><div>Team</div><div>W</div><div>L</div><div>±</div><div>Pts</div></div>
+          ${[
+            ['first',1,'Bay Area Sharks','#0891B2','BS',4,0,84,12],
+            ['',2,'Crosstown Cardinals','#DC2626','CC',3,1,42,9],
+            ['',3,'Lakeside Lightning','#F59E0B','LL',3,1,28,9],
+            ['',4,'Riverside Panthers','#E21224','RP',2,2,8,6],
+            ['',5,'Eastside Hawks','#1E40AF','EH',2,2,-4,6],
+            ['',6,'Forge United','#0EA5E9','FU',1,3,-22,3],
+            ['',7,'North Hill Wolves','#0F766E','NH',1,3,-48,3],
+            ['',8,'Westend Bears','#9333EA','WB',0,4,-88,0],
+          ].map(([cls,r,t,c,a,w,l,gd,pts])=>`
+            <div class="lader__row ${cls}">
+              <div class="lader__rank">${r}</div>
+              <div class="brk__seed-crest" style="background:${c};width:24px;height:24px;font-size:9px;">${a}</div>
+              <div class="lader__name">${t}</div>
+              <div class="lader__num">${w}</div><div class="lader__num">${l}</div>
+              <div class="lader__num ${gd>0?'gd-pos':'gd-neg'}">${gd>0?'+':''}${gd}</div>
+              <div class="lader__num" style="color:#fff;font-weight:700;">${pts}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="t-glass" style="padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><h3 class="t-h3">Top scorers</h3><span class="t-eyebrow">Through Day 2</span></div>
+        <div class="topscore">
+          ${[
+            ['first',1,'Marcus Chen','Sharks · #14','#0891B2','MC',82],
+            ['',2,'Jaylen Ross','Cardinals · #5','#DC2626','JR',71],
+            ['',3,'DeSean Wright','Panthers · #21','#E21224','DW',64],
+            ['',4,'Eli Park','Lightning · #11','#F59E0B','EP',58],
+            ['',5,'Tariq Bell','Sharks · #3','#0891B2','TB',54],
+          ].map(([cls,r,n,t,c,a,p])=>`
+            <div class="topscore__row ${cls}"><div class="topscore__rank">${r}</div><div class="topscore__avatar" style="background:${c};">${a}</div><div style="flex:1;"><div class="topscore__name">${n}</div><div class="topscore__team">${t}</div></div><div class="topscore__pts">${p}</div></div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+`;
+
+/* ============================================================
+   PARENT VIEW — modeled on existing EventDetailPanel (light dialog)
+   ============================================================ */
+screens.parent = () => `
+  <div class="t-top">
+    <div>
+      <div class="t-top__crumbs"><span data-go="hub" style="cursor:pointer;">Tournaments</span><span class="sep">/</span><span data-go="detail" style="cursor:pointer;">Spring Showdown</span><span class="sep">/</span><span class="here">Parent preview</span></div>
+      <div class="t-top__title">Player & parent view</div>
+    </div>
+    <div class="t-top__actions">
+      <span class="t-chip t-chip--player">Players see this</span>
+      <span class="t-chip t-chip--parent">Parents see this</span>
+      <button class="t-btn t-btn--glass" data-go="detail">← Back to admin</button>
+    </div>
+  </div>
+  <div class="t-body" style="background:rgba(0,0,0,0.4);">
+    <div class="pv-shell">
+      <div class="pv-card">
+        <div class="pv-card__head">
+          <div class="pv-card__title-row">
+            <div>
+              <h3 class="pv-card__title">QF · Riverside vs Hawks</h3>
+              <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+                <span class="pv-badge pv-badge--game">Game</span>
+                <span class="pv-badge pv-badge--tournament">Tournament</span>
+                <span class="pv-badge pv-badge--live">Live</span>
+              </div>
+            </div>
+            <button class="pv-card__close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+          </div>
+        </div>
+
+        <div class="pv-card__body">
+
+          <!-- Standard event detail rows (matches EventDetailPanel) -->
+          <div class="pv-card__section">
+            <div class="pv-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Saturday, April 29, 2026</div>
+            <div class="pv-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>2:00 PM – 3:30 PM</div>
+            <div class="pv-row pv-row--start"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Riverside Sportsplex · Court 1 (Center)</div>
+          </div>
+
+          <!-- RSVP section (matches existing) -->
+          <div class="pv-card__section">
+            <h4 class="pv-card__h">RSVP</h4>
+            <div class="pv-rsvp">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+              You've RSVP'd for this event
+            </div>
+          </div>
+
+          <!-- Check-in section (matches existing) -->
+          <div class="pv-card__section">
+            <h4 class="pv-card__h">Event Check-in</h4>
+            <p style="font-size:13px;color:#71717a;margin:0;">Check-in opens 30 min before tipoff.</p>
+            <button class="pv-btn pv-btn--cta" id="pv-checkin">Check in now</button>
+          </div>
+
+          <!-- TOURNAMENT section — only present because event is tournament-linked -->
+          <div class="pv-card__section">
+            <div class="pv-trn">
+              <div class="pv-trn__h">
+                <h4>Spring Showdown</h4>
+                <div class="pv-trn__sub">Tournament · Day 2 of 3</div>
+              </div>
+
+              <!-- Live score -->
+              <div class="pv-live">
+                <div class="pv-live__meta">Q3 · 4:18 remaining</div>
+                <div class="pv-live__row">
+                  <div class="pv-live__team"><div class="brk__seed-crest" style="background:#E21224;width:26px;height:26px;font-size:10px;border-radius:6px;">RP</div>Panthers</div>
+                  <div class="pv-live__score lead">42</div>
+                </div>
+                <div class="pv-live__row">
+                  <div class="pv-live__team"><div class="brk__seed-crest" style="background:#1E40AF;width:26px;height:26px;font-size:10px;border-radius:6px;">EH</div><span style="opacity:0.7;">Hawks</span></div>
+                  <div class="pv-live__score" style="color:rgba(255,255,255,0.7);">38</div>
+                </div>
+              </div>
+
+              <!-- Tabs -->
+              <div class="pv-tabs" id="pv-tabs">
+                <button class="pv-tab active" data-pv="bracket">Bracket</button>
+                <button class="pv-tab" data-pv="schedule">Schedule</button>
+                <button class="pv-tab" data-pv="standings">Standings</button>
+                <button class="pv-tab" data-pv="leaders">Leaders</button>
+              </div>
+
+              <div class="pv-tabbody active" data-pv-pane="bracket">
+                <div class="pv-mini">
+                  <svg viewBox="0 0 380 220">
+                    <path d="M 95 30 H 115 V 60 H 135 M 95 90 H 115 V 60 H 135" stroke="rgba(0,0,0,0.15)" stroke-width="1" fill="none"/>
+                    <path d="M 95 145 H 115 V 175 H 135 M 95 205 H 115 V 175 H 135" stroke="rgba(0,0,0,0.15)" stroke-width="1" fill="none"/>
+                    <path d="M 215 60 H 235 V 117 H 255 M 215 175 H 235 V 117 H 255" stroke="rgba(0,0,0,0.15)" stroke-width="1" fill="none"/>
+                    <g font-family="ui-monospace,monospace" font-size="10">
+                      <rect x="10" y="20" width="85" height="22" rx="3" fill="#fafafa"/><text x="16" y="34" fill="#0f0f10" font-weight="700">BS</text><text x="80" y="34" fill="#16a34a" text-anchor="end" font-weight="700">64</text>
+                      <rect x="10" y="80" width="85" height="22" rx="3" fill="#fafafa"/><text x="16" y="94" fill="#71717a">WB</text><text x="80" y="94" fill="#71717a" text-anchor="end">52</text>
+                      <rect x="10" y="135" width="85" height="22" rx="3" fill="#fef2f2" stroke="#E21224"/><text x="16" y="149" fill="#E21224" font-weight="800">RP</text><text x="80" y="149" fill="#E21224" text-anchor="end" font-weight="800">42</text>
+                      <rect x="10" y="195" width="85" height="22" rx="3" fill="#fafafa"/><text x="16" y="209" fill="#71717a">EH</text><text x="80" y="209" fill="#71717a" text-anchor="end">38</text>
+                      <rect x="135" y="50" width="80" height="22" rx="3" fill="#fafafa"/><text x="141" y="64" fill="#0f0f10" font-weight="700">BS (1)</text>
+                      <rect x="135" y="165" width="80" height="22" rx="3" fill="#fef2f2" stroke="#fecaca"/><text x="141" y="179" fill="#0f0f10" font-weight="700">RP (4)?</text>
+                      <rect x="255" y="105" width="90" height="26" rx="4" fill="#fafafa" stroke="#d4d4d8" stroke-dasharray="2 3"/><text x="300" y="121" fill="#71717a" text-anchor="middle" font-weight="700">CHAMPION</text>
+                    </g>
+                  </svg>
+                </div>
+                <div class="pv-mini-cap">If Panthers hold the lead, semi vs Sharks tips at 1:30 PM on Court 1.</div>
+              </div>
+
+              <div class="pv-tabbody" data-pv-pane="schedule">
+                <div class="pv-game-line"><div><div class="pv-game-when">Fri · 6:00 PM · Court 2</div><div class="pv-game-teams">Panthers vs Lightning</div></div><div class="pv-game-result win">W 51-44</div></div>
+                <div class="pv-game-line mine"><div><div class="pv-game-when" style="color:#E21224;">NOW · Court 1</div><div class="pv-game-teams">Panthers vs Hawks · QF</div></div><div class="pv-game-result" style="color:#E21224;font-size:14px;">42-38</div></div>
+                <div class="pv-game-line"><div><div class="pv-game-when">Sat · 1:30 PM · Court 1</div><div class="pv-game-teams">Winner vs Sharks · SF</div></div><div class="pv-game-result" style="font-family:var(--bx-font-mono);font-size:11px;color:#a1a1aa;">if win</div></div>
+                <div class="pv-game-line"><div><div class="pv-game-when">Sun · 5:00 PM · Court 1</div><div class="pv-game-teams">Championship</div></div><div class="pv-game-result" style="font-family:var(--bx-font-mono);font-size:11px;color:#a1a1aa;">if win</div></div>
+              </div>
+
+              <div class="pv-tabbody" data-pv-pane="standings">
+                <div class="pv-stand">
+                  <div class="pv-stand__row head"><div></div><div></div><div>Team</div><div>W</div><div>L</div><div>Pts</div></div>
+                  <div class="pv-stand__row first"><div class="pv-stand__rank">1</div><div class="brk__seed-crest" style="background:#0891B2;width:22px;height:22px;font-size:9px;">BS</div><div class="pv-stand__name">Sharks</div><div class="pv-stand__num">4</div><div class="pv-stand__num">0</div><div class="pv-stand__num" style="font-weight:700;color:#0f0f10;">12</div></div>
+                  <div class="pv-stand__row"><div class="pv-stand__rank">2</div><div class="brk__seed-crest" style="background:#DC2626;width:22px;height:22px;font-size:9px;">CC</div><div class="pv-stand__name">Cardinals</div><div class="pv-stand__num">3</div><div class="pv-stand__num">1</div><div class="pv-stand__num" style="font-weight:700;color:#0f0f10;">9</div></div>
+                  <div class="pv-stand__row"><div class="pv-stand__rank">3</div><div class="brk__seed-crest" style="background:#F59E0B;width:22px;height:22px;font-size:9px;">LL</div><div class="pv-stand__name">Lightning</div><div class="pv-stand__num">3</div><div class="pv-stand__num">1</div><div class="pv-stand__num" style="font-weight:700;color:#0f0f10;">9</div></div>
+                  <div class="pv-stand__row mine"><div class="pv-stand__rank">4</div><div class="brk__seed-crest" style="background:#E21224;width:22px;height:22px;font-size:9px;">RP</div><div class="pv-stand__name" style="color:#E21224;">Panthers (you)</div><div class="pv-stand__num">2</div><div class="pv-stand__num">2</div><div class="pv-stand__num" style="font-weight:700;color:#0f0f10;">6</div></div>
+                </div>
+              </div>
+
+              <div class="pv-tabbody" data-pv-pane="leaders">
+                <div class="pv-leader">
+                  <div class="pv-leader__row first"><div class="pv-leader__rank">1</div><div class="pv-leader__avatar" style="background:#0891B2;">MC</div><div style="flex:1;"><div class="pv-leader__name">Marcus Chen</div><div class="pv-leader__team">Sharks · #14</div></div><div class="pv-leader__pts">82</div></div>
+                  <div class="pv-leader__row"><div class="pv-leader__rank">2</div><div class="pv-leader__avatar" style="background:#DC2626;">JR</div><div style="flex:1;"><div class="pv-leader__name">Jaylen Ross</div><div class="pv-leader__team">Cardinals · #5</div></div><div class="pv-leader__pts">71</div></div>
+                  <div class="pv-leader__row mine"><div class="pv-leader__rank">3</div><div class="pv-leader__avatar" style="background:#E21224;">DW</div><div style="flex:1;"><div class="pv-leader__name" style="color:#E21224;">DeSean Wright (your team)</div><div class="pv-leader__team">Panthers · #21</div></div><div class="pv-leader__pts">64</div></div>
+                  <div class="pv-leader__row"><div class="pv-leader__rank">4</div><div class="pv-leader__avatar" style="background:#F59E0B;">EP</div><div style="flex:1;"><div class="pv-leader__name">Eli Park</div><div class="pv-leader__team">Lightning · #11</div></div><div class="pv-leader__pts">58</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+`;
+
+function bindParent(){
+  if(!host.querySelector('.pv-card')) return;
+  host.querySelectorAll('.pv-tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      host.querySelectorAll('.pv-tab').forEach(o=>o.classList.remove('active'));
+      host.querySelectorAll('.pv-tabbody').forEach(o=>o.classList.remove('active'));
+      tab.classList.add('active');
+      host.querySelector(`.pv-tabbody[data-pv-pane="${tab.dataset.pv}"]`).classList.add('active');
+    });
+  });
+  document.getElementById('pv-checkin')?.addEventListener('click', ()=> showToast('✓ Checked in to QF · Riverside vs Hawks'));
+}
+
+/* INIT */
+document.querySelectorAll('.t-sb__item[data-nav="hub"]').forEach(el=>{
+  el.addEventListener('click', e=>{ e.preventDefault(); navigate('hub'); });
+});
+const initial = (location.hash||'#hub').slice(1);
+navigate(initial in screens ? initial : 'hub');
+</script>
+</body>
+</html>

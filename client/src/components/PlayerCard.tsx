@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { motion } from "framer-motion";
 import { AwardsDialog, EvaluationDialog, SKILL_CATEGORIES, type PlayerLite, type EvalScores, type Quarter } from "@/components/CoachAwardDialogs";
-import UypTrophyRings from "@/components/UypTrophyRings";
+import UypTrophyRings, { type TrophyTier } from "@/components/UypTrophyRings";
 import {
   X,
   Shirt,
@@ -75,6 +75,19 @@ interface TierMeter {
   total: number;
 }
 
+interface EarnedAward {
+  id?: number | string;
+  awardId?: number | string;
+  tier?: string;
+  name?: string;
+  description?: string;
+  imageUrl?: string | null;
+  prestige?: string | null;
+  xpReward?: number;
+  awardedAt?: string | Date | null;
+  notes?: string | null;
+}
+
 interface AwardsSummary {
   tierSummary?: {
     legacy: TierMeter;
@@ -91,6 +104,7 @@ interface AwardsSummary {
   hallOfFameBadgesCount: number;
   prospectBadgesCount: number;
   trophiesCount: number;
+  allAwards?: EarnedAward[];
 }
 
 export default function PlayerCard({ 
@@ -102,6 +116,7 @@ export default function PlayerCard({
 }: PlayerCardProps) {
   const [showAwardDialog, setShowAwardDialog] = useState(false);
   const [showSkillEvaluation, setShowSkillEvaluation] = useState(false);
+  const [tierDetailFor, setTierDetailFor] = useState<TrophyTier | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -354,22 +369,27 @@ export default function PlayerCard({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md p-0 overflow-hidden" hideClose>
+      <Dialog open={isOpen} onOpenChange={(v) => { if (!v) { setTierDetailFor(null); onClose(); } }}>
+        <DialogContent
+          className="max-w-md p-0 overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[85vh]"
+          hideClose
+        >
           <DialogHeader className="sr-only">
             <DialogTitle>{getPlayerFullName(playerProfile)}'s Profile</DialogTitle>
           </DialogHeader>
-          
-          {/* Close button */}
+
+          {/* Close button — kept anchored to the dialog (outside scroll area) */}
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 z-10 rounded-full p-2 bg-white/90 hover:bg-white shadow-lg transition-all"
+            className="absolute right-4 top-4 z-20 rounded-full p-2 bg-white/90 hover:bg-white shadow-lg transition-all"
             data-testid="close-player-card"
           >
             <X className="h-4 w-4 text-gray-600" />
           </button>
 
-          <div className="bg-gradient-to-b from-gray-50 to-white">
+          {/* Scrollable inner container so long profiles (awards, medical info,
+              actions) stay reachable on small viewports / mobile. */}
+          <div className="overflow-y-auto overscroll-contain flex-1 bg-gradient-to-b from-gray-50 to-white">
             {/* Profile Section */}
             <div className="relative px-0 pt-6">
               <motion.section
@@ -443,9 +463,14 @@ export default function PlayerCard({
               </div>
             </div>
 
-            {/* Trophies & Badges */}
+            {/* Trophies & Badges — tap a ring to see the awards in that tier */}
             <div className="p-2 pb-6">
-              <UypTrophyRings data={ringsData} size={109} stroke={8} />
+              <UypTrophyRings
+                data={ringsData}
+                size={109}
+                stroke={8}
+                onTierClick={setTierDetailFor}
+              />
             </div>
 
             {/* Emergency Contact & Medical Information - Coach View Only */}
@@ -532,6 +557,16 @@ export default function PlayerCard({
         </DialogContent>
       </Dialog>
 
+      {/* Tier detail dialog: lists every award the player has earned in
+          the tapped tier, surfaced when a coach/parent/player taps one
+          of the trophy rings on the profile. */}
+      <TierAwardsDialog
+        tier={tierDetailFor}
+        awards={awardsSummary?.allAwards ?? []}
+        playerName={getPlayerFullName(playerProfile)}
+        onClose={() => setTierDetailFor(null)}
+      />
+
       {/* Awards Dialog */}
       {showAwardDialog && selectedPlayer && (
         <AwardsDialog
@@ -610,5 +645,120 @@ function SkillBar({
         />
       </div>
     </motion.div>
+  );
+}
+
+const TIER_THEME: Record<TrophyTier, { gradient: string; ring: string; chip: string; label: string }> = {
+  Legend:   { gradient: 'from-amber-100 via-yellow-50 to-white',   ring: 'ring-amber-300',   chip: 'bg-amber-500 text-white',   label: 'Legend' },
+  Diamond:  { gradient: 'from-cyan-100 via-sky-50 to-white',       ring: 'ring-cyan-300',    chip: 'bg-cyan-500 text-white',    label: 'Diamond' },
+  Platinum: { gradient: 'from-slate-100 via-zinc-50 to-white',     ring: 'ring-slate-300',   chip: 'bg-slate-500 text-white',   label: 'Platinum' },
+  Gold:     { gradient: 'from-yellow-100 via-amber-50 to-white',   ring: 'ring-yellow-300',  chip: 'bg-yellow-500 text-white',  label: 'Gold' },
+  Silver:   { gradient: 'from-gray-100 via-neutral-50 to-white',   ring: 'ring-gray-300',    chip: 'bg-gray-400 text-white',    label: 'Silver' },
+  Bronze:   { gradient: 'from-orange-100 via-amber-50 to-white',   ring: 'ring-orange-300',  chip: 'bg-orange-500 text-white',  label: 'Bronze' },
+};
+
+function formatAwardedAt(value: EarnedAward['awardedAt']): string | null {
+  if (!value) return null;
+  try {
+    const d = typeof value === 'string' ? new Date(value) : value;
+    if (!(d instanceof Date) || isNaN(d.getTime())) return null;
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch {
+    return null;
+  }
+}
+
+function TierAwardsDialog({
+  tier,
+  awards,
+  playerName,
+  onClose,
+}: {
+  tier: TrophyTier | null;
+  awards: EarnedAward[];
+  playerName: string;
+  onClose: () => void;
+}) {
+  const theme = tier ? TIER_THEME[tier] : null;
+  const tierAwards = tier
+    ? awards.filter((a) => (a.tier ?? '').toLowerCase() === tier.toLowerCase())
+    : [];
+
+  return (
+    <Dialog open={!!tier} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent
+        className="max-w-md p-0 overflow-hidden flex flex-col max-h-[85vh]"
+        data-testid={`dialog-tier-awards-${tier?.toLowerCase() ?? ''}`}
+      >
+        <DialogHeader className={`px-5 pt-5 pb-3 bg-gradient-to-b ${theme?.gradient ?? 'from-gray-50 to-white'}`}>
+          <div className="flex items-center gap-3">
+            <span
+              className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-bold tracking-wide ${theme?.chip ?? ''}`}
+              data-testid="badge-tier-name"
+            >
+              {theme?.label ?? tier}
+            </span>
+            <span className="text-sm text-gray-600">
+              {tierAwards.length} {tierAwards.length === 1 ? 'award' : 'awards'}
+            </span>
+          </div>
+          <DialogTitle className="mt-2 text-lg font-semibold text-gray-900">
+            {playerName}'s {theme?.label ?? tier} awards
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="overflow-y-auto overscroll-contain px-5 pb-5 pt-2 flex-1">
+          {tierAwards.length === 0 ? (
+            <div className="text-center py-10 text-gray-500" data-testid="empty-tier-awards">
+              <Trophy className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+              <p className="text-sm">No {theme?.label ?? tier} awards earned yet.</p>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {tierAwards.map((a, i) => {
+                const dateLabel = formatAwardedAt(a.awardedAt);
+                return (
+                  <li
+                    key={`${a.id ?? a.awardId ?? a.name ?? 'award'}-${i}`}
+                    className={`flex items-start gap-3 rounded-lg border bg-white p-3 shadow-sm ring-1 ${theme?.ring ?? 'ring-gray-200'}`}
+                    data-testid={`tier-award-item-${i}`}
+                  >
+                    {a.imageUrl ? (
+                      <img
+                        src={a.imageUrl}
+                        alt={a.name ?? 'Award'}
+                        className="h-12 w-12 rounded-md object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 rounded-md bg-gray-100 flex items-center justify-center flex-shrink-0">
+                        <Trophy className="h-6 w-6 text-gray-400" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-semibold text-gray-900 truncate" data-testid="text-award-name">
+                          {a.name ?? 'Award'}
+                        </p>
+                        {typeof a.xpReward === 'number' && a.xpReward > 0 && (
+                          <span className="text-xs font-medium text-blue-600 whitespace-nowrap">
+                            +{a.xpReward} XP
+                          </span>
+                        )}
+                      </div>
+                      {a.description && (
+                        <p className="text-sm text-gray-600 mt-0.5 line-clamp-2">{a.description}</p>
+                      )}
+                      {dateLabel && (
+                        <p className="text-xs text-gray-500 mt-1">Awarded {dateLabel}</p>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

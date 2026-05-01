@@ -31,6 +31,7 @@ function CircularRingMeter({
   scheme,
   size = 136,
   stroke = 16,
+  onClick,
 }: {
   label: string;
   earned: number;
@@ -38,6 +39,7 @@ function CircularRingMeter({
   scheme: { ring: readonly string[] };
   size?: number;
   stroke?: number;
+  onClick?: () => void;
 }) {
   const radius = (size - stroke) / 2;
   const center = size / 2;
@@ -49,12 +51,30 @@ function CircularRingMeter({
 
   return (
     <motion.div 
-      style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      whileHover={{ scale: 1.05 }}
+      style={{
+        width: size,
+        height: size,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: onClick ? 'pointer' : 'default',
+      }}
+      whileHover={{ scale: onClick ? 1.08 : 1.05 }}
+      whileTap={onClick ? { scale: 0.96 } : undefined}
       initial={{ opacity: 0, scale: 0.8 }}
       whileInView={{ opacity: 1, scale: 1 }}
       viewport={{ once: true, amount: 0.3 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      } : undefined}
+      data-testid={onClick ? `tier-ring-${label.toLowerCase()}` : undefined}
     >
       <motion.svg
         viewBox={`0 0 ${size} ${size}`}
@@ -140,16 +160,20 @@ function CircularRingMeter({
 
 const defaultMeter: Meter = { earned: 0, total: 1 };
 
+export type TrophyTier = 'Legend' | 'Diamond' | 'Platinum' | 'Gold' | 'Silver' | 'Bronze';
+
 export default function UypTrophyRings({
   data,
   size = 136,
   stroke = 16,
   className,
+  onTierClick,
 }: {
   data: UypRingsData | null | undefined;
   size?: number;
   stroke?: number;
   className?: string;
+  onTierClick?: (tier: TrophyTier) => void;
 }) {
   const safeData = {
     legacy: data?.legacy ?? defaultMeter,
@@ -159,6 +183,8 @@ export default function UypTrophyRings({
     starter: data?.starter ?? defaultMeter,
     prospect: data?.prospect ?? defaultMeter,
   };
+
+  const handle = (tier: TrophyTier) => onTierClick ? () => onTierClick(tier) : undefined;
 
   return (
     <div
@@ -171,12 +197,12 @@ export default function UypTrophyRings({
         padding: '4px',
       }}
     >
-      <CircularRingMeter label="Legend"     earned={safeData.legacy.earned}     total={safeData.legacy.total}     scheme={schemes.legacy}     size={size} stroke={stroke} />
-      <CircularRingMeter label="Diamond"    earned={safeData.hof.earned}        total={safeData.hof.total}        scheme={schemes.hof}        size={size} stroke={stroke} />
-      <CircularRingMeter label="Platinum"   earned={safeData.superstar.earned}  total={safeData.superstar.total}  scheme={schemes.superstar}  size={size} stroke={stroke} />
-      <CircularRingMeter label="Gold"       earned={safeData.allStar.earned}    total={safeData.allStar.total}    scheme={schemes.allStar}    size={size} stroke={stroke} />
-      <CircularRingMeter label="Silver"     earned={safeData.starter.earned}    total={safeData.starter.total}    scheme={schemes.starter}    size={size} stroke={stroke} />
-      <CircularRingMeter label="Bronze"     earned={safeData.prospect.earned}   total={safeData.prospect.total}   scheme={schemes.prospect}   size={size} stroke={stroke} />
+      <CircularRingMeter label="Legend"     earned={safeData.legacy.earned}     total={safeData.legacy.total}     scheme={schemes.legacy}     size={size} stroke={stroke} onClick={handle('Legend')} />
+      <CircularRingMeter label="Diamond"    earned={safeData.hof.earned}        total={safeData.hof.total}        scheme={schemes.hof}        size={size} stroke={stroke} onClick={handle('Diamond')} />
+      <CircularRingMeter label="Platinum"   earned={safeData.superstar.earned}  total={safeData.superstar.total}  scheme={schemes.superstar}  size={size} stroke={stroke} onClick={handle('Platinum')} />
+      <CircularRingMeter label="Gold"       earned={safeData.allStar.earned}    total={safeData.allStar.total}    scheme={schemes.allStar}    size={size} stroke={stroke} onClick={handle('Gold')} />
+      <CircularRingMeter label="Silver"     earned={safeData.starter.earned}    total={safeData.starter.total}    scheme={schemes.starter}    size={size} stroke={stroke} onClick={handle('Silver')} />
+      <CircularRingMeter label="Bronze"     earned={safeData.prospect.earned}   total={safeData.prospect.total}   scheme={schemes.prospect}   size={size} stroke={stroke} onClick={handle('Bronze')} />
     </div>
   );
 }

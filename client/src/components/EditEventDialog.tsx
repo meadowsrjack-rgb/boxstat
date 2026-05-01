@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, Settings2, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Settings2, ChevronDown, ChevronRight, X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -160,6 +160,21 @@ export function EditEventDialog({ event, teams, programs, facilities, organizati
   const [newFacilityLat, setNewFacilityLat] = useState("");
   const [newFacilityLng, setNewFacilityLng] = useState("");
 
+  type AdditionalEventRow = {
+    title: string;
+    startTime: string;
+    endTime: string;
+    location: string;
+    meetingLink: string;
+    latitude?: number;
+    longitude?: number;
+    facilityId?: number | null;
+    courtName?: string;
+    locationType: "physical" | "online";
+  };
+  const [additionalEvents, setAdditionalEvents] = useState<AdditionalEventRow[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+
   const { data: allUsers = [] } = useQuery<any[]>({ queryKey: ["/api/users"] });
   const { data: divisions = [] } = useQuery<any[]>({ queryKey: ["/api/divisions"] });
 
@@ -250,8 +265,6 @@ export function EditEventDialog({ event, teams, programs, facilities, organizati
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      toast({ title: "Event updated successfully" });
-      onClose();
     },
     onError: () => {
       toast({ title: "Failed to update event", variant: "destructive" });
@@ -259,6 +272,7 @@ export function EditEventDialog({ event, teams, programs, facilities, organizati
   });
 
   const handleSave = async () => {
+    if (isSaving) return;
     if (isRecurring) {
       if (
         (recurrenceFrequency === "weekly" || recurrenceFrequency === "biweekly") &&
@@ -286,6 +300,27 @@ export function EditEventDialog({ event, teams, programs, facilities, organizati
       }
     }
 
+    if (additionalEvents.length > 0) {
+      for (let i = 0; i < additionalEvents.length; i++) {
+        const row = additionalEvents[i];
+        if (!row.title?.trim() || !row.startTime || !row.endTime) {
+          toast({
+            title: `Additional event #${i + 1} is incomplete`,
+            description: "Please fill in title, start time, and end time.",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (row.locationType === "physical" && !row.location?.trim()) {
+          toast({
+            title: `Additional event #${i + 1} needs a location`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+    }
+
     const etz = editingEvent.timezone || "America/Los_Angeles";
     const recurringEndDateISO =
       isRecurring && recurrenceEndType === "date" && recurrenceEndDate
@@ -305,10 +340,84 @@ export function EditEventDialog({ event, teams, programs, facilities, organizati
       recurringEndDate: isRecurring ? recurringEndDateISO : null,
     };
 
+    setIsSaving(true);
     try {
-      await updateEvent.mutateAsync(updatedData);
-    } catch {
-      return;
+      try {
+        await updateEvent.mutateAsync(updatedData);
+      } catch {
+        return;
+      }
+
+      let additionalCreatedCount = 0;
+      let additionalFailed = false;
+      if (additionalEvents.length > 0) {
+      let assignTo: any;
+      let visibility: any;
+      if (isEveryoneSelected) {
+        assignTo = { roles: ["player", "coach", "parent", "admin"] };
+        visibility = { roles: ["player", "coach", "parent", "admin"] };
+      } else {
+        assignTo = {};
+        if (selectedTeams.length > 0) assignTo.teams = selectedTeams.map(String);
+        if (selectedPrograms.length > 0) assignTo.programs = selectedPrograms.map(String);
+        if (selectedDivisions.length > 0) assignTo.divisions = selectedDivisions.map(String);
+        if (selectedUsers.length > 0) assignTo.users = selectedUsers;
+        if (selectedRoles.length > 0) assignTo.roles = selectedRoles;
+        visibility = { ...assignTo };
+      }
+
+      const sharedEventType = editingEvent.eventType || editingEvent.type || "practice";
+      const additionalPayloads = additionalEvents.map((row) => ({
+        title: row.title.trim(),
+        startTime: localDatetimeToUTC(row.startTime, etz),
+        endTime: localDatetimeToUTC(row.endTime, etz),
+        location: row.locationType === "online" ? "Online" : row.location,
+        meetingLink: row.meetingLink || "",
+        latitude: row.latitude,
+        longitude: row.longitude,
+        facilityId: row.facilityId ?? null,
+        courtName: row.courtName || "",
+        description: editingEvent.description || "",
+        eventType: sharedEventType,
+        organizationId: organization.id,
+        assignTo,
+        visibility,
+        playerRsvpEnabled: editingEvent.playerRsvpEnabled !== false,
+        timezone: etz,
+        isRecurring: false,
+        recurringType: null,
+        recurringEndDate: null,
+        teamId: editingEvent.teamId,
+        programId: editingEvent.programId,
+        scheduleRequestSource: undefined,
+      }));
+
+      try {
+        const batchResult = await apiRequest("POST", "/api/events/batch", {
+          events: additionalPayloads,
+          eventWindows: eventWindows.length > 0 ? eventWindows : undefined,
+        });
+        additionalCreatedCount = batchResult?.count || (batchResult?.events?.length ?? 0);
+        queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      } catch (e: any) {
+        console.error("Failed to create additional events:", e);
+        additionalFailed = true;
+        toast({
+          title: "Event updated, but additional events failed",
+          description: e?.message || "Could not create the additional events. Please try again.",
+          variant: "destructive",
+        });
+      }
+
+      if (!additionalFailed) {
+        toast({
+          title:
+            additionalCreatedCount > 1
+              ? `Event updated and ${additionalCreatedCount} more added`
+              : `Event updated and 1 more added`,
+        });
+        setAdditionalEvents([]);
+      }
     }
 
     if (isRecurring) {
@@ -392,6 +501,18 @@ export function EditEventDialog({ event, teams, programs, facilities, organizati
       } else {
         queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       }
+    }
+
+      if (additionalFailed) {
+        return;
+      }
+
+      if (additionalEvents.length === 0 && !isRecurring) {
+        toast({ title: "Event updated successfully" });
+      }
+      onClose();
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1051,6 +1172,245 @@ export function EditEventDialog({ event, teams, programs, facilities, organizati
             </div>
           </div>
 
+          <div className="border-t pt-5 space-y-3">
+            {additionalEvents.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold">Additional events</h3>
+                <p className="text-xs text-muted-foreground">
+                  These share this event's type, audience, RSVP, timezone and check-in windows.
+                </p>
+              </div>
+            )}
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant={additionalEvents.length === 0 ? "ghost" : "outline"}
+                size="sm"
+                disabled={isSaving || updateEvent.isPending}
+                onClick={() => {
+                  const last = additionalEvents[additionalEvents.length - 1];
+                  const baseTitle =
+                    last?.title || editingEvent.title || "";
+                  const baseStart =
+                    last?.startTime || editingEvent.startTime || "";
+                  const baseEnd =
+                    last?.endTime || editingEvent.endTime || "";
+                  const shifted = (v: string): string => {
+                    if (!v || !v.includes("T")) return v;
+                    const [datePart, timePart] = v.split("T");
+                    const [y, m, d] = datePart.split("-").map(Number);
+                    if (!y || !m || !d) return v;
+                    const dt = new Date(y, m - 1, d);
+                    dt.setDate(dt.getDate() + 1);
+                    const yy = dt.getFullYear();
+                    const mm = String(dt.getMonth() + 1).padStart(2, "0");
+                    const dd = String(dt.getDate()).padStart(2, "0");
+                    return `${yy}-${mm}-${dd}T${timePart}`;
+                  };
+                  const baseLocation =
+                    last?.location ?? editingEvent.location ?? "";
+                  const baseLocType: "physical" | "online" =
+                    last?.locationType ??
+                    (editingEvent.location === "Online" ? "online" : "physical");
+                  setAdditionalEvents([
+                    ...additionalEvents,
+                    {
+                      title: baseTitle,
+                      startTime: shifted(baseStart),
+                      endTime: shifted(baseEnd),
+                      location: baseLocation,
+                      meetingLink: last?.meetingLink ?? editingEvent.meetingLink ?? "",
+                      latitude: last?.latitude ?? editingEvent.latitude,
+                      longitude: last?.longitude ?? editingEvent.longitude,
+                      facilityId: last?.facilityId ?? editingEvent.facilityId ?? null,
+                      courtName: last?.courtName ?? editingEvent.courtName ?? "",
+                      locationType: baseLocType,
+                    },
+                  ]);
+                }}
+                data-testid="button-add-additional-event"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Add another event
+              </Button>
+            </div>
+
+            {additionalEvents.map((row, idx) => (
+              <div
+                key={idx}
+                className="border rounded-lg p-4 space-y-3 bg-muted/20"
+                data-testid={`additional-event-row-${idx}`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Additional event {idx + 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdditionalEvents(additionalEvents.filter((_, i) => i !== idx));
+                    }}
+                    className="text-destructive hover:text-destructive/80 text-xs flex items-center gap-1"
+                    data-testid={`button-remove-additional-${idx}`}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Remove
+                  </button>
+                </div>
+
+                <Input
+                  value={row.title}
+                  onChange={(e) => {
+                    const next = [...additionalEvents];
+                    next[idx] = { ...next[idx], title: e.target.value };
+                    setAdditionalEvents(next);
+                  }}
+                  placeholder="Event title..."
+                  className="h-10"
+                  data-testid={`input-additional-title-${idx}`}
+                />
+
+                <DateTimeRangePicker
+                  startValue={row.startTime || ""}
+                  endValue={row.endTime || ""}
+                  onStartChange={(v) => {
+                    const next = [...additionalEvents];
+                    next[idx] = { ...next[idx], startTime: v };
+                    setAdditionalEvents(next);
+                  }}
+                  onEndChange={(v) => {
+                    const next = [...additionalEvents];
+                    next[idx] = { ...next[idx], endTime: v };
+                    setAdditionalEvents(next);
+                  }}
+                />
+
+                <div className="flex rounded-lg overflow-hidden w-fit border">
+                  <button
+                    type="button"
+                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${row.locationType === "physical" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent"}`}
+                    onClick={() => {
+                      const next = [...additionalEvents];
+                      next[idx] = {
+                        ...next[idx],
+                        locationType: "physical",
+                        location: "",
+                        meetingLink: "",
+                        latitude: undefined,
+                        longitude: undefined,
+                      };
+                      setAdditionalEvents(next);
+                    }}
+                  >
+                    Physical
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${row.locationType === "online" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent"}`}
+                    onClick={() => {
+                      const next = [...additionalEvents];
+                      next[idx] = {
+                        ...next[idx],
+                        locationType: "online",
+                        location: "Online",
+                        latitude: undefined,
+                        longitude: undefined,
+                      };
+                      setAdditionalEvents(next);
+                    }}
+                  >
+                    Online
+                  </button>
+                </div>
+
+                {row.locationType === "physical" ? (
+                  <div className="space-y-2">
+                    <Select
+                      value={row.facilityId ? String(row.facilityId) : "none"}
+                      onValueChange={(value) => {
+                        const next = [...additionalEvents];
+                        if (value === "none") {
+                          next[idx] = {
+                            ...next[idx],
+                            facilityId: null,
+                            location: "",
+                            latitude: undefined,
+                            longitude: undefined,
+                          };
+                        } else {
+                          const fac = facilities.find((f: any) => String(f.id) === value);
+                          if (fac) {
+                            next[idx] = {
+                              ...next[idx],
+                              facilityId: fac.id,
+                              location: fac.address,
+                              latitude: fac.latitude,
+                              longitude: fac.longitude,
+                            };
+                          }
+                        }
+                        setAdditionalEvents(next);
+                      }}
+                    >
+                      <SelectTrigger data-testid={`select-additional-facility-${idx}`}>
+                        <SelectValue placeholder="Select a saved facility" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None (enter manually)</SelectItem>
+                        {facilities
+                          .filter((f: any) => f.isActive !== false)
+                          .map((f: any) => (
+                            <SelectItem key={f.id} value={String(f.id)}>
+                              {f.name} — {f.address}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    {row.facilityId && (
+                      <Input
+                        value={row.courtName || ""}
+                        onChange={(e) => {
+                          const next = [...additionalEvents];
+                          next[idx] = { ...next[idx], courtName: e.target.value };
+                          setAdditionalEvents(next);
+                        }}
+                        placeholder="Court / field (optional)"
+                        className="h-9"
+                      />
+                    )}
+                    <LocationSearch
+                      value={row.location || ""}
+                      onLocationSelect={(location) => {
+                        const next = [...additionalEvents];
+                        next[idx] = {
+                          ...next[idx],
+                          location: location.name,
+                          latitude: location.lat ?? undefined,
+                          longitude: location.lng ?? undefined,
+                          facilityId: null,
+                        };
+                        setAdditionalEvents(next);
+                      }}
+                      placeholder="Search venue or address..."
+                      className="w-full"
+                    />
+                  </div>
+                ) : (
+                  <Input
+                    value={row.meetingLink}
+                    onChange={(e) => {
+                      const next = [...additionalEvents];
+                      next[idx] = { ...next[idx], meetingLink: e.target.value };
+                      setAdditionalEvents(next);
+                    }}
+                    placeholder="https://zoom.us/j/..."
+                    data-testid={`input-additional-meeting-link-${idx}`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+
           </div>
 
           <div className="flex items-center justify-between border-t pt-4 shrink-0 bg-background">
@@ -1076,6 +1436,7 @@ export function EditEventDialog({ event, teams, programs, facilities, organizati
                 type="button"
                 onClick={handleSave}
                 disabled={
+                  isSaving ||
                   updateEvent.isPending ||
                   !editingEvent.title?.trim() ||
                   !editingEvent.startTime ||
@@ -1084,8 +1445,10 @@ export function EditEventDialog({ event, teams, programs, facilities, organizati
                 }
                 data-testid="button-submit-edit-event"
               >
-                {updateEvent.isPending
-                  ? "Updating..."
+                {isSaving || updateEvent.isPending
+                  ? "Saving..."
+                  : additionalEvents.length > 0
+                  ? `Update & Add ${additionalEvents.length} Event${additionalEvents.length > 1 ? "s" : ""}`
                   : isRecurring
                   ? "Update & Create Recurring"
                   : "Update Event"}

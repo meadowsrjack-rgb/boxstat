@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -32,7 +32,7 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { Plus, Trash2, Settings2, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Settings2, ChevronDown, ChevronRight, X } from "lucide-react";
 import { LocationSearch } from "@/components/LocationSearch";
 import DateTimeRangePicker from "@/components/DateTimeRangePicker";
 import EventWindowsConfigurator from "@/components/EventWindowsConfigurator";
@@ -45,24 +45,45 @@ import {
 } from "@/lib/time";
 import type { EventWindow } from "@shared/schema";
 
-const createEventSchema = z.object({
+const eventRowSchema = z.object({
   title: z.string().min(1, "Event title is required"),
-  type: z.enum([
-    "game", "tournament", "camp", "exhibition", "practice", "skills",
-    "workshop", "talk", "combine", "training", "meeting", "course",
-    "tryout", "skills-assessment", "team-building", "parent-meeting",
-    "equipment-pickup", "photo-day", "award-ceremony", "fnh",
-  ]),
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().min(1, "End time is required"),
   location: z.string().min(1, "Location is required"),
   meetingLink: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
-  description: z.string().optional(),
   facilityId: z.number().nullable().optional(),
   courtName: z.string().optional(),
+  locationType: z.enum(["physical", "online"]),
 });
+
+const createEventSchema = z.object({
+  type: z.enum([
+    "game", "tournament", "camp", "exhibition", "practice", "skills",
+    "workshop", "talk", "combine", "training", "meeting", "course",
+    "tryout", "skills-assessment", "team-building", "parent-meeting",
+    "equipment-pickup", "photo-day", "award-ceremony", "fnh",
+  ]),
+  description: z.string().optional(),
+  events: z.array(eventRowSchema).min(1, "At least one event is required"),
+});
+
+type EventRowValue = z.infer<typeof eventRowSchema>;
+type CreateEventFormValues = z.infer<typeof createEventSchema>;
+
+const emptyRow: EventRowValue = {
+  title: "",
+  startTime: "",
+  endTime: "",
+  location: "",
+  meetingLink: "",
+  latitude: undefined,
+  longitude: undefined,
+  facilityId: null,
+  courtName: "",
+  locationType: "physical",
+};
 
 interface CreateEventDialogProps {
   isOpen: boolean;
@@ -77,6 +98,19 @@ interface CreateEventDialogProps {
 function getDefaultTimezone() {
   const browserTz = getBrowserTimezone();
   return TIMEZONE_OPTIONS.find((tz) => tz.value === browserTz) ? browserTz : "America/Los_Angeles";
+}
+
+function shiftDatetimeByDays(value: string, days: number): string {
+  if (!value || !value.includes("T")) return value;
+  const [datePart, timePart] = value.split("T");
+  const [y, m, d] = datePart.split("-").map(Number);
+  if (!y || !m || !d) return value;
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  const yy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}T${timePart}`;
 }
 
 export function CreateEventDialog({
@@ -98,7 +132,6 @@ export function CreateEventDialog({
   const [recurrenceEndDate, setRecurrenceEndDate] = useState("");
   const [playerRsvpEnabled, setPlayerRsvpEnabled] = useState(true);
   const [eventTimezone, setEventTimezone] = useState(getDefaultTimezone);
-  const [locationType, setLocationType] = useState<"physical" | "online">("physical");
   const [isEveryoneSelected, setIsEveryoneSelected] = useState(true);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -117,36 +150,25 @@ export function CreateEventDialog({
   const { data: allUsers = [] } = useQuery<any[]>({ queryKey: ["/api/users"] });
   const { data: divisions = [] } = useQuery<any[]>({ queryKey: ["/api/divisions"] });
 
-  const form = useForm({
+  const form = useForm<CreateEventFormValues>({
     resolver: zodResolver(createEventSchema),
     defaultValues: {
-      title: "",
-      type: "practice" as const,
-      startTime: "",
-      endTime: "",
-      location: "",
-      meetingLink: "",
-      latitude: undefined,
-      longitude: undefined,
+      type: "practice",
       description: "",
-      facilityId: null,
-      courtName: "",
+      events: [{ ...emptyRow }],
     },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "events",
   });
 
   const resetAll = () => {
     form.reset({
-      title: "",
       type: "practice",
-      startTime: "",
-      endTime: "",
-      location: "",
-      meetingLink: "",
-      latitude: undefined,
-      longitude: undefined,
       description: "",
-      facilityId: null,
-      courtName: "",
+      events: [{ ...emptyRow }],
     });
     setEventWindows([]);
     setIsEveryoneSelected(true);
@@ -157,7 +179,6 @@ export function CreateEventDialog({
     setSelectedPrograms([]);
     setSelectedRoles([]);
     setUserSearch("");
-    setLocationType("physical");
     setIsRecurring(false);
     setRecurrenceFrequency("weekly");
     setRecurrenceCount(4);
@@ -166,6 +187,7 @@ export function CreateEventDialog({
     setRecurrenceEndDate("");
     setPlayerRsvpEnabled(true);
     setEventTimezone(getDefaultTimezone());
+    setShowFacilityManager(false);
   };
 
   useEffect(() => {
@@ -181,7 +203,6 @@ export function CreateEventDialog({
       const hasAllRoles =
         event.assignTo?.roles && allRoles.every((r: string) => event.assignTo.roles.includes(r));
 
-      setLocationType(event.location === "Online" ? "online" : "physical");
       setEventTimezone(etz);
 
       if (hasAllRoles) {
@@ -246,22 +267,47 @@ export function CreateEventDialog({
       }
 
       form.reset({
-        title: `${event.title} (Copy)`,
         type: (event.eventType || event.type || "practice") as any,
-        startTime: localStart,
-        endTime: localEnd,
-        location: event.location || "",
-        meetingLink: event.meetingLink || "",
-        latitude: event.latitude,
-        longitude: event.longitude,
         description: event.description || "",
+        events: [
+          {
+            title: `${event.title} (Copy)`,
+            startTime: localStart,
+            endTime: localEnd,
+            location: event.location || "",
+            meetingLink: event.meetingLink || "",
+            latitude: event.latitude,
+            longitude: event.longitude,
+            facilityId: event.facilityId ?? null,
+            courtName: event.courtName || "",
+            locationType: event.location === "Online" ? "online" : "physical",
+          },
+        ],
       });
     }
   }, [isOpen, duplicatingEvent]);
 
+  const handleAddRow = () => {
+    const rows = form.getValues("events");
+    const last = rows[rows.length - 1];
+    const next: EventRowValue = {
+      title: last?.title || "",
+      startTime: last?.startTime ? shiftDatetimeByDays(last.startTime, 1) : "",
+      endTime: last?.endTime ? shiftDatetimeByDays(last.endTime, 1) : "",
+      location: last?.location || "",
+      meetingLink: last?.meetingLink || "",
+      latitude: last?.latitude,
+      longitude: last?.longitude,
+      facilityId: last?.facilityId ?? null,
+      courtName: last?.courtName || "",
+      locationType: last?.locationType || "physical",
+    };
+    append(next);
+  };
+
   const createEvent = useMutation({
-    mutationFn: async (data: any) => {
-      const { type, ...rest } = data;
+    mutationFn: async (data: CreateEventFormValues) => {
+      const { type, description, events: rows } = data;
 
       let assignTo: any = {};
       let visibility: any = {};
@@ -288,48 +334,6 @@ export function CreateEventDialog({
         visibility = { ...assignTo };
       }
 
-      console.log("Event form data before submission:", { type, assignTo, ...rest });
-      const utcStartTime = localDatetimeToUTC(rest.startTime, eventTimezone);
-      const utcEndTime = localDatetimeToUTC(rest.endTime, eventTimezone);
-      const recurringEndDateISO =
-        isRecurring && recurrenceEndType === "date" && recurrenceEndDate
-          ? recurrenceEndDate + "T23:59:59Z"
-          : null;
-
-      const basePayload = {
-        ...rest,
-        startTime: utcStartTime,
-        endTime: utcEndTime,
-        eventType: type,
-        organizationId: organization.id,
-        assignTo,
-        visibility,
-        playerRsvpEnabled,
-        timezone: eventTimezone,
-        isRecurring,
-        recurringType: isRecurring ? recurrenceFrequency : null,
-        recurringEndDate: isRecurring ? recurringEndDateISO : null,
-      };
-
-      const eventsToCreate: any[] = [];
-
-      const naiveStart = rest.startTime || "";
-      const naiveEnd = rest.endTime || "";
-
-      if (!naiveStart.includes("T") || !naiveEnd.includes("T")) {
-        toast({ title: "Please set both start and end times", variant: "destructive" });
-        return;
-      }
-
-      const [startDatePart, startTimePart] = naiveStart.split("T");
-      const [, endTimePart] = naiveEnd.split("T");
-      const [startHour, startMinute] = startTimePart.split(":").map(Number);
-      const [endHour, endMinute] = endTimePart.split(":").map(Number);
-      const [sYear, sMonth, sDay] = startDatePart.split("-").map(Number);
-
-      let durationMinutes = endHour * 60 + endMinute - (startHour * 60 + startMinute);
-      if (durationMinutes <= 0) durationMinutes += 24 * 60;
-
       if (isRecurring) {
         if (
           (recurrenceFrequency === "weekly" || recurrenceFrequency === "biweekly") &&
@@ -352,9 +356,58 @@ export function CreateEventDialog({
         }
       }
 
-      eventsToCreate.push(basePayload);
+      const recurringEndDateISO =
+        isRecurring && recurrenceEndType === "date" && recurrenceEndDate
+          ? recurrenceEndDate + "T23:59:59Z"
+          : null;
 
-      if (isRecurring) {
+      const eventsToCreate: any[] = [];
+
+      for (const row of rows) {
+        const naiveStart = row.startTime || "";
+        const naiveEnd = row.endTime || "";
+        if (!naiveStart.includes("T") || !naiveEnd.includes("T")) {
+          toast({ title: "Please set both start and end times for every event row", variant: "destructive" });
+          return;
+        }
+
+        const utcStartTime = localDatetimeToUTC(naiveStart, eventTimezone);
+        const utcEndTime = localDatetimeToUTC(naiveEnd, eventTimezone);
+
+        const basePayload: any = {
+          title: row.title,
+          startTime: utcStartTime,
+          endTime: utcEndTime,
+          location: row.locationType === "online" ? "Online" : row.location,
+          meetingLink: row.meetingLink || "",
+          latitude: row.latitude,
+          longitude: row.longitude,
+          facilityId: row.facilityId ?? null,
+          courtName: row.courtName || "",
+          description: description || "",
+          eventType: type,
+          organizationId: organization.id,
+          assignTo,
+          visibility,
+          playerRsvpEnabled,
+          timezone: eventTimezone,
+          isRecurring,
+          recurringType: isRecurring ? recurrenceFrequency : null,
+          recurringEndDate: isRecurring ? recurringEndDateISO : null,
+        };
+
+        eventsToCreate.push(basePayload);
+
+        if (!isRecurring) continue;
+
+        const [startDatePart, startTimePart] = naiveStart.split("T");
+        const [, endTimePart] = naiveEnd.split("T");
+        const [startHour, startMinute] = startTimePart.split(":").map(Number);
+        const [endHour, endMinute] = endTimePart.split(":").map(Number);
+        const [sYear, sMonth, sDay] = startDatePart.split("-").map(Number);
+        let durationMinutes = endHour * 60 + endMinute - (startHour * 60 + startMinute);
+        if (durationMinutes <= 0) durationMinutes += 24 * 60;
+
         let maxEndDate: Date | null = null;
         if (recurrenceEndType === "date" && recurrenceEndDate) {
           const [year, month, day] = recurrenceEndDate.split("-").map(Number);
@@ -376,7 +429,7 @@ export function CreateEventDialog({
           };
         };
 
-        const startDateStr = `${sYear}-${String(sMonth).padStart(2, "0")}-${String(sDay).padStart(2, "0")}`;
+        const startDateStr = `${sYear}-${pad(sMonth)}-${pad(sDay)}`;
 
         if (
           (recurrenceFrequency === "weekly" || recurrenceFrequency === "biweekly") &&
@@ -392,14 +445,14 @@ export function CreateEventDialog({
           let shouldStop = false;
 
           while (eventCount < maxAdditional && iterations < maxIterations && !shouldStop) {
-            for (const dayOfWeek of recurrenceDays.sort((a, b) => a - b)) {
+            for (const dayOfWeek of [...recurrenceDays].sort((a, b) => a - b)) {
               if (eventCount >= maxAdditional) { shouldStop = true; break; }
               const eventDate = new Date(curWeekStart);
               eventDate.setDate(curWeekStart.getDate() + dayOfWeek);
               const startDateRef = new Date(sYear, sMonth - 1, sDay);
               if (eventDate <= startDateRef) continue;
               if (maxEndDate && eventDate > maxEndDate) { shouldStop = true; break; }
-              const occDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, "0")}-${String(eventDate.getDate()).padStart(2, "0")}`;
+              const occDateStr = `${eventDate.getFullYear()}-${pad(eventDate.getMonth() + 1)}-${pad(eventDate.getDate())}`;
               if (occDateStr === startDateStr) continue;
               eventsToCreate.push(makeOccurrence(eventDate.getFullYear(), eventDate.getMonth() + 1, eventDate.getDate()));
               eventCount++;
@@ -524,13 +577,15 @@ export function CreateEventDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/facilities"] });
-      if (form.getValues("facilityId") !== null) {
-        const currentFacId = form.getValues("facilityId");
-        const stillExists = facilities.find((f: any) => f.id === currentFacId);
-        if (!stillExists) {
-          form.setValue("facilityId", null);
+      const rows = form.getValues("events");
+      rows.forEach((row, idx) => {
+        if (row.facilityId !== null && row.facilityId !== undefined) {
+          const stillExists = facilities.find((f: any) => f.id === row.facilityId);
+          if (!stillExists) {
+            form.setValue(`events.${idx}.facilityId` as const, null);
+          }
         }
-      }
+      });
       toast({ title: "Facility deleted" });
     },
     onError: () => {
@@ -538,11 +593,14 @@ export function CreateEventDialog({
     },
   });
 
-  const watchedStartTime = form.watch("startTime");
-  const watchedEndTime = form.watch("endTime");
-  const watchedTitle = form.watch("title");
-  const watchedLocation = form.watch("location");
-  const watchedFacilityId = form.watch("facilityId");
+  const watchedRows = form.watch("events");
+  const firstRow = watchedRows?.[0];
+  const isSubmitting = createEvent.isPending;
+
+  const missingFields: string[] = [];
+  if (!firstRow?.title) missingFields.push("title");
+  if (watchedRows?.some((r) => !r.startTime || !r.endTime)) missingFields.push("dates");
+  if (watchedRows?.some((r) => !r.location)) missingFields.push("location");
 
   return (
     <Dialog
@@ -571,26 +629,8 @@ export function CreateEventDialog({
           >
           <div className="flex-1 overflow-y-auto space-y-5 pr-1">
             <span className="inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider bg-teal-50 text-teal-700 rounded-full border border-teal-200">
-              New Event
+              {fields.length > 1 ? `New Events (${fields.length})` : "New Event"}
             </span>
-
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="Event title..."
-                      className="text-lg h-12"
-                      data-testid="input-event-title"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
               {/* Left Column */}
@@ -637,242 +677,68 @@ export function CreateEventDialog({
                   )}
                 />
 
-                <div className="space-y-3">
+                <div className="space-y-1.5">
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Date &amp; Time
+                    Timezone (applies to every event)
                   </label>
-                  <DateTimeRangePicker
-                    startValue={watchedStartTime || ""}
-                    endValue={watchedEndTime || ""}
-                    onStartChange={(v) => form.setValue("startTime", v, { shouldValidate: true })}
-                    onEndChange={(v) => form.setValue("endTime", v, { shouldValidate: true })}
-                  />
-                  <div className="space-y-1.5">
-                    <label className="text-xs text-muted-foreground">Timezone</label>
-                    <Select value={eventTimezone} onValueChange={setEventTimezone}>
-                      <SelectTrigger className="h-9" data-testid="select-event-timezone">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TIMEZONE_OPTIONS.map((tz) => (
-                          <SelectItem key={tz.value} value={tz.value}>
-                            {tz.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Select value={eventTimezone} onValueChange={setEventTimezone}>
+                    <SelectTrigger className="h-9" data-testid="select-event-timezone">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIMEZONE_OPTIONS.map((tz) => (
+                        <SelectItem key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Location
-                  </label>
-                  <div className="flex rounded-lg overflow-hidden w-fit border">
-                    <button
-                      type="button"
-                      className={`px-4 py-2 text-sm font-medium transition-colors ${locationType === "physical" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent"}`}
-                      onClick={() => {
-                        setLocationType("physical");
-                        form.setValue("location", "");
-                        form.setValue("meetingLink", "");
-                        form.setValue("latitude", undefined as any);
-                        form.setValue("longitude", undefined as any);
+                  {fields.map((field, index) => (
+                    <EventRowEditor
+                      key={field.id}
+                      index={index}
+                      total={fields.length}
+                      form={form}
+                      facilities={facilities}
+                      showFacilityManager={showFacilityManager && index === 0}
+                      setShowFacilityManager={setShowFacilityManager}
+                      newFacilityName={newFacilityName}
+                      setNewFacilityName={setNewFacilityName}
+                      newFacilityAddress={newFacilityAddress}
+                      setNewFacilityAddress={setNewFacilityAddress}
+                      newFacilityLat={newFacilityLat}
+                      setNewFacilityLat={setNewFacilityLat}
+                      newFacilityLng={newFacilityLng}
+                      setNewFacilityLng={setNewFacilityLng}
+                      addFacilityPending={addFacility.isPending}
+                      onAddFacility={() => addFacility.mutate()}
+                      onDeleteFacility={(id) => {
+                        if (confirm("Delete this facility?")) deleteFacility.mutate(id);
                       }}
-                    >
-                      Physical
-                    </button>
-                    <button
-                      type="button"
-                      className={`px-4 py-2 text-sm font-medium transition-colors ${locationType === "online" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent"}`}
-                      onClick={() => {
-                        setLocationType("online");
-                        form.setValue("location", "Online");
-                        form.setValue("latitude", undefined as any);
-                        form.setValue("longitude", undefined as any);
-                      }}
-                    >
-                      Online
-                    </button>
-                  </div>
-
-                  {locationType === "physical" ? (
-                    <>
-                      <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <label className="text-xs font-medium text-muted-foreground">Facility</label>
-                            <button
-                              type="button"
-                              onClick={() => setShowFacilityManager(!showFacilityManager)}
-                              className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                            >
-                              <Settings2 className="w-3 h-3" />
-                              {showFacilityManager ? "Done" : "Manage"}
-                            </button>
-                          </div>
-
-                          {!showFacilityManager ? (
-                            <Select
-                              value={watchedFacilityId ? String(watchedFacilityId) : "none"}
-                              onValueChange={(value) => {
-                                if (value === "none") {
-                                  form.setValue("facilityId", null);
-                                  form.setValue("location", "");
-                                  form.setValue("latitude", undefined);
-                                  form.setValue("longitude", undefined);
-                                } else {
-                                  const fac = facilities.find((f: any) => String(f.id) === value);
-                                  if (fac) {
-                                    form.setValue("facilityId", fac.id);
-                                    form.setValue("location", fac.address);
-                                    form.setValue("latitude", fac.latitude);
-                                    form.setValue("longitude", fac.longitude);
-                                  }
-                                }
-                              }}
-                            >
-                              <SelectTrigger data-testid="select-event-facility">
-                                <SelectValue placeholder="Select a saved facility" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">None (enter manually)</SelectItem>
-                                {facilities
-                                  .filter((f: any) => f.isActive !== false)
-                                  .map((f: any) => (
-                                    <SelectItem key={f.id} value={String(f.id)}>
-                                      {f.name} — {f.address}
-                                    </SelectItem>
-                                  ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
-                              <div className="space-y-2">
-                                {facilities.filter((f: any) => f.isActive !== false).length === 0 ? (
-                                  <p className="text-xs text-muted-foreground text-center py-2">No facilities yet</p>
-                                ) : (
-                                  facilities.filter((f: any) => f.isActive !== false).map((f: any) => (
-                                    <div key={f.id} className="flex items-center justify-between gap-2 text-sm bg-background rounded px-3 py-2 border">
-                                      <div className="min-w-0 flex-1">
-                                        <span className="font-medium">{f.name}</span>
-                                        <span className="text-muted-foreground ml-1 text-xs truncate">— {f.address}</span>
-                                      </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          if (confirm(`Delete "${f.name}"?`)) {
-                                            deleteFacility.mutate(f.id);
-                                          }
-                                        }}
-                                        className="text-destructive hover:text-destructive/80 shrink-0 p-1"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
-                                  ))
-                                )}
-                              </div>
-                              <div className="border-t pt-3 space-y-2">
-                                <p className="text-xs font-medium text-muted-foreground">Add New Facility</p>
-                                <Input
-                                  placeholder="Facility name (e.g. Main Arena)"
-                                  value={newFacilityName}
-                                  onChange={(e) => setNewFacilityName(e.target.value)}
-                                  className="h-8 text-sm"
-                                />
-                                <LocationSearch
-                                  value={newFacilityAddress}
-                                  onLocationSelect={(location) => {
-                                    setNewFacilityAddress(location.name);
-                                    setNewFacilityLat(String(location.lat ?? ""));
-                                    setNewFacilityLng(String(location.lng ?? ""));
-                                  }}
-                                  placeholder="Search venue or address..."
-                                  className="w-full"
-                                />
-                                {newFacilityAddress && (
-                                  <p className="text-xs text-muted-foreground truncate">
-                                    {newFacilityAddress}
-                                    {newFacilityLat && newFacilityLng && (
-                                      <span className="ml-1 text-muted-foreground/60">
-                                        ({parseFloat(newFacilityLat).toFixed(4)}, {parseFloat(newFacilityLng).toFixed(4)})
-                                      </span>
-                                    )}
-                                  </p>
-                                )}
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  className="w-full"
-                                  disabled={!newFacilityName.trim() || !newFacilityAddress.trim() || addFacility.isPending}
-                                  onClick={() => addFacility.mutate()}
-                                >
-                                  <Plus className="w-3.5 h-3.5 mr-1" />
-                                  {addFacility.isPending ? "Adding..." : "Add Facility"}
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      {watchedFacilityId && (
-                        <div className="space-y-2">
-                          <label className="text-xs font-medium text-muted-foreground">Court / Field</label>
-                          <Input
-                            value={form.watch("courtName") || ""}
-                            onChange={(e) => form.setValue("courtName", e.target.value)}
-                            placeholder="e.g. Court 3, Gym B, Field A"
-                            data-testid="input-event-court"
-                          />
-                        </div>
-                      )}
-                      <FormField
-                        control={form.control}
-                        name="location"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <LocationSearch
-                                value={field.value || ""}
-                                onLocationSelect={(location) => {
-                                  field.onChange(location.name);
-                                  form.setValue("latitude", location.lat ?? undefined);
-                                  form.setValue("longitude", location.lng ?? undefined);
-                                  form.setValue("facilityId", null);
-                                }}
-                                placeholder="Search for a venue or address..."
-                                className="w-full"
-                              />
-                            </FormControl>
-                            <p className="text-xs text-muted-foreground">
-                              {watchedFacilityId
-                                ? "Facility address auto-filled. Override with manual search if needed."
-                                : "Search and select a location — enables GPS check-in geo-fencing"}
-                            </p>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </>
-                  ) : (
-                    <FormField
-                      control={form.control}
-                      name="meetingLink"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="https://zoom.us/j/..."
-                              data-testid="input-event-meeting-link"
-                            />
-                          </FormControl>
-                          <p className="text-xs text-muted-foreground">
-                            Paste a Zoom, Google Meet, or other meeting link
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      onRemove={() => remove(index)}
                     />
+                  ))}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={handleAddRow}
+                    disabled={isSubmitting}
+                    data-testid="button-add-event-row"
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    Add another event
+                  </Button>
+
+                  {isRecurring && fields.length > 1 && (
+                    <p className="text-xs text-muted-foreground italic">
+                      Recurring is on — each of the {fields.length} event rows will generate its own series.
+                    </p>
                   )}
                 </div>
 
@@ -1116,6 +982,11 @@ export function CreateEventDialog({
 
                   {isRecurring && (
                     <div className="space-y-4 pt-2">
+                      {fields.length > 1 && (
+                        <p className="text-xs text-muted-foreground bg-muted/40 border rounded p-2">
+                          Recurrence applies independently to each of the {fields.length} event rows.
+                        </p>
+                      )}
                       <div className="grid grid-cols-2 gap-2">
                         {[
                           { value: "daily", label: "Daily" },
@@ -1280,7 +1151,7 @@ export function CreateEventDialog({
                 </div>
 
                 <EventWindowsConfigurator
-                  eventStartTime={watchedStartTime ? new Date(watchedStartTime) : undefined}
+                  eventStartTime={firstRow?.startTime ? new Date(firstRow.startTime) : undefined}
                   windows={eventWindows}
                   onChange={setEventWindows}
                 />
@@ -1291,15 +1162,7 @@ export function CreateEventDialog({
 
             <div className="flex items-center justify-between border-t pt-4 shrink-0 bg-background">
               <p className="text-sm text-muted-foreground">
-                {(!watchedTitle || !watchedStartTime || !watchedEndTime || !watchedLocation) &&
-                  `Missing: ${[
-                    !watchedTitle && "title",
-                    !watchedStartTime && "dates",
-                    !watchedEndTime && "dates",
-                    !watchedLocation && "location",
-                  ]
-                    .filter(Boolean)
-                    .join(", ")}`}
+                {missingFields.length > 0 && `Missing: ${Array.from(new Set(missingFields)).join(", ")}`}
               </p>
               <div className="flex gap-3">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
@@ -1307,16 +1170,14 @@ export function CreateEventDialog({
                 </Button>
                 <Button
                   type="submit"
-                  disabled={
-                    createEvent.isPending ||
-                    !watchedTitle ||
-                    !watchedStartTime ||
-                    !watchedEndTime ||
-                    !watchedLocation
-                  }
+                  disabled={isSubmitting || missingFields.length > 0}
                   data-testid="button-submit-event"
                 >
-                  {createEvent.isPending ? "Creating..." : "Create Event"}
+                  {isSubmitting
+                    ? "Creating..."
+                    : fields.length > 1
+                    ? `Create ${fields.length} Events`
+                    : "Create Event"}
                 </Button>
               </div>
             </div>
@@ -1324,5 +1185,324 @@ export function CreateEventDialog({
         </Form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface EventRowEditorProps {
+  index: number;
+  total: number;
+  form: UseFormReturn<CreateEventFormValues>;
+  facilities: any[];
+  showFacilityManager: boolean;
+  setShowFacilityManager: (v: boolean) => void;
+  newFacilityName: string;
+  setNewFacilityName: (v: string) => void;
+  newFacilityAddress: string;
+  setNewFacilityAddress: (v: string) => void;
+  newFacilityLat: string;
+  setNewFacilityLat: (v: string) => void;
+  newFacilityLng: string;
+  setNewFacilityLng: (v: string) => void;
+  addFacilityPending: boolean;
+  onAddFacility: () => void;
+  onDeleteFacility: (id: number) => void;
+  onRemove: () => void;
+}
+
+function EventRowEditor({
+  index,
+  total,
+  form,
+  facilities,
+  showFacilityManager,
+  setShowFacilityManager,
+  newFacilityName,
+  setNewFacilityName,
+  newFacilityAddress,
+  setNewFacilityAddress,
+  newFacilityLat,
+  setNewFacilityLat,
+  newFacilityLng,
+  setNewFacilityLng,
+  addFacilityPending,
+  onAddFacility,
+  onDeleteFacility,
+  onRemove,
+}: EventRowEditorProps) {
+  const watchedStart = form.watch(`events.${index}.startTime`) ?? "";
+  const watchedEnd = form.watch(`events.${index}.endTime`) ?? "";
+  const watchedFacilityId = form.watch(`events.${index}.facilityId`);
+  const watchedLocationType = form.watch(`events.${index}.locationType`);
+  const watchedCourtName = form.watch(`events.${index}.courtName`) ?? "";
+
+  return (
+    <div className={`border rounded-lg p-4 space-y-4 ${total > 1 ? "bg-muted/20" : ""}`} data-testid={`event-row-${index}`}>
+      {total > 1 && (
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Event {index + 1}
+          </span>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-destructive hover:text-destructive/80 text-xs flex items-center gap-1"
+            data-testid={`button-remove-row-${index}`}
+          >
+            <X className="w-3.5 h-3.5" />
+            Remove
+          </button>
+        </div>
+      )}
+
+      <FormField
+        control={form.control}
+        name={`events.${index}.title`}
+        render={({ field }) => (
+          <FormItem>
+            <FormControl>
+              <Input
+                {...field}
+                placeholder="Event title..."
+                className="text-lg h-12"
+                data-testid={`input-event-title-${index}`}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <div className="space-y-3">
+        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Date &amp; Time
+        </label>
+        <DateTimeRangePicker
+          startValue={watchedStart || ""}
+          endValue={watchedEnd || ""}
+          onStartChange={(v) => form.setValue(`events.${index}.startTime`, v, { shouldValidate: true })}
+          onEndChange={(v) => form.setValue(`events.${index}.endTime`, v, { shouldValidate: true })}
+        />
+        <FormField
+          control={form.control}
+          name={`events.${index}.startTime`}
+          render={() => <FormMessage />}
+        />
+        <FormField
+          control={form.control}
+          name={`events.${index}.endTime`}
+          render={() => <FormMessage />}
+        />
+      </div>
+
+      <div className="space-y-3">
+        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Location
+        </label>
+        <div className="flex rounded-lg overflow-hidden w-fit border">
+          <button
+            type="button"
+            className={`px-4 py-2 text-sm font-medium transition-colors ${watchedLocationType === "physical" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent"}`}
+            onClick={() => {
+              form.setValue(`events.${index}.locationType`, "physical");
+              form.setValue(`events.${index}.location`, "");
+              form.setValue(`events.${index}.meetingLink`, "");
+              form.setValue(`events.${index}.latitude`, undefined);
+              form.setValue(`events.${index}.longitude`, undefined);
+            }}
+          >
+            Physical
+          </button>
+          <button
+            type="button"
+            className={`px-4 py-2 text-sm font-medium transition-colors ${watchedLocationType === "online" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent"}`}
+            onClick={() => {
+              form.setValue(`events.${index}.locationType`, "online");
+              form.setValue(`events.${index}.location`, "Online", { shouldValidate: true });
+              form.setValue(`events.${index}.latitude`, undefined);
+              form.setValue(`events.${index}.longitude`, undefined);
+            }}
+          >
+            Online
+          </button>
+        </div>
+
+        {watchedLocationType === "physical" ? (
+          <>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-muted-foreground">Facility</label>
+                {index === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowFacilityManager(!showFacilityManager)}
+                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    <Settings2 className="w-3 h-3" />
+                    {showFacilityManager ? "Done" : "Manage"}
+                  </button>
+                )}
+              </div>
+
+              {!showFacilityManager ? (
+                <Select
+                  value={watchedFacilityId ? String(watchedFacilityId) : "none"}
+                  onValueChange={(value) => {
+                    if (value === "none") {
+                      form.setValue(`events.${index}.facilityId`, null);
+                      form.setValue(`events.${index}.location`, "");
+                      form.setValue(`events.${index}.latitude`, undefined);
+                      form.setValue(`events.${index}.longitude`, undefined);
+                    } else {
+                      const fac = facilities.find((f: any) => String(f.id) === value);
+                      if (fac) {
+                        form.setValue(`events.${index}.facilityId`, fac.id);
+                        form.setValue(`events.${index}.location`, fac.address, { shouldValidate: true });
+                        form.setValue(`events.${index}.latitude`, fac.latitude);
+                        form.setValue(`events.${index}.longitude`, fac.longitude);
+                      }
+                    }
+                  }}
+                >
+                  <SelectTrigger data-testid={`select-event-facility-${index}`}>
+                    <SelectValue placeholder="Select a saved facility" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None (enter manually)</SelectItem>
+                    {facilities
+                      .filter((f: any) => f.isActive !== false)
+                      .map((f: any) => (
+                        <SelectItem key={f.id} value={String(f.id)}>
+                          {f.name} — {f.address}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
+                  <div className="space-y-2">
+                    {facilities.filter((f: any) => f.isActive !== false).length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-2">No facilities yet</p>
+                    ) : (
+                      facilities.filter((f: any) => f.isActive !== false).map((f: any) => (
+                        <div key={f.id} className="flex items-center justify-between gap-2 text-sm bg-background rounded px-3 py-2 border">
+                          <div className="min-w-0 flex-1">
+                            <span className="font-medium">{f.name}</span>
+                            <span className="text-muted-foreground ml-1 text-xs truncate">— {f.address}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onDeleteFacility(f.id)}
+                            className="text-destructive hover:text-destructive/80 shrink-0 p-1"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="border-t pt-3 space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Add New Facility</p>
+                    <Input
+                      placeholder="Facility name (e.g. Main Arena)"
+                      value={newFacilityName}
+                      onChange={(e) => setNewFacilityName(e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                    <LocationSearch
+                      value={newFacilityAddress}
+                      onLocationSelect={(location) => {
+                        setNewFacilityAddress(location.name);
+                        setNewFacilityLat(String(location.lat ?? ""));
+                        setNewFacilityLng(String(location.lng ?? ""));
+                      }}
+                      placeholder="Search venue or address..."
+                      className="w-full"
+                    />
+                    {newFacilityAddress && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {newFacilityAddress}
+                        {newFacilityLat && newFacilityLng && (
+                          <span className="ml-1 text-muted-foreground/60">
+                            ({parseFloat(newFacilityLat).toFixed(4)}, {parseFloat(newFacilityLng).toFixed(4)})
+                          </span>
+                        )}
+                      </p>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="w-full"
+                      disabled={!newFacilityName.trim() || !newFacilityAddress.trim() || addFacilityPending}
+                      onClick={onAddFacility}
+                    >
+                      <Plus className="w-3.5 h-3.5 mr-1" />
+                      {addFacilityPending ? "Adding..." : "Add Facility"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+            {watchedFacilityId && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Court / Field</label>
+                <Input
+                  value={watchedCourtName || ""}
+                  onChange={(e) => form.setValue(`events.${index}.courtName`, e.target.value)}
+                  placeholder="e.g. Court 3, Gym B, Field A"
+                  data-testid={`input-event-court-${index}`}
+                />
+              </div>
+            )}
+            <FormField
+              control={form.control}
+              name={`events.${index}.location`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <LocationSearch
+                      value={field.value || ""}
+                      onLocationSelect={(location) => {
+                        field.onChange(location.name);
+                        form.setValue(`events.${index}.latitude`, location.lat ?? undefined);
+                        form.setValue(`events.${index}.longitude`, location.lng ?? undefined);
+                        form.setValue(`events.${index}.facilityId`, null);
+                      }}
+                      placeholder="Search for a venue or address..."
+                      className="w-full"
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    {watchedFacilityId
+                      ? "Facility address auto-filled. Override with manual search if needed."
+                      : "Search and select a location — enables GPS check-in geo-fencing"}
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        ) : (
+          <FormField
+            control={form.control}
+            name={`events.${index}.meetingLink`}
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <Input
+                    {...field}
+                    placeholder="https://zoom.us/j/..."
+                    data-testid={`input-event-meeting-link-${index}`}
+                  />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">
+                  Paste a Zoom, Google Meet, or other meeting link
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+      </div>
+    </div>
   );
 }

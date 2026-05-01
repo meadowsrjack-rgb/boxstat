@@ -338,7 +338,11 @@ function StoreItemDialog({
 }) {
   const [imgIndex, setImgIndex] = useState(0);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
+  // Track both axes so we can tell a horizontal swipe (carousel) from a
+  // vertical drag (the user trying to scroll the dialog body).
   const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const isHorizontalSwipe = useRef<boolean>(false);
 
   const allImages = useMemo(() => {
     if (!item) return [];
@@ -395,14 +399,44 @@ function StoreItemDialog({
 
         {allImages.length > 0 && (
           <div
-            className="relative aspect-[16/9] bg-black/30 rounded-lg overflow-hidden"
-            onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
-            onTouchMove={e => { e.preventDefault(); }}
+            className="relative aspect-[16/9] bg-black/30 rounded-lg overflow-hidden select-none"
+            // touch-action: pan-y lets the browser keep handling vertical
+            // scroll, while we capture horizontal drags ourselves. Without
+            // this hint, modern mobile browsers (especially iOS Safari)
+            // could swallow our swipe or block the dialog from scrolling.
+            style={{ touchAction: 'pan-y' }}
+            onTouchStart={e => {
+              touchStartX.current = e.touches[0].clientX;
+              touchStartY.current = e.touches[0].clientY;
+              isHorizontalSwipe.current = false;
+            }}
+            onTouchMove={e => {
+              if (touchStartX.current === null || touchStartY.current === null) return;
+              const dx = e.touches[0].clientX - touchStartX.current;
+              const dy = e.touches[0].clientY - touchStartY.current;
+              // Once we've decided this is a horizontal swipe, keep
+              // claiming it. This prevents jitter mid-gesture.
+              if (!isHorizontalSwipe.current && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+                isHorizontalSwipe.current = true;
+              }
+            }}
             onTouchEnd={e => {
-              if (touchStartX.current === null) return;
+              if (touchStartX.current === null || touchStartY.current === null) {
+                touchStartX.current = null;
+                touchStartY.current = null;
+                return;
+              }
               const dx = e.changedTouches[0].clientX - touchStartX.current;
+              const dy = e.changedTouches[0].clientY - touchStartY.current;
               touchStartX.current = null;
-              if (Math.abs(dx) < 40) return;
+              touchStartY.current = null;
+              const wasHorizontal = isHorizontalSwipe.current;
+              isHorizontalSwipe.current = false;
+              // Only treat as a swipe if it was horizontally dominant
+              // and crossed the 40px threshold; otherwise let the
+              // gesture be a tap or a vertical scroll.
+              if (!wasHorizontal) return;
+              if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
               if (dx < 0) {
                 setImgIndex(i => (i + 1) % allImages.length);
               } else {

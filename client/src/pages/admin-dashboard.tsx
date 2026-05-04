@@ -10521,6 +10521,8 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       durationDays: 90,
       durationValue: 90,
       durationUnit: "days",
+      endsAfterDays: null as number | null,
+      trialPeriodDays: undefined as number | null | undefined,
       allowInstallments: false,
       installments: 3,
       installmentPrice: 0,
@@ -10585,10 +10587,27 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
 
   const createProgram = useMutation({
     mutationFn: async (data: any) => {
+      const { endsAfterDays, ...rest } = data;
+      const normalizedTrial =
+        data.type === "Subscription" &&
+        typeof data.trialPeriodDays === "number" &&
+        data.trialPeriodDays > 0
+          ? data.trialPeriodDays
+          : null;
       const payload = {
-        ...data,
+        ...rest,
         organizationId: organization?.id,
         productCategory: "service",
+        // For Subscription, "Ends After" overrides durationDays.
+        // Empty/null means ongoing (null persisted, not 0).
+        // For One-Time / Credit Pack, keep the durationDays computed
+        // from the existing duration controls (durationValue × unit).
+        durationDays:
+          data.type === "Subscription"
+            ? (typeof endsAfterDays === "number" && endsAfterDays > 0 ? endsAfterDays : null)
+            : data.durationDays,
+        // Normalize "no trial" to null so 0/empty round-trip cleanly.
+        trialPeriodDays: normalizedTrial,
       };
       if (editingProgram) {
         const result = await apiRequest("PATCH", `/api/programs/${editingProgram.id}`, payload);
@@ -10670,9 +10689,11 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
       billingCycle: program.billingCycle || "Monthly",
       billingIntervalDays: program.billingIntervalDays || (program.billingCycle === "Weekly" ? 7 : program.billingCycle === "28-Day" ? 28 : program.billingCycle === "Quarterly" ? 90 : program.billingCycle === "6-Month" ? 180 : program.billingCycle === "Yearly" ? 365 : program.billingCycle?.endsWith("-Day") ? parseInt(program.billingCycle) || 30 : 30),
       billingModel: program.billingModel || "Per Player",
-      durationDays: durationDays,
+      durationDays: program.durationDays ?? durationDays,
       durationValue: durationValue,
       durationUnit: durationUnit,
+      endsAfterDays: program.type === "Subscription" ? (program.durationDays ?? null) : null,
+      trialPeriodDays: program.trialPeriodDays ?? null,
       allowInstallments: program.allowInstallments || false,
       installments: program.installments || 3,
       installmentPrice: program.installmentPrice || 0,
@@ -10728,6 +10749,8 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
         durationDays: 90,
         durationValue: 90,
         durationUnit: "days",
+        endsAfterDays: null,
+        trialPeriodDays: undefined,
         allowInstallments: false,
         installments: 3,
         installmentPrice: 0,
@@ -10770,6 +10793,8 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
         durationDays: 90,
         durationValue: 90,
         durationUnit: "days",
+        endsAfterDays: null,
+        trialPeriodDays: undefined,
         allowInstallments: false,
         installments: 3,
         installmentPrice: 0,
@@ -11613,6 +11638,71 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                                       <p className="text-xs text-gray-400">{(() => { const d = field.value; if (!d || d <= 0) return "e.g. 30 = monthly, 90 = quarterly, 180 = 6 months"; if (d === 7) return "Charges every week"; if (d === 14) return "Charges every 2 weeks"; if (d === 28) return "Charges every 28 days"; if (d === 30) return "Charges monthly"; if (d === 90) return "Charges quarterly"; if (d === 180) return "Charges every 6 months"; if (d === 365) return "Charges yearly"; return `Charges every ${d} days`; })()}</p>
                                     </div>
                                   )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name="endsAfterDays"
+                                  render={({ field }) => {
+                                    const v = field.value as number | null | undefined;
+                                    const hasValue = typeof v === "number" && v > 0;
+                                    return (
+                                      <div className="space-y-1.5">
+                                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Ends After (days)</label>
+                                        <input
+                                          type="number"
+                                          min="1"
+                                          placeholder="Leave empty for ongoing"
+                                          value={hasValue ? v : ""}
+                                          onChange={(e) => {
+                                            const raw = e.target.value;
+                                            if (raw === "") {
+                                              field.onChange(null);
+                                              return;
+                                            }
+                                            const n = parseInt(raw);
+                                            field.onChange(Number.isNaN(n) ? null : n);
+                                          }}
+                                          data-testid="input-program-ends-after-days"
+                                          className="w-full h-10 px-3 rounded-md border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition"
+                                        />
+                                        <p className="text-xs text-gray-400">{hasValue ? `Subscription auto-ends after ${v} days` : "Leave empty for ongoing subscription"}</p>
+                                      </div>
+                                    );
+                                  }}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name="trialPeriodDays"
+                                  render={({ field }) => {
+                                    const v = field.value;
+                                    const hasValue = typeof v === "number" && v > 0;
+                                    return (
+                                      <div className="space-y-1.5">
+                                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Trial Period (days)</label>
+                                        <input
+                                          type="number"
+                                          min="1"
+                                          placeholder="Leave empty for no free trial"
+                                          value={hasValue ? v : ""}
+                                          onChange={(e) => {
+                                            const raw = e.target.value;
+                                            if (raw === "") {
+                                              field.onChange(null);
+                                              return;
+                                            }
+                                            const n = parseInt(raw);
+                                            // Treat 0 / NaN / negative as "no trial" (null) so we round-trip cleanly.
+                                            field.onChange(!Number.isFinite(n) || n <= 0 ? null : n);
+                                          }}
+                                          data-testid="input-program-trial-period-days"
+                                          className="w-full h-10 px-3 rounded-md border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition"
+                                        />
+                                        <p className="text-xs text-gray-400">{hasValue ? `First charge happens after a ${v}-day free trial` : "Leave empty for no free trial"}</p>
+                                      </div>
+                                    );
+                                  }}
                                 />
 
                                 {/* Installments */}

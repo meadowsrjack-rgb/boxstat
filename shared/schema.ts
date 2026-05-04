@@ -454,7 +454,8 @@ export const products = pgTable("products", {
   billingModel: varchar("billing_model"), // "Per Player", "Per Family", "Organization-Wide"
   pricingModel: varchar("pricing_model"), // DEPRECATED: backwards compat
   duration: varchar(), // DEPRECATED: backwards compat
-  durationDays: integer("duration_days"), // Expiration period in days
+  durationDays: integer("duration_days"), // Expiration period in days (Subscription: "Ends After")
+  trialPeriodDays: integer("trial_period_days"), // Free trial window in days before first charge (Subscription only)
   allowInstallments: boolean("allow_installments").default(false), // Enable installment payment option
   installments: integer(), // Number of installments
   installmentPrice: integer("installment_price"), // Price per installment in cents
@@ -1897,7 +1898,8 @@ export interface Product {
   billingModel?: string; // "Per Player", "Per Family", "Organization-Wide"
   pricingModel?: string; // DEPRECATED: Use "type" instead. Kept for backwards compatibility
   duration?: string; // DEPRECATED: Use "durationDays" instead. Kept for backwards compatibility
-  durationDays?: number; // Expiration period for one-time passes (e.g., 90 days)
+  durationDays?: number | null; // Expiration period for one-time passes (e.g., 90 days). For Subscription: "Ends After (days)"
+  trialPeriodDays?: number | null; // Free trial window before first charge (Subscription only)
   installments?: number; // Number of installments if pricing model is "installments"
   installmentPrice?: number; // Price per installment in cents
   stripePriceId?: string; // Stripe Price ID for payment integration
@@ -1983,7 +1985,8 @@ export const insertProductSchema = z.object({
   billingModel: z.string().optional(),
   pricingModel: z.string().optional(), // DEPRECATED
   duration: z.string().optional(), // DEPRECATED
-  durationDays: z.number().optional(),
+  durationDays: z.number().nullish(),
+  trialPeriodDays: z.number().nullish(),
   installments: z.number().optional(),
   installmentPrice: z.number().optional(),
   stripePriceId: z.string().optional(),

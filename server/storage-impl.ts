@@ -354,6 +354,7 @@ export interface IStorage {
   getEnrollmentsByAccountHolder(accountHolderId: string): Promise<ProductEnrollment[]>;
   getEnrollmentByStripeSubscriptionId(stripeSubscriptionId: string): Promise<ProductEnrollment | undefined>;
   getEnrollmentsByProgram(programId: string): Promise<{ userId: string }[]>;
+  getKnownStripePaymentIds(stripeIds: string[]): Promise<string[]>;
   
   // Notification Campaign operations
   getNotificationCampaign(id: number): Promise<NotificationCampaign | undefined>;
@@ -2445,6 +2446,18 @@ class MemStorage implements IStorage {
       }
     }
     return enrollments;
+  }
+
+  async getKnownStripePaymentIds(stripeIds: string[]): Promise<string[]> {
+    if (!stripeIds || stripeIds.length === 0) return [];
+    const wanted = new Set(stripeIds);
+    const found: string[] = [];
+    for (const p of this.payments.values()) {
+      if (p.stripePaymentId && wanted.has(p.stripePaymentId)) {
+        found.push(p.stripePaymentId);
+      }
+    }
+    return found;
   }
   
   // Notification Campaign operations (stub implementations for MemStorage)
@@ -6059,6 +6072,16 @@ class DatabaseStorage implements IStorage {
       .where(eq(schema.productEnrollments.stripeSubscriptionId, stripeSubscriptionId))
       .limit(1);
     return results[0] as ProductEnrollment | undefined;
+  }
+
+  async getKnownStripePaymentIds(stripeIds: string[]): Promise<string[]> {
+    if (!stripeIds || stripeIds.length === 0) return [];
+    const results = await db.select({ id: schema.payments.stripePaymentId })
+      .from(schema.payments)
+      .where(inArray(schema.payments.stripePaymentId, stripeIds));
+    return results
+      .map((r: { id: string | null }) => r.id)
+      .filter((id: string | null): id is string => typeof id === 'string' && id.length > 0);
   }
 
   async getEnrollmentsByProgram(programId: string): Promise<{ userId: string }[]> {

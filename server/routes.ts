@@ -547,6 +547,12 @@ const stripe = stripeSecretKey
 const stripeOrgCache = new Map<string, { instance: Stripe; key: string; createdAt: number }>();
 const STRIPE_CACHE_TTL = 5 * 60 * 1000;
 
+// Cache for the orphan-Stripe-payments admin alert. Per-org, 10 min TTL.
+// Cached value can be `null` (no orphans found) so dashboard reloads don't
+// re-hit Stripe inside the TTL window.
+const orphanStripeAlertsCache = new Map<string, { fetchedAt: number; alert: any }>();
+const ORPHAN_STRIPE_TTL_MS = 10 * 60 * 1000;
+
 // Default pay-by window for unpaid grants (admin-assigned per Task #243 and
 // parent self-claim per Task #248). Kept here so both code paths stay in sync.
 // Task #246 may make this configurable per organization; for now it's a
@@ -11600,6 +11606,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (alertErr) {
         console.error('[admin alerts] Failed to load invited-not-claimed users:', alertErr);
+      }
+
+      // Orphan Stripe payments: charges that succeeded on Stripe but were
+      // never recorded in our `payments` table (e.g. someone charged the
+      // parent via the Stripe Dashboard or a Payment Link instead of going
+      // through the in-app checkout, so the webhook had nothing to attach
+      // the payment to). Without this alert, the parent receives a Stripe
+      // receipt but the app shows them as unpaid — exactly the Danning Shi /
+      // Lucas Liao $252.06 case.
+      //
+      // We cache per-org for 10 minutes so dashboard reloads don't hammer
+      // Stripe.
+      try {
+        const cached = orphanStripeAlertsCache.get(organizationId);
+        let orphanAlert: any = null;
+        if (cached && Date.now() - cached.fetchedAt < ORPHAN_STRIPE_TTL_MS) {
+          orphanAlert = cached.alert;
+        } else {
+          const orgStripe = await getStripeForOrg(organizationId);
+          if (orgStripe) {
+            const nowUnix = Math.floor(Date.now() / 1000);
+            const sinceUnix = nowUnix - 30 * 24 * 60 * 60;
+            // Charges newer than this are still inside the in-app webhook
+            // grace window — skip them so a legitimate checkout that simply
+            // hasn't been written to our DB yet doesn't flicker as an
+            // "orphan" while it's being processed.
+            const graceCutoffUnix = nowUnix - 10 * 60;
+
+            // Paginate succeeded charges over the last 30 days. Bounded to
+            // 5 pages × 100 = 500 charges + ~5 Stripe round trips per cache
+            // miss so we don't run unbounded loops on huge orgs. If the org
+            // exceeds this we record `truncated:true` so the alert can flag
+            // that the scan was capped.
+            const MAX_PAGES = 5;
+            const PAGE_SIZE = 100;
+            const collected: any[] = [];
+            let startingAfter: string | undefined;
+            let truncated = false;
+            for (let page = 0; page < MAX_PAGES; page++) {
+              const resp: any = await orgStripe.charges.list({
+                created: { gte: sinceUnix },
+                limit: PAGE_SIZE,
+                ...(startingAfter ? { starting_after: startingAfter } : {}),
+              });
+              for (const c of resp.data) collected.push(c);
+              if (!resp.has_more || resp.data.length === 0) break;
+              startingAfter = resp.data[resp.data.length - 1].id;
+              if (page === MAX_PAGES - 1 && resp.has_more) truncated = true;
+            }
+
+            const recent = collected.filter((c: any) =>
+              c.status === 'succeeded' && c.paid && !c.refunded && c.created < graceCutoffUnix
+            );
+            if (recent.length > 0) {
+              const stripeIds = new Set<string>();
+              for (const c of recent) {
+                if (c.id) stripeIds.add(c.id);
+                if (typeof c.payment_intent === 'string' && c.payment_intent) stripeIds.add(c.payment_intent);
+              }
+              // Look up which of those IDs we already have in our payments table.
+              const knownIds = await storage.getKnownStripePaymentIds(Array.from(stripeIds));
+              const known = new Set(knownIds);
+              const orphans = recent.filter((c: any) => {
+                if (c.id && known.has(c.id)) return false;
+                if (typeof c.payment_intent === 'string' && c.payment_intent && known.has(c.payment_intent)) return false;
+                return true;
+              });
+              if (orphans.length > 0) {
+                const baseMessage = `${orphans.length} Stripe payment${orphans.length > 1 ? 's' : ''} not linked to a player or program`;
+                orphanAlert = {
+                  type: 'orphan_stripe_payments',
+                  count: orphans.length,
+                  message: truncated ? `${baseMessage} (scan capped at ${MAX_PAGES * PAGE_SIZE} charges — older orphans may exist)` : baseMessage,
+                  truncated,
+                  // Trim payload: only what an admin needs to drill into Stripe
+                  // and find the right player. No receipt URLs / raw billing
+                  // payloads — admins click through to Stripe Dashboard.
+                  details: orphans.slice(0, 25).map((c: any) => ({
+                    chargeId: c.id,
+                    paymentIntentId: typeof c.payment_intent === 'string' ? c.payment_intent : null,
+                    amount: c.amount,
+                    currency: c.currency,
+                    email: c.receipt_email || c.billing_details?.email || null,
+                    name: c.billing_details?.name || null,
+                    createdAt: new Date(c.created * 1000).toISOString(),
+                  })),
+                };
+              }
+            }
+          }
+          orphanStripeAlertsCache.set(organizationId, {
+            fetchedAt: Date.now(),
+            alert: orphanAlert,
+          });
+        }
+        if (orphanAlert) alerts.push(orphanAlert);
+      } catch (alertErr) {
+        console.error('[admin alerts] Failed to load orphan Stripe payments:', alertErr);
       }
 
       res.json(alerts);

@@ -770,6 +770,7 @@ export default function AdminDashboard() {
               invited_not_claimed: { icon: Mail, bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-800', tab: 'users' },
               pending_player_approvals: { icon: UserPlus, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800', tab: 'overview' },
               pending_self_claims: { icon: UserPlus, bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-800', tab: 'users' },
+              orphan_stripe_payments: { icon: DollarSign, bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-800', tab: 'overview' },
             };
             const config = alertConfig[alert.type] || { icon: AlertCircle, bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-800', tab: 'overview' };
             const handleAlertClick = () => {
@@ -885,6 +886,16 @@ export default function AdminDashboard() {
                           <p className="text-xs text-red-600 mt-0.5 truncate">
                             {alert.details.slice(0, 3).map((d: any) => d.name).join(', ')}
                             {alert.details.length > 3 && ` +${alert.details.length - 3} more`}
+                          </p>
+                        )}
+                        {alert.type === 'orphan_stripe_payments' && alert.details?.length > 0 && (
+                          <p className="text-xs text-rose-600 mt-0.5 truncate">
+                            {alert.details.slice(0, 3).map((d: any) => {
+                              const dollars = `$${((d.amount || 0) / 100).toFixed(2)}`;
+                              const who = d.email || d.name || d.chargeId || 'unknown';
+                              return `${dollars} · ${who}`;
+                            }).join(', ')}
+                            {alert.details.length > 3 && ` +${alert.details.length - 3} more`} · paid on Stripe but not linked
                           </p>
                         )}
                         {alert.type === 'missing_location' && alert.details?.length > 0 && (

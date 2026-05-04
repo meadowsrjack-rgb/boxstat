@@ -502,7 +502,7 @@ export default function AdminProgramDetail() {
                       <img
                         src={overviewForm.coverImageUrl}
                         alt="Cover"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-fill"
                         onError={(e) => {
                           (e.target as HTMLImageElement).style.display = 'none';
                         }}

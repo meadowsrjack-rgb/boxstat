@@ -11391,7 +11391,7 @@ function ProgramsTab({ programs: allPrograms, teams, organization }: any) {
                           {field.value ? (
                             <div className="relative w-full max-w-xs">
                               <div className="aspect-[16/9] bg-gray-100 rounded-lg overflow-hidden">
-                                <img src={field.value} alt="Cover" className="w-full h-full object-cover" />
+                                <img src={field.value} alt="Cover" className="w-full h-full object-fill" />
                               </div>
                               <button type="button" onClick={() => field.onChange("")} className="absolute top-2 right-2 bg-red-600 text-white rounded p-1 hover:bg-red-700">
                                 <X size={14} />

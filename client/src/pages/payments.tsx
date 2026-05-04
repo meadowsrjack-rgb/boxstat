@@ -297,7 +297,7 @@ function StoreItemCard({
           <img
             src={allImages[0]}
             alt={item.name}
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover"
           />
           {allImages.length > 1 && (
             <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
@@ -447,7 +447,7 @@ function StoreItemDialog({
             <img
               src={allImages[imgIndex]}
               alt={`${item.name} image ${imgIndex + 1}`}
-              className="w-full h-full object-contain"
+              className="w-full h-full object-cover"
             />
             {allImages.length > 1 && (
               <>

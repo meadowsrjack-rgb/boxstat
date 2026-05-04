@@ -17401,61 +17401,141 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
                     <MessageSquare className="w-12 h-12 mx-auto mb-2 text-gray-400" />
                     <p>No messages yet. Messages from parents will appear here.</p>
                   </div>
-                ) : (
+                ) : (() => {
+                  // Group contactMessages by sender so each user shows up once
+                  // in the conversation list (instead of one row per message).
+                  // Key by senderId when present, otherwise fall back to email
+                  // and finally to the message id so a stray message without a
+                  // sender record still gets its own row instead of collapsing
+                  // every orphan into one bucket.
+                  const groupsMap = new Map<string, {
+                    key: string;
+                    sender: any;
+                    messages: any[];
+                    latest: any;
+                    unreadCount: number;
+                  }>();
+                  contactMessages.forEach((m: any) => {
+                    // Namespace each key part so an id like "42" can't collide
+                    // with an email "42" or another sender's stringified id,
+                    // and so two records for the same user always pick the
+                    // same bucket instead of splitting (id-keyed vs email-
+                    // keyed). Prefer the most stable identifier available.
+                    const sid = m.senderId ?? m.sender?.id;
+                    const semail = m.sender?.email;
+                    const key = sid != null
+                      ? `id:${sid}`
+                      : semail
+                      ? `email:${String(semail).toLowerCase()}`
+                      : `msg:${m.id}`;
+                    let g = groupsMap.get(key);
+                    if (!g) {
+                      g = { key, sender: m.sender, messages: [], latest: m, unreadCount: 0 };
+                      groupsMap.set(key, g);
+                    }
+                    g.messages.push(m);
+                    if (!g.sender && m.sender) g.sender = m.sender;
+                    if (new Date(m.createdAt).getTime() > new Date(g.latest.createdAt).getTime()) {
+                      g.latest = m;
+                    }
+                    if (m.status === 'unread') g.unreadCount += 1;
+                  });
+                  const groups = Array.from(groupsMap.values()).sort(
+                    (a, b) => new Date(b.latest.createdAt).getTime() - new Date(a.latest.createdAt).getTime()
+                  );
+                  groups.forEach((g) => {
+                    g.messages.sort(
+                      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                    );
+                  });
+                  // The right-pane "selected conversation" maps to a group by
+                  // either its sender key or the id of any message inside it,
+                  // so existing click handlers that pass a message keep working.
+                  const selectedKey = selectedConversation?.__groupKey;
+                  const selectedGroup =
+                    (selectedKey && groups.find((g) => g.key === selectedKey)) ||
+                    (selectedConversation?.id
+                      ? groups.find((g) => g.messages.some((m) => m.id === selectedConversation.id))
+                      : null);
+
+                  return (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Conversation list */}
+                    {/* Conversation list — one row per sender */}
                     <div className="border rounded-lg p-4 space-y-2 max-h-96 overflow-y-auto">
-                      {contactMessages.map((msg: any) => (
-                        <div
-                          key={msg.id}
-                          className={`p-3 rounded-lg cursor-pointer hover:bg-gray-50 ${selectedConversation?.id === msg.id ? 'bg-gray-100 border-l-4 border-red-600' : ''}`}
-                          onClick={() => {
-                            setSelectedConversation(msg);
-                            if (msg.status === 'unread') {
-                              markMessageAsReadMutation.mutate(msg.id);
-                            }
-                          }}
-                          data-testid={`conversation-${msg.id}`}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="font-medium text-sm">
-                              {msg.sender?.firstName} {msg.sender?.lastName}
+                      {groups.map((g) => {
+                        const isSelected = selectedGroup?.key === g.key;
+                        const senderName = g.sender
+                          ? `${g.sender.firstName ?? ''} ${g.sender.lastName ?? ''}`.trim() || g.sender.email || 'Unknown user'
+                          : 'Unknown user';
+                        return (
+                          <div
+                            key={g.key}
+                            className={`p-3 rounded-lg cursor-pointer hover:bg-gray-50 ${isSelected ? 'bg-gray-100 border-l-4 border-red-600' : ''}`}
+                            onClick={() => {
+                              // Stash the group key on the selected object so
+                              // re-renders (after refetch) can rebind to the
+                              // same group even if message ids change.
+                              setSelectedConversation({ ...g.latest, __groupKey: g.key });
+                              g.messages.forEach((m) => {
+                                if (m.status === 'unread') {
+                                  markMessageAsReadMutation.mutate(m.id);
+                                }
+                              });
+                            }}
+                            data-testid={`conversation-${g.key}`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="font-medium text-sm">{senderName}</div>
+                              <div className="text-xs text-gray-500">
+                                {new Date(g.latest.createdAt).toLocaleDateString()}
+                              </div>
                             </div>
-                            <div className="text-xs text-gray-500">
-                              {new Date(msg.createdAt).toLocaleDateString()}
+                            <p className="text-sm text-gray-600 truncate">{g.latest.message}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              {g.messages.length > 1 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {g.messages.length} messages
+                                </Badge>
+                              )}
+                              {g.unreadCount > 0 && (
+                                <Badge variant="default" className="text-xs">
+                                  {g.unreadCount} new
+                                </Badge>
+                              )}
                             </div>
                           </div>
-                          <p className="text-sm text-gray-600 truncate">{msg.message}</p>
-                          {msg.status === 'unread' && <Badge variant="default" className="mt-1">New</Badge>}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
-                    {/* Conversation detail */}
+                    {/* Conversation detail — every message from this sender */}
                     <div className="border rounded-lg p-4">
-                      {selectedConversation ? (
+                      {selectedGroup ? (
                         <div className="space-y-4">
                           <div className="border-b pb-2">
                             <h4 className="font-medium">
-                              {selectedConversation.sender?.firstName} {selectedConversation.sender?.lastName}
+                              {selectedGroup.sender?.firstName} {selectedGroup.sender?.lastName}
                             </h4>
-                            <p className="text-xs text-gray-500">{selectedConversation.sender?.email}</p>
+                            <p className="text-xs text-gray-500">{selectedGroup.sender?.email}</p>
                           </div>
-                          
-                          <div className="space-y-3 max-h-48 overflow-y-auto">
-                            <div className="bg-gray-100 rounded-lg p-3">
-                              <p className="text-sm">{selectedConversation.message}</p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {new Date(selectedConversation.createdAt).toLocaleString()}
-                              </p>
-                            </div>
-                            
-                            {selectedConversation.replies?.map((reply: any) => (
-                              <div key={reply.id} className={`rounded-lg p-3 ${reply.isAdmin ? 'bg-red-50 ml-4' : 'bg-gray-100'}`}>
-                                <p className="text-sm">{reply.message}</p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {reply.isAdmin ? 'Admin' : 'User'} - {new Date(reply.createdAt).toLocaleString()}
-                                </p>
+
+                          <div className="space-y-4 max-h-96 overflow-y-auto">
+                            {selectedGroup.messages.map((m) => (
+                              <div key={m.id} className="space-y-2">
+                                <div className="bg-gray-100 rounded-lg p-3">
+                                  <p className="text-sm">{m.message}</p>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {new Date(m.createdAt).toLocaleString()}
+                                  </p>
+                                </div>
+                                {m.replies?.map((reply: any) => (
+                                  <div key={reply.id} className={`rounded-lg p-3 ${reply.isAdmin ? 'bg-red-50 ml-4' : 'bg-gray-100 ml-4'}`}>
+                                    <p className="text-sm">{reply.message}</p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {reply.isAdmin ? 'Admin' : 'User'} - {new Date(reply.createdAt).toLocaleString()}
+                                    </p>
+                                  </div>
+                                ))}
                               </div>
                             ))}
                           </div>
@@ -17468,7 +17548,10 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
                               data-testid="input-reply-message"
                             />
                             <Button
-                              onClick={() => replyMessageMutation.mutate({ parentId: selectedConversation.id, message: replyMessage })}
+                              onClick={() => replyMessageMutation.mutate({
+                                parentId: selectedGroup.latest.id,
+                                message: replyMessage,
+                              })}
                               disabled={!replyMessage.trim() || replyMessageMutation.isPending}
                               data-testid="button-send-reply"
                             >
@@ -17484,7 +17567,8 @@ function CRMTab({ organization, users, teams, divisions, notifications, initialS
                       )}
                     </div>
                   </div>
-                )}
+                  );
+                })()}
           </div>
         )}
 

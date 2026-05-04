@@ -3122,112 +3122,12 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     return user.phoneNumber || user.phone || '';
   };
 
-  const sortedUsers = sortField ? [...users].sort((a, b) => {
-    let aValue = a[sortField];
-    let bValue = b[sortField];
-
-    if (sortField === 'email') {
-      aValue = getDisplayEmail(a);
-      bValue = getDisplayEmail(b);
-    }
-
-    if (sortField === 'phoneNumber') {
-      aValue = getDisplayPhone(a);
-      bValue = getDisplayPhone(b);
-    }
-
-    if (sortField === 'team') {
-      const aTeam = teams.find((t: any) => t.id === a.teamId);
-      const bTeam = teams.find((t: any) => t.id === b.teamId);
-      aValue = aTeam?.name || '';
-      bValue = bTeam?.name || '';
-    }
-
-    if (sortField === 'division') {
-      const aDivision = divisions.find((d: any) => d.id === a.divisionId);
-      const bDivision = divisions.find((d: any) => d.id === b.divisionId);
-      aValue = aDivision?.name || '';
-      bValue = bDivision?.name || '';
-    }
-
-    if (sortField === 'dob' || sortField === 'dateOfBirth') {
-      aValue = a.dob || a.dateOfBirth;
-      bValue = b.dob || b.dateOfBirth;
-    }
-
-    if (sortField === 'createdAt') {
-      aValue = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      bValue = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-    }
-
-    if (sortField === 'awards') {
-      aValue = a.awards?.length || 0;
-      bValue = b.awards?.length || 0;
-    }
-
-    if (sortField === 'isActive') {
-      aValue = a.isActive !== false ? 1 : 0;
-      bValue = b.isActive !== false ? 1 : 0;
-    }
-
-    if (aValue == null) aValue = '';
-    if (bValue == null) bValue = '';
-
-    const aStr = typeof aValue === 'string' ? aValue.toLowerCase() : aValue;
-    const bStr = typeof bValue === 'string' ? bValue.toLowerCase() : bValue;
-
-    if (aStr < bStr) return sortDirection === 'asc' ? -1 : 1;
-    if (aStr > bStr) return sortDirection === 'asc' ? 1 : -1;
-    return 0;
-  }) : users;
-
-  // Group users into families so every account that shares a household
-  // (parent + admin/coach role variants of the same human + their child
-  // player profiles) renders contiguously. The group key is the root
-  // account-holder id (walking up accountHolderId/parentId chains), with
-  // a fallback to the resolved display email and finally the user's own id
-  // so unrelated users still sort independently. The first time a key is
-  // seen in the already-sorted list determines the family's position, so
-  // "newest at top" still holds but the whole family rides along.
-  // Task #308: Build a household map keyed by the root account-holder so the
-  // admin Users tab agrees with the profile selection page on which players
-  // belong to which family. The previous `accountHolderId === user.id` check
-  // missed players whose `accountHolderId` pointed at a sibling profile (e.g.
-  // an admin/coach role of the same human) instead of the canonical parent
-  // row. We compute the root key here once and reuse it everywhere we need
-  // to know "does this player belong to this household?".
+  // Hoisted above sortedUsers so the 'status' sort branch can call
+  // deriveUserStatus. The original definitions used to live further down,
+  // after sortedUsers, which made them unavailable here. groupedUsersBase
+  // still gets defined later because it consumes sortedUsers.
   const householdCtx = buildHouseholdContext(users, getDisplayEmail);
   const householdPlayersFor = (u: any): any[] => householdPlayersForCtx(u, householdCtx);
-  const groupedUsersBase = groupUsersByHousehold(sortedUsers, householdCtx);
-
-  // Pending-approval players (and the household they sit in) sort to the top
-  // of the table by default so admins still see the queue front and center
-  // after the dedicated Overview card was removed. We only bubble when the
-  // user hasn't picked an explicit sort column — that way picking e.g. Name
-  // asc still gives the expected pure alphabetical order.
-  const isDefaultSort = sortField === 'createdAt' && sortDirection === 'desc';
-  const groupedUsers = (() => {
-    if (!isDefaultSort) return groupedUsersBase;
-    const pendingHouseholdRoots = new Set<string>();
-    for (const u of users || []) {
-      if (u?.approvalStatus === 'pending') {
-        const key = `root:${(u.accountHolderId && (householdCtx.userById.get(u.accountHolderId)?.id)) || u.accountHolderId || u.id}`;
-        pendingHouseholdRoots.add(key);
-      }
-    }
-    if (pendingHouseholdRoots.size === 0) return groupedUsersBase;
-    const top: any[] = [];
-    const rest: any[] = [];
-    for (const u of groupedUsersBase) {
-      const isPendingPlayer = u?.approvalStatus === 'pending';
-      // Match either the player themselves or the household they belong to.
-      const inPendingHousehold = isPendingPlayer
-        || (u.id && pendingHouseholdRoots.has(`root:${u.id}`))
-        || (u.accountHolderId && pendingHouseholdRoots.has(`root:${u.accountHolderId}`));
-      if (inPendingHousehold) top.push(u); else rest.push(u);
-    }
-    return [...top, ...rest];
-  })();
 
   // Helper: derive enrollment status label for a user
   const deriveUserStatus = (user: any): string => {
@@ -3343,6 +3243,138 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
     if (hasExpired) return "Expired";
     return "No Enrollment";
   };
+
+  // Stable order for the Status sort. Lower index sorts first when ascending.
+  // Mirrors the priority that matters operationally: things admins need to
+  // act on (payment failures, low balance, unpaid, self-claim, needs-team)
+  // bubble to the top, then healthy active accounts, then dormant/empty.
+  const STATUS_SORT_ORDER: Record<string, number> = {
+    'Payment Failed': 0,
+    'Low Balance': 1,
+    'Unpaid': 2,
+    'Self-Claimed': 3,
+    'Needs Team': 4,
+    'Active': 5,
+    'Grace Period': 6,
+    'Expired': 7,
+    'No Enrollment': 8,
+  };
+
+  const sortedUsers = sortField ? [...users].sort((a, b) => {
+    let aValue = a[sortField];
+    let bValue = b[sortField];
+
+    if (sortField === 'status') {
+      aValue = STATUS_SORT_ORDER[deriveUserStatus(a)] ?? 99;
+      bValue = STATUS_SORT_ORDER[deriveUserStatus(b)] ?? 99;
+    }
+
+    if (sortField === 'email') {
+      aValue = getDisplayEmail(a);
+      bValue = getDisplayEmail(b);
+    }
+
+    if (sortField === 'phoneNumber') {
+      aValue = getDisplayPhone(a);
+      bValue = getDisplayPhone(b);
+    }
+
+    if (sortField === 'team') {
+      const aTeam = teams.find((t: any) => t.id === a.teamId);
+      const bTeam = teams.find((t: any) => t.id === b.teamId);
+      aValue = aTeam?.name || '';
+      bValue = bTeam?.name || '';
+    }
+
+    if (sortField === 'division') {
+      const aDivision = divisions.find((d: any) => d.id === a.divisionId);
+      const bDivision = divisions.find((d: any) => d.id === b.divisionId);
+      aValue = aDivision?.name || '';
+      bValue = bDivision?.name || '';
+    }
+
+    if (sortField === 'dob' || sortField === 'dateOfBirth') {
+      aValue = a.dob || a.dateOfBirth;
+      bValue = b.dob || b.dateOfBirth;
+    }
+
+    if (sortField === 'createdAt') {
+      aValue = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      bValue = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    }
+
+    if (sortField === 'awards') {
+      aValue = a.awards?.length || 0;
+      bValue = b.awards?.length || 0;
+    }
+
+    if (sortField === 'isActive') {
+      aValue = a.isActive !== false ? 1 : 0;
+      bValue = b.isActive !== false ? 1 : 0;
+    }
+
+    if (aValue == null) aValue = '';
+    if (bValue == null) bValue = '';
+
+    const aStr = typeof aValue === 'string' ? aValue.toLowerCase() : aValue;
+    const bStr = typeof bValue === 'string' ? bValue.toLowerCase() : bValue;
+
+    if (aStr < bStr) return sortDirection === 'asc' ? -1 : 1;
+    if (aStr > bStr) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  }) : users;
+
+  // Group users into families so every account that shares a household
+  // (parent + admin/coach role variants of the same human + their child
+  // player profiles) renders contiguously. The group key is the root
+  // account-holder id (walking up accountHolderId/parentId chains), with
+  // a fallback to the resolved display email and finally the user's own id
+  // so unrelated users still sort independently. The first time a key is
+  // seen in the already-sorted list determines the family's position, so
+  // "newest at top" still holds but the whole family rides along.
+  // Task #308: Build a household map keyed by the root account-holder so the
+  // admin Users tab agrees with the profile selection page on which players
+  // belong to which family. The previous `accountHolderId === user.id` check
+  // missed players whose `accountHolderId` pointed at a sibling profile (e.g.
+  // an admin/coach role of the same human) instead of the canonical parent
+  // row. We compute the root key here once and reuse it everywhere we need
+  // to know "does this player belong to this household?".
+  // (householdCtx + householdPlayersFor are now defined above sortedUsers
+  // so the 'status' sort branch can use them; only groupedUsersBase stays
+  // here because it consumes sortedUsers.)
+  const groupedUsersBase = groupUsersByHousehold(sortedUsers, householdCtx);
+
+  // Pending-approval players (and the household they sit in) sort to the top
+  // of the table by default so admins still see the queue front and center
+  // after the dedicated Overview card was removed. We only bubble when the
+  // user hasn't picked an explicit sort column — that way picking e.g. Name
+  // asc still gives the expected pure alphabetical order.
+  const isDefaultSort = sortField === 'createdAt' && sortDirection === 'desc';
+  const groupedUsers = (() => {
+    if (!isDefaultSort) return groupedUsersBase;
+    const pendingHouseholdRoots = new Set<string>();
+    for (const u of users || []) {
+      if (u?.approvalStatus === 'pending') {
+        const key = `root:${(u.accountHolderId && (householdCtx.userById.get(u.accountHolderId)?.id)) || u.accountHolderId || u.id}`;
+        pendingHouseholdRoots.add(key);
+      }
+    }
+    if (pendingHouseholdRoots.size === 0) return groupedUsersBase;
+    const top: any[] = [];
+    const rest: any[] = [];
+    for (const u of groupedUsersBase) {
+      const isPendingPlayer = u?.approvalStatus === 'pending';
+      // Match either the player themselves or the household they belong to.
+      const inPendingHousehold = isPendingPlayer
+        || (u.id && pendingHouseholdRoots.has(`root:${u.id}`))
+        || (u.accountHolderId && pendingHouseholdRoots.has(`root:${u.accountHolderId}`));
+      if (inPendingHousehold) top.push(u); else rest.push(u);
+    }
+    return [...top, ...rest];
+  })();
+
+  // (deriveUserStatus is hoisted above sortedUsers so the Status column can
+  // sort by it; the original definition used to live here.)
 
   // Filter users based on search term, role, and status filters
   const filteredUsers = groupedUsers.filter((user: any) => {
@@ -5172,10 +5204,11 @@ function UsersTab({ users, teams, programs, divisions, organization, enrollments
                   Teams
                 </TableHead>
                 <TableHead 
-                  className="select-none hover:bg-gray-100 px-2 whitespace-nowrap"
+                  className="cursor-pointer select-none hover:bg-gray-100 px-2 whitespace-nowrap"
+                  onClick={() => handleSort('status')}
                   data-testid="sort-status"
                 >
-                  Status
+                  Status {sortField === 'status' && (sortDirection === 'asc' ? '↑' : '↓')}
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100 px-2 whitespace-nowrap"
